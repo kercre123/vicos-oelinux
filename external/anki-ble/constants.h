@@ -1,0 +1,87 @@
+/**
+ * File: constants.h
+ *
+ * Author: seichert
+ * Created: 10/3/2017
+ *
+ * Description: Anki BLE Server constants
+ *
+ * Copyright: Anki, Inc. 2017
+ *
+ **/
+
+#pragma once
+
+#include <bluetooth/uuid.h>
+
+// This header defines constants specific to the Anki BLE GATT Service.
+
+namespace Anki {
+
+
+const bluetooth::UUID kAnkiBLEService_128_BIT_UUID("D55E356B-59CC-4265-9D5F-3C61E9DFD70F");
+const bluetooth::UUID kCentralToPeripheralCharacteristicUUID("7D2A4BDA-D29B-4152-B725-2491478C5CD7");
+const bluetooth::UUID kPeripheralToCentralCharacteristicUUID("30619F2D-0F54-41BD-A65A-7588D8C85B45");
+const bluetooth::UUID kDisconnectCharacteristicUUID("68F0FD05-B0D4-495A-8FD8-130179A137C0");
+const bluetooth::UUID kCCCDescriptorUUID("2902");
+
+enum VictorMsg_Command : uint8_t {
+  MSG_B2V_BTLE_DISCONNECT = 13,
+
+  MSG_B2V_CORE_PING_REQUEST = 22,
+  MSG_V2B_CORE_PING_RESPONSE = 23,
+  MSG_B2V_HEARTBEAT = 24,
+  MSG_V2B_HEARTBEAT = 25,
+
+  MSG_B2V_WIFI_START = 26,
+  MSG_B2V_WIFI_STOP = 27,
+
+  MSG_B2V_DEV_PING_WITH_DATA_REQUEST = 145,
+  MSG_V2B_DEV_PING_WITH_DATA_RESPONSE = 146,
+  MSG_B2V_DEV_RESTART_ADBD = 147,
+};
+
+typedef struct {
+  uint8_t size;   // 1
+  uint8_t msgID;  // MSG_B2V_BTLE_DISCONNECT
+} VictorMsg_Disconnect;
+
+typedef struct {
+  uint8_t size;   // 1
+  uint8_t msgID;  // MSG_B2V_CORE_PING_REQUEST
+} VictorMsg_PingRequest;
+
+typedef struct {
+  uint8_t size;   // 1
+  uint8_t msgID;  // MSG_V2B_CORE_PING_RESPONSE
+} VictorMsg_PingResponse;
+
+typedef struct {
+  uint8_t size;     // 2
+  uint8_t msgID;    // MSG_B2V_HEARTBEAT or MSG_V2B_HEARTBEAT
+  uint8_t counter;  // Looping counter from 0 to 255
+} VictorMsg_HeartBeat;
+
+typedef struct {
+  uint8_t size;     // 1
+  uint8_t msgID;    // MSG_B2V_WIFI_START
+} VictorMsg_WifiStart;
+
+typedef struct {
+  uint8_t size;     // 1
+  uint8_t msgID;    // MSG_B2V_WIFI_STOP
+} VictorMsg_WifiStop;
+
+typedef struct {
+  uint8_t size;     // 1 to 19
+  uint8_t msgID;    // MSG_B2V_DEV_PING_WITH_DATA_REQUEST
+  uint8_t data[18];
+} VictorMsg_PingWithDataRequest;
+
+typedef struct {
+  uint8_t size;     // 1 to 19
+  uint8_t msgID;    // MSG_V2B_DEV_PING_WITH_DATA_RESPONSE
+  uint8_t data[18];
+} VictorMsg_PingWithDataResponse;
+
+}  // Anki
