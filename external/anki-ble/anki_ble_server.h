@@ -35,6 +35,7 @@
 
 #pragma once
 
+#include <deque>
 #include <unordered_map>
 
 #include <base/macros.h>
@@ -63,6 +64,28 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   bool Run(const RunCallback& callback);
 
  private:
+  class NotificationInfo {
+  public:
+    NotificationInfo(const std::string& device_address,
+                     const bluetooth::GattIdentifier& characteristic_id,
+                     bool confirm,
+                     const std::vector<uint8_t>& value)
+      : device_address_(device_address)
+      , characteristic_id_(characteristic_id)
+      , confirm_(confirm)
+      , value_(value) { }
+
+    const std::string& GetDeviceAddress() const { return device_address_; }
+    const bluetooth::GattIdentifier& GetCharacteristicId() const { return characteristic_id_; }
+    bool GetConfirm() const { return confirm_; }
+    const std::vector<uint8_t>& GetValue() const { return value_; }
+  private:
+    std::string device_address_;
+    bluetooth::GattIdentifier characteristic_id_;
+    bool confirm_;
+    std::vector<uint8_t> value_;
+  };
+
   void ScheduleNextHeartBeat();
   void SendHeartBeat();
   void BuildHeartBeatMessage(std::vector<uint8_t>* out_value);
@@ -93,17 +116,24 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   void OnExecuteWriteRequest(
       const std::string& device_address,
       int request_id, bool is_execute) override;
+  void SendMessageToConnectedCentral(const std::vector<uint8_t>& value);
+  void QueueNotification(const std::string& device_address,
+                         const bluetooth::GattIdentifier& characteristic_id,
+                         bool confirm,
+                         const std::vector<uint8_t>& value);
+  void TransmitNextNotification();
   void OnNotificationSent(const std::string& device_address,
                           int status) override;
 
   void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message);
+  void HandleDisconnect();
+  void EnableWiFiInterface(const bool enable);
   // Single mutex to protect all variables below.
   std::mutex mutex_;
 
-  // This stores whether or not at least one remote device has written to the
-  // CCC descriptor.
-  bool peripheral_to_central_ccc_descriptor_written_;
-  bool disconnect_ccc_descriptor_written_;
+  // The address of the central that is connected to us.  Only allow 1 central
+  // at a time to be connected.
+  std::string connected_central_address_;
 
   // The IBluetooth and IBluetoothGattServer binders that we use to communicate
   // with the Bluetooth daemon's GATT server features.
@@ -118,16 +148,16 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   // been registered with the daemon.
   RunCallback pending_run_cb_;
 
-  // Stores whether or not an outgoing notification is still pending. We use
-  // this to throttle notifications so that we don't accidentally congest the
-  // connection.
-  std::unordered_map<std::string, bool> pending_notification_map_;
-
   uint8_t heart_beat_count_;
 
   std::vector<uint8_t> peripheral_to_central_value_;
   std::vector<uint8_t> central_to_peripheral_value_;
   std::vector<uint8_t> disconnect_value_;
+
+  // The daemon itself doesn't maintain a Client Characteristic Configuration
+  // mapping, so we do it ourselves here.
+  uint8_t peripheral_to_central_ccc_value_;
+  uint8_t disconnect_ccc_value_;
 
   // The unique IDs that refer to each of the BLE Service GATT objects.
   // These are returned to us from the Bluetooth daemon as we populate the database.
@@ -137,11 +167,6 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   bluetooth::GattIdentifier peripheral_to_central_cccd_id_;
   bluetooth::GattIdentifier disconnect_id_;
   bluetooth::GattIdentifier disconnect_cccd_id_;
-
-  // The daemon itself doesn't maintain a Client Characteristic Configuration
-  // mapping, so we do it ourselves here.
-  std::unordered_map<std::string, uint8_t> device_peripheral_to_central_ccc_map_;
-  std::unordered_map<std::string, uint8_t> device_disconnect_ccc_map_;
 
   // Wether we should also start advertising
   bool advertise_;
@@ -156,6 +181,9 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   // Note: This should remain the last member so that it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
   base::WeakPtrFactory<BLEServer> weak_ptr_factory_;
+
+
+  std::deque<NotificationInfo> notifications_;
 
   DISALLOW_COPY_AND_ASSIGN(BLEServer);
 };

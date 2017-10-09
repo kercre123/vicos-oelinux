@@ -43,6 +43,7 @@
 
 #include <cutils/properties.h>
 
+#include <sys/wait.h>
 #include "constants.h"
 
 namespace Anki {
@@ -54,25 +55,18 @@ class CLIBluetoothLowEnergyCallback
       : bt_(bt) {}
 
   // IBluetoothLowEnergyCallback overrides:
-  void OnConnectionState(int status, int client_id, const char* address,
-                         bool connected) override {
-    LOG(INFO) << "Connection state: [" << address
-              << " connected: " << (connected ? "true" : "false") << " ] "
-              << "- status: " << status
-              << " - client_id: " << client_id;
-  }
-  void OnMtuChanged(int /* status */, const char * /* address */, int /* mtu */) override {}
+  void OnConnectionState(int /* status */,
+                         int /* client_id */,
+                         const char* /* address */,
+                         bool /* connected */) override {}
+
+  void OnMtuChanged(int /* status */,
+                    const char * /* address */,
+                    int /* mtu */) override {}
 
   void OnScanResult(const bluetooth::ScanResult& /* scan_result */) override {}
 
-  void OnClientRegistered(int status, int client_id){
-    if (status != bluetooth::BLE_STATUS_SUCCESS) {
-      LOG(ERROR) << "Failed to register BLE client, will not start advertising";
-      return;
-    }
-
-    LOG(INFO) << "Registered BLE client with ID: " << client_id;
-
+  void StartAdvertising() {
     /* Advertising data: 128-bit Service UUID: Anki BLE Service */
     std::vector<uint8_t> data{0x11, // Length of 17
                               0x07, // Complete list of 128-bit UUID
@@ -96,7 +90,22 @@ class CLIBluetoothLowEnergyCallback
     bluetooth::AdvertiseData scan_rsp;
 
     bt_->GetLowEnergyInterface()->
-        StartMultiAdvertising(client_id, adv_data, scan_rsp, settings);
+        StartMultiAdvertising(client_id_, adv_data, scan_rsp, settings);
+  }
+
+  void StopAdvertising() {
+    bt_->GetLowEnergyInterface()->StopMultiAdvertising(client_id_);
+  }
+
+  void OnClientRegistered(int status, int client_id){
+    if (status != bluetooth::BLE_STATUS_SUCCESS) {
+      LOG(ERROR) << "Failed to register BLE client, will not start advertising";
+      return;
+    }
+    client_id_ = client_id;
+    LOG(INFO) << "Registered BLE client with ID: " << client_id;
+
+    StartAdvertising();
   }
 
   void OnMultiAdvertiseCallback(int /* status */, bool is_start,
@@ -106,6 +115,7 @@ class CLIBluetoothLowEnergyCallback
 
  private:
   android::sp<ipc::binder::IBluetooth> bt_;
+  int client_id_ = 0;
   DISALLOW_COPY_AND_ASSIGN(CLIBluetoothLowEnergyCallback);
 };
 
@@ -114,15 +124,13 @@ BLEServer::BLEServer(
     android::sp<ipc::binder::IBluetooth> bluetooth,
     scoped_refptr<base::SingleThreadTaskRunner> main_task_runner,
     bool advertise)
-    : peripheral_to_central_ccc_descriptor_written_(false),
-      disconnect_ccc_descriptor_written_(false),
-      bluetooth_(bluetooth),
+  : bluetooth_(bluetooth),
       server_if_(-1),
-      heart_beat_count_(0),
       advertise_(advertise),
       main_task_runner_(main_task_runner),
       weak_ptr_factory_(this) {
   CHECK(bluetooth_.get());
+  HandleDisconnect();
 }
 
 BLEServer::~BLEServer() {
@@ -177,38 +185,21 @@ void BLEServer::ScheduleNextHeartBeat() {
 void BLEServer::SendHeartBeat() {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  // Send a notification or indication to all enabled devices.
-  bool found = false;
-  for (const auto& iter : device_peripheral_to_central_ccc_map_) {
-    uint8_t ccc_val = iter.second;
-
-    if (!ccc_val)
-      continue;
-
-    found = true;
-
-    // Don't send a notification if one is already pending for this device.
-    if (pending_notification_map_[iter.first])
-      continue;
-
-    BuildHeartBeatMessage(&peripheral_to_central_value_);
-
-    if (gatt_->SendNotification(server_if_, iter.first, peripheral_to_central_id_,
-                                false, peripheral_to_central_value_)) {
-      pending_notification_map_[iter.first] = true;
-    } else {
-      found = false;
-    }
-  }
-
-  // Still enabled!
-  if (found) {
-    ScheduleNextHeartBeat();
+  // Only send a heartbeat if a central has connected to us
+  if (connected_central_address_.empty()) {
     return;
   }
 
-  // All clients disabled notifications.
-  peripheral_to_central_ccc_descriptor_written_ = false;
+  // Only send a heartbeat if the CCC value is 1 (enabled)
+  if (!peripheral_to_central_ccc_value_) {
+    return;
+  }
+
+  std::vector<uint8_t> data;
+  BuildHeartBeatMessage(&data);
+  SendMessageToConnectedCentral(data);
+
+  ScheduleNextHeartBeat();
 }
 
 void BLEServer::BuildHeartBeatMessage(
@@ -352,7 +343,8 @@ void BLEServer::OnServiceAdded(
       LOG(ERROR) << "Failed to obtain handle to IBluetoothLowEnergy interface";
       return;
     }
-    ble->RegisterClient(new CLIBluetoothLowEnergyCallback(bluetooth_));
+    bool registered = ble->RegisterClient(new CLIBluetoothLowEnergyCallback(bluetooth_));
+    LOG(INFO) << "RegisterClient result = " << registered;
   }
 
 }
@@ -362,6 +354,9 @@ void BLEServer::OnCharacteristicReadRequest(
     int request_id, int offset, bool /* is_long */,
     const bluetooth::GattIdentifier& characteristic_id) {
   std::lock_guard<std::mutex> lock(mutex_);
+
+  // Save the address as our connected central
+  connected_central_address_ = device_address;
 
   // This is where we handle an incoming characteristic read. Only the
   // peripheral to central and disconnect characteristics are readable.
@@ -391,6 +386,9 @@ void BLEServer::OnDescriptorReadRequest(
     const bluetooth::GattIdentifier& descriptor_id) {
   std::lock_guard<std::mutex> lock(mutex_);
 
+  // Save the address as our connected central
+  connected_central_address_ = device_address;
+
   // This is where we handle an incoming characteristic descriptor read.
   if ((descriptor_id != peripheral_to_central_cccd_id_)
       && (descriptor_id != disconnect_cccd_id_)) {
@@ -404,9 +402,9 @@ void BLEServer::OnDescriptorReadRequest(
   // 16-bit value encoded as little-endian.
   uint8_t value_bytes[2];
   if (descriptor_id == peripheral_to_central_cccd_id_) {
-    value_bytes[0] = device_peripheral_to_central_ccc_map_[device_address];
+    value_bytes[0] = peripheral_to_central_ccc_value_;
   } else if (descriptor_id == disconnect_cccd_id_) {
-    value_bytes[0] = device_disconnect_ccc_map_[device_address];
+    value_bytes[0] = disconnect_ccc_value_;
   }
   value_bytes[1] = 0x00;
 
@@ -453,6 +451,30 @@ void BLEServer::OnCharacteristicWriteRequest(
   gatt_->SendResponse(server_if_, device_address, request_id,
                       bluetooth::GATT_ERROR_NONE, offset, dummy);
 }
+
+void BLEServer::EnableWiFiInterface(const bool enable)
+{
+  pid_t pid = fork();
+  if (pid == 0) {
+    if (enable) {
+      char *const args[] = {(char* const) "/system/bin/ifconfig",
+                            (char* const) "wlan0",
+                            (char* const) "up", NULL};
+      execve((char* const) "/system/bin/ifconfig", args, nullptr);
+    } else {
+      char *const args[] = {(char* const) "/system/bin/ifconfig",
+                            (char* const) "wlan0",
+                            (char* const) "down", NULL};
+      execve((char* const) "/system/bin/ifconfig", args, nullptr);
+    }
+  } else if (pid > 0) {
+    wait(NULL);
+  } else {
+    LOG(ERROR) << "EnableWiFiInterface fork() failed";
+  }
+}
+
+
 void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message)
 {
   if (message.size() < 2) {
@@ -465,21 +487,31 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   switch (msgID) {
   case VictorMsg_Command::MSG_B2V_BTLE_DISCONNECT:
     LOG(INFO) << "Received request to disconnect";
+    // TODO:  Not sure how to do this, may need to power down and power up adapter?
     break;
   case VictorMsg_Command::MSG_B2V_CORE_PING_REQUEST:
     LOG(INFO) << "Received ping request";
+    SendMessageToConnectedCentral({0x01, VictorMsg_Command::MSG_V2B_CORE_PING_RESPONSE});
     break;
   case VictorMsg_Command::MSG_B2V_HEARTBEAT:
     LOG(INFO) << "Received heartbeat";
+    // Nothing to do here, we already send a periodic heartbeat of our own back to the central
     break;
   case VictorMsg_Command::MSG_B2V_WIFI_START:
     LOG(INFO) << "Received WiFi start";
+    EnableWiFiInterface(true);
     break;
   case VictorMsg_Command::MSG_B2V_WIFI_STOP:
     LOG(INFO) << "Received WiFi stop";
+    EnableWiFiInterface(false);
     break;
   case VictorMsg_Command::MSG_B2V_DEV_PING_WITH_DATA_REQUEST:
-    LOG(INFO) << "Received ping with data request";
+    {
+      LOG(INFO) << "Received ping with data request";
+      std::vector<uint8_t> data = message;
+      data[1] = VictorMsg_Command::MSG_V2B_DEV_PING_WITH_DATA_RESPONSE;
+      SendMessageToConnectedCentral(data);
+    }
     break;
   case VictorMsg_Command::MSG_B2V_DEV_RESTART_ADBD:
     LOG(INFO) << "Received restart adbd request";
@@ -490,6 +522,17 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   }
 }
 
+void BLEServer::HandleDisconnect() {
+  connected_central_address_.clear();
+  peripheral_to_central_ccc_value_ = 0;
+  disconnect_ccc_value_ = 0;
+  heart_beat_count_ = 0;
+  peripheral_to_central_value_.clear();
+  central_to_peripheral_value_.clear();
+  disconnect_value_.clear();
+  notifications_.clear();
+}
+
 void BLEServer::OnDescriptorWriteRequest(
     const std::string& device_address,
     int request_id, int offset, bool is_prepare_write, bool need_response,
@@ -498,7 +541,6 @@ void BLEServer::OnDescriptorWriteRequest(
   std::lock_guard<std::mutex> lock(mutex_);
 
   std::vector<uint8_t> dummy;
-
   // This is where we handle an incoming characteristic write. The Anki BLE
   // service doesn't really support prepared writes, so we just reject them to
   // keep things simple.
@@ -521,22 +563,23 @@ void BLEServer::OnDescriptorWriteRequest(
     return;
   }
 
+  // Save the address as our connected central
+  connected_central_address_ = device_address;
 
   if (descriptor_id == peripheral_to_central_cccd_id_) {
-    device_peripheral_to_central_ccc_map_[device_address] = value[0];
+    uint8_t previous_value = peripheral_to_central_ccc_value_;
+    peripheral_to_central_ccc_value_ = value[0];
     LOG(INFO) << "Peripheral to Central CCC written - device: "
               << device_address << " value: " << (int)value[0];
 
     // Start sending heartbeats
-    if (!peripheral_to_central_ccc_descriptor_written_ && value[0]) {
-      peripheral_to_central_ccc_descriptor_written_ = true;
+    if (!previous_value && peripheral_to_central_ccc_value_) {
       ScheduleNextHeartBeat();
     }
   } else if (descriptor_id == disconnect_cccd_id_) {
-    device_disconnect_ccc_map_[device_address] = value[0];
+    disconnect_ccc_value_ = value[0];
     LOG(INFO) << "Disconnect CCC written - device: "
               << device_address << " value: " << (int)value[0];
-    disconnect_ccc_descriptor_written_ = true;
   }
 
   if (!need_response)
@@ -556,12 +599,55 @@ void BLEServer::OnExecuteWriteRequest(
                       bluetooth::GATT_ERROR_REQUEST_NOT_SUPPORTED, 0, dummy);
 }
 
+void BLEServer::SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
+{
+  QueueNotification(connected_central_address_, peripheral_to_central_id_, false, value);
+}
+
+void BLEServer::QueueNotification(const std::string& device_address,
+                                  const bluetooth::GattIdentifier& characteristic_id,
+                                  bool confirm,
+                                  const std::vector<uint8_t>& value)
+{
+  notifications_.emplace_back(device_address, characteristic_id, confirm, value);
+  if (notifications_.size() == 1) {
+    TransmitNextNotification();
+  }
+
+}
+
+void BLEServer::TransmitNextNotification()
+{
+  bool transmitted = false;
+  while (!transmitted && !notifications_.empty()) {
+    const NotificationInfo& notification = notifications_.front();
+    if ((notification.GetDeviceAddress() == connected_central_address_)
+        && (gatt_->SendNotification(server_if_,
+                                    notification.GetDeviceAddress(),
+                                    notification.GetCharacteristicId(),
+                                    notification.GetConfirm(),
+                                    notification.GetValue()))) {
+      transmitted = true;
+    } else {
+      LOG(INFO) << "Failed to send notification to " << notification.GetDeviceAddress();
+      if (connected_central_address_ == notification.GetDeviceAddress()) {
+        HandleDisconnect();
+        return;
+      } else {
+        notifications_.pop_front();
+      }
+    }
+  }
+
+}
+
 void BLEServer::OnNotificationSent(
     const std::string& device_address, int status) {
   LOG(INFO) << "Notification was sent - device: " << device_address
             << " status: " << status;
   std::lock_guard<std::mutex> lock(mutex_);
-  pending_notification_map_[device_address] = false;
+  notifications_.pop_front();
+  TransmitNextNotification();
 }
 
 }  // namespace Anki

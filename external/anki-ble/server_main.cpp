@@ -82,20 +82,20 @@ void StartAnkiBLEServer() {
     LOG(INFO) << "Anki BLE Server is already started";
     return;
   }
-  LOG(INFO) << "Attempting to start Anki BLE Server";
+  DLOG(INFO) << "Attempting to start Anki BLE Server";
   anki_ble_server_started = true;
 
   SetAdapterName();
 
   // Create the Anki BLE server.
-  LOG(INFO) << "Creating Anki BLE Server";
+  DLOG(INFO) << "Creating Anki BLE Server";
   able.reset(new Anki::BLEServer(bt_iface, main_loop.task_runner(), true));
   if (!able->Run(&BLEServerCallback)) {
     LOG(ERROR) << "Failed to start Anki BLE server";
     exit_code = EXIT_FAILURE;
     QuitMessageLoop();
   }
-  LOG(INFO) << "Done creating Anki BLE Server";
+  DLOG(INFO) << "Done creating Anki BLE Server";
 }
 
 class BluetoothStateCallback : public ipc::binder::BnBluetoothCallback {
@@ -207,9 +207,9 @@ int main(int argc, char* argv[]) {
   // call above but we use this main loop for sending out heart beat
   // notifications.
 
-  LOG(INFO) << "Running the main loop";
+  DLOG(INFO) << "Running the main loop";
   main_loop.Run();
-  LOG(INFO) << "Done running the main loop";
+  DLOG(INFO) << "Done running the main loop";
 
   LOG(INFO) << "Exiting";
   return exit_code;
