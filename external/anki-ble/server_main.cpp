@@ -31,6 +31,8 @@
 
 #include <bluetooth/binder/IBluetooth.h>
 
+#include <cutils/properties.h>
+
 #include <algorithm>
 
 #include "anki_ble_server.h"
@@ -56,7 +58,9 @@ void QuitMessageLoop() {
 }
 
 void SetAdapterName() {
-  std::string name = "VICTOR_" + bt_iface->GetAddress();
+  char serialNo[PROPERTY_VALUE_MAX] = {'\0'};
+  (void) property_get("ro.serialno", serialNo, "XXXXXX");
+  std::string name = "VICTOR_" + std::string(serialNo);
   name.erase(std::remove(name.begin(), name.end(), ':'), name.end());
   std::string current_local_name = bt_iface->GetName();
   if (current_local_name != name) {
