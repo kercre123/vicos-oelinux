@@ -68,13 +68,26 @@ class CLIBluetoothLowEnergyCallback
 
   void StartAdvertising() {
     /* Advertising data: 128-bit Service UUID: Anki BLE Service */
-    std::vector<uint8_t> data{0x11, // Length of 17
-                              0x07, // Complete list of 128-bit UUID
-                              0x0F, 0xD7, 0xDF, 0xE9, 0x61, 0x3C,
-                              0x5F, 0x9D,
-                              0x65, 0x42,
-                              0xCC, 0x59,
-                              0x6B, 0x35, 0x5E, 0xD5};
+    std::vector<uint8_t> data;
+    int uuid_size = kAnkiBLEService_128_BIT_UUID.GetShortestRepresentationSize();
+    uint8_t type;
+    if (uuid_size == bluetooth::UUID::kNumBytes128)
+      type = bluetooth::kEIRTypeComplete128BitUUIDs;
+    else if (uuid_size == bluetooth::UUID::kNumBytes32)
+      type = bluetooth::kEIRTypeComplete32BitUUIDs;
+    else if (uuid_size == bluetooth::UUID::kNumBytes16)
+      type = bluetooth::kEIRTypeComplete16BitUUIDs;
+    else
+      NOTREACHED() << "Unexpected size: " << uuid_size;
+
+    data.push_back(uuid_size + 1);
+    data.push_back(type);
+
+    auto uuid_bytes = kAnkiBLEService_128_BIT_UUID.GetFullLittleEndian();
+    int index = (uuid_size == 16) ? 0 : 12;
+    data.insert(data.end(), uuid_bytes.data() + index,
+                uuid_bytes.data() + index + uuid_size);
+
     base::TimeDelta timeout;
 
     bluetooth::AdvertiseSettings settings(
@@ -83,11 +96,11 @@ class CLIBluetoothLowEnergyCallback
         bluetooth::AdvertiseSettings::TX_POWER_LEVEL_MEDIUM,
         true);
 
-    bluetooth::AdvertiseData adv_data(data);
+    bluetooth::AdvertiseData adv_data;
     adv_data.set_include_device_name(true);
     adv_data.set_include_tx_power_level(true);
 
-    bluetooth::AdvertiseData scan_rsp;
+    bluetooth::AdvertiseData scan_rsp(data);
 
     bt_->GetLowEnergyInterface()->
         StartMultiAdvertising(client_id_, adv_data, scan_rsp, settings);
