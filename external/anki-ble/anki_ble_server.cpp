@@ -43,7 +43,13 @@
 
 #include <cutils/properties.h>
 
+#include <logwrap/logwrap.h>
+
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #include "constants.h"
 
 namespace Anki {
@@ -487,6 +493,93 @@ void BLEServer::EnableWiFiInterface(const bool enable)
   }
 }
 
+void BLEServer::ExecCommand(const std::vector<std::string>& args)
+{
+  static const std::vector<std::string> allowedCommands =
+    { "ifconfig", "wpa_cli", "dhcptool", "reboot"};
+
+  if (args.empty()) {
+    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
+                                  "Invalid argument: args in empty");
+    return;
+  }
+
+  LOG(INFO) << "ExecCommand. args[0] = " << args[0];
+
+  if (std::find(allowedCommands.begin(), allowedCommands.end(), args[0]) == allowedCommands.end()) {
+    std::string errMessage = "Operation not permitted. Valid commands are ";
+    bool first = true;
+    for (auto const& s : allowedCommands) {
+      if (first) {
+        first = false;
+      } else {
+        errMessage += ", ";
+      }
+      errMessage += s;
+    }
+    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, errMessage);
+    return;
+  }
+
+  int argc = args.size();
+  char* argv[argc];
+  int status = 0;
+  bool ignore_int_quit = false;
+  int log_target = LOG_FILE;
+  bool abbreviated = true;
+  char *file_path = (char *) "/data/local/tmp/cmd_results.txt";
+  struct AndroidForkExecvpOption* opts = NULL;
+  size_t opts_len = 0;
+  std::string commandLine;
+
+  for (unsigned int j = 0 ; j < args.size(); ++j) {
+    argv[j] = (char *) malloc(args[j].size() + 1);
+    strcpy(argv[j], args[j].c_str());
+    if (j != 0) {
+      commandLine += " ";
+    }
+    commandLine += std::string(argv[j]);
+  }
+
+  (void) unlink(file_path);
+
+  LOG(INFO) << "About fork and exec '" << commandLine << "'";
+
+  int rc = android_fork_execvp_ext(argc, argv, &status, ignore_int_quit,
+                                   log_target, abbreviated, file_path,
+                                   opts, opts_len);
+  LOG(INFO) << "Fork results. rc = " << rc << " and status = " << status;
+  for (unsigned int j = 0; j < args.size(); ++j) {
+    free(argv[j]);
+  }
+
+  int results_fd = open(file_path, O_RDONLY);
+  if (results_fd > 0) {
+    std::vector<uint8_t> value;
+    size_t count = 128;
+    uint8_t data[count];
+    ssize_t bytesRead;
+    bytesRead = read(results_fd, data, count);
+    while (bytesRead > 0) {
+      std::copy(&data[0], &data[bytesRead], std::back_inserter(value));
+      bytesRead = read(results_fd, data, count);
+    }
+    value.push_back(0);
+    std::vector<uint8_t> clean_value;
+    size_t k = 0;
+    while (k < value.size()) {
+      clean_value.push_back(value[k]);
+      if (value[k] == '\n') {
+        k++;
+      }
+      k++;
+    }
+    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, clean_value);
+    close(results_fd); results_fd = -1;
+  }
+
+}
+
 
 void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message)
 {
@@ -529,6 +622,42 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   case VictorMsg_Command::MSG_B2V_DEV_RESTART_ADBD:
     LOG(INFO) << "Received restart adbd request";
     property_set("ctl.restart", "adbd");
+    break;
+  case VictorMsg_Command::MSG_B2V_DEV_EXEC_CMD_LINE:
+    {
+      LOG(INFO) << "Received command line to execute";
+      std::vector<std::string> args;
+      std::string arg;
+      for (auto it = message.begin() + 2; it != message.end(); it++) {
+        if (((char) *it) == '\0') {
+          args.push_back(arg);
+          arg.clear();
+        } else {
+          arg.push_back((char) *it);
+        }
+      }
+      if (!arg.empty()) {
+        args.push_back(arg);
+      }
+      ExecCommand(args);
+    }
+    break;
+  case VictorMsg_Command::MSG_B2V_MULTIPART_START:
+    LOG(INFO) << "Received multipart message start";
+    multipart_message_.clear();
+    std::copy(message.begin() + 2, message.end(),
+              std::back_inserter(multipart_message_));
+    break;
+  case VictorMsg_Command::MSG_B2V_MULTIPART_CONTINUE:
+    LOG(INFO) << "Received multipart message continue";
+    std::copy(message.begin() + 2, message.end(),
+              std::back_inserter(multipart_message_));
+    break;
+  case VictorMsg_Command::MSG_B2V_MULTIPART_FINAL:
+    LOG(INFO) << "Received multipart message final";
+    std::copy(message.begin() + 2, message.end(),
+              std::back_inserter(multipart_message_));
+    HandleIncomingMessageFromCentral(multipart_message_);
     break;
   default:
     break;
@@ -614,8 +743,50 @@ void BLEServer::OnExecuteWriteRequest(
 
 void BLEServer::SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
 {
-  QueueNotification(connected_central_address_, peripheral_to_central_id_, false, value);
+  if (value.size() <= kAnkiVictorMsgMaxSize) {
+    QueueNotification(connected_central_address_, peripheral_to_central_id_, false, value);
+  } else {
+    // Fragment large message into multipart messages to queue
+    size_t offset = 0;
+    while (offset < value.size()) {
+      std::vector<uint8_t> message;
+      uint8_t msgID;
+      uint8_t msgSize = kAnkiVictorMsgBaseSize;
+      if (offset == 0) {
+        msgID = MSG_V2B_MULTIPART_START;
+        msgSize += kAnkiVictorMsgPayloadMaxSize;
+      } else if (value.size() - offset > kAnkiVictorMsgMaxSize) {
+        msgID = MSG_V2B_MULTIPART_CONTINUE;
+        msgSize += kAnkiVictorMsgPayloadMaxSize;
+      } else {
+        msgID = MSG_V2B_MULTIPART_FINAL;
+        msgSize += (value.size() - offset);
+      }
+      message.push_back(msgSize);
+      message.push_back(msgID);
+      std::copy(value.begin() + offset, value.begin() + offset + msgSize - 1, std::back_inserter(message));
+      SendMessageToConnectedCentral(message);
+      offset += (msgSize - 1);
+    }
+  }
 }
+
+void BLEServer::SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value)
+{
+  std::vector<uint8_t> msg;
+  msg.push_back(value.size() + 1);
+  msg.push_back(msgID);
+  msg.insert(std::end(msg), std::begin(value), std::end(value));
+  SendMessageToConnectedCentral(msg);
+}
+
+void BLEServer::SendMessageToConnectedCentral(uint8_t msgID, const std::string& str)
+{
+  std::vector<uint8_t> value(str.begin(), str.end());
+  value.push_back(0);
+  SendMessageToConnectedCentral(msgID, value);
+}
+
 
 void BLEServer::QueueNotification(const std::string& device_address,
                                   const bluetooth::GattIdentifier& characteristic_id,
@@ -658,6 +829,7 @@ void BLEServer::OnNotificationSent(
     const std::string& device_address, int status) {
   LOG(INFO) << "Notification was sent - device: " << device_address
             << " status: " << status;
+  (void) usleep(1000 * 5);
   std::lock_guard<std::mutex> lock(mutex_);
   notifications_.pop_front();
   TransmitNextNotification();

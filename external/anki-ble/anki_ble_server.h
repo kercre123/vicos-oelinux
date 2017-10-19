@@ -117,6 +117,8 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
       const std::string& device_address,
       int request_id, bool is_execute) override;
   void SendMessageToConnectedCentral(const std::vector<uint8_t>& value);
+  void SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value);
+  void SendMessageToConnectedCentral(uint8_t msgID, const std::string& str);
   void QueueNotification(const std::string& device_address,
                          const bluetooth::GattIdentifier& characteristic_id,
                          bool confirm,
@@ -128,6 +130,7 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message);
   void HandleDisconnect();
   void EnableWiFiInterface(const bool enable);
+  void ExecCommand(const std::vector<std::string>& args);
   // Single mutex to protect all variables below.
   std::mutex mutex_;
 
@@ -184,6 +187,8 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
 
 
   std::deque<NotificationInfo> notifications_;
+
+  std::vector<uint8_t> multipart_message_;
 
   DISALLOW_COPY_AND_ASSIGN(BLEServer);
 };
