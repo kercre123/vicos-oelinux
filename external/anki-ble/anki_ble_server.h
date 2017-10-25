@@ -48,6 +48,7 @@
 #include <bluetooth/gatt_identifier.h>
 
 namespace Anki {
+class CLIBluetoothLowEnergyCallback;
 
 class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
  public:
@@ -128,9 +129,14 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
                           int status) override;
 
   void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message);
+  void ResetConnectionState();
+  void HandleConnect(const std::string& device_address);
   void HandleDisconnect();
   void EnableWiFiInterface(const bool enable);
   void ExecCommand(const std::vector<std::string>& args);
+
+
+  CLIBluetoothLowEnergyCallback* low_energy_callback_;
   // Single mutex to protect all variables below.
   std::mutex mutex_;
 

@@ -143,11 +143,12 @@ BLEServer::BLEServer(
     android::sp<ipc::binder::IBluetooth> bluetooth,
     scoped_refptr<base::SingleThreadTaskRunner> main_task_runner,
     bool advertise)
-  : bluetooth_(bluetooth),
-      server_if_(-1),
-      advertise_(advertise),
-      main_task_runner_(main_task_runner),
-      weak_ptr_factory_(this) {
+  : low_energy_callback_(nullptr),
+    bluetooth_(bluetooth),
+    server_if_(-1),
+    advertise_(advertise),
+    main_task_runner_(main_task_runner),
+    weak_ptr_factory_(this) {
   CHECK(bluetooth_.get());
   HandleDisconnect();
 }
@@ -362,7 +363,8 @@ void BLEServer::OnServiceAdded(
       LOG(ERROR) << "Failed to obtain handle to IBluetoothLowEnergy interface";
       return;
     }
-    bool registered = ble->RegisterClient(new CLIBluetoothLowEnergyCallback(bluetooth_));
+    low_energy_callback_ = new CLIBluetoothLowEnergyCallback(bluetooth_);
+    bool registered = ble->RegisterClient(low_energy_callback_);
     LOG(INFO) << "RegisterClient result = " << registered;
   }
 
@@ -373,9 +375,6 @@ void BLEServer::OnCharacteristicReadRequest(
     int request_id, int offset, bool /* is_long */,
     const bluetooth::GattIdentifier& characteristic_id) {
   std::lock_guard<std::mutex> lock(mutex_);
-
-  // Save the address as our connected central
-  connected_central_address_ = device_address;
 
   // This is where we handle an incoming characteristic read. Only the
   // peripheral to central and disconnect characteristics are readable.
@@ -404,9 +403,6 @@ void BLEServer::OnDescriptorReadRequest(
     int request_id, int offset, bool /* is_long */,
     const bluetooth::GattIdentifier& descriptor_id) {
   std::lock_guard<std::mutex> lock(mutex_);
-
-  // Save the address as our connected central
-  connected_central_address_ = device_address;
 
   // This is where we handle an incoming characteristic descriptor read.
   if ((descriptor_id != peripheral_to_central_cccd_id_)
@@ -664,7 +660,7 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   }
 }
 
-void BLEServer::HandleDisconnect() {
+void BLEServer::ResetConnectionState() {
   connected_central_address_.clear();
   peripheral_to_central_ccc_value_ = 0;
   disconnect_ccc_value_ = 0;
@@ -673,6 +669,20 @@ void BLEServer::HandleDisconnect() {
   central_to_peripheral_value_.clear();
   disconnect_value_.clear();
   notifications_.clear();
+}
+
+void BLEServer::HandleConnect(const std::string& device_address) {
+  if (low_energy_callback_) {
+    low_energy_callback_->StopAdvertising();
+  }
+  connected_central_address_ = device_address;
+}
+
+void BLEServer::HandleDisconnect() {
+  ResetConnectionState();
+  if (low_energy_callback_) {
+    low_energy_callback_->StartAdvertising();
+  }
 }
 
 void BLEServer::OnDescriptorWriteRequest(
@@ -705,8 +715,7 @@ void BLEServer::OnDescriptorWriteRequest(
     return;
   }
 
-  // Save the address as our connected central
-  connected_central_address_ = device_address;
+  HandleConnect(device_address);
 
   if (descriptor_id == peripheral_to_central_cccd_id_) {
     uint8_t previous_value = peripheral_to_central_ccc_value_;
