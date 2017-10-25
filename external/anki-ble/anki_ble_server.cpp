@@ -827,11 +827,18 @@ void BLEServer::TransmitNextNotification()
 
 void BLEServer::OnNotificationSent(
     const std::string& device_address, int status) {
-  LOG(INFO) << "Notification was sent - device: " << device_address
-            << " status: " << status;
-  (void) usleep(1000 * 5);
+  if (status == bluetooth::GATT_ERROR_NONE) {
+    LOG(INFO) << "Notification was sent - device: " << device_address;
+    (void) usleep(1000 * 5);
+  } else {
+    LOG(WARNING) << "Notification failed to send - device: " << device_address
+                 << " status: " << status;
+    (void) usleep(1000 * 30);
+  }
   std::lock_guard<std::mutex> lock(mutex_);
-  notifications_.pop_front();
+  if (status == bluetooth::GATT_ERROR_NONE) {
+    notifications_.pop_front();
+  }
   TransmitNextNotification();
 }
 
