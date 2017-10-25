@@ -755,7 +755,7 @@ void BLEServer::SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
       if (offset == 0) {
         msgID = MSG_V2B_MULTIPART_START;
         msgSize += kAnkiVictorMsgPayloadMaxSize;
-      } else if (value.size() - offset > kAnkiVictorMsgMaxSize) {
+      } else if (value.size() - offset > kAnkiVictorMsgPayloadMaxSize) {
         msgID = MSG_V2B_MULTIPART_CONTINUE;
         msgSize += kAnkiVictorMsgPayloadMaxSize;
       } else {
