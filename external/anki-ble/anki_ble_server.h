@@ -43,6 +43,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
 #include <base/single_thread_task_runner.h>
+#include <base/threading/thread.h>
 
 #include <bluetooth/binder/IBluetooth.h>
 #include <bluetooth/binder/IBluetoothGattServerCallback.h>
@@ -141,6 +142,7 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   std::string GetPathToSSHAuthorizedKeys();
   void SetSSHAuthorizedKeys(const std::string& keys);
   void ExecCommand(const std::vector<std::string>& args);
+  void ExecCommandInBackground(const std::vector<std::string>& args);
 
 
   CLIBluetoothLowEnergyCallback* low_energy_callback_;
@@ -190,6 +192,11 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   // libchrome task runner that we use to post
   // notifications on the main thread.
   scoped_refptr<base::SingleThreadTaskRunner> main_task_runner_;
+
+  base::Thread* bg_thread_;
+  // libchrome task runner that we use to post
+  // notifications on the background thread
+  scoped_refptr<base::SingleThreadTaskRunner> bg_task_runner_;
 
   // We use this to pass weak_ptr's to base::Bind, which won't execute if the
   // BLEServer object gets deleted. This is a convenience utility from

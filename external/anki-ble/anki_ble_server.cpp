@@ -157,11 +157,16 @@ BLEServer::BLEServer(
     main_task_runner_(main_task_runner),
     weak_ptr_factory_(this) {
   CHECK(bluetooth_.get());
+  bg_thread_ = new base::Thread("BackgroundTaskThread");
+  bg_thread_->Start();
+  bg_task_runner_ = bg_thread_->task_runner();
   HandleDisconnect();
 }
 
 BLEServer::~BLEServer() {
   std::lock_guard<std::mutex> lock(mutex_);
+  bg_thread_->Stop();
+  delete bg_thread_; bg_thread_ = nullptr;
   if (!gatt_.get() || server_if_ == -1)
     return;
 
@@ -562,9 +567,9 @@ void BLEServer::SetWiFiConfig(const std::map<std::string, std::string> networks)
               << wifiConfigPath << "' errno = " << errno;
     return;
   }
-  ExecCommand({"wpa_cli", "reconfigure"});
-  ExecCommand({"dhcptool", "wlan0"});
-  ExecCommand({"wpa_cli", "status"});
+  ExecCommandInBackground({"wpa_cli", "reconfigure"});
+  ExecCommandInBackground({"dhcptool", "wlan0"});
+  ExecCommandInBackground({"wpa_cli", "status"});
 }
 
 std::string BLEServer::GetPathToSSHAuthorizedKeys()
@@ -607,6 +612,13 @@ void BLEServer::SetSSHAuthorizedKeys(const std::string& keys)
   SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
                                 "SSH authorized keys set");
 
+}
+
+void BLEServer::ExecCommandInBackground(const std::vector<std::string>& args)
+{
+  bg_task_runner_->PostTask(FROM_HERE, base::Bind(&BLEServer::ExecCommand,
+                                                  weak_ptr_factory_.GetWeakPtr(),
+                                                  args));
 }
 
 void BLEServer::ExecCommand(const std::vector<std::string>& args)
@@ -791,7 +803,7 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
       if (!arg.empty()) {
         args.push_back(arg);
       }
-      ExecCommand(args);
+      ExecCommandInBackground(args);
     }
     break;
   case VictorMsg_Command::MSG_B2V_MULTIPART_START:
