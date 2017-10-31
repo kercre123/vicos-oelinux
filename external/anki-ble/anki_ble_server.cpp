@@ -481,24 +481,13 @@ void BLEServer::OnCharacteristicWriteRequest(
 
 void BLEServer::EnableWiFiInterface(const bool enable)
 {
-  pid_t pid = fork();
-  if (pid == 0) {
-    if (enable) {
-      char *const args[] = {(char* const) "/system/bin/ifconfig",
-                            (char* const) "wlan0",
-                            (char* const) "up", NULL};
-      execve((char* const) "/system/bin/ifconfig", args, nullptr);
-    } else {
-      char *const args[] = {(char* const) "/system/bin/ifconfig",
-                            (char* const) "wlan0",
-                            (char* const) "down", NULL};
-      execve((char* const) "/system/bin/ifconfig", args, nullptr);
-    }
-  } else if (pid > 0) {
-    wait(NULL);
+  if (enable) {
+    ExecCommandInBackground({"ifconfig", "wlan0", "up"});
+    ExecCommandInBackground({"dhcptool", "wlan0"});
   } else {
-    LOG(ERROR) << "EnableWiFiInterface fork() failed";
+    ExecCommandInBackground({"ifconfig", "wlan0", "down"});
   }
+  ExecCommandInBackground({"ifconfig", "wlan0"});
 }
 
 std::string BLEServer::GetPathToWiFiConfigFile()
