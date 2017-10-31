@@ -37,6 +37,7 @@
 
 #include <deque>
 #include <unordered_map>
+#include <map>
 
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
@@ -133,6 +134,10 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   void HandleConnect(const std::string& device_address);
   void HandleDisconnect();
   void EnableWiFiInterface(const bool enable);
+  std::string GetPathToWiFiConfigFile();
+  std::string GetPathToWiFiDefaultConfigFile();
+  std::string GetWiFiDefaultConfig();
+  void SetWiFiConfig(const std::map<std::string, std::string> networks);
   void ExecCommand(const std::vector<std::string>& args);
 
 

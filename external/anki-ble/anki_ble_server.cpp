@@ -45,11 +45,18 @@
 
 #include <logwrap/logwrap.h>
 
+#include "private/android_filesystem_config.h"
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 #include "constants.h"
 
 namespace Anki {
@@ -489,6 +496,77 @@ void BLEServer::EnableWiFiInterface(const bool enable)
   }
 }
 
+std::string BLEServer::GetPathToWiFiConfigFile()
+{
+  return "/data/misc/wifi/wpa_supplicant.conf";
+}
+
+std::string BLEServer::GetPathToWiFiDefaultConfigFile()
+{
+  return "/system/etc/wpa_supplicant_default.conf";
+}
+
+std::string BLEServer::GetWiFiDefaultConfig()
+{
+  std::string defaultConfigPath = GetPathToWiFiDefaultConfigFile();
+  std::ifstream istrm(defaultConfigPath, std::ios::binary | std::ios::in);
+  if (istrm.is_open()) {
+    auto ss = std::ostringstream{};
+    ss << istrm.rdbuf();
+    return ss.str();
+  } else {
+    const char* defaultConfig = R"foo(ctrl_interface=/data/misc/wifi/sockets
+update_config=1
+p2p_no_group_iface=1
+
+)foo";
+    return defaultConfig;
+  }
+}
+
+void BLEServer::SetWiFiConfig(const std::map<std::string, std::string> networks)
+{
+  std::string wifiConfigPath = GetPathToWiFiConfigFile();
+  std::string wifiConfigTmpPath = wifiConfigPath + ".tmp";
+
+  (void) unlink(wifiConfigTmpPath.c_str());
+
+  auto wifiConfigStream = std::ofstream(wifiConfigTmpPath, std::ios::binary | std::ios::out | std::ios::trunc);
+  if (!wifiConfigStream.is_open()) {
+    LOG(INFO) << "Failed to open '" << wifiConfigTmpPath << "'";
+    return;
+  }
+  wifiConfigStream << GetWiFiDefaultConfig();
+
+  for (auto const& kv : networks) {
+    wifiConfigStream << "network={" << std::endl
+                     << "\tssid=\"" << kv.first << "\"" << std::endl
+                     << "\tpsk=\"" << kv.second << "\"" << std::endl
+                     << "}" << std::endl << std::endl;
+  }
+
+  wifiConfigStream.close();
+  int rc = chmod(wifiConfigTmpPath.c_str(), (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP));
+  if (rc) {
+    LOG(INFO) << "Error chmoding '" << wifiConfigTmpPath << "' errno = " << errno;
+    return;
+  }
+  rc = chown(wifiConfigTmpPath.c_str(), AID_WIFI, AID_WIFI);
+  if (rc) {
+    LOG(INFO) << "Error chowning '" << wifiConfigTmpPath << "' errno = " << errno;
+    return;
+  }
+  rc = rename(wifiConfigTmpPath.c_str(), wifiConfigPath.c_str());
+  if (rc) {
+    LOG(INFO) << "Error renaming '" << wifiConfigTmpPath << "' to '"
+              << wifiConfigPath << "' errno = " << errno;
+    return;
+  }
+  ExecCommand({"wpa_cli", "reconfigure"});
+  ExecCommand({"dhcptool", "wlan0"});
+  ExecCommand({"wpa_cli", "status"});
+}
+
 void BLEServer::ExecCommand(const std::vector<std::string>& args)
 {
   static const std::vector<std::string> allowedCommands =
@@ -606,6 +684,32 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   case VictorMsg_Command::MSG_B2V_WIFI_STOP:
     LOG(INFO) << "Received WiFi stop";
     EnableWiFiInterface(false);
+    break;
+  case VictorMsg_Command::MSG_B2V_WIFI_SET_CONFIG:
+    {
+      LOG(INFO) << "Receive WiFi Set Config";
+      std::map<std::string, std::string> networks;
+      std::string arg;
+      std::string ssid;
+      for (auto it = message.begin() + 2 ; it != message.end(); it++) {
+        if (((char) *it) == '\0') {
+          if (ssid.empty()) {
+            ssid = arg;
+            arg.clear();
+          } else {
+            networks.emplace(ssid, arg);
+            ssid.clear();
+            arg.clear();
+          }
+        } else {
+          arg.push_back(*it);
+        }
+      }
+      if (!arg.empty() && !ssid.empty()) {
+        networks.emplace(ssid, arg);
+      }
+      SetWiFiConfig(networks);
+    }
     break;
   case VictorMsg_Command::MSG_B2V_DEV_PING_WITH_DATA_REQUEST:
     {
