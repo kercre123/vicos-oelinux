@@ -567,6 +567,48 @@ void BLEServer::SetWiFiConfig(const std::map<std::string, std::string> networks)
   ExecCommand({"wpa_cli", "status"});
 }
 
+std::string BLEServer::GetPathToSSHAuthorizedKeys()
+{
+  return "/data/root/.ssh/authorized_keys";
+}
+
+void BLEServer::SetSSHAuthorizedKeys(const std::string& keys)
+{
+  std::string authorizedKeysPath = GetPathToSSHAuthorizedKeys();
+  std::string authorizedKeysTmpPath = authorizedKeysPath + ".tmp";
+
+  (void) unlink(authorizedKeysTmpPath.c_str());
+
+  auto authKeysStream = std::ofstream(authorizedKeysTmpPath, std::ios::binary | std::ios::out | std::ios::trunc);
+  if (!authKeysStream.is_open()) {
+    LOG(INFO) << "Failed to open '" << authorizedKeysTmpPath << "'";
+    return;
+  }
+
+  authKeysStream << keys;
+
+  authKeysStream.close();
+  int rc = chmod(authorizedKeysTmpPath.c_str(), (S_IRUSR | S_IWUSR));
+  if (rc) {
+    LOG(INFO) << "Error chmoding '" << authorizedKeysTmpPath << "' errno = " << errno;
+    return;
+  }
+  rc = chown(authorizedKeysTmpPath.c_str(), AID_ROOT, AID_ROOT);
+  if (rc) {
+    LOG(INFO) << "Error chowning '" << authorizedKeysTmpPath << "' errno = " << errno;
+    return;
+  }
+  rc = rename(authorizedKeysTmpPath.c_str(), authorizedKeysPath.c_str());
+  if (rc) {
+    LOG(INFO) << "Error renaming '" << authorizedKeysTmpPath << "' to '"
+              << authorizedKeysPath << "' errno = " << errno;
+    return;
+  }
+  SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
+                                "SSH authorized keys set");
+
+}
+
 void BLEServer::ExecCommand(const std::vector<std::string>& args)
 {
   static const std::vector<std::string> allowedCommands =
@@ -709,6 +751,16 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
         networks.emplace(ssid, arg);
       }
       SetWiFiConfig(networks);
+    }
+    break;
+  case VictorMsg_Command::MSG_B2V_SSH_SET_AUTHORIZED_KEYS:
+    {
+      LOG(INFO) << "Receive SSH authorized keys";
+      std::string keys;
+      for (auto it = message.begin() + 2; it != message.end(); it++) {
+        keys.push_back(*it);
+      }
+      SetSSHAuthorizedKeys(keys);
     }
     break;
   case VictorMsg_Command::MSG_B2V_DEV_PING_WITH_DATA_REQUEST:
