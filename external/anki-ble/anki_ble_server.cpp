@@ -104,7 +104,7 @@ class CLIBluetoothLowEnergyCallback
     base::TimeDelta timeout;
 
     bluetooth::AdvertiseSettings settings(
-        bluetooth::AdvertiseSettings::MODE_LOW_POWER,
+        bluetooth::AdvertiseSettings::MODE_BALANCED,
         timeout,
         bluetooth::AdvertiseSettings::TX_POWER_LEVEL_MEDIUM,
         true);
