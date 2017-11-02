@@ -606,7 +606,7 @@ void BLEServer::SetSSHAuthorizedKeys(const std::string& keys)
 void BLEServer::ExecCommandInBackground(const std::vector<std::string>& args)
 {
   bg_task_runner_->PostTask(FROM_HERE, base::Bind(&BLEServer::ExecCommand,
-                                                  weak_ptr_factory_.GetWeakPtr(),
+                                                  base::Unretained(this),
                                                   args));
 }
 
@@ -638,6 +638,21 @@ void BLEServer::ExecCommand(const std::vector<std::string>& args)
     return;
   }
 
+  std::string output;
+  int rc = ExecCommandEx(args, output);
+
+  if (rc) {
+    std::ostringstream oss;
+    oss << "Error: " << rc << std::endl;
+    output = oss.str() + output;
+  }
+  SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, output);
+}
+
+int BLEServer::ExecCommandEx(const std::vector<std::string>& args, std::string& output)
+{
+  output.clear();
+
   int argc = args.size();
   char* argv[argc];
   int status = 0;
@@ -647,54 +662,35 @@ void BLEServer::ExecCommand(const std::vector<std::string>& args)
   char *file_path = (char *) "/data/local/tmp/cmd_results.txt";
   struct AndroidForkExecvpOption* opts = NULL;
   size_t opts_len = 0;
-  std::string commandLine;
-
-  for (unsigned int j = 0 ; j < args.size(); ++j) {
-    argv[j] = (char *) malloc(args[j].size() + 1);
-    strcpy(argv[j], args[j].c_str());
-    if (j != 0) {
-      commandLine += " ";
-    }
-    commandLine += std::string(argv[j]);
-  }
 
   (void) unlink(file_path);
 
-  LOG(INFO) << "About fork and exec '" << commandLine << "'";
+  for (size_t j = 0 ; j < args.size(); ++j) {
+    argv[j] = (char *) malloc(args[j].size() + 1);
+    strcpy(argv[j], args[j].c_str());
+  }
 
   int rc = android_fork_execvp_ext(argc, argv, &status, ignore_int_quit,
                                    log_target, abbreviated, file_path,
                                    opts, opts_len);
-  LOG(INFO) << "Fork results. rc = " << rc << " and status = " << status;
+
   for (unsigned int j = 0; j < args.size(); ++j) {
     free(argv[j]);
   }
 
-  int results_fd = open(file_path, O_RDONLY);
-  if (results_fd > 0) {
-    std::vector<uint8_t> value;
-    size_t count = 128;
-    uint8_t data[count];
-    ssize_t bytesRead;
-    bytesRead = read(results_fd, data, count);
-    while (bytesRead > 0) {
-      std::copy(&data[0], &data[bytesRead], std::back_inserter(value));
-      bytesRead = read(results_fd, data, count);
-    }
-    value.push_back(0);
-    std::vector<uint8_t> clean_value;
-    size_t k = 0;
-    while (k < value.size()) {
-      clean_value.push_back(value[k]);
-      if (value[k] == '\n') {
-        k++;
-      }
-      k++;
-    }
-    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, clean_value);
-    close(results_fd); results_fd = -1;
+  if (rc) {
+    return rc;
   }
 
+  std::ifstream input(file_path);
+
+  for (std::string line ; std::getline(input, line) ;) {
+    output.append(line);
+    output.append("\n");
+    input.ignore();
+  }
+
+  return status;
 }
 
 

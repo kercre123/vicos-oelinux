@@ -143,6 +143,7 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   void SetSSHAuthorizedKeys(const std::string& keys);
   void ExecCommand(const std::vector<std::string>& args);
   void ExecCommandInBackground(const std::vector<std::string>& args);
+  int ExecCommandEx(const std::vector<std::string>& args, std::string& output);
 
 
   CLIBluetoothLowEnergyCallback* low_energy_callback_;
