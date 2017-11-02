@@ -38,6 +38,7 @@
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/rand_util.h>
+#include <base/strings/string_util.h>
 
 #include <bluetooth/low_energy_constants.h>
 
@@ -520,16 +521,8 @@ p2p_no_group_iface=1
 
 void BLEServer::SetWiFiConfig(const std::map<std::string, std::string> networks)
 {
-  std::string wifiConfigPath = GetPathToWiFiConfigFile();
-  std::string wifiConfigTmpPath = wifiConfigPath + ".tmp";
+  std::ostringstream wifiConfigStream;
 
-  (void) unlink(wifiConfigTmpPath.c_str());
-
-  auto wifiConfigStream = std::ofstream(wifiConfigTmpPath, std::ios::binary | std::ios::out | std::ios::trunc);
-  if (!wifiConfigStream.is_open()) {
-    LOG(INFO) << "Failed to open '" << wifiConfigTmpPath << "'";
-    return;
-  }
   wifiConfigStream << GetWiFiDefaultConfig();
 
   for (auto const& kv : networks) {
@@ -539,23 +532,17 @@ void BLEServer::SetWiFiConfig(const std::map<std::string, std::string> networks)
                      << "}" << std::endl << std::endl;
   }
 
-  wifiConfigStream.close();
-  int rc = chmod(wifiConfigTmpPath.c_str(), (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP));
+  int rc = WriteFileAtomically(GetPathToWiFiConfigFile(),
+                               wifiConfigStream.str(),
+                               (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP),
+                               AID_WIFI,
+                               AID_WIFI);
   if (rc) {
-    LOG(INFO) << "Error chmoding '" << wifiConfigTmpPath << "' errno = " << errno;
+    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
+                                  "Failed to write wifi config. rc = " + std::to_string(rc));
     return;
   }
-  rc = chown(wifiConfigTmpPath.c_str(), AID_WIFI, AID_WIFI);
-  if (rc) {
-    LOG(INFO) << "Error chowning '" << wifiConfigTmpPath << "' errno = " << errno;
-    return;
-  }
-  rc = rename(wifiConfigTmpPath.c_str(), wifiConfigPath.c_str());
-  if (rc) {
-    LOG(INFO) << "Error renaming '" << wifiConfigTmpPath << "' to '"
-              << wifiConfigPath << "' errno = " << errno;
-    return;
-  }
+
   ExecCommandInBackground({"wpa_cli", "reconfigure"});
   ExecCommandInBackground({"dhcptool", "wlan0"});
   ExecCommandInBackground({"wpa_cli", "status"});
@@ -568,39 +555,56 @@ std::string BLEServer::GetPathToSSHAuthorizedKeys()
 
 void BLEServer::SetSSHAuthorizedKeys(const std::string& keys)
 {
-  std::string authorizedKeysPath = GetPathToSSHAuthorizedKeys();
-  std::string authorizedKeysTmpPath = authorizedKeysPath + ".tmp";
+  int rc = WriteFileAtomically(GetPathToSSHAuthorizedKeys(),
+                               keys,
+                               (S_IRUSR | S_IWUSR),
+                               AID_ROOT,
+                               AID_ROOT);
 
-  (void) unlink(authorizedKeysTmpPath.c_str());
-
-  auto authKeysStream = std::ofstream(authorizedKeysTmpPath, std::ios::binary | std::ios::out | std::ios::trunc);
-  if (!authKeysStream.is_open()) {
-    LOG(INFO) << "Failed to open '" << authorizedKeysTmpPath << "'";
-    return;
-  }
-
-  authKeysStream << keys;
-
-  authKeysStream.close();
-  int rc = chmod(authorizedKeysTmpPath.c_str(), (S_IRUSR | S_IWUSR));
   if (rc) {
-    LOG(INFO) << "Error chmoding '" << authorizedKeysTmpPath << "' errno = " << errno;
-    return;
+    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
+                                  "Failed to set SSH authorized keys. rc = " + std::to_string(rc));
+  } else {
+    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
+                                  "SSH authorized keys set");
   }
-  rc = chown(authorizedKeysTmpPath.c_str(), AID_ROOT, AID_ROOT);
-  if (rc) {
-    LOG(INFO) << "Error chowning '" << authorizedKeysTmpPath << "' errno = " << errno;
-    return;
-  }
-  rc = rename(authorizedKeysTmpPath.c_str(), authorizedKeysPath.c_str());
-  if (rc) {
-    LOG(INFO) << "Error renaming '" << authorizedKeysTmpPath << "' to '"
-              << authorizedKeysPath << "' errno = " << errno;
-    return;
-  }
-  SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
-                                "SSH authorized keys set");
+}
 
+int BLEServer::WriteFileAtomically(const std::string& path,
+                                   const std::string& data,
+                                   mode_t mode,
+                                   uid_t owner,
+                                   gid_t group)
+{
+  std::string tmpPath = path + ".tmp";
+
+  {
+    auto ofstrm = std::ofstream(tmpPath, std::ios::binary | std::ios::out | std::ios::trunc);
+    if (!ofstrm.is_open()) {
+      LOG(INFO) << "Failed to open '" << tmpPath << "'";
+      return -1;
+    }
+
+    ofstrm << data;
+  }
+
+  int rc = chmod(tmpPath.c_str(), mode);
+  if (rc) {
+    LOG(INFO) << "Error chmoding '" << tmpPath << "' errno = " << errno;
+    return rc;
+  }
+  rc = chown(tmpPath.c_str(), owner, group);
+  if (rc) {
+    LOG(INFO) << "Error chowning '" << tmpPath << "' errno = " << errno;
+    return rc;
+  }
+  rc = rename(tmpPath.c_str(), path.c_str());
+  if (rc) {
+    LOG(INFO) << "Error renaming '" << tmpPath << "' to '"
+              << path << "' errno = " << errno;
+    return rc;
+  }
+  return 0;
 }
 
 void BLEServer::ExecCommandInBackground(const std::vector<std::string>& args)
@@ -621,19 +625,9 @@ void BLEServer::ExecCommand(const std::vector<std::string>& args)
     return;
   }
 
-  LOG(INFO) << "ExecCommand. args[0] = " << args[0];
-
   if (std::find(allowedCommands.begin(), allowedCommands.end(), args[0]) == allowedCommands.end()) {
-    std::string errMessage = "Operation not permitted. Valid commands are ";
-    bool first = true;
-    for (auto const& s : allowedCommands) {
-      if (first) {
-        first = false;
-      } else {
-        errMessage += ", ";
-      }
-      errMessage += s;
-    }
+    std::string errMessage =
+      "Operation not permitted. Valid commands are " + base::JoinString(allowedCommands, ", ");
     SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, errMessage);
     return;
   }

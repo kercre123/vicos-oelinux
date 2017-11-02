@@ -141,6 +141,11 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   void SetWiFiConfig(const std::map<std::string, std::string> networks);
   std::string GetPathToSSHAuthorizedKeys();
   void SetSSHAuthorizedKeys(const std::string& keys);
+  int WriteFileAtomically(const std::string& path,
+                          const std::string& data,
+                          mode_t mode,
+                          uid_t owner,
+                          gid_t group);
   void ExecCommand(const std::vector<std::string>& args);
   void ExecCommandInBackground(const std::vector<std::string>& args);
   int ExecCommandEx(const std::vector<std::string>& args, std::string& output);
