@@ -135,6 +135,14 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   void HandleConnect(const std::string& device_address);
   void HandleDisconnect();
   void EnableWiFiInterface(const bool enable);
+  class WiFiScanResult {
+  public:
+    bool secure;
+    uint8_t signal_strength;
+    std::string ssid;
+  };
+  void ParseWiFiScanResults(const std::string& in, std::vector<WiFiScanResult>& outResults);
+  void ScanForWiFiAccessPoints();
   std::string GetPathToWiFiConfigFile();
   std::string GetPathToWiFiDefaultConfigFile();
   std::string GetWiFiDefaultConfig();

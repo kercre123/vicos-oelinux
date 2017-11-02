@@ -480,6 +480,78 @@ void BLEServer::OnCharacteristicWriteRequest(
                       bluetooth::GATT_ERROR_NONE, offset, dummy);
 }
 
+void BLEServer::ParseWiFiScanResults(const std::string& in, std::vector<WiFiScanResult>& outResults)
+{
+  outResults.clear();
+  std::istringstream input(in);
+  std::string header1;
+  std::string header2;
+
+  std::getline(input, header1);
+  std::getline(input, header2);
+
+  for (std::string line; std::getline(input, line); ) {
+    std::stringstream linestream(line);
+    std::string bssid;
+    std::string frequency;
+    std::string signal_level;
+    std::string flags;
+    std::string ssid;
+
+    std::getline(linestream, bssid, '\t');
+    if (!linestream.good()) break;
+    std::getline(linestream, frequency, '\t');
+    if (!linestream.good()) break;
+    std::getline(linestream, signal_level, '\t');
+    if (!linestream.good()) break;
+    std::getline(linestream, flags, '\t');
+    if (!linestream.good()) break;
+    std::getline(linestream, ssid, '\t');
+    if (!linestream.good() && !linestream.eof()) break;
+
+    WiFiScanResult result;
+    result.ssid = ssid;
+    result.secure = (flags.find("[WPA") == 0);
+    int signal_level_val = std::stoi(signal_level);
+    if (signal_level_val > -50) {
+      result.signal_strength = 3;
+    } else if (signal_level_val > -60) {
+      result.signal_strength = 2;
+    } else if (signal_level_val > -80) {
+      result.signal_strength = 1;
+    } else {
+      result.signal_strength = 0;
+    }
+    outResults.push_back(result);
+  }
+
+}
+
+void BLEServer::ScanForWiFiAccessPoints()
+{
+  std::string output;
+  int rc = ExecCommandEx({"wpa_cli", "scan"}, output);
+  if (rc) {
+    LOG(ERROR) << "Error scanning for WiFi access points. rc = " << rc;
+    return;
+  }
+  rc = ExecCommandEx({"wpa_cli", "scan_results"}, output);
+  if (rc) {
+    LOG(ERROR) << "Error getting WiFi scan results. rc=  " << rc;
+    return;
+  }
+  std::vector<WiFiScanResult> results;
+  ParseWiFiScanResults(output, results);
+  std::vector<uint8_t> packed_results;
+  for (auto const& r : results) {
+    packed_results.push_back(r.secure ? 1 : 0);
+    packed_results.push_back(r.signal_strength);
+    std::copy(r.ssid.begin(), r.ssid.end(), std::back_inserter(packed_results));
+    packed_results.push_back(0);
+  }
+  SendMessageToConnectedCentral(MSG_V2B_WIFI_SCAN_RESULTS, packed_results);
+}
+
 void BLEServer::EnableWiFiInterface(const bool enable)
 {
   if (enable) {
@@ -717,6 +789,10 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   case VictorMsg_Command::MSG_B2V_WIFI_STOP:
     LOG(INFO) << "Received WiFi stop";
     EnableWiFiInterface(false);
+    break;
+  case VictorMsg_Command::MSG_B2V_WIFI_SCAN:
+    LOG(INFO) << "Received WiFi scan";
+    ScanForWiFiAccessPoints();
     break;
   case VictorMsg_Command::MSG_B2V_WIFI_SET_CONFIG:
     {
