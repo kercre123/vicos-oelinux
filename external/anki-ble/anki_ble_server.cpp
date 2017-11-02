@@ -984,7 +984,6 @@ void BLEServer::TransmitNextNotification()
 void BLEServer::OnNotificationSent(
     const std::string& device_address, int status) {
   if (status == bluetooth::GATT_ERROR_NONE) {
-    LOG(INFO) << "Notification was sent - device: " << device_address;
     (void) usleep(1000 * 5);
   } else {
     LOG(WARNING) << "Notification failed to send - device: " << device_address
