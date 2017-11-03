@@ -54,6 +54,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -239,6 +240,7 @@ void BLEServer::BuildHeartBeatMessage(
     std::vector<uint8_t>* out_value) {
   CHECK(out_value);  // Assert that |out_value| is not nullptr.
 
+  // Payload is a uint8_t heart beat counter
   out_value->clear();
   out_value->push_back(2); // message size
   out_value->push_back(VictorMsg_Command::MSG_V2B_HEARTBEAT);
@@ -543,6 +545,7 @@ void BLEServer::ScanForWiFiAccessPoints()
   std::vector<WiFiScanResult> results;
   ParseWiFiScanResults(output, results);
   std::vector<uint8_t> packed_results;
+  // Payload is (<secure><signal_strength><ssid>\0)*
   for (auto const& r : results) {
     packed_results.push_back(r.secure ? 1 : 0);
     packed_results.push_back(r.signal_strength);
@@ -798,24 +801,21 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
     {
       LOG(INFO) << "Receive WiFi Set Config";
       std::map<std::string, std::string> networks;
-      std::string arg;
-      std::string ssid;
-      for (auto it = message.begin() + 2 ; it != message.end(); it++) {
-        if (((char) *it) == '\0') {
-          if (ssid.empty()) {
-            ssid = arg;
-            arg.clear();
-          } else {
-            networks.emplace(ssid, arg);
-            ssid.clear();
-            arg.clear();
-          }
-        } else {
-          arg.push_back(*it);
+      // The payload is (<SSID>\0<PSK>\0)*
+      for (auto it = message.begin() + 2 ; it != message.end(); ) {
+        auto terminator = std::find(it, message.end(), 0);
+        if (terminator == message.end()) {
+          break;
         }
-      }
-      if (!arg.empty() && !ssid.empty()) {
-        networks.emplace(ssid, arg);
+        std::string ssid(it, terminator);
+        it = terminator + 1;
+        terminator = std::find(it, message.end(), 0);
+        if (terminator == message.end()) {
+          break;
+        }
+        std::string psk(it, terminator);
+        networks.emplace(ssid, psk);
+        it = terminator + 1;
       }
       SetWiFiConfig(networks);
     }
@@ -823,10 +823,8 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   case VictorMsg_Command::MSG_B2V_SSH_SET_AUTHORIZED_KEYS:
     {
       LOG(INFO) << "Receive SSH authorized keys";
-      std::string keys;
-      for (auto it = message.begin() + 2; it != message.end(); it++) {
-        keys.push_back(*it);
-      }
+      // Payload is text for the .ssh/authorized_keys file
+      std::string keys(message.begin() + 2, message.end());
       SetSSHAuthorizedKeys(keys);
     }
     break;
@@ -846,34 +844,28 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
     {
       LOG(INFO) << "Received command line to execute";
       std::vector<std::string> args;
-      std::string arg;
-      for (auto it = message.begin() + 2; it != message.end(); it++) {
-        if (((char) *it) == '\0') {
-          args.push_back(arg);
-          arg.clear();
-        } else {
-          arg.push_back((char) *it);
+      for (auto it = message.begin() + 2; it != message.end(); ) {
+        auto terminator = std::find(it, message.end(), 0);
+        if (terminator == message.end()) {
+          break;
         }
-      }
-      if (!arg.empty()) {
+        std::string arg(it, terminator);
         args.push_back(arg);
+        it = terminator + 1;
       }
       ExecCommandInBackground(args);
     }
     break;
   case VictorMsg_Command::MSG_B2V_MULTIPART_START:
-    LOG(INFO) << "Received multipart message start";
     multipart_message_.clear();
     std::copy(message.begin() + 2, message.end(),
               std::back_inserter(multipart_message_));
     break;
   case VictorMsg_Command::MSG_B2V_MULTIPART_CONTINUE:
-    LOG(INFO) << "Received multipart message continue";
     std::copy(message.begin() + 2, message.end(),
               std::back_inserter(multipart_message_));
     break;
   case VictorMsg_Command::MSG_B2V_MULTIPART_FINAL:
-    LOG(INFO) << "Received multipart message final";
     std::copy(message.begin() + 2, message.end(),
               std::back_inserter(multipart_message_));
     HandleIncomingMessageFromCentral(multipart_message_);
@@ -1005,9 +997,8 @@ void BLEServer::SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
 
 void BLEServer::SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value)
 {
-  std::vector<uint8_t> msg;
-  msg.push_back(value.size() + 1);
-  msg.push_back(msgID);
+  uint8_t msgSize = std::min(static_cast<unsigned int>(std::numeric_limits<uint8_t>::max()), value.size() + 1);
+  std::vector<uint8_t> msg {msgSize, msgID};
   msg.insert(std::end(msg), std::begin(value), std::end(value));
   SendMessageToConnectedCentral(msg);
 }
