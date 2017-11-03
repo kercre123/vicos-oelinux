@@ -61,47 +61,4 @@ enum VictorMsg_Command : uint8_t {
   MSG_V2B_MULTIPART_FINAL = 0xF5, // 245
 };
 
-typedef struct {
-  uint8_t size;   // 1
-  uint8_t msgID;  // MSG_B2V_BTLE_DISCONNECT
-} VictorMsg_Disconnect;
-
-typedef struct {
-  uint8_t size;   // 1
-  uint8_t msgID;  // MSG_B2V_CORE_PING_REQUEST
-} VictorMsg_PingRequest;
-
-typedef struct {
-  uint8_t size;   // 1
-  uint8_t msgID;  // MSG_V2B_CORE_PING_RESPONSE
-} VictorMsg_PingResponse;
-
-typedef struct {
-  uint8_t size;     // 2
-  uint8_t msgID;    // MSG_B2V_HEARTBEAT or MSG_V2B_HEARTBEAT
-  uint8_t counter;  // Looping counter from 0 to 255
-} VictorMsg_HeartBeat;
-
-typedef struct {
-  uint8_t size;     // 1
-  uint8_t msgID;    // MSG_B2V_WIFI_START
-} VictorMsg_WifiStart;
-
-typedef struct {
-  uint8_t size;     // 1
-  uint8_t msgID;    // MSG_B2V_WIFI_STOP
-} VictorMsg_WifiStop;
-
-typedef struct {
-  uint8_t size;     // 1 to 19
-  uint8_t msgID;    // MSG_B2V_DEV_PING_WITH_DATA_REQUEST
-  uint8_t data[18];
-} VictorMsg_PingWithDataRequest;
-
-typedef struct {
-  uint8_t size;     // 1 to 19
-  uint8_t msgID;    // MSG_V2B_DEV_PING_WITH_DATA_RESPONSE
-  uint8_t data[18];
-} VictorMsg_PingWithDataResponse;
-
 }  // Anki
