@@ -29,6 +29,9 @@ const size_t kAnkiVictorMsgMaxSize=20;
 const size_t kAnkiVictorMsgPayloadMaxSize=18;
 const size_t kAnkiVictorMsgBaseSize=1;
 
+const int kMinRssi = -100;
+const int kMaxRssi = -55;
+
 enum VictorMsg_Command : uint8_t {
   MSG_B2V_BTLE_DISCONNECT = 0x0D, // 13
 
@@ -59,6 +62,17 @@ enum VictorMsg_Command : uint8_t {
   MSG_V2B_MULTIPART_START = 0xF3, // 243
   MSG_V2B_MULTIPART_CONTINUE = 0xF4, // 244
   MSG_V2B_MULTIPART_FINAL = 0xF5, // 245
+};
+
+enum WiFiAuth : uint8_t {
+  AUTH_NONE_OPEN = 0,
+    AUTH_NONE_WEP = 1,
+    AUTH_NONE_WEP_SHARED = 2,
+    AUTH_IEEE8021X = 3,
+    AUTH_WPA_PSK = 4,
+    AUTH_WPA_EAP = 5,
+    AUTH_WPA2_PSK = 6,
+    AUTH_WPA2_EAP = 7
 };
 
 }  // Anki

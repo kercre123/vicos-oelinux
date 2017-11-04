@@ -482,6 +482,19 @@ void BLEServer::OnCharacteristicWriteRequest(
                       bluetooth::GATT_ERROR_NONE, offset, dummy);
 }
 
+int BLEServer::CalculateSignalLevel(int rssi, int numLevels)
+{
+  if (rssi <= kMinRssi) {
+    return 0;
+  } else if (rssi >= kMaxRssi) {
+    return (numLevels - 1);
+  } else {
+    float inputRange = (kMaxRssi - kMinRssi);
+    float outputRange = (numLevels - 1);
+    return (int)((float)(rssi - kMinRssi) * outputRange / inputRange);
+  }
+}
+
 void BLEServer::ParseWiFiScanResults(const std::string& in, std::vector<WiFiScanResult>& outResults)
 {
   outResults.clear();
@@ -513,17 +526,38 @@ void BLEServer::ParseWiFiScanResults(const std::string& in, std::vector<WiFiScan
 
     WiFiScanResult result;
     result.ssid = ssid;
-    result.secure = (flags.find("[WPA") == 0);
-    int signal_level_val = std::stoi(signal_level);
-    if (signal_level_val > -50) {
-      result.signal_strength = 3;
-    } else if (signal_level_val > -60) {
-      result.signal_strength = 2;
-    } else if (signal_level_val > -80) {
-      result.signal_strength = 1;
+    if (flags.find("[WPA2-EAP") != std::string::npos) {
+      result.auth = AUTH_WPA2_EAP;
+    } else if (flags.find("[WPA-EAP") != std::string::npos) {
+      result.auth = AUTH_WPA_EAP;
+    } else if (flags.find("[WPA2-PSK") != std::string::npos) {
+      result.auth = AUTH_WPA2_PSK;
+    } else if (flags.find("[WPA-PSK") != std::string::npos) {
+      result.auth = AUTH_WPA_PSK;
     } else {
-      result.signal_strength = 0;
+      result.auth = AUTH_NONE_OPEN;
     }
+
+    if (flags.find("-CCMP") != std::string::npos) {
+      result.encrypted = true;
+    } else if (flags.find("-TKIP") != std::string::npos) {
+      result.encrypted = false;
+    } else if (flags.find("WEP") != std::string::npos) {
+      result.encrypted = true;
+      if (result.auth == AUTH_NONE_OPEN) {
+        result.auth = AUTH_NONE_WEP;
+      }
+    } else {
+      result.encrypted = false;
+    }
+
+    if (flags.find("[WPS") != std::string::npos) {
+      result.wps = true;
+    } else {
+      result.wps = false;
+    }
+
+    result.signal_level = (uint8_t) CalculateSignalLevel(std::stoi(signal_level), 4);
     outResults.push_back(result);
   }
 
@@ -545,10 +579,12 @@ void BLEServer::ScanForWiFiAccessPoints()
   std::vector<WiFiScanResult> results;
   ParseWiFiScanResults(output, results);
   std::vector<uint8_t> packed_results;
-  // Payload is (<secure><signal_strength><ssid>\0)*
+  // Payload is (<auth><encrypted><wps><signal_level><ssid>\0)*
   for (auto const& r : results) {
-    packed_results.push_back(r.secure ? 1 : 0);
-    packed_results.push_back(r.signal_strength);
+    packed_results.push_back(r.auth);
+    packed_results.push_back(r.encrypted);
+    packed_results.push_back(r.wps);
+    packed_results.push_back(r.signal_level);
     std::copy(r.ssid.begin(), r.ssid.end(), std::back_inserter(packed_results));
     packed_results.push_back(0);
   }

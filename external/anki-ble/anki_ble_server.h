@@ -49,6 +49,8 @@
 #include <bluetooth/binder/IBluetoothGattServerCallback.h>
 #include <bluetooth/gatt_identifier.h>
 
+#include "constants.h"
+
 namespace Anki {
 class CLIBluetoothLowEnergyCallback;
 
@@ -137,10 +139,13 @@ class BLEServer : public ipc::binder::BnBluetoothGattServerCallback {
   void EnableWiFiInterface(const bool enable);
   class WiFiScanResult {
   public:
-    bool secure;
-    uint8_t signal_strength;
+    WiFiAuth auth;
+    bool     encrypted;
+    bool     wps;
+    uint8_t  signal_level;
     std::string ssid;
   };
+  int CalculateSignalLevel(int rssi, int numLevels);
   void ParseWiFiScanResults(const std::string& in, std::vector<WiFiScanResult>& outResults);
   void ScanForWiFiAccessPoints();
   std::string GetPathToWiFiConfigFile();
