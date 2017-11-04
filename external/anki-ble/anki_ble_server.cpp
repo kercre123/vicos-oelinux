@@ -727,22 +727,11 @@ void BLEServer::ExecCommandInBackground(const std::vector<std::string>& args)
 
 void BLEServer::ExecCommand(const std::vector<std::string>& args)
 {
-  static const std::vector<std::string> allowedCommands =
-    { "ifconfig", "wpa_cli", "dhcptool", "reboot"};
-
   if (args.empty()) {
     SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
                                   "Invalid argument: args in empty");
     return;
   }
-
-  if (std::find(allowedCommands.begin(), allowedCommands.end(), args[0]) == allowedCommands.end()) {
-    std::string errMessage =
-      "Operation not permitted. Valid commands are " + base::JoinString(allowedCommands, ", ");
-    SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, errMessage);
-    return;
-  }
-
   std::string output;
   int rc = ExecCommandEx(args, output);
 
@@ -763,7 +752,7 @@ int BLEServer::ExecCommandEx(const std::vector<std::string>& args, std::string& 
   int status = 0;
   bool ignore_int_quit = false;
   int log_target = LOG_FILE;
-  bool abbreviated = true;
+  bool abbreviated = false;
   char *file_path = (char *) "/data/local/tmp/cmd_results.txt";
   struct AndroidForkExecvpOption* opts = NULL;
   size_t opts_len = 0;
