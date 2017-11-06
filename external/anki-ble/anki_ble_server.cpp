@@ -781,7 +781,6 @@ int BLEServer::ExecCommandEx(const std::vector<std::string>& args, std::string& 
   for (std::string line ; std::getline(input, line) ;) {
     output.append(line);
     output.append("\n");
-    input.ignore();
   }
 
   return status;
