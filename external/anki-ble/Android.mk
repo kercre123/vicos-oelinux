@@ -25,12 +25,13 @@ endif
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
+	fork_and_exec.cpp \
 	anki_ble_server.cpp \
 	server_main.cpp
 LOCAL_C_INCLUDES += $(LOCAL_PATH)
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE := anki-ble-server
-LOCAL_STATIC_LIBRARIES += libbluetooth-client liblogwrap
+LOCAL_STATIC_LIBRARIES += libbluetooth-client
 LOCAL_SHARED_LIBRARIES += \
 	libbinder \
 	libchrome \

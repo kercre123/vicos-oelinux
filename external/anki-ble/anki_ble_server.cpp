@@ -33,6 +33,7 @@
 //
 
 #include "anki_ble_server.h"
+#include "fork_and_exec.h"
 
 #include <base/bind.h>
 #include <base/location.h>
@@ -43,8 +44,6 @@
 #include <bluetooth/low_energy_constants.h>
 
 #include <cutils/properties.h>
-
-#include <logwrap/logwrap.h>
 
 #include "private/android_filesystem_config.h"
 
@@ -720,13 +719,18 @@ int BLEServer::WriteFileAtomically(const std::string& path,
 
 void BLEServer::ExecCommandInBackground(const std::vector<std::string>& args)
 {
-  bg_task_runner_->PostTask(FROM_HERE, base::Bind(&BLEServer::ExecCommand,
-                                                  base::Unretained(this),
-                                                  args));
+  if (!connected_central_address_.empty()) {
+    bg_task_runner_->PostTask(FROM_HERE, base::Bind(&BLEServer::ExecCommand,
+                                                    base::Unretained(this),
+                                                    args));
+  };
 }
 
 void BLEServer::ExecCommand(const std::vector<std::string>& args)
 {
+  if (connected_central_address_.empty()) {
+    return;
+  }
   if (args.empty()) {
     SendMessageToConnectedCentral(MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
                                   "Invalid argument: args in empty");
@@ -746,44 +750,16 @@ void BLEServer::ExecCommand(const std::vector<std::string>& args)
 int BLEServer::ExecCommandEx(const std::vector<std::string>& args, std::string& output)
 {
   output.clear();
-
-  int argc = args.size();
-  char* argv[argc];
-  int status = 0;
-  bool ignore_int_quit = false;
-  int log_target = LOG_FILE;
-  bool abbreviated = false;
-  char *file_path = (char *) "/data/local/tmp/cmd_results.txt";
-  struct AndroidForkExecvpOption* opts = NULL;
-  size_t opts_len = 0;
-
-  (void) unlink(file_path);
-
-  for (size_t j = 0 ; j < args.size(); ++j) {
-    argv[j] = (char *) malloc(args[j].size() + 1);
-    strcpy(argv[j], args[j].c_str());
+  if (connected_central_address_.empty()) {
+    return -1;
   }
+  std::ostringstream oss;
 
-  int rc = android_fork_execvp_ext(argc, argv, &status, ignore_int_quit,
-                                   log_target, abbreviated, file_path,
-                                   opts, opts_len);
+  int rc = Anki::ForkAndExec(args, oss);
 
-  for (unsigned int j = 0; j < args.size(); ++j) {
-    free(argv[j]);
-  }
+  output = oss.str();
 
-  if (rc) {
-    return rc;
-  }
-
-  std::ifstream input(file_path);
-
-  for (std::string line ; std::getline(input, line) ;) {
-    output.append(line);
-    output.append("\n");
-  }
-
-  return status;
+  return rc;
 }
 
 
@@ -799,7 +775,7 @@ void BLEServer::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& mes
   switch (msgID) {
   case VictorMsg_Command::MSG_B2V_BTLE_DISCONNECT:
     LOG(INFO) << "Received request to disconnect";
-    // TODO:  Not sure how to do this, may need to power down and power up adapter?
+    HandleDisconnect();
     break;
   case VictorMsg_Command::MSG_B2V_CORE_PING_REQUEST:
     LOG(INFO) << "Received ping request";
@@ -918,6 +894,7 @@ void BLEServer::HandleConnect(const std::string& device_address) {
 }
 
 void BLEServer::HandleDisconnect() {
+  Anki::KillChildProcess();
   ResetConnectionState();
   if (low_energy_callback_) {
     low_energy_callback_->StartAdvertising();
