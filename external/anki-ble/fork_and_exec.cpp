@@ -41,6 +41,10 @@ static int ExecChild(const std::vector<std::string>& args) {
   for (size_t i = 0 ; i < args.size() + 1 ; ++i) {
     free(argv_child[i]);
   }
+  if (rc) {
+    fprintf(stderr, "%s: %s\n", argv_child[0], strerror(errno));
+    _exit(-1);
+  }
   return rc;
 }
 
