@@ -100,6 +100,10 @@ class TestDelegate : public LowEnergyClient::Delegate {
     last_mtu_ = mtu;
   }
 
+  void OnServicesDiscovered(LowEnergyClient* client, int status, const char* address) {
+    ASSERT_TRUE(client);
+  }
+
   void OnScanResult(LowEnergyClient* client, const ScanResult& scan_result) {
     ASSERT_TRUE(client);
     scan_result_count_++;

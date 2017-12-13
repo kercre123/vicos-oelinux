@@ -187,6 +187,14 @@ class CLIBluetoothLowEnergyCallback
     EndAsyncOut();
   }
 
+  void OnServicesDiscovered(int status, const char *address) override {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Services Discovered: "
+	 << COLOR_BOLDYELLOW "[" << address << " ] "
+	 << COLOR_BOLDWHITE " - status: " << status << COLOR_OFF;
+    EndAsyncOut();
+  }
+
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {
     BeginAsyncOut();
     cout << COLOR_BOLDWHITE "Scan result: "
@@ -458,6 +466,31 @@ void HandleRefreshDevice(IBluetooth* bt_iface, const vector<string>& args) {
 
   gatt_iface->RefreshDevice(gatt_client_id.load(), address.c_str());
   PrintCommandStatus(true);
+}
+
+void HandleDiscoverServices(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+
+  if (args.size() != 1) {
+    PrintError("Expected MAC address as only argument");
+    return;
+  }
+
+  address = args[0];
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->DiscoverServices(ble_client_id.load(), address.c_str());
+  PrintCommandStatus(status);
 }
 
 void HandleStartAdv(IBluetooth* bt_iface, const vector<string>& args) {
@@ -760,6 +793,8 @@ struct {
     "\t\tUnregister from the Bluetooth GATT Client interface" },
   { "refresh-device", HandleRefreshDevice,
     "\t\tRefresh Device GATT information" },
+  { "discover-services", HandleDiscoverServices,
+    "\t\tDiscover GATT Services offered by connected device" },
   { "connect-le", HandleConnect, "\t\tConnect to LE device (-h for options)"},
   { "disconnect-le", HandleDisconnect,
     "\t\tDisconnect LE device (-h for options)"},

@@ -69,6 +69,10 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
     virtual void OnMtuChanged(LowEnergyClient* client, int status, const char* address,
                               int mtu) = 0;
 
+    // Called asynchronously to notify that services have been discovered
+    virtual void OnServicesDiscovered(LowEnergyClient* client, int status,
+				      const char* address) = 0;
+
    private:
     DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
@@ -96,6 +100,10 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   // Sends request to set MTU to |mtu| for device with address |address|.
   // Return true on success, false otherwise.
   bool SetMtu(std::string address, int mtu);
+
+  // Sends request to discover services for device with address |address|.
+  // Return true on success, false otherwise.
+  bool DiscoverServices(std::string address);
 
   // Initiates a BLE device scan for this client using the given |settings| and
   // |filters|. See the documentation for ScanSettings and ScanFilter for how
@@ -160,6 +168,9 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   void MtuChangedCallback(
       hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
       int mtu) override;
+  void SearchCompleteCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id,
+      int status) override;
   void MultiAdvEnableCallback(
       hal::BluetoothGattInterface* gatt_iface,
       int client_id, int status) override;

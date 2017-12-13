@@ -38,6 +38,8 @@ class CLIBluetoothLowEnergyCallback
                          bool connected) override {}
   void OnMtuChanged(int status, const char *address, int mtu) override {}
 
+  void OnServicesDiscovered(int status, const char *address) override {}
+
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {}
 
   void OnClientRegistered(int status, int client_id){
