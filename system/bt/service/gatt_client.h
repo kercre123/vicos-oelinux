@@ -38,6 +38,8 @@ class GattClient : public BluetoothInstance {
   const UUID& GetAppIdentifier() const override;
   int GetInstanceId() const override;
 
+  bool RefreshDevice(std::string address);
+
  private:
   friend class GattClientFactory;
 

@@ -42,6 +42,7 @@ class BluetoothGattClientBinderServer : public BnBluetoothGattClient,
       const android::sp<IBluetoothGattClientCallback>& callback) override;
   void UnregisterClient(int client_id) override;
   void UnregisterAll() override;
+  bool RefreshDevice(int client_id, const char* address) override;
 
  private:
   // Returns a pointer to the IBluetoothGattClientCallback instance

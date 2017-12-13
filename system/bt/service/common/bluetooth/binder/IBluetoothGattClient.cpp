@@ -58,6 +58,13 @@ status_t BnBluetoothGattClient::onTransact(
     UnregisterAll();
     return android::NO_ERROR;
   }
+  case REFRESH_DEVICE_TRANSACTION: {
+    int client_id = data.readInt32();
+    const char* address = data.readCString();
+    bool result = RefreshDevice(client_id, address);
+    reply->writeInt32(result);
+    return android::NO_ERROR;
+  }
   default:
     return BBinder::onTransact(code, data, reply, flags);
   }
@@ -100,6 +107,20 @@ void BpBluetoothGattClient::UnregisterAll() {
 
   remote()->transact(IBluetoothGattClient::UNREGISTER_ALL_TRANSACTION,
                      data, &reply);
+}
+
+bool BpBluetoothGattClient::RefreshDevice(int client_id, const char* address) {
+  Parcel data, reply;
+
+  data.writeInterfaceToken(IBluetoothGattClient::getInterfaceDescriptor());
+  data.writeInt32(client_id);
+  data.writeCString(address);
+
+  remote()->transact(IBluetoothGattClient::REFRESH_DEVICE_TRANSACTION,
+                     data, &reply);
+
+  return reply.readInt32();
+
 }
 
 IMPLEMENT_META_INTERFACE(BluetoothGattClient,

@@ -435,6 +435,31 @@ void HandleUnregisterGATT(IBluetooth* bt_iface, const vector<string>& args) {
   PrintCommandStatus(true);
 }
 
+void HandleRefreshDevice(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+
+  if (args.size() != 1) {
+    PrintError("Expected MAC address as only argument");
+    return;
+  }
+
+  address = args[0];
+
+  if (!gatt_client_id.load()) {
+    PrintError("Not registered");
+    return;
+  }
+
+  sp<IBluetoothGattClient> gatt_iface = bt_iface->GetGattClientInterface();
+  if (!gatt_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth GATT Client interface");
+    return;
+  }
+
+  gatt_iface->RefreshDevice(gatt_client_id.load(), address.c_str());
+  PrintCommandStatus(true);
+}
+
 void HandleStartAdv(IBluetooth* bt_iface, const vector<string>& args) {
   bool include_name = false;
   bool include_tx_power = false;
@@ -733,6 +758,8 @@ struct {
     "\t\tRegister with the Bluetooth GATT Client interface" },
   { "unregister-gatt", HandleUnregisterGATT,
     "\t\tUnregister from the Bluetooth GATT Client interface" },
+  { "refresh-device", HandleRefreshDevice,
+    "\t\tRefresh Device GATT information" },
   { "connect-le", HandleConnect, "\t\tConnect to LE device (-h for options)"},
   { "disconnect-le", HandleDisconnect,
     "\t\tDisconnect LE device (-h for options)"},
