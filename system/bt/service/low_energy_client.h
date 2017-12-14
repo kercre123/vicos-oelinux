@@ -73,6 +73,10 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
     virtual void OnServicesDiscovered(LowEnergyClient* client, int status,
 				      const char* address) = 0;
 
+    // Called asynchronously to notify that the gatt db has been updated
+    virtual void OnGattDbUpdated(LowEnergyClient* client, const char* address,
+				 btgatt_db_element_t* db, int size) = 0;
+
    private:
     DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
@@ -104,6 +108,10 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   // Sends request to discover services for device with address |address|.
   // Return true on success, false otherwise.
   bool DiscoverServices(std::string address);
+
+  // Sends request to get GATT db for device with address |address|.
+  // Return true on success, false otherwise.
+  bool GetGattDb(std::string address);
 
   // Initiates a BLE device scan for this client using the given |settings| and
   // |filters|. See the documentation for ScanSettings and ScanFilter for how
@@ -171,6 +179,9 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   void SearchCompleteCallback(
       hal::BluetoothGattInterface* gatt_iface, int conn_id,
       int status) override;
+  void GetGattDbCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id,
+      btgatt_db_element_t *db, int size) override;
   void MultiAdvEnableCallback(
       hal::BluetoothGattInterface* gatt_iface,
       int client_id, int status) override;

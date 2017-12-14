@@ -79,6 +79,14 @@ status_t BnBluetoothLowEnergyCallback::onTransact(
     OnServicesDiscovered(status, address);
     return android::NO_ERROR;
   }
+  case ON_GATT_DB_UPDATED_TRANSACTION: {
+    const char *address = data.readCString();
+    btgatt_db_element_t* db;
+    int size;
+    CreateBtGattDbArrayFromParcel(data, &db, &size);
+    OnGattDbUpdated(address, db, size);
+    return android::NO_ERROR;
+  }
   case ON_SCAN_RESULT_TRANSACTION: {
     auto scan_result = CreateScanResultFromParcel(data);
     CHECK(scan_result.get());
@@ -166,6 +174,21 @@ void BpBluetoothLowEnergyCallback::OnServicesDiscovered(
 
   remote()->transact(
       IBluetoothLowEnergyCallback::ON_SEARCH_COMPLETE_TRANSACTION,
+      data, NULL,
+      IBinder::FLAG_ONEWAY);
+}
+
+void BpBluetoothLowEnergyCallback::OnGattDbUpdated(
+     const char* address, btgatt_db_element_t* db, int size) {
+  Parcel data;
+
+  data.writeInterfaceToken(
+      IBluetoothLowEnergyCallback::getInterfaceDescriptor());
+  data.writeCString(address);
+  WriteBtGattDbArrayToParcel(db, size, &data);
+
+  remote()->transact(
+      IBluetoothLowEnergyCallback::ON_GATT_DB_UPDATED_TRANSACTION,
       data, NULL,
       IBinder::FLAG_ONEWAY);
 }

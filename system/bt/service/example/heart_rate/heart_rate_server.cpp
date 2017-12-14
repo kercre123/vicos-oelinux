@@ -40,6 +40,8 @@ class CLIBluetoothLowEnergyCallback
 
   void OnServicesDiscovered(int status, const char *address) override {}
 
+  void OnGattDbUpdated(const char *address, btgatt_db_element_t* db, int size) override {}
+
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {}
 
   void OnClientRegistered(int status, int client_id){

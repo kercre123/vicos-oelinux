@@ -65,6 +65,7 @@ class IBluetoothLowEnergy : public android::IInterface {
     CONFIGURE_ATT_MTU_TRANSACTION,
     CONNECTION_PARAMETER_UPDATE_TRANSACTION,
     DISCONNECT_ALL_TRANSACTION,
+    GET_GATT_DB_TRANSACTION,
 
     NUM_HW_TRACK_FILTERS_AVAILABLE,
   };
@@ -80,6 +81,8 @@ class IBluetoothLowEnergy : public android::IInterface {
   virtual bool SetMtu(int client_id, const char* address, int mtu) = 0;
 
   virtual bool DiscoverServices(int client_id, const char* address) = 0;
+  virtual bool GetGattDb(int client_id, const char* address) = 0;
+
 
   virtual bool StartScan(
       int client_id,
@@ -135,6 +138,7 @@ class BpBluetoothLowEnergy : public android::BpInterface<IBluetoothLowEnergy> {
   bool SetMtu(int client_id, const char* address, int mtu) override;
 
   bool DiscoverServices(int client_id, const char* address) override;
+  bool GetGattDb(int client_id, const char* address) override;
 
   bool StartScan(
       int client_id,

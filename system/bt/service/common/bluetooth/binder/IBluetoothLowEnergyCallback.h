@@ -24,6 +24,8 @@
 #include <bluetooth/advertise_settings.h>
 #include <bluetooth/scan_result.h>
 
+#include <hardware/bt_common_types.h>
+
 namespace ipc {
 namespace binder {
 
@@ -54,6 +56,7 @@ namespace binder {
     ON_CONFIGURE_ATT_MTU_TRANSACTION,
     ON_ATT_MTU_CHANGED_TRANSACTION,
     ON_FOUND_OR_LOST_TRANSACTION,
+    ON_GATT_DB_UPDATED_TRANSACTION,
   };
 
   virtual void OnClientRegistered(int status, int client_if) = 0;
@@ -61,6 +64,7 @@ namespace binder {
                                  bool connected) = 0;
   virtual void OnMtuChanged(int status, const char* address, int mtu) = 0;
   virtual void OnServicesDiscovered(int status, const char* address) = 0;
+  virtual void OnGattDbUpdated(const char* address, btgatt_db_element_t* db, int size) = 0;
   virtual void OnScanResult(const bluetooth::ScanResult& scan_result) = 0;
   virtual void OnMultiAdvertiseCallback(
       int status, bool is_start,
@@ -103,6 +107,7 @@ class BpBluetoothLowEnergyCallback
                          bool connected) override;
   void OnMtuChanged(int status, const char* address, int mtu) override;
   void OnServicesDiscovered(int status, const char* address) override;
+  void OnGattDbUpdated(const char* address, btgatt_db_element_t* db, int size) override;
   void OnScanResult(const bluetooth::ScanResult& scan_result) override;
   void OnMultiAdvertiseCallback(
       int status, bool is_start,

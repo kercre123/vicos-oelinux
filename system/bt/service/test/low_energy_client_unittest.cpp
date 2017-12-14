@@ -104,6 +104,11 @@ class TestDelegate : public LowEnergyClient::Delegate {
     ASSERT_TRUE(client);
   }
 
+  void OnGattDbUpdated(LowEnergyClient* client, const char* address,
+		       btgatt_db_element_t* db, int size) {
+    ASSERT_TRUE(client);
+  }
+
   void OnScanResult(LowEnergyClient* client, const ScanResult& scan_result) {
     ASSERT_TRUE(client);
     scan_result_count_++;

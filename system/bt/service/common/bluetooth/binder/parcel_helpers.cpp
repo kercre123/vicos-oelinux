@@ -301,5 +301,44 @@ std::unique_ptr<bluetooth::ScanResult> CreateScanResultFromParcel(
   return std::unique_ptr<ScanResult>(new ScanResult(
       device_address, *scan_record, rssi));
 }
+
+void WriteBtGattDbArrayToParcel(const btgatt_db_element_t* db, int size,
+                                android::Parcel* parcel) {
+  parcel->writeInt32(size);
+  for (int i = 0 ; i < size; i++) {
+    parcel->writeInt32(db[i].id);
+    parcel->writeByteVector(std::vector<uint8_t>(&(db[i].uuid.uu[0]), &(db[i].uuid.uu[sizeof(db[i].uuid.uu)])));
+    parcel->writeInt32(db[i].type);
+    parcel->writeInt32(db[i].attribute_handle);
+    parcel->writeInt32(db[i].start_handle);
+    parcel->writeInt32(db[i].end_handle);
+    parcel->writeInt32(db[i].properties);
+  }
+}
+
+void CreateBtGattDbArrayFromParcel(const android::Parcel& parcel,
+                                   btgatt_db_element_t** pDb, int* pSize) {
+  int size = parcel.readInt32();
+  *pSize = size;
+  if (size <= 0) {
+    *pDb = nullptr;
+    return;
+  }
+  btgatt_db_element_t* db = (btgatt_db_element_t *) malloc(sizeof(*db) * size);
+  (void) memset(db, 0, sizeof(*db) * size);
+  for (int i = 0 ; i < size; i++) {
+    db[i].id = (uint16_t) parcel.readInt32();
+    std::vector<uint8_t> uuidBytes;
+    (void) parcel.readByteVector(&uuidBytes);
+    memcpy(db[i].uuid.uu, uuidBytes.data(), uuidBytes.size());
+    db[i].type = (bt_gatt_db_attribute_type_t) parcel.readInt32();
+    db[i].attribute_handle = (uint16_t) parcel.readInt32();
+    db[i].start_handle = (uint16_t) parcel.readInt32();
+    db[i].end_handle = (uint16_t) parcel.readInt32();
+    db[i].properties = (uint8_t) parcel.readInt32();
+  }
+  *pDb = db;
+}
+
 }  // namespace binder
 }  // namespace ipc

@@ -28,6 +28,8 @@
 #include <bluetooth/scan_settings.h>
 #include <bluetooth/uuid.h>
 
+#include <hardware/bt_common_types.h>
+
 namespace ipc {
 namespace binder {
 
@@ -94,6 +96,14 @@ void WriteScanResultToParcel(
 
 std::unique_ptr<bluetooth::ScanResult> CreateScanResultFromParcel(
     const android::Parcel& parcel);
+
+// Helpers for converting array of btgatt_db_element_t to/from Parcel
+
+void WriteBtGattDbArrayToParcel(const btgatt_db_element_t* db, int size,
+                                android::Parcel* parcel);
+
+void CreateBtGattDbArrayFromParcel(const android::Parcel& parcel,
+                                   btgatt_db_element_t** pDb, int* pSize);
 
 }  // namespace binder
 }  // namespace ipc

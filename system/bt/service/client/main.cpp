@@ -15,6 +15,7 @@
 //
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 
 #ifdef BT_LIBCHROME_NDEBUG
@@ -193,6 +194,99 @@ class CLIBluetoothLowEnergyCallback
 	 << COLOR_BOLDYELLOW "[" << address << " ] "
 	 << COLOR_BOLDWHITE " - status: " << status << COLOR_OFF;
     EndAsyncOut();
+  }
+
+  void uuid_to_string(bt_uuid_t *p_uuid, std::string& str) {
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    for (int i = 15 ; i >= 0; i--) {
+      ss << std::setw(2) << static_cast<int>(p_uuid->uu[i]);
+      if (i == 12 || i == 10 || i == 8 || i == 6) {
+        ss << "-";
+      }
+    }
+    str = ss.str();
+  }
+
+  void bt_gatt_db_attribute_type_t_to_string(bt_gatt_db_attribute_type_t t, std::string& type) {
+    switch(t) {
+      case BTGATT_DB_PRIMARY_SERVICE:
+        type = "Primary Service";
+        break;
+      case BTGATT_DB_SECONDARY_SERVICE:
+        type = "Secondary Service";
+        break;
+      case BTGATT_DB_INCLUDED_SERVICE:
+        type = "Included Service";
+        break;
+      case BTGATT_DB_CHARACTERISTIC:
+        type = "Characteristic";
+        break;
+      case BTGATT_DB_DESCRIPTOR:
+        type = "Descriptor";
+        break;
+      default:
+        type = "Unknown (" + std::to_string(t) + ")";;
+        break;
+    }
+  }
+
+  void gatt_properties_to_string(uint8_t btaCharProperties, std::string& properties) {
+    const std::map<uint8_t, std::string> props {
+      { 0x01, "broadcast"},
+      { 0x02, "read"},
+      { 0x04, "write_no_response"},
+      { 0x08, "write"},
+      { 0x10, "notify"},
+      { 0x20, "indicate"},
+      { 0x40, "auth"},
+      { 0x80, "ext_prop"},
+    };
+    std::ostringstream oss;
+    for (auto p : props) {
+      if (btaCharProperties & p.first) {
+        if (oss.tellp()) {
+          oss << "|";
+        }
+        oss << p.second;
+      }
+    }
+    properties = oss.str();
+    
+  }
+
+  void OnGattDbUpdated(const char *address, btgatt_db_element_t* db, int size) override {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Gatt Db Updated: "
+	 << COLOR_BOLDYELLOW "[" << address << " ] "
+	 << COLOR_BOLDWHITE " - size: " << size << endl;
+    for (int i = 0 ; i < size ; i++) {
+      std::string uuid;
+      uuid_to_string(&(db[i].uuid), uuid);
+      std::string type;
+      bt_gatt_db_attribute_type_t_to_string(db[i].type, type);
+      cout << COLOR_BOLDYELLOW " - id: " << db[i].id
+           << ", uuid: " << uuid
+           << ", type: " << type;
+      if (db[i].attribute_handle) {
+        cout << ", attribute_handle: " << db[i].attribute_handle;
+      }
+      if (db[i].start_handle) {
+        cout  << ", start_handle: " << db[i].start_handle;
+      }
+      if (db[i].end_handle) {
+        cout << ", end_handle: " << db[i].end_handle;
+      }
+      if (db[i].properties) {
+        std::string charProperties;
+        gatt_properties_to_string(db[i].properties, charProperties);
+        cout << ", properties: " << charProperties;
+      }
+      cout << endl;
+    }
+    cout << COLOR_OFF;
+    EndAsyncOut();
+    free(db);
   }
 
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {
@@ -490,6 +584,31 @@ void HandleDiscoverServices(IBluetooth* bt_iface, const vector<string>& args) {
   }
 
   bool status = ble_iface->DiscoverServices(ble_client_id.load(), address.c_str());
+  PrintCommandStatus(status);
+}
+
+void HandleGetGattDb(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+
+  if (args.size() != 1) {
+    PrintError("Expected MAC address as only argument");
+    return;
+  }
+
+  address = args[0];
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->GetGattDb(ble_client_id.load(), address.c_str());
   PrintCommandStatus(status);
 }
 
@@ -795,6 +914,8 @@ struct {
     "\t\tRefresh Device GATT information" },
   { "discover-services", HandleDiscoverServices,
     "\tDiscover GATT Services offered by connected device" },
+  { "get-gatt-db", HandleGetGattDb,
+    "\t\tGet GATT DB offered by connected device" },
   { "connect-le", HandleConnect, "\t\tConnect to LE device (-h for options)"},
   { "disconnect-le", HandleDisconnect,
     "\t\tDisconnect LE device (-h for options)"},

@@ -118,6 +118,21 @@ bool BluetoothLowEnergyBinderServer::DiscoverServices(int client_id,
   return client->DiscoverServices(address);
 }
 
+bool BluetoothLowEnergyBinderServer::GetGattDb(int client_id,
+					       const char* address) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+          << " address: " << address;
+  std::lock_guard<std::mutex> lock(*maps_lock());
+
+  auto client = GetLEClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown client_id: " << client_id;
+    return false;
+  }
+
+  return client->GetGattDb(address);
+}
+
 bool BluetoothLowEnergyBinderServer::StartScan(
     int client_id,
     const bluetooth::ScanSettings& settings,
@@ -276,6 +291,22 @@ void BluetoothLowEnergyBinderServer::OnServicesDiscovered(
   }
 
   cb->OnServicesDiscovered(status, address);
+}
+
+void BluetoothLowEnergyBinderServer::OnGattDbUpdated(
+     bluetooth::LowEnergyClient* client, const char* address,
+     btgatt_db_element_t* db, int size) {
+  VLOG(2) << __func__ << " address: " << address
+          << " size: " << size;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnGattDbUpdated(address, db, size);
 }
 
 void BluetoothLowEnergyBinderServer::OnScanResult(

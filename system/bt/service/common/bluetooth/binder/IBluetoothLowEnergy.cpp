@@ -103,6 +103,15 @@ status_t BnBluetoothLowEnergy::onTransact(
 
     return android::NO_ERROR;
   }
+  case GET_GATT_DB_TRANSACTION: {
+    int client_id = data.readInt32();
+    const char* address = data.readCString();
+
+    bool result = GetGattDb(client_id, address);
+    reply->writeInt32(result);
+
+    return android::NO_ERROR;
+  }
   case START_SCAN_TRANSACTION: {
     int client_id = data.readInt32();
     auto settings = CreateScanSettingsFromParcel(data);
@@ -248,6 +257,17 @@ bool BpBluetoothLowEnergy::DiscoverServices(int client_id, const char* address) 
   data.writeCString(address);
 
   remote()->transact(IBluetoothLowEnergy::DISCOVER_SERVICES_TRANSACTION, data, &reply);
+  return reply.readInt32();
+}
+
+bool BpBluetoothLowEnergy::GetGattDb(int client_id, const char* address) {
+  Parcel data, reply;
+
+  data.writeInterfaceToken(IBluetoothLowEnergy::getInterfaceDescriptor());
+  data.writeInt32(client_id);
+  data.writeCString(address);
+
+  remote()->transact(IBluetoothLowEnergy::GET_GATT_DB_TRANSACTION, data, &reply);
   return reply.readInt32();
 }
 

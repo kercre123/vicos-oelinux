@@ -51,6 +51,7 @@ class BluetoothLowEnergyBinderServer
   bool Disconnect(int client_id, const char* address) override;
   bool SetMtu(int client_id, const char* address, int mtu) override;
   bool DiscoverServices(int client_id, const char* address) override;
+  bool GetGattDb(int client_id, const char* address) override;
   bool StartScan(
       int client_id,
       const bluetooth::ScanSettings& settings,
@@ -70,6 +71,8 @@ class BluetoothLowEnergyBinderServer
                     const char* address, int mtu) override;
   void OnServicesDiscovered(bluetooth::LowEnergyClient* client, int status,
 		    const char* address) override;
+  void OnGattDbUpdated(bluetooth::LowEnergyClient* client, const char* address,
+		       btgatt_db_element_t* db, int size) override;
   void OnScanResult(bluetooth::LowEnergyClient* client,
                     const bluetooth::ScanResult& result) override;
 
