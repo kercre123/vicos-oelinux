@@ -41,7 +41,7 @@
 			"csiphy_timer_src_clk", "csiphy_timer_clk",
 			"camss_ahb_src", "csi0_phy_clk", "csi1_phy_clk",
 			"camss_ahb_clk";
-		qcom,clock-rates = <0 0 200000000 0 0 0 0 0>;
+		qcom,clock-rates = <0 0 266000000 0 0 0 0 0>;
 	};
 
 	qcom,csid@1b08000  {
@@ -53,6 +53,7 @@
 		interrupt-names = "csid";
 		qcom,csi-vdd-voltage = <1200000>;
 		qcom,mipi-csi-vdd-supply = <&pm8916_l2>;
+		qcom,gdscr-vdd-supply = <&pm8916_l2>; // XXX - APQ8009 doesn't seem to have a gdsc_camss_top
 		clocks = <&clock_gcc clk_gcc_camss_ispif_ahb_clk>,
 			<&clock_gcc clk_gcc_camss_top_ahb_clk>,
 			<&clock_gcc clk_gcc_camss_csi0_ahb_clk>,
@@ -65,7 +66,7 @@
 			"csi_ahb_clk", "csi_src_clk",
 			"csi_clk",  "csi_pix_clk",
 			"csi_rdi_clk", "camss_ahb_clk";
-		qcom,clock-rates = <40000000 0 0 200000000 0 0 0 0>;
+		qcom,clock-rates = <40000000 0 0 266000000 0 0 0 0>;
 	};
 
 	qcom,csid@1b08400 {
@@ -77,6 +78,7 @@
 		interrupt-names = "csid";
 		qcom,csi-vdd-voltage = <1200000>;
 		qcom,mipi-csi-vdd-supply = <&pm8916_l2>;
+		qcom,gdscr-vdd-supply = <&pm8916_l2>; // XXX - APQ8009 doesn't seem to have a gdsc_camss_top
 		clocks = <&clock_gcc clk_gcc_camss_ispif_ahb_clk>,
 			<&clock_gcc clk_gcc_camss_top_ahb_clk>,
 			<&clock_gcc clk_gcc_camss_csi1_ahb_clk>,
@@ -90,7 +92,7 @@
 			"csi_ahb_clk", "csi_src_clk",
 			"csi_clk", "csi_pix_clk",
 			"csi_rdi_clk", "camss_ahb_clk", "camss_csi1_phy";
-		qcom,clock-rates = <40000000 0 0 200000000 0 0 0 0 0>;
+		qcom,clock-rates = <40000000 0 0 266000000 0 0 0 0 0>;
 	};
 
 	qcom,ispif@1b0a000 {
@@ -126,8 +128,8 @@
 			"vfe0_clk_src", "camss_vfe_vfe0_clk",
 			"camss_csi_vfe0_clk";
 		qcom,clock-rates = <0 40000000
-			200000000 0 0 0
-			200000000 0 0 0
+			266000000 0 0 0
+			266000000 0 0 0
 			0 0 0>;
 		qcom,clock-control = "NO_SET_RATE", "SET_RATE",
 			"SET_RATE", "NO_SET_RATE", "NO_SET_RATE", "NO_SET_RATE",

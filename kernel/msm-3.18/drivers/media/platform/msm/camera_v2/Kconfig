@@ -131,6 +131,15 @@ config MSM_ISPIF_V2
           of any CID of CSID can be routed to of pixel
           or raw data interface in VFE.
 
+config GC2145_8909
+        bool "Sensor GC2145_8909 (YUV .3M)"
+        depends on MSMB_CAMERA
+        ---help---
+          GC2145_8909 is GalaxyCore YUV sensor. It supports VGA preview
+          and snapshot. The snapshot resolution shall be
+          1600 * 1200. It does not support auto focus. It supports
+          few special effects like mono.
+
 config IMX134
 	bool "Sensor IMX134 (BAYER 8M)"
 	depends on MSMB_CAMERA

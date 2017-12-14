@@ -9,7 +9,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
+// Anki-modified version of msm8909.dtsi - reassigning pins and ripping out unused peripherals
 #include "skeleton64.dtsi"
 #include <dt-bindings/clock/msm-clocks-8909.h>
 #include <dt-bindings/clock/msm-clocks-a7.h>
@@ -42,15 +42,9 @@
 
 		sdhc1 = &sdhc_1; /* SDC1 eMMC slot */
 		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
-		spi0 = &spi_0; /* SPI0 controller device */
-		spi2 = &spi_2;
-		spi4 = &spi_4;
-		i2c5 = &i2c_5; /* I2c5 cntroller device */
-		i2c3 = &i2c_3; /* I2C3 controller */
-		i2c1 = &i2c_1; /* I2C1 controller */
-		i2c2 = &i2c_2; /* I2C2 NFC qup2 device */
-		i2c4 = &i2c_4; /* I2C4 controller device */
-		qpic_nand1 = &qnand_1; /* qpic nand controller */
+		spi0 = &spi_0; // SPI0 IMU    (QUP5)
+    spi1 = &spi_1; // SPI1 LCD    (QUP4)
+    i2c6 = &i2c_6; // I2C6 Camera (QUP6)
 	};
 
 	cpus {
@@ -194,9 +188,6 @@
 #include "msm8909-gpu.dtsi"
 #include "msm8909-coresight.dtsi"
 #include "msm8909-bus.dtsi"
-#include "msm8909-mdss.dtsi"
-#include "msm8909-mdss-pll.dtsi"
-#include "msm8909-camera.dtsi"
 
 &soc {
 	#address-cells = <1>;
@@ -303,14 +294,6 @@
 		qcom,dev-opp-list = <&msm_gpu>;
 	};
 
-	clock_gcc_mdss: qcom,gcc-mdss@1ac8300 {
-		compatible = "qcom,gcc-mdss-8909";
-		clocks = <&mdss_dsi0_pll clk_dsi_pll0_pixel_clk_src>,
-			 <&mdss_dsi0_pll clk_dsi_pll0_byte_clk_src>;
-		clock-names = "pixel_src", "byte_src";
-		#clock-cells = <1>;
-	};
-
 	clock_debug: qcom,cc-debug@1874000 {
 		compatible = "qcom,cc-debug-8909";
 		reg = <0x1874000 0x4>,
@@ -403,7 +386,7 @@
 		compatible = "qcom,msm-lsuart-v14";
 		reg = <0x78af000 0x200>;
 		interrupts = <0 107 0>;
-		status = "okay";
+		status = "disabled";
 		clocks = <&clock_gcc clk_gcc_blsp1_uart1_apps_clk>,
 			 <&clock_gcc clk_gcc_blsp1_ahb_clk>;
 		clock-names = "core_clk", "iface_clk";
@@ -413,7 +396,7 @@
 		compatible = "qcom,msm-lsuart-v14";
 		reg = <0x78b0000 0x200>;
 		interrupts = <0 108 0>;
-		status = "okay";
+		status = "disabled";
 		clocks = <&clock_gcc clk_gcc_blsp1_uart2_apps_clk>,
 			 <&clock_gcc clk_gcc_blsp1_ahb_clk>;
 		clock-names = "core_clk", "iface_clk";
@@ -966,9 +949,16 @@
 		qcom,vdd-voltage-level = <0 1200000 1200000>;
 
 		qcom,hsusb-otg-phy-init-seq = <0x73 0x80 0xffffffff>;
-		qcom,hsusb-otg-phy-type = <3>; /* SNPS Femto PHY */
-		qcom,hsusb-otg-mode = <1>; /* DEVICE only */
-		qcom,hsusb-otg-otg-control = <2>; /* PMIC */
+		// qcom,hsusb-otg-phy-type = <3>; /* SNPS Femto PHY */
+		// qcom,hsusb-otg-mode = <1>; /* DEVICE only */
+		// qcom,hsusb-otg-otg-control = <2>; /* PMIC */
+
+		// NDM: Force OTG control to "manual", default to device mode
+		qcom,hsusb-otg-mode = <3>;
+		qcom,hsusb-otg-otg-control = <3>;
+		qcom,hsusb-otg-default-mode = <1>; 
+		vbus_otg-supply = <&pm8916_l4>;
+		
 		qcom,dp-manual-pullup;
 		qcom,phy-dvdd-always-on;
 		qcom,hsusb-otg-mpm-dpsehv-int = <49>;
@@ -1285,72 +1275,58 @@
 		clock-frequency = <32768>;
 	};
 
-	spi_0: spi@78ba000 { /* BLSP1 QUP6 */
+	spi_0: spi@78b9000 { /* BLSP1 QUP5 */
+		cell-index = <0>; // spidev0
 		compatible = "qcom,spi-qup-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg-names = "spi_physical", "spi_bam_physical";
-		reg = <0x78ba000 0x600>,
-		      <0x7884000 0x23000>;
+		reg = <0x78b9000 0x600>,
+					<0x7884000 0x23000>;
 		interrupt-names = "spi_irq", "spi_bam_irq";
-		interrupts = <0 100 0>, <0 238 0>;
+		interrupts = <0 99 0>, <0 238 0>;
 		spi-max-frequency = <19200000>;
 		pinctrl-names = "spi_default", "spi_sleep";
+		pinctrl-states = "spi_default";
 		pinctrl-0 = <&spi0_default &spi0_cs0_active>;
 		pinctrl-1 = <&spi0_sleep &spi0_cs0_sleep>;
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-		<&clock_gcc clk_gcc_blsp1_qup6_spi_apps_clk>;
+						 <&clock_gcc clk_gcc_blsp1_qup5_spi_apps_clk>;
 		clock-names = "iface_clk", "core_clk";
 		qcom,infinite-mode = <0>;
 		qcom,use-bam;
 		qcom,use-pinctrl;
 		qcom,ver-reg-exists;
-		qcom,bam-consumer-pipe-index = <14>;
-		qcom,bam-producer-pipe-index = <15>;
+		qcom,bam-consumer-pipe-index = <12>;
+		qcom,bam-producer-pipe-index = <13>;
 		qcom,master-id = <86>;
+		status = "okay";
+
+		spidev@0x00 {
+				cell-index = <0>; // spidev0
+				compatible = "spidev";
+				spi-max-frequency = <19200000>;
+				reg = <0>;
+		};
 	};
 
-	spi_2: spi@78b6000 { /* BLSP1 QUP2 */
-		compatible = "qcom,spi-qup-v2";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg-names = "spi_physical", "spi_bam_physical";
-		reg = <0x78b6000 0x600>,
-		      <0x7884000 0x23000>;
-		interrupt-names = "spi_irq", "spi_bam_irq";
-		interrupts = <0 96 0>, <0 238 0>;
-		spi-max-frequency = <50000000>;
-		pinctrl-names = "spi_default", "spi_sleep";
-		pinctrl-0 = <&spi2_default &spi2_cs0_active>;
-		pinctrl-1 = <&spi2_sleep &spi2_cs0_sleep>;
-		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-		<&clock_gcc clk_gcc_blsp1_qup2_spi_apps_clk>;
-		clock-names = "iface_clk", "core_clk";
-		qcom,infinite-mode = <0>;
-		qcom,use-bam;
-		qcom,use-pinctrl;
-		qcom,ver-reg-exists;
-		qcom,bam-consumer-pipe-index = <6>;
-		qcom,bam-producer-pipe-index = <7>;
-		qcom,master-id = <86>;
-		status = "disabled";
-	};
-
-	spi_4: spi@78B8000{ /* BLSP1 QUP4 */
+	spi_1: spi@78b8000 { /* BLSP1 QUP4 */
+		cell-index = <1>; // spidev1
 		compatible = "qcom,spi-qup-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg-names = "spi_physical", "spi_bam_physical";
 		reg = <0x78b8000 0x600>,
-		      <0x7884000 0x23000>;
+					<0x7884000 0x23000>;
 		interrupt-names = "spi_irq", "spi_bam_irq";
 		interrupts = <0 98 0>, <0 238 0>;
-		spi-max-frequency = <50000000>;
+		spi-max-frequency = <19200000>;
 		pinctrl-names = "spi_default", "spi_sleep";
-		pinctrl-0 = <&spi4_default &spi4_cs0_active>;
-		pinctrl-1 = <&spi4_sleep &spi4_cs0_sleep>;
+		pinctrl-states = "spi_default";
+		pinctrl-0 = <&spi1_default &spi1_cs0_active>;
+		pinctrl-1 = <&spi1_sleep &spi1_cs0_sleep>;
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-		<&clock_gcc clk_gcc_blsp1_qup4_spi_apps_clk>;
+						 <&clock_gcc clk_gcc_blsp1_qup4_spi_apps_clk>;
 		clock-names = "iface_clk", "core_clk";
 		qcom,infinite-mode = <0>;
 		qcom,use-bam;
@@ -1359,7 +1335,14 @@
 		qcom,bam-consumer-pipe-index = <10>;
 		qcom,bam-producer-pipe-index = <11>;
 		qcom,master-id = <86>;
-		status = "disabled";
+		status = "okay";
+
+		spidev@0x00 {
+				cell-index = <1>; // spidev1
+				compatible = "spidev";
+				spi-max-frequency = <19200000>;
+				reg = <0>;
+		};
 	};
 
 	dma_blsp1: qcom,sps-dma@7884000 { /* BLSP1 */
@@ -1370,125 +1353,29 @@
 		qcom,summing-threshold = <10>;
 	};
 
-	i2c_2: i2c@78b6000 { /* BLSP1 QUP2 */
+	i2c_6: i2c@78ba000 { /* BLSP1 QUP6 - numbered QUP5 in datasheet, argh! */
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg-names = "qup_phys_addr";
-		reg = <0x78b6000 0x1000>;
+		reg = <0x78ba000 0x1000>;
 		interrupt-names = "qup_irq";
-		interrupts = <0 96 0>;
+		interrupts = <0 100 0>;
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp1_qup2_i2c_apps_clk>;
-
+						 <&clock_gcc clk_gcc_blsp1_qup6_i2c_apps_clk>;
 		pinctrl-names = "i2c_active", "i2c_sleep";
-		pinctrl-0 = <&i2c_2_active>;
-		pinctrl-1 = <&i2c_2_sleep>;
+		pinctrl-0 = <&i2c_6_active>;
+		pinctrl-1 = <&i2c_6_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		dmas = <&dma_blsp1 6 64 0x20000020 0x20>,
-			<&dma_blsp1 7 32 0x20000020 0x20>;
+		dmas = <&dma_blsp1 14 64 0x20000020 0x20>,
+			<&dma_blsp1 15 32 0x20000020 0x20>;
 		dma-names = "tx", "rx";
 		qcom,master-id = <86>;
-	};
-
-	i2c_4: i2c@78b8000 { /* BLSP1 QUP4 */
-		compatible = "qcom,i2c-msm-v2";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg-names = "qup_phys_addr";
-		reg = <0x78b8000 0x1000>;
-		interrupt-names = "qup_irq";
-		interrupts = <0 98 0>;
-		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp1_qup4_i2c_apps_clk>;
-		clock-names = "iface_clk", "core_clk";
-		qcom,clk-freq-out = <400000>;
-		qcom,clk-freq-in  = <19200000>;
-		pinctrl-names = "i2c_active", "i2c_sleep";
-		pinctrl-0 = <&i2c_4_active>;
-		pinctrl-1 = <&i2c_4_sleep>;
-		qcom,noise-rjct-scl = <0>;
-		qcom,noise-rjct-sda = <0>;
-		dmas = <&dma_blsp1 10 64 0x20000020 0x20>,
-			<&dma_blsp1 11 32 0x20000020 0x20>;
-		dma-names = "tx", "rx";
-		qcom,master-id = <86>;
-	};
-
-	 i2c_5: i2c@78b9000 { /* BLSP1 QUP5 */
-		compatible = "qcom,i2c-msm-v2";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg-names = "qup_phys_addr";
-		reg = <0x78b9000 0x1000>;
-		interrupt-names = "qup_irq";
-		interrupts = <0 99 0>;
-		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp1_qup5_i2c_apps_clk>;
-		clock-names = "iface_clk", "core_clk";
-		qcom,clk-freq-out = <100000>;
-		qcom,clk-freq-in  = <19200000>;
-		pinctrl-names = "i2c_active", "i2c_sleep";
-		pinctrl-0 = <&i2c_5_active>;
-		pinctrl-1 = <&i2c_5_sleep>;
-		qcom,noise-rjct-scl = <0>;
-		qcom,noise-rjct-sda = <0>;
-		dmas = <&dma_blsp1 12 64 0x20000020 0x20>,
-		<&dma_blsp1 13 32 0x20000020 0x20>;
-		dma-names = "tx", "rx";
-		qcom,master-id = <86>;
-};
-
-	i2c_3: i2c@78b7000 { /* BLSP1 QUP3 */
-		compatible = "qcom,i2c-msm-v2";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg-names = "qup_phys_addr";
-		reg = <0x78b7000 0x1000>;
-		interrupt-names = "qup_irq";
-		interrupts = <0 97 0>;
-		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp1_qup3_i2c_apps_clk>;
-		clock-names = "iface_clk", "core_clk";
-		qcom,clk-freq-out = <100000>;
-		qcom,clk-freq-in  = <19200000>;
-		pinctrl-names = "i2c_active", "i2c_sleep";
-		pinctrl-0 = <&i2c_3_active>;
-		pinctrl-1 = <&i2c_3_sleep>;
-		qcom,noise-rjct-scl = <0>;
-		qcom,noise-rjct-sda = <0>;
-		dmas = <&dma_blsp1 8 64 0x20000020 0x20>,
-			<&dma_blsp1 9  32 0x20000020 0x20>;
-		dma-names = "tx", "rx";
-		qcom,master-id = <86>;
-	};
-
-	i2c_1: i2c@78b5000 { /* BLSP1 QUP1 */
-		compatible = "qcom,i2c-msm-v2";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg-names = "qup_phys_addr";
-		reg = <0x78b5000 0x1000>;
-		interrupt-names = "qup_irq";
-		interrupts = <0 95 0>;
-		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
-		clock-names = "iface_clk", "core_clk";
-		qcom,clk-freq-out = <100000>;
-		qcom,clk-freq-in  = <19200000>;
-		pinctrl-names = "i2c_active", "i2c_sleep";
-		pinctrl-0 = <&i2c_1_active>;
-		pinctrl-1 = <&i2c_1_sleep>;
-		qcom,noise-rjct-scl = <0>;
-		qcom,noise-rjct-sda = <0>;
-		dmas = <&dma_blsp1 4 64 0x20000020 0x20>,
-			<&dma_blsp1 5  32 0x20000020 0x20>;
-		dma-names = "tx", "rx";
-		qcom,master-id = <86>;
+		status = "okay";
 	};
 
 	qcom,venus@1de0000 {
