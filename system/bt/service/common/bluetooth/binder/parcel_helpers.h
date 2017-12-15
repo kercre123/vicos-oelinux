@@ -28,7 +28,7 @@
 #include <bluetooth/scan_settings.h>
 #include <bluetooth/uuid.h>
 
-#include <hardware/bt_common_types.h>
+#include <hardware/bt_gatt_client.h>
 
 namespace ipc {
 namespace binder {
@@ -104,6 +104,13 @@ void WriteBtGattDbArrayToParcel(const btgatt_db_element_t* db, int size,
 
 void CreateBtGattDbArrayFromParcel(const android::Parcel& parcel,
                                    btgatt_db_element_t** pDb, int* pSize);
+
+// Helpers for converting btgatt_read_params_t to/from Parcel
+void WriteBtGattReadParamsToParcel(const btgatt_read_params_t* data,
+                                   android::Parcel* parcel);
+
+void CreateBtGattReadParamsFromParcel(const android::Parcel& parcel,
+                                      btgatt_read_params_t** pData);
 
 }  // namespace binder
 }  // namespace ipc

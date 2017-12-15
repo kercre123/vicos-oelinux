@@ -126,6 +126,11 @@ class BluetoothGattInterface {
         btgatt_db_element_t* gatt_db,
         int size);
 
+    virtual void ReadCharacteristicCallback(
+        BluetoothGattInterface* gatt_iface,
+        int conn_id, int status,
+        btgatt_read_params_t* data);
+
     virtual void ServicesRemovedCallback(
         BluetoothGattInterface* gatt_iface,
         int conn_id,

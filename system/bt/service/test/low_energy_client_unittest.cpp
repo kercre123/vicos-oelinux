@@ -109,6 +109,11 @@ class TestDelegate : public LowEnergyClient::Delegate {
     ASSERT_TRUE(client);
   }
 
+  void OnCharacteristicRead(LowEnergyClient* client, const char* address, int status,
+                            btgatt_read_params_t* data) {
+    ASSERT_TRUE(client);
+  }
+
   void OnScanResult(LowEnergyClient* client, const ScanResult& scan_result) {
     ASSERT_TRUE(client);
     scan_result_count_++;

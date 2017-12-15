@@ -340,5 +340,31 @@ void CreateBtGattDbArrayFromParcel(const android::Parcel& parcel,
   *pDb = db;
 }
 
+void WriteBtGattReadParamsToParcel(const btgatt_read_params_t* data,
+                                   android::Parcel* parcel)
+{
+  parcel->writeInt32(data->handle);
+  std::vector<uint8_t> value(&(data->value.value[0]),
+                             &(data->value.value[data->value.len]));
+  parcel->writeByteVector(value);
+  parcel->writeInt32(data->value_type);
+  parcel->writeInt32(data->status);
+}
+
+void CreateBtGattReadParamsFromParcel(const android::Parcel& parcel,
+                                      btgatt_read_params_t** pData)
+{
+  btgatt_read_params_t* data = (btgatt_read_params_t *) malloc(sizeof(*data));
+  (void) memset(data, 0, sizeof(*data));
+  data->handle = (uint16_t) parcel.readInt32();
+  std::vector<uint8_t> value;
+  (void) parcel.readByteVector(&value);
+  memcpy(&(data->value.value[0]), value.data(), value.size());
+  data->value.len = (uint16_t) value.size();
+  data->value_type = (uint16_t) parcel.readInt32();
+  data->status = (uint8_t) parcel.readInt32();
+  *pData = data;
+}
+
 }  // namespace binder
 }  // namespace ipc

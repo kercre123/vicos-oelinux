@@ -243,6 +243,15 @@ void GetGattDbCallback(int conn_id, btgatt_db_element_t *db, int size) {
       GetGattDbCallback(g_interface, conn_id, db, size));
 }
 
+void ReadCharacteristicCallback(int conn_id, int status, btgatt_read_params_t *data) {
+  shared_lock<shared_timed_mutex> lock(g_instance_lock);
+  VLOG(2) << __func__ << " - conn_id: " << conn_id << " status: " << status;
+  VERIFY_INTERFACE_OR_RETURN();
+
+  FOR_EACH_CLIENT_OBSERVER(
+      ReadCharacteristicCallback(g_interface, conn_id, status, data));
+}
+
 void ServicesRemovedCallback(int conn_id, uint16_t start_handle, uint16_t end_handle) {
   shared_lock<shared_timed_mutex> lock(g_instance_lock);
   VLOG(2) << __func__ << " - conn_id: " << conn_id
@@ -439,7 +448,7 @@ const btgatt_client_callbacks_t gatt_client_callbacks = {
     SearchCompleteCallback,
     RegisterForNotificationCallback,
     NotifyCallback,
-    nullptr,  // read_characteristic_cb
+    ReadCharacteristicCallback,  // read_characteristic_cb
     WriteCharacteristicCallback,
     nullptr,  // read_descriptor_cb
     WriteDescriptorCallback,
@@ -714,6 +723,14 @@ void BluetoothGattInterface::ClientObserver::GetGattDbCallback(
     int /* conn_id */,
     btgatt_db_element_t* /* gatt_db */,
     int /* size */) {
+  // Do nothing.
+}
+
+void BluetoothGattInterface::ClientObserver::ReadCharacteristicCallback(
+    BluetoothGattInterface* /* gatt_iface */,
+    int /* conn_id */,
+    int /* status */,
+    btgatt_read_params_t* /* data */) {
   // Do nothing.
 }
 

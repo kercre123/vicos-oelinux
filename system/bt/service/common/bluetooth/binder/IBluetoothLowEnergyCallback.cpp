@@ -87,6 +87,14 @@ status_t BnBluetoothLowEnergyCallback::onTransact(
     OnGattDbUpdated(address, db, size);
     return android::NO_ERROR;
   }
+  case ON_CHARACTERISTIC_READ_TRANSACTION: {
+    const char *address = data.readCString();
+    int status = data.readInt32();
+    btgatt_read_params_t* p_data;
+    CreateBtGattReadParamsFromParcel(data, &p_data);
+    OnCharacteristicRead(address, status, p_data);
+    return android::NO_ERROR;
+  }
   case ON_SCAN_RESULT_TRANSACTION: {
     auto scan_result = CreateScanResultFromParcel(data);
     CHECK(scan_result.get());
@@ -189,6 +197,22 @@ void BpBluetoothLowEnergyCallback::OnGattDbUpdated(
 
   remote()->transact(
       IBluetoothLowEnergyCallback::ON_GATT_DB_UPDATED_TRANSACTION,
+      data, NULL,
+      IBinder::FLAG_ONEWAY);
+}
+
+void BpBluetoothLowEnergyCallback::OnCharacteristicRead(
+    const char* address, int status, btgatt_read_params_t* p_data) {
+  Parcel data;
+
+  data.writeInterfaceToken(
+      IBluetoothLowEnergyCallback::getInterfaceDescriptor());
+  data.writeCString(address);
+  data.writeInt32(status);
+  WriteBtGattReadParamsToParcel(p_data, &data);
+
+  remote()->transact(
+      IBluetoothLowEnergyCallback::ON_CHARACTERISTIC_READ_TRANSACTION,
       data, NULL,
       IBinder::FLAG_ONEWAY);
 }

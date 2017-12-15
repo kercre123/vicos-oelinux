@@ -289,6 +289,22 @@ class CLIBluetoothLowEnergyCallback
     free(db);
   }
 
+  void OnCharacteristicRead(const char* address, int status, btgatt_read_params_t* p_data)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Characteristic Read Result: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << COLOR_BOLDWHITE " - status: " << status << endl;
+    if (status == BT_STATUS_SUCCESS) {
+      cout << COLOR_BOLDWHITE "Value: "
+           << COLOR_BOLDYELLOW << base::HexEncode(p_data->value.value, p_data->value.len)
+           << endl;
+    }
+    cout << COLOR_OFF;
+    EndAsyncOut();
+    free(p_data);
+  }
+
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {
     BeginAsyncOut();
     cout << COLOR_BOLDWHITE "Scan result: "
@@ -612,6 +628,33 @@ void HandleGetGattDb(IBluetooth* bt_iface, const vector<string>& args) {
   PrintCommandStatus(status);
 }
 
+void HandleReadChar(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+  int handle;
+
+  if (args.size() != 2) {
+    PrintError("Expected MAC address and handle as only arguments");
+    return;
+  }
+
+  address = args[0];
+  handle = std::stoi(args[1]);
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->ReadCharacteristic(ble_client_id.load(), address.c_str(), handle);
+  PrintCommandStatus(status);
+}
+
 void HandleStartAdv(IBluetooth* bt_iface, const vector<string>& args) {
   bool include_name = false;
   bool include_tx_power = false;
@@ -916,6 +959,8 @@ struct {
     "\tDiscover GATT Services offered by connected device" },
   { "get-gatt-db", HandleGetGattDb,
     "\t\tGet GATT DB offered by connected device" },
+  { "read-char", HandleReadChar,
+    "\t\tRead the value of a characteristic by handle" },
   { "connect-le", HandleConnect, "\t\tConnect to LE device (-h for options)"},
   { "disconnect-le", HandleDisconnect,
     "\t\tDisconnect LE device (-h for options)"},
