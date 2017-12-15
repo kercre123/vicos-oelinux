@@ -114,6 +114,21 @@ class TestDelegate : public LowEnergyClient::Delegate {
     ASSERT_TRUE(client);
   }
 
+  void OnCharacteristicNotificationRegistration(LowEnergyClient* client,
+                                                const char* address,
+                                                int registered,
+                                                int status,
+                                                uint16_t handle) {
+    ASSERT_TRUE(client);
+  }
+
+  void OnCharacteristicChanged(LowEnergyClient* client,
+                               const char* address,
+                               btgatt_notify_params_t *p_data) {
+    ASSERT_TRUE(client);
+  }
+
+
   void OnScanResult(LowEnergyClient* client, const ScanResult& scan_result) {
     ASSERT_TRUE(client);
     scan_result_count_++;

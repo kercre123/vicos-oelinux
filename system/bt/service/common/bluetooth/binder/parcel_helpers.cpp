@@ -366,5 +366,41 @@ void CreateBtGattReadParamsFromParcel(const android::Parcel& parcel,
   *pData = data;
 }
 
+void WriteBtGattNotifyParamsToParcel(const btgatt_notify_params_t* notification,
+                                     android::Parcel* parcel)
+{
+  std::vector<uint8_t> value(&(notification->value[0]),
+                             &(notification->value[notification->len]));
+  parcel->writeByteVector(value);
+  std::vector<uint8_t> bda(&notification->bda.address[0],
+                           &notification->bda.address[sizeof(notification->bda.address)]);
+  parcel->writeByteVector(bda);
+  parcel->writeInt32(notification->handle);
+  parcel->writeInt32(notification->len);
+  parcel->writeInt32(notification->is_notify);
+}
+
+void CreateBtGattNotifyParamsFromParcel(const android::Parcel& parcel,
+                                        btgatt_notify_params_t** pNotification)
+{
+  btgatt_notify_params_t* notification =
+      (btgatt_notify_params_t *) malloc(sizeof(*notification));
+  (void) memset(notification, 0, sizeof(*notification));
+  std::vector<uint8_t> value;
+  (void) parcel.readByteVector(&value);
+  size_t n = std::min(value.size(), sizeof(notification->value));
+  memcpy(&(notification->value), value.data(), n);
+  notification->len = n;
+  std::vector<uint8_t> bda;
+  (void) parcel.readByteVector(&bda);
+  n = std::min(bda.size(), sizeof(notification->bda.address));
+  memcpy(&(notification->bda.address), bda.data(), n);
+  notification->handle = (uint16_t) parcel.readInt32();
+  notification->len = (uint16_t) parcel.readInt32();
+  notification->is_notify = (uint8_t) parcel.readInt32();
+  *pNotification = notification;
+}
+
+
 }  // namespace binder
 }  // namespace ipc

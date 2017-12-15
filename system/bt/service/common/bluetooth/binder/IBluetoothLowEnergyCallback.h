@@ -59,6 +59,8 @@ namespace binder {
     ON_FOUND_OR_LOST_TRANSACTION,
     ON_GATT_DB_UPDATED_TRANSACTION,
     ON_CHARACTERISTIC_READ_TRANSACTION,
+    ON_REGISTER_FOR_NOTIFICATION_CALLBACK_TRANSACTION,
+    ON_NOTIFY_TRANSACTION,
   };
 
   virtual void OnClientRegistered(int status, int client_if) = 0;
@@ -68,6 +70,9 @@ namespace binder {
   virtual void OnServicesDiscovered(int status, const char* address) = 0;
   virtual void OnGattDbUpdated(const char* address, btgatt_db_element_t* db, int size) = 0;
   virtual void OnCharacteristicRead(const char* address, int status, btgatt_read_params_t* p_data) = 0;
+  virtual void OnCharacteristicNotificationRegistration(const char* address, int registered,
+                                                        int status, uint16_t handle) = 0;
+  virtual void OnCharacteristicChanged(const char* address, btgatt_notify_params_t* notification) = 0;
   virtual void OnScanResult(const bluetooth::ScanResult& scan_result) = 0;
   virtual void OnMultiAdvertiseCallback(
       int status, bool is_start,
@@ -112,6 +117,9 @@ class BpBluetoothLowEnergyCallback
   void OnServicesDiscovered(int status, const char* address) override;
   void OnGattDbUpdated(const char* address, btgatt_db_element_t* db, int size) override;
   void OnCharacteristicRead(const char* address, int status, btgatt_read_params_t* p_data) override;
+  void OnCharacteristicNotificationRegistration(const char* address, int registered,
+                                                int status, uint16_t handle) override;
+  void OnCharacteristicChanged(const char* address, btgatt_notify_params_t* notification) override;
   void OnScanResult(const bluetooth::ScanResult& scan_result) override;
   void OnMultiAdvertiseCallback(
       int status, bool is_start,

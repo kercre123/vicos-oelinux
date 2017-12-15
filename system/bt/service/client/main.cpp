@@ -305,6 +305,32 @@ class CLIBluetoothLowEnergyCallback
     free(p_data);
   }
 
+  void OnCharacteristicNotificationRegistration(const char* address, int registered,
+                                                int status, uint16_t handle)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Characteristic Notification Registration Result: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << COLOR_BOLDWHITE " - registered: " << registered
+         << COLOR_BOLDWHITE " - status: " << status
+         << COLOR_BOLDWHITE " - handle: " << handle << COLOR_OFF << endl;
+    EndAsyncOut();
+  }
+
+  void OnCharacteristicChanged(const char* address,
+                               btgatt_notify_params_t *p_data)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Characteristic Notification: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << " - handle: " << p_data->handle
+         << base::HexEncode(p_data->value, p_data->len)
+         << COLOR_OFF << endl;
+    EndAsyncOut();
+    free(p_data);
+  }
+
+
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {
     BeginAsyncOut();
     cout << COLOR_BOLDWHITE "Scan result: "
@@ -575,6 +601,35 @@ void HandleRefreshDevice(IBluetooth* bt_iface, const vector<string>& args) {
   }
 
   gatt_iface->RefreshDevice(gatt_client_id.load(), address.c_str());
+  PrintCommandStatus(true);
+}
+
+void HandleSetCharNotify(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+  int handle;
+  bool enable;
+
+  if (args.size() != 3) {
+    PrintError("Expected 3 arguments: MAC address, handle of characteristic, true|false");
+    return;
+  }
+
+  address = args[0];
+  handle = std::stoi(args[1]);
+  enable = (args[2] == "true");
+
+  if (!gatt_client_id.load()) {
+    PrintError("Not registered");
+    return;
+  }
+
+  sp<IBluetoothGattClient> gatt_iface = bt_iface->GetGattClientInterface();
+  if (!gatt_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth GATT Client interface");
+    return;
+  }
+
+  gatt_iface->SetCharacteristicNotification(gatt_client_id.load(), address.c_str(), handle, enable);
   PrintCommandStatus(true);
 }
 
@@ -961,6 +1016,8 @@ struct {
     "\t\tGet GATT DB offered by connected device" },
   { "read-char", HandleReadChar,
     "\t\tRead the value of a characteristic by handle" },
+  { "set-char-notify", HandleSetCharNotify,
+    "\t\tEnable or disable notifications/indications for a given characteristic" },
   { "connect-le", HandleConnect, "\t\tConnect to LE device (-h for options)"},
   { "disconnect-le", HandleDisconnect,
     "\t\tDisconnect LE device (-h for options)"},

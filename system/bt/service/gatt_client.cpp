@@ -65,6 +65,34 @@ bool GattClient::RefreshDevice(std::string address) {
   return true;
 }
 
+bool GattClient::SetCharacteristicNotification(std::string address, int handle,
+                                               bool enable) {
+  VLOG(1) << "GattClient SetCharacteristicNotification " << address
+          << " handle: " << handle << " enable : " << enable;
+
+  bt_bdaddr_t bda;
+  util::BdAddrFromString(address, &bda);
+
+  bt_status_t status;
+
+  if (enable) {
+    status = hal::BluetoothGattInterface::Get()->
+        GetClientHALInterface()->register_for_notification(client_id_, &bda,
+                                                           (uint16_t) handle);
+  } else {
+    status = hal::BluetoothGattInterface::Get()->
+        GetClientHALInterface()->deregister_for_notification(client_id_, &bda,
+                                                             (uint16_t) handle);
+  }
+
+  if (status != BT_STATUS_SUCCESS) {
+    LOG(ERROR) << "HAL call to enable/disable characteristic notification failed";
+    return false;
+  }
+
+  return true;
+}
+
 // GattClientFactory implementation
 // ========================================================
 

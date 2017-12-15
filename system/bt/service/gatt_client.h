@@ -39,6 +39,7 @@ class GattClient : public BluetoothInstance {
   int GetInstanceId() const override;
 
   bool RefreshDevice(std::string address);
+  bool SetCharacteristicNotification(std::string address, int handle, bool enable);
 
  private:
   friend class GattClientFactory;

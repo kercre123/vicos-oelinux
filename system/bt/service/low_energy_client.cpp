@@ -802,6 +802,58 @@ void LowEnergyClient::ReadCharacteristicCallback(
     delegate_->OnCharacteristicRead(this, addr, status, data);
 }
 
+void LowEnergyClient::RegisterForNotificationCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id, int registered,
+    int status, uint16_t handle) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnCharacteristicNotificationRegistration(this, addr,
+                                                        registered, status,
+                                                        handle);
+}
+
+void LowEnergyClient::NotifyCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id,
+    btgatt_notify_params_t* notification) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnCharacteristicChanged(this, addr, notification);
+}
+
 void LowEnergyClient::MultiAdvEnableCallback(
     hal::BluetoothGattInterface* gatt_iface,
     int client_id, int status) {

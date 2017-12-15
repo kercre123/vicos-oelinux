@@ -112,5 +112,12 @@ void WriteBtGattReadParamsToParcel(const btgatt_read_params_t* data,
 void CreateBtGattReadParamsFromParcel(const android::Parcel& parcel,
                                       btgatt_read_params_t** pData);
 
+// Helpers for converting btgatt_notify_params_t to/from Parcel
+void WriteBtGattNotifyParamsToParcel(const btgatt_notify_params_t* notification,
+                                     android::Parcel* parcel);
+
+void CreateBtGattNotifyParamsFromParcel(const android::Parcel& parcel,
+                                        btgatt_notify_params_t** pNotification);
+
 }  // namespace binder
 }  // namespace ipc

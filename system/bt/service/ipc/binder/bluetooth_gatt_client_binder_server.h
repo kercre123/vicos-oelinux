@@ -43,6 +43,7 @@ class BluetoothGattClientBinderServer : public BnBluetoothGattClient,
   void UnregisterClient(int client_id) override;
   void UnregisterAll() override;
   bool RefreshDevice(int client_id, const char* address) override;
+  bool SetCharacteristicNotification(int client_id, const char* address, int handle, bool enable) override;
 
  private:
   // Returns a pointer to the IBluetoothGattClientCallback instance

@@ -44,6 +44,11 @@ class CLIBluetoothLowEnergyCallback
 
   void OnCharacteristicRead(const char *address, int status, btgatt_read_params_t* data) override {}
 
+  void OnCharacteristicNotificationRegistration(const char* address, int registered,
+                                                int status, uint16_t handle) override {}
+
+  void OnCharacteristicChanged(const char* address, btgatt_notify_params_t* notification) override {}
+
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {}
 
   void OnClientRegistered(int status, int client_id){

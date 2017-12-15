@@ -341,6 +341,36 @@ void BluetoothLowEnergyBinderServer::OnCharacteristicRead(
   cb->OnCharacteristicRead(address, status, data);
 }
 
+void BluetoothLowEnergyBinderServer::OnCharacteristicNotificationRegistration(
+     bluetooth::LowEnergyClient* client, const char* address,
+     int registered, int status, uint16_t handle) {
+  VLOG(2) << __func__ << " address: " << address;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnCharacteristicNotificationRegistration(address, registered, status, handle);
+}
+
+void BluetoothLowEnergyBinderServer::OnCharacteristicChanged(
+     bluetooth::LowEnergyClient* client, const char* address,
+     btgatt_notify_params_t* notification) {
+  VLOG(2) << __func__ << " address: " << address;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnCharacteristicChanged(address, notification);
+}
+
 void BluetoothLowEnergyBinderServer::OnScanResult(
     bluetooth::LowEnergyClient* client,
     const bluetooth::ScanResult& result) {

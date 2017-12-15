@@ -81,6 +81,22 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
     virtual void OnCharacteristicRead(LowEnergyClient* client, const char* address,
                                       int status, btgatt_read_params_t* data) = 0;
 
+    // Called asynchronously to inform whether or not the client is registered
+    // for notifications on a particular characteristic
+    virtual void
+        OnCharacteristicNotificationRegistration(LowEnergyClient* client,
+                                                 const char* address,
+                                                 int registered,
+                                                 int status,
+                                                 uint16_t handle) = 0;
+
+    // Called asynchronously to inform the client that the remote device
+    // sent an indication or notification that the client is registered for
+    virtual void
+        OnCharacteristicChanged(LowEnergyClient* client,
+                                const char* address,
+                                btgatt_notify_params_t *p_data) = 0;
+
    private:
     DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
@@ -188,6 +204,12 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   void SearchCompleteCallback(
       hal::BluetoothGattInterface* gatt_iface, int conn_id,
       int status) override;
+  void RegisterForNotificationCallback(
+      hal::BluetoothGattInterface* gatt_iface,
+      int conn_id, int registered, int status, uint16_t handle) override;
+  void NotifyCallback(
+      hal::BluetoothGattInterface* gatt_iface,
+      int conn_id, btgatt_notify_params_t *p_data) override;
   void GetGattDbCallback(
       hal::BluetoothGattInterface* gatt_iface, int conn_id,
       btgatt_db_element_t *db, int size) override;
