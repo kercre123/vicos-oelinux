@@ -139,7 +139,7 @@ class CLIBluetoothCallback : public ipc::binder::BnBluetoothCallback {
     cout << COLOR_BOLDWHITE "Adapter state changed: " COLOR_OFF
          << COLOR_MAGENTA << AdapterStateToString(prev_state) << COLOR_OFF
          << COLOR_BOLDWHITE " -> " COLOR_OFF
-         << COLOR_BOLDYELLOW << AdapterStateToString(new_state) << COLOR_OFF;
+         << COLOR_BOLDYELLOW << AdapterStateToString(new_state) << COLOR_OFF << endl;
     EndAsyncOut();
    }
 
@@ -161,7 +161,7 @@ class CLIBluetoothLowEnergyCallback
     } else {
       ble_client_id = client_id;
       cout << COLOR_BOLDWHITE "Registered BLE client with ID: " COLOR_OFF
-           << COLOR_GREEN << client_id << COLOR_OFF;
+           << COLOR_GREEN << client_id << COLOR_OFF << endl;
     }
     EndAsyncOut();
 
@@ -175,7 +175,7 @@ class CLIBluetoothLowEnergyCallback
          << COLOR_BOLDYELLOW "[" << address
          << " connected: " << (connected ? "true" : "false") << " ] "
          << COLOR_BOLDWHITE "- status: " << status
-         << COLOR_BOLDWHITE " - client_id: " << client_id << COLOR_OFF;
+         << COLOR_BOLDWHITE " - client_id: " << client_id << COLOR_OFF << endl;
     EndAsyncOut();
   }
 
@@ -184,7 +184,7 @@ class CLIBluetoothLowEnergyCallback
     cout << COLOR_BOLDWHITE "MTU changed: "
          << COLOR_BOLDYELLOW "[" << address << " ] "
          << COLOR_BOLDWHITE " - status: " << status
-         << COLOR_BOLDWHITE " - mtu: " << mtu << COLOR_OFF;
+         << COLOR_BOLDWHITE " - mtu: " << mtu << COLOR_OFF << endl;
     EndAsyncOut();
   }
 
@@ -192,7 +192,7 @@ class CLIBluetoothLowEnergyCallback
     BeginAsyncOut();
     cout << COLOR_BOLDWHITE "Services Discovered: "
 	 << COLOR_BOLDYELLOW "[" << address << " ] "
-	 << COLOR_BOLDWHITE " - status: " << status << COLOR_OFF;
+	 << COLOR_BOLDWHITE " - status: " << status << COLOR_OFF << endl;
     EndAsyncOut();
   }
 
@@ -344,7 +344,7 @@ class CLIBluetoothLowEnergyCallback
     cout << COLOR_BOLDWHITE "Characteristic Notification: "
          << COLOR_BOLDYELLOW "[" << address << " ] "
          << " - handle: " << p_data->handle
-         << base::HexEncode(p_data->value, p_data->len)
+         << " - value: " << base::HexEncode(p_data->value, p_data->len)
          << COLOR_OFF << endl;
     EndAsyncOut();
     free(p_data);
@@ -393,7 +393,7 @@ class CLIGattClientCallback
     } else {
       gatt_client_id = client_id;
       cout << COLOR_BOLDWHITE "Registered GATT client with ID: " COLOR_OFF
-           << COLOR_GREEN << client_id << COLOR_OFF;
+           << COLOR_GREEN << client_id << COLOR_OFF << endl;
     }
     EndAsyncOut();
 

@@ -736,7 +736,9 @@ void LowEnergyClient::ConnectCallback(
   if (client_id != client_id_)
     return;
 
-  VLOG(1) << __func__ << "client_id: " << client_id << " status: " << status;
+  VLOG(1) << __func__ << "client_id: " << client_id
+          << " conn_id: " << conn_id
+          << " status: " << status;
 
   {
     lock_guard<mutex> lock(connection_fields_lock_);
@@ -951,7 +953,8 @@ void LowEnergyClient::NotifyCallback(
     hal::BluetoothGattInterface* gatt_iface, int conn_id,
     btgatt_notify_params_t* notification) {
 
-  VLOG(1) << __func__ << " conn_id: " << conn_id;
+  VLOG(1) << __func__ << " conn_id: " << conn_id
+          << " address: " << BtAddrString(&(notification->bda));
 
   const bt_bdaddr_t *bda = nullptr;
   {

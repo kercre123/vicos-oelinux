@@ -134,7 +134,7 @@ void RegisterForNotificationCallback(int conn_id, int registered, int status, ui
   shared_lock<shared_timed_mutex> lock(g_instance_lock);
   VERIFY_INTERFACE_OR_RETURN();
 
-  LOG(INFO) << __func__ << " - conn_id: " << conn_id
+  VLOG(2) << __func__ << " - conn_id: " << conn_id
           << " - status: " << status
           << " - registered: " << registered
           << " - handle: " << handle;
@@ -150,7 +150,7 @@ void NotifyCallback(int conn_id, btgatt_notify_params_t *p_data) {
           << " - address: " << BtAddrString(&p_data->bda)
           << " - handle: " << p_data->handle
           << " - len: " << p_data->len
-          << " - is_notify: " << p_data->is_notify;
+          << " - is_notify: " << (int) p_data->is_notify;
 
   FOR_EACH_CLIENT_OBSERVER(
     NotifyCallback(g_interface, conn_id, p_data));
