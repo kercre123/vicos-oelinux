@@ -315,6 +315,16 @@ class CLIBluetoothLowEnergyCallback
     EndAsyncOut();
   }
 
+  void OnDescriptorWrite(const char* address, int status, uint16_t handle)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Descriptor Write Result: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << COLOR_BOLDWHITE " - status: " << status
+         << COLOR_BOLDWHITE " - handle: " << handle << COLOR_OFF << endl;
+    EndAsyncOut();
+  }
+
   void OnCharacteristicNotificationRegistration(const char* address, int registered,
                                                 int status, uint16_t handle)
   {
@@ -755,6 +765,41 @@ void HandleWriteChar(IBluetooth* bt_iface, const vector<string>& args) {
   PrintCommandStatus(status);
 }
 
+void HandleWriteDesc(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+  int handle;
+  int write_type;
+  std::vector<uint8_t> value;
+
+  if (args.size() != 4) {
+    PrintError("Expected MAC address, handle, write type and hex-string value as only arguments");
+    return;
+  }
+
+  address = args[0];
+  handle = std::stoi(args[1]);
+  write_type = std::stoi(args[2]);
+  base::HexStringToBytes(args[3], &value);
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->WriteDescriptor(ble_client_id.load(),
+                                           address.c_str(),
+                                           handle,
+                                           write_type,
+                                           value);
+  PrintCommandStatus(status);
+}
+
 void HandleStartAdv(IBluetooth* bt_iface, const vector<string>& args) {
   bool include_name = false;
   bool include_tx_power = false;
@@ -1063,6 +1108,8 @@ struct {
     "\t\tRead the value of a characteristic by handle" },
   { "write-char", HandleWriteChar,
     "\t\tWrite the value of a characteristic by handle" },
+  { "write-desc", HandleWriteDesc,
+    "\t\tWrite the value of a descriptor by handle" },
   { "set-char-notify", HandleSetCharNotify,
     "\t\tEnable or disable notifications/indications for a given characteristic" },
   { "connect-le", HandleConnect, "\t\tConnect to LE device (-h for options)"},

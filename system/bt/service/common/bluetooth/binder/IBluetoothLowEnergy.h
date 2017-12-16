@@ -68,6 +68,7 @@ class IBluetoothLowEnergy : public android::IInterface {
     GET_GATT_DB_TRANSACTION,
     READ_CHARACTERISTIC_TRANSACTION,
     WRITE_CHARACTERISTIC_TRANSACTION,
+    WRITE_DESCRIPTOR_TRANSACTION,
 
     NUM_HW_TRACK_FILTERS_AVAILABLE,
   };
@@ -87,6 +88,8 @@ class IBluetoothLowEnergy : public android::IInterface {
   virtual bool ReadCharacteristic(int client_id, const char* address, int handle) = 0;
   virtual bool WriteCharacteristic(int client_id, const char* address, int handle,
                                    int write_type, const std::vector<uint8_t>& value) = 0;
+  virtual bool WriteDescriptor(int client_id, const char* address, int handle,
+                               int write_type, const std::vector<uint8_t>& value) = 0;
 
 
   virtual bool StartScan(
@@ -147,6 +150,8 @@ class BpBluetoothLowEnergy : public android::BpInterface<IBluetoothLowEnergy> {
   bool ReadCharacteristic(int client_id, const char* address, int handle) override;
   bool WriteCharacteristic(int client_id, const char* address, int handle,
                            int write_type, const std::vector<uint8_t>& value) override;
+  bool WriteDescriptor(int client_id, const char* address, int handle,
+                       int write_type, const std::vector<uint8_t>& value) override;
   bool StartScan(
       int client_id,
       const bluetooth::ScanSettings& settings,

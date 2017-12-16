@@ -46,6 +46,8 @@ class CLIBluetoothLowEnergyCallback
 
   void OnCharacteristicWrite(const char *address, int status, uint16_t handle) override {}
 
+  void OnDescriptorWrite(const char *address, int status, uint16_t handle) override {}
+
   void OnCharacteristicNotificationRegistration(const char* address, int registered,
                                                 int status, uint16_t handle) override {}
 

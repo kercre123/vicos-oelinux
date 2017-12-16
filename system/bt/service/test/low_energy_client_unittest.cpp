@@ -119,6 +119,11 @@ class TestDelegate : public LowEnergyClient::Delegate {
     ASSERT_TRUE(client);
   }
 
+  void OnDescriptorWrite(LowEnergyClient* client, const char* address, int status,
+                         uint16_t handle) {
+    ASSERT_TRUE(client);
+  }
+
   void OnCharacteristicNotificationRegistration(LowEnergyClient* client,
                                                 const char* address,
                                                 int registered,

@@ -55,6 +55,8 @@ class BluetoothLowEnergyBinderServer
   bool ReadCharacteristic(int client_id, const char* address, int handle) override;
   bool WriteCharacteristic(int client_id, const char* address, int handle,
                            int write_type, const std::vector<uint8_t>& value) override;
+  bool WriteDescriptor(int client_id, const char* address, int handle,
+                       int write_type, const std::vector<uint8_t>& value) override;
   bool StartScan(
       int client_id,
       const bluetooth::ScanSettings& settings,
@@ -80,6 +82,8 @@ class BluetoothLowEnergyBinderServer
                             int status, btgatt_read_params_t* data) override;
   void OnCharacteristicWrite(bluetooth::LowEnergyClient* client, const char* address,
                              int status, uint16_t handle) override;
+  void OnDescriptorWrite(bluetooth::LowEnergyClient* client, const char* address,
+                         int status, uint16_t handle) override;
   void OnCharacteristicNotificationRegistration(bluetooth::LowEnergyClient* client,
                                                 const char* address, int registered,
                                                 int status, uint16_t handle) override;

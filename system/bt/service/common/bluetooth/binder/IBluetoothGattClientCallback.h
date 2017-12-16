@@ -45,7 +45,6 @@ namespace binder {
     ON_GET_DESCRIPTOR_TRANSACTION,
     ON_EXECUTE_WRITE_TRANSACTION,
     ON_DESCRIPTOR_READ_TRANSACTION,
-    ON_DESCRIPTOR_WRITE_TRANSACTION,
   };
 
   virtual void OnClientRegistered(int status, int client_id) = 0;

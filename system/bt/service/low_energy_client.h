@@ -81,9 +81,13 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
     virtual void OnCharacteristicRead(LowEnergyClient* client, const char* address,
                                       int status, btgatt_read_params_t* data) = 0;
 
-    // Called asynchronously to notify that the gatt characteristic has been read
+    // Called asynchronously to notify that the gatt characteristic has been written
     virtual void OnCharacteristicWrite(LowEnergyClient* client, const char* address,
                                        int status, uint16_t handle) = 0;
+
+    // Called asynchronously to notify that the gatt descriptor has been written
+    virtual void OnDescriptorWrite(LowEnergyClient* client, const char* address,
+                                   int status, uint16_t handle) = 0;
 
     // Called asynchronously to inform whether or not the client is registered
     // for notifications on a particular characteristic
@@ -147,6 +151,12 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   // Return true on success, false otherwise.
   bool WriteCharacteristic(std::string address, int handle, int write_type,
                            const std::vector<uint8_t>& value);
+
+  // Sends request to write GATT descriptor for device with address |address|
+  // and handle |handle|.
+  // Return true on success, false otherwise.
+  bool WriteDescriptor(std::string address, int handle, int write_type,
+                       const std::vector<uint8_t>& value);
 
   // Initiates a BLE device scan for this client using the given |settings| and
   // |filters|. See the documentation for ScanSettings and ScanFilter for how
@@ -227,6 +237,9 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
       hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
       btgatt_read_params_t *data) override;
   void WriteCharacteristicCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+      uint16_t handle) override;
+  void WriteDescriptorCallback(
       hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
       uint16_t handle) override;
   void MultiAdvEnableCallback(

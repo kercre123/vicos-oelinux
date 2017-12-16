@@ -517,6 +517,40 @@ bool LowEnergyClient::WriteCharacteristic(std::string address, int handle, int w
   return true;
 }
 
+bool LowEnergyClient::WriteDescriptor(std::string address, int handle, int write_type,
+                                      const std::vector<uint8_t>& value) {
+  VLOG(2) << __func__ << "Address: " << address
+          << " handle: " << handle
+          << " write_type: " << write_type;
+
+  bt_bdaddr_t bda;
+  util::BdAddrFromString(address, &bda);
+
+  std::map<const bt_bdaddr_t, int>::iterator conn_id;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    conn_id = connection_ids_.find(bda);
+    if (conn_id == connection_ids_.end()) {
+      LOG(WARNING) << "Can't get gatt db, no existing connection to " << address;
+      return false;
+    }
+  }
+
+  bt_status_t status = hal::BluetoothGattInterface::Get()->
+      GetClientHALInterface()->write_descriptor(conn_id->second,
+                                                handle,
+                                                write_type,
+                                                value.size(),
+                                                0 /* auth_req */,
+                                                (char *) value.data());
+  if (status != BT_STATUS_SUCCESS) {
+    LOG(ERROR) << "HAL call to write descriptor failed";
+    return false;
+  }
+
+  return true;
+}
+
 void LowEnergyClient::SetDelegate(Delegate* delegate) {
   lock_guard<mutex> lock(delegate_mutex_);
   delegate_ = delegate;
@@ -859,6 +893,31 @@ void LowEnergyClient::WriteCharacteristicCallback(
   const char *addr = BtAddrString(bda).c_str();
   if (delegate_)
     delegate_->OnCharacteristicWrite(this, addr, status, handle);
+}
+
+void LowEnergyClient::WriteDescriptorCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+    uint16_t handle) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnDescriptorWrite(this, addr, status, handle);
 }
 
 void LowEnergyClient::RegisterForNotificationCallback(
