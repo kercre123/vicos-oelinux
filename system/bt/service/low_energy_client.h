@@ -81,6 +81,10 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
     virtual void OnCharacteristicRead(LowEnergyClient* client, const char* address,
                                       int status, btgatt_read_params_t* data) = 0;
 
+    // Called asynchronously to notify that the gatt characteristic has been read
+    virtual void OnCharacteristicWrite(LowEnergyClient* client, const char* address,
+                                       int status, uint16_t handle) = 0;
+
     // Called asynchronously to inform whether or not the client is registered
     // for notifications on a particular characteristic
     virtual void
@@ -137,6 +141,12 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   // and handle |handle|.
   // Return true on success, false otherwise.
   bool ReadCharacteristic(std::string address, int handle);
+
+  // Sends request to write GATT characteristic for device with address |address|
+  // and handle |handle|.
+  // Return true on success, false otherwise.
+  bool WriteCharacteristic(std::string address, int handle, int write_type,
+                           const std::vector<uint8_t>& value);
 
   // Initiates a BLE device scan for this client using the given |settings| and
   // |filters|. See the documentation for ScanSettings and ScanFilter for how
@@ -216,6 +226,9 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   void ReadCharacteristicCallback(
       hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
       btgatt_read_params_t *data) override;
+  void WriteCharacteristicCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+      uint16_t handle) override;
   void MultiAdvEnableCallback(
       hal::BluetoothGattInterface* gatt_iface,
       int client_id, int status) override;

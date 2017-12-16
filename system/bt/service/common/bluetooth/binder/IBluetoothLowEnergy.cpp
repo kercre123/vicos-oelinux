@@ -122,6 +122,19 @@ status_t BnBluetoothLowEnergy::onTransact(
 
     return android::NO_ERROR;
   }
+  case WRITE_CHARACTERISTIC_TRANSACTION: {
+    int client_id = data.readInt32();
+    const char* address = data.readCString();
+    int handle = data.readInt32();
+    int write_type = data.readInt32();
+    std::vector<uint8_t> value;
+    (void) data.readByteVector(&value);
+
+    bool result = WriteCharacteristic(client_id, address, handle, write_type, value);
+    reply->writeInt32(result);
+
+    return android::NO_ERROR;
+  }
   case START_SCAN_TRANSACTION: {
     int client_id = data.readInt32();
     auto settings = CreateScanSettingsFromParcel(data);
@@ -290,6 +303,22 @@ bool BpBluetoothLowEnergy::ReadCharacteristic(int client_id, const char* address
   data.writeInt32(handle);
 
   remote()->transact(IBluetoothLowEnergy::READ_CHARACTERISTIC_TRANSACTION, data, &reply);
+  return reply.readInt32();
+}
+
+bool BpBluetoothLowEnergy::WriteCharacteristic(int client_id, const char* address,
+                                               int handle, int write_type,
+                                               const std::vector<uint8_t>& value) {
+  Parcel data, reply;
+
+  data.writeInterfaceToken(IBluetoothLowEnergy::getInterfaceDescriptor());
+  data.writeInt32(client_id);
+  data.writeCString(address);
+  data.writeInt32(handle);
+  data.writeInt32(write_type);
+  data.writeByteVector(value);
+
+  remote()->transact(IBluetoothLowEnergy::WRITE_CHARACTERISTIC_TRANSACTION, data, &reply);
   return reply.readInt32();
 }
 

@@ -95,6 +95,13 @@ status_t BnBluetoothLowEnergyCallback::onTransact(
     OnCharacteristicRead(address, status, p_data);
     return android::NO_ERROR;
   }
+  case ON_CHARACTERISTIC_WRITE_TRANSACTION: {
+    const char *address = data.readCString();
+    int status = data.readInt32();
+    uint16_t handle = (uint16_t) data.readInt32();
+    OnCharacteristicWrite(address, status, handle);
+    return android::NO_ERROR;
+  }
   case ON_REGISTER_FOR_NOTIFICATION_CALLBACK_TRANSACTION: {
     const char *address = data.readCString();
     int registered = data.readInt32();
@@ -228,6 +235,22 @@ void BpBluetoothLowEnergyCallback::OnCharacteristicRead(
 
   remote()->transact(
       IBluetoothLowEnergyCallback::ON_CHARACTERISTIC_READ_TRANSACTION,
+      data, NULL,
+      IBinder::FLAG_ONEWAY);
+}
+
+void BpBluetoothLowEnergyCallback::OnCharacteristicWrite(
+    const char* address, int status, uint16_t handle) {
+  Parcel data;
+
+  data.writeInterfaceToken(
+      IBluetoothLowEnergyCallback::getInterfaceDescriptor());
+  data.writeCString(address);
+  data.writeInt32(status);
+  data.writeInt32(handle);
+
+  remote()->transact(
+      IBluetoothLowEnergyCallback::ON_CHARACTERISTIC_WRITE_TRANSACTION,
       data, NULL,
       IBinder::FLAG_ONEWAY);
 }
