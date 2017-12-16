@@ -962,6 +962,13 @@ void LowEnergyClient::NotifyCallback(
         break;
       }
     }
+    if (!bda) {
+      std::map<const bt_bdaddr_t, int>::iterator conn_id_itr;
+      conn_id_itr = connection_ids_.find(notification->bda);
+      if (conn_id_itr != connection_ids_.end()) {
+        bda = &(notification->bda);
+      }
+    }
   }
 
   if (!bda)
