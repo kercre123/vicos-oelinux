@@ -80,6 +80,28 @@ class CLIBluetoothLowEnergyCallback
 
   void OnScanResult(const bluetooth::ScanResult& /* scan_result */) override {}
 
+  void OnServicesDiscovered(int /* status */, const char* /* address */) override {}
+
+  void OnGattDbUpdated(const char* /* address */, btgatt_db_element_t* /* db */,
+                       int /* size */) override {}
+
+  void OnCharacteristicRead(const char* /* address */, int /* status */,
+                            btgatt_read_params_t* /* p_data */) override {}
+
+  void OnCharacteristicWrite(const char* /* address */, int /* status */,
+                             uint16_t /* handle */) override {}
+
+  void OnDescriptorWrite(const char* /* address */, int /* status */,
+                         uint16_t /* handle */) override {}
+
+  void OnCharacteristicNotificationRegistration(const char* /* address */,
+                                                int /* registered */,
+                                                int /* status */,
+                                                uint16_t /* handle */) override {}
+
+  void OnCharacteristicChanged(const char* /* address */,
+                               btgatt_notify_params_t* /* notification */) override {}
+
   void StartAdvertising() {
     /* Advertising data: 128-bit Service UUID: Anki BLE Service */
     std::vector<uint8_t> data;
