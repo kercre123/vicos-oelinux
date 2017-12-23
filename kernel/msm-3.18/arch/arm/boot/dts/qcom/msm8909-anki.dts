@@ -15,6 +15,7 @@
 
 #include "anki-mtp.dtsi"
 #include "msm8909-pm8916.dtsi"
+#include "msm8909-pm8916-camera.dtsi"
 
 / {
 	model = "ANKI Victor Headboard";
