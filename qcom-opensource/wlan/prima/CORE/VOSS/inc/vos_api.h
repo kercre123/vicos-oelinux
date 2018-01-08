@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -74,6 +74,7 @@
 #include <vos_threads.h>
 #include <vos_timer.h>
 #include <vos_pack_align.h>
+#include <asm/arch_timer.h>
 
 /**
  * enum userspace_log_level - Log level at userspace
@@ -534,4 +535,17 @@ void vos_dump_wdi_events(void);
 bool vos_check_arp_target_ip(vos_pkt_t *pPacket);
 void vos_update_arp_fw_tx_delivered(void);
 void vos_update_arp_rx_drop_reorder(void);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+static inline uint64_t __vos_get_log_timestamp(void)
+{
+	return arch_counter_get_cntvct();
+}
+#else
+static inline uint64_t __vos_get_log_timestamp(void)
+{
+	return arch_counter_get_cntpct();
+}
+#endif /* LINUX_VERSION_CODE */
+
 #endif // if !defined __VOS_NVITEM_H
