@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote name="anki" fetch="git@github.com:anki/" />
+
+  <!-- To remove a porject from the main manifest do something like the following
+  <remove-project name="CyanogenMod/android_hardware_ti_omap3" /> -->
+
+  <project name="vic-os--kernel" remote="anki" path="kernel/msm-3.18" revision="anki/le" upstream="anki/le" />
+  <project name="vic-os--platform-vendor-qcom-opensource-wlan-prima" remote="anki" path="qcom-opensource/wlan/prima" revision="anki/le" upstream="anki/le" />
+  <project name="vic-os--poky-meta-qti-bsp" remote="anki" path="poky/meta-qti-bsp" revision="anki/le" upstream="anki/le" />
+  <project name="vic-os--bootable-bootloader-lk" remote="anki" path="bootable/bootloader/lk" revision="anki/le" upstream="anki/le" />
+
+</manifest>
