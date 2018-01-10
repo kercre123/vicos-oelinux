@@ -1,0 +1,29 @@
+/**
+ * File: btutils.h
+ *
+ * Author: seichert
+ * Created: 1/11/2018
+ *
+ * Description: Bluetooth utility functions
+ *
+ * Copyright: Anki, Inc. 2018
+ *
+ **/
+
+#pragma once
+#include <hardware/bluetooth.h>
+#include <string>
+
+std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr);
+std::string bt_uuid_t_to_string(const bt_uuid_t* uuid);
+void bt_uuid_t_from_string(const std::string& uuidStr, bt_uuid_t* uuid);
+bool bt_uuid_t_equals(const bt_uuid_t* uuid1, const bt_uuid_t* uuid2);
+std::string bt_status_t_to_string(const bt_status_t status);
+std::string bt_gatt_error_to_string(const int error);
+const char* bt_scan_mode_t_to_string(const bt_scan_mode_t mode);
+const char* bt_state_t_to_string(const bt_state_t state);
+const char* bt_cb_thread_evt_to_string(const bt_cb_thread_evt evt);
+const char* bt_property_type_t_to_string(const bt_property_type_t property_type);
+const char* bt_device_type_t_to_string(const bt_device_type_t type);
+std::string bt_acl_state_t_to_string(const bt_acl_state_t state);
+

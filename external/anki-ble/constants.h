@@ -12,18 +12,17 @@
 
 #pragma once
 
-#include <bluetooth/uuid.h>
+#include <string>
 
 // This header defines constants specific to the Anki BLE GATT Service.
 
 namespace Anki {
 
-
-const bluetooth::UUID kAnkiBLEService_128_BIT_UUID("D55E356B-59CC-4265-9D5F-3C61E9DFD70F");
-const bluetooth::UUID kCentralToPeripheralCharacteristicUUID("7D2A4BDA-D29B-4152-B725-2491478C5CD7");
-const bluetooth::UUID kPeripheralToCentralCharacteristicUUID("30619F2D-0F54-41BD-A65A-7588D8C85B45");
-const bluetooth::UUID kDisconnectCharacteristicUUID("68F0FD05-B0D4-495A-8FD8-130179A137C0");
-const bluetooth::UUID kCCCDescriptorUUID("2902");
+const std::string kAnkiBLEService_128_BIT_UUID("D55E356B-59CC-4265-9D5F-3C61E9DFD70F");
+const std::string kCentralToPeripheralCharacteristicUUID("7D2A4BDA-D29B-4152-B725-2491478C5CD7");
+const std::string kPeripheralToCentralCharacteristicUUID("30619F2D-0F54-41BD-A65A-7588D8C85B45");
+const std::string kDisconnectCharacteristicUUID("68F0FD05-B0D4-495A-8FD8-130179A137C0");
+const std::string kCCCDescriptorUUID("00002902-0000-1000-8000-00805F9B34FB");
 
 const size_t kAnkiVictorMsgMaxSize=20;
 const size_t kAnkiVictorMsgPayloadMaxSize=18;

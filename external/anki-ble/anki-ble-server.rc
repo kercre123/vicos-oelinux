@@ -1,6 +1,0 @@
-service anki-ble-server /system/bin/anki-ble-server
-        class late_start
-        user root
-        group root
-	oneshot
-
