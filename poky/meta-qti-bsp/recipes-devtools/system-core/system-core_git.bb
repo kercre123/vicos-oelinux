@@ -83,6 +83,16 @@ do_install_append() {
           ${D}${systemd_unitdir}/system/multi-user.target.wants/leprop.service
       ln -sf ${systemd_unitdir}/system/leprop.service \
           ${D}${systemd_unitdir}/system/ffbm.target.wants/leprop.service
+      if ${@bb.utils.contains('DISTRO_FEATURES', 'wifi', 'true', 'false', d)}; then
+          cat >> ${D}${sysconfdir}/initscripts/init_post_boot <<EOT
+
+export MODULE_BASE=/lib/modules/\`uname -r\`
+case "\$1" in
+start)
+    insmod \$MODULE_BASE/extra/wlan.ko
+esac
+EOT
+      fi
    else
       install -m 0755 ${S}/adb/start_adbd -D ${D}${sysconfdir}/init.d/adbd
       install -m 0755 ${S}/logd/start_logd -D ${D}${sysconfdir}/init.d/logd
