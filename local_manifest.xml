@@ -9,5 +9,6 @@
   <project name="vic-os--platform-vendor-qcom-opensource-wlan-prima" remote="anki" path="qcom-opensource/wlan/prima" revision="anki/le" upstream="anki/le" />
   <project name="vic-os--poky-meta-qti-bsp" remote="anki" path="poky/meta-qti-bsp" revision="anki/le" upstream="anki/le" />
   <project name="vic-os--bootable-bootloader-lk" remote="anki" path="bootable/bootloader/lk" revision="anki/le" upstream="anki/le" />
+  <project name="vic-os--android_compat-device-qcom-msm890" remote="anki" path="android_compat/device/qcom/msm8909" revision="anki/le" upstream="anki/le" />
 
 </manifest>
