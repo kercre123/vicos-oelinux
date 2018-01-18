@@ -1,4 +1,4 @@
-inherit autotools-brokensep pkgconfig
+inherit autotools-brokensep pkgconfig systemd update-rc.d
 
 DESCRIPTION = "Bluetooth Property Daemon"
 HOMEPAGE = "http://codeaurora.org/"
@@ -9,7 +9,9 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 DEPENDS = "common glib-2.0 liblog"
 FILESPATH =+ "${WORKSPACE}:"
+SRC_DIR = "${WORKSPACE}/qcom-opensource/bt/property-ops/"
 SRC_URI = "file://qcom-opensource/bt/property-ops/"
+SRC_URI += "file://btproperty.service"
 
 EXTRA_OECONF = " \
                 --with-glib \
@@ -18,3 +20,25 @@ S = "${WORKDIR}/qcom-opensource/bt/property-ops/"
 
 CFLAGS_append = " -DUSE_ANDROID_LOGGING "
 LDFLAGS_append = " -llog "
+
+INITSCRIPT_NAME = "start_btproperty"
+INITSCRIPT_PARAMS = "start 98 5 . stop 2 0 1 6 ."
+
+do_install_append() {
+    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+	install -d ${D}${sysconfdir}/initscripts/
+	install "${S}start_btproperty" ${D}${sysconfdir}/initscripts/start_btproperty
+	install -d ${D}${sysconfdir}/systemd/system/
+	install -m 0644 ${WORKDIR}/btproperty.service \
+	    -D ${D}${sysconfdir}/systemd/system/btproperty.service
+	install -d ${D}${sysconfdir}/systemd/system/multi-user.target.wants/
+	ln -sf /etc/systemd/system/btproperty.service \
+	    ${D}${sysconfdir}/systemd/system/multi-user.target.wants/btproperty.service
+    else
+	install -d ${D}${sysconfdir}
+	install -d ${D}${sysconfdir}/init.d
+	install "${S}/start_btproperty" ${D}${sysconfdir}/init.d
+    fi
+}
+
+FILES_${PN} += "${systemd_unitdir}/system/"
