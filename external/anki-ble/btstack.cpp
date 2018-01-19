@@ -561,6 +561,7 @@ bt_status_t AddNextCharacteristicOrDescriptor() {
     }
   }
   if (!found) {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
     sBtGattServiceAdded = true;
     sBtStackCallbackReceived = true;
     sBtStackCallbackCV.notify_one();
@@ -582,6 +583,7 @@ void btgatts_service_added_cb(int status, int server_if,
   }
 
   if (bt_status != BT_STATUS_SUCCESS) {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
     sBtGattOpError = true;
     sBtStackCallbackReceived = true;
     sBtStackCallbackCV.notify_one();
@@ -614,6 +616,7 @@ void btgatts_characteristic_added_cb(int status, int server_if, bt_uuid_t *char_
   }
 
   if (bt_status != BT_STATUS_SUCCESS) {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
     sBtGattOpError = true;
     sBtStackCallbackReceived = true;
     sBtStackCallbackCV.notify_one();
@@ -647,6 +650,7 @@ void btgatts_descriptor_added_cb(int status, int server_if, bt_uuid_t *descr_id,
     bt_status = AddNextCharacteristicOrDescriptor();
   }
   if (bt_status != BT_STATUS_SUCCESS) {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
     sBtGattOpError = true;
     sBtStackCallbackReceived = true;
     sBtStackCallbackCV.notify_one();
@@ -659,6 +663,7 @@ void btgatts_service_started_cb(int status, int server_if, int srvc_handle)
   bt_status_t bt_status = (bt_status_t) status;
   logv("%s(status = %s, server_if = %d, srvc_handle = %d)",
        __FUNCTION__, bt_status_t_to_string(bt_status).c_str(), server_if, srvc_handle);
+  std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
   sBtGattOpError = !(bt_status == BT_STATUS_SUCCESS);
   sBtGattServiceStarted =
       ((bt_status == BT_STATUS_SUCCESS) && (srvc_handle == sBluetoothGattService->service_handle));
@@ -671,7 +676,7 @@ void btgatts_service_stopped_cb(int status, int server_if, int srvc_handle)
   bt_status_t bt_status = (bt_status_t) status;
   logv("%s(status = %s, server_if = %d, srvc_handle = %d)",
        __FUNCTION__, bt_status_t_to_string(bt_status).c_str(), server_if, srvc_handle);
-
+  std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
   sBtGattOpError = !(bt_status == BT_STATUS_SUCCESS);
   sBtGattServiceStarted =
       ((bt_status == BT_STATUS_SUCCESS) && (srvc_handle == sBluetoothGattService->service_handle));
@@ -875,7 +880,10 @@ bool EnableAdapter() {
   if (sBtAdapterEnabled) {
     return true;
   }
-  sBtStackCallbackReceived = false;
+  {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
+    sBtStackCallbackReceived = false;
+  }
   int status = sBtInterface->enable(false /* guest_mode */);
   if (status != BT_STATUS_SUCCESS) {
     logw("sBtInterface->enable returned %s", bt_status_t_to_string((bt_status_t) status).c_str());
@@ -924,7 +932,10 @@ bool RegisterGattClient() {
   if (!sBtGattInterface) {
     return false;
   }
-  sBtStackCallbackReceived = false;
+  {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
+    sBtStackCallbackReceived = false;
+  }
   bt_status_t status = sBtGattInterface->client->register_client(&sGattClientUUID);
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to register GATT client. status = %s",
@@ -947,7 +958,10 @@ bool RegisterGattServer() {
   if (!sBtGattInterface) {
     return false;
   }
-  sBtStackCallbackReceived = false;
+  {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
+    sBtStackCallbackReceived = false;
+  }
   bt_status_t status = sBtGattInterface->server->register_server(&sGattServerUUID);
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to register GATT server. status = %s",
@@ -980,9 +994,12 @@ bool AddGattService(BluetoothGattService* service) {
     num_handles += it.descriptors.size();
   }
 
-  sBtStackCallbackReceived = false;
-  sBtGattServiceAdded = false;
-  sBtGattOpError = false;
+  {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
+    sBtStackCallbackReceived = false;
+    sBtGattServiceAdded = false;
+    sBtGattOpError = false;
+  }
   bt_status_t status = sBtGattInterface->server->add_service(sBtGattServerIf,
                                                              &srvc_id,
                                                              num_handles);
@@ -1017,9 +1034,12 @@ bool StartGattService(BluetoothGattService* service) {
     loge("service doesn't match");
     return false;
   }
-  sBtStackCallbackReceived = false;
-  sBtGattServiceStarted = false;
-  sBtGattOpError = false;
+  {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
+    sBtStackCallbackReceived = false;
+    sBtGattServiceStarted = false;
+    sBtGattOpError = false;
+  }
   bt_status_t status = sBtGattInterface->server->start_service(sBtGattServerIf,
                                                                sBluetoothGattService->service_handle,
                                                                GATT_TRANSPORT_LE);
