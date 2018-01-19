@@ -59,28 +59,14 @@
 
 &spmi_bus {
 	qcom,pm8916@0 {
-		qcom,leds@a300 {
-			status = "okay";
-			qcom,led_mpp_4 {
-				label = "mpp";
-				linux,name = "face-backlight";
-				linux,default-trigger = "none";
-				qcom,default-state = "on";
-				qcom,max-current = <20>;
-				qcom,current-setting = <15>;
-				qcom,id = <6>;
-				qcom,mode = "manual";
-				qcom,source-sel = <1>;
-				qcom,mode-ctrl = <0x60>;
-			};
-		};
 		qcom,leds@a100 {
 			status = "okay";
 			qcom,led_mpp_2 {
+        compatible = "qcom,leds-qpnp";
 				label = "mpp";
 				linux,name = "face-backlight";
 				linux,default-trigger = "none";
-				qcom,default-state = "on";
+				qcom,default-state = "off";
 				qcom,max-current = <20>;
 				qcom,current-setting = <15>;
 				qcom,id = <6>;
@@ -99,10 +85,7 @@
 	};
 
 	mpp@a100 { /* MPP 2 */
-		/* Backlight current sync */
-		qcom,mode = <6>;		/* Current sync */
-		qcom,cs-out = <2>;		/* 15mA */
-		qcom,master-en = <1>;		/* Enable MPP */
+		status = "disabled";
 	};
 
 	mpp@a200 { /* MPP 3 */
@@ -111,10 +94,7 @@
 	};
 
 	mpp@a300 { /* MPP 4 */
-		/* Backlight current sync */
-		qcom,mode = <6>;		/* Current sync */
-		qcom,cs-out = <2>;		/* 15mA */
-		qcom,master-en = <1>;		/* Enable MPP */
+		status = "disabled";
 	};
 };
 

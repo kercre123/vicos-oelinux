@@ -930,7 +930,6 @@
 		qcom,has-autodetect-xo;
 		qcom,is-pronto-v3;
 		qcom,is-dual-band-disabled;
-		qcom,is-pronto-vadc;
 		qcom,has-pronto-hw;
 		qcom,wcnss-adc_tm = <&pm8909_adc_tm>;
 	};
