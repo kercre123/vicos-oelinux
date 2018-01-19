@@ -10,7 +10,6 @@ CFLAGS_append = " -DUSE_ANDROID_LOGGING "
 LDFLAGS_append = " -llog "
 
 FILESPATH =+ "${WORKSPACE}:"
-SRC_DIR = "${WORKSPACE}/external/anki-ble/"
 SRC_URI = "file://external/anki-ble/"
 SRC_URI += "file://ankibluetoothd.service"
 
