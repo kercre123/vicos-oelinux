@@ -9,7 +9,6 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 DEPENDS = "common glib-2.0 liblog"
 FILESPATH =+ "${WORKSPACE}:"
-SRC_DIR = "${WORKSPACE}/qcom-opensource/bt/property-ops/"
 SRC_URI = "file://qcom-opensource/bt/property-ops/"
 SRC_URI += "file://btproperty.service"
 
