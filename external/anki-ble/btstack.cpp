@@ -36,8 +36,14 @@ using namespace std::chrono_literals;
 extern "C" {
 #endif
 
-static bt_uuid_t sGattClientUUID;
-static bt_uuid_t sGattServerUUID;
+/* To register for the client and server GATT interface, we need to provide uuids.
+ * These uuids were generated with uuidgen on the desktop to avoid having to generate
+ * them in code.
+ */
+static bt_uuid_t sGattClientUUID = {0x11, 0xd3, 0xc1, 0xd7, 0xac, 0x93, 0x38, 0xa1,
+                                    0x6c, 0x47, 0x87, 0xfc, 0x54, 0x16, 0xd0, 0x03};
+static bt_uuid_t sGattServerUUID = {0x25, 0x3b, 0xbe, 0x5a, 0x29, 0x45, 0xe9, 0x84,
+                                    0xd0, 0x48, 0xfc, 0xb6, 0xeb, 0xd2, 0x90, 0xb6};
 
 static struct hw_device_t *sDevice;
 static bluetooth_device_t *sBtDevice;
@@ -918,10 +924,8 @@ bool RegisterGattClient() {
   if (!sBtGattInterface) {
     return false;
   }
-  bt_uuid_t uuid;
-  bt_uuid_t_from_string("03d01654-fc87-476c-a138-93acd7c1d311", &uuid);
   sBtStackCallbackReceived = false;
-  bt_status_t status = sBtGattInterface->client->register_client(&uuid);
+  bt_status_t status = sBtGattInterface->client->register_client(&sGattClientUUID);
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to register GATT client. status = %s",
          bt_status_t_to_string(status).c_str());
@@ -943,10 +947,8 @@ bool RegisterGattServer() {
   if (!sBtGattInterface) {
     return false;
   }
-  bt_uuid_t uuid;
-  bt_uuid_t_from_string("b690d2eb-b6fc-48d0-84e9-45295abe3b25", &uuid);
   sBtStackCallbackReceived = false;
-  bt_status_t status = sBtGattInterface->server->register_server(&uuid);
+  bt_status_t status = sBtGattInterface->server->register_server(&sGattServerUUID);
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to register GATT server. status = %s",
          bt_status_t_to_string(status).c_str());
