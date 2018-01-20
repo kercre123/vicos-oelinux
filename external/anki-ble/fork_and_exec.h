@@ -19,7 +19,6 @@
 namespace Anki {
 
 int ForkAndExec(const std::vector<std::string>& args, std::ostream& out);
-
 void KillChildProcess();
 
 } // namespace Anki

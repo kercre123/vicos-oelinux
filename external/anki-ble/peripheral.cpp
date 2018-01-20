@@ -15,7 +15,7 @@
 #include "btstack.h"
 #include "btutils.h"
 #include "constants.h"
-#include "fork_and_exec.h"
+#include "exec_command.h"
 #include "gatt_constants.h"
 #include "log.h"
 #include "taskExecutor.h"
@@ -37,7 +37,6 @@ const uid_t kRootUid = 0;
 const gid_t kRootGid = 0;
 
 static std::mutex sMutex;
-static Anki::TaskExecutor sBackgroundTaskExecutor;
 static Anki::TaskExecutor sHeartBeatTaskExecutor;
 
 static BluetoothGattService sBluetoothGattService;
@@ -72,7 +71,7 @@ void TransmitNextNotification()
     } else {
       logi("Failed to send notification");
       if (sConnected && sConnectionId) {
-        Anki::KillChildProcess();
+        Anki::CancelBackgroundCommands();
         sConnected = false;
         sConnectionId = -1;
         return;
@@ -85,6 +84,9 @@ void TransmitNextNotification()
 
 static void SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
 {
+  if (!sConnected) {
+    return;
+  }
   if (value.size() <= Anki::kAnkiVictorMsgMaxSize) {
     sNotificationQueue.emplace_back(value);
     if (sNotificationQueue.size() == 1) {
@@ -118,6 +120,9 @@ static void SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
 
 static void SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value)
 {
+  if (!sConnected) {
+    return;
+  }
   uint8_t msgSize = std::min(static_cast<unsigned int>(std::numeric_limits<uint8_t>::max()), value.size() + 1);
   std::vector<uint8_t> msg {msgSize, msgID};
   msg.insert(std::end(msg), std::begin(value), std::end(value));
@@ -126,6 +131,9 @@ static void SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8
 
 static void SendMessageToConnectedCentral(uint8_t msgID, const std::string& str)
 {
+  if (!sConnected) {
+    return;
+  }
   std::vector<uint8_t> value(str.begin(), str.end());
   value.push_back(0);
   SendMessageToConnectedCentral(msgID, value);
@@ -159,49 +167,6 @@ static void ScheduleNextHeartBeat() {
   sHeartBeatTaskExecutor.WakeAfter(std::bind(SendHeartBeat), when);
 };
 
-static int ExecCommandEx(const std::vector<std::string>& args, std::string& output)
-{
-  output.clear();
-  if (!sConnected) {
-    return -1;
-  }
-  std::ostringstream oss;
-
-  int rc = Anki::ForkAndExec(args, oss);
-
-  output = oss.str();
-
-  return rc;
-}
-
-static void ExecCommand(const std::vector<std::string>& args)
-{
-  if (!sConnected) {
-    return;
-  }
-  if (args.empty()) {
-    SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
-                                  "Invalid argument: args in empty");
-    return;
-  }
-  std::string output;
-  int rc = ExecCommandEx(args, output);
-
-  if (rc) {
-    std::ostringstream oss;
-    oss << "Error: " << rc << std::endl;
-    output = oss.str() + output;
-  }
-  SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, output);
-}
-
-
-static void ExecCommandInBackground(const std::vector<std::string>& args)
-{
-  if (sConnected) {
-    sBackgroundTaskExecutor.Wake(std::bind(&ExecCommand, args));
-  }
-}
 static int CalculateSignalLevel(int rssi, int numLevels)
 {
   if (rssi <= Anki::kMinRssi) {
@@ -295,12 +260,12 @@ static void ParseWiFiScanResults(const std::string& in, std::vector<WiFiScanResu
 static void ScanForWiFiAccessPoints()
 {
   std::string output;
-  int rc = ExecCommandEx({"wpa_cli", "scan"}, output);
+  int rc = Anki::ExecCommand({"wpa_cli", "scan"}, output);
   if (rc) {
     loge("Error scanning for WiFi access points. rc = %d", rc);
     return;
   }
-  rc = ExecCommandEx({"wpa_cli", "scan_results"}, output);
+  rc = Anki::ExecCommand({"wpa_cli", "scan_results"}, output);
   if (rc) {
     loge("Error getting WiFi scan results. rc = %d", rc);
     return;
@@ -320,14 +285,38 @@ static void ScanForWiFiAccessPoints()
   SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_WIFI_SCAN_RESULTS, packed_results);
 }
 
+static void ExecCommandInBackgroundAndSendOutputToCentral(const std::vector<std::string>& args)
+{
+  if (!sConnected) {
+    return;
+  }
+  if (args.empty()) {
+    SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
+                                  "Invalid argument: args in empty");
+    return;
+  }
+  auto callback = [](int rc, const std::string& output) {
+    if (!sConnected) {
+      return;
+    }
+    std::ostringstream oss;
+    if (rc) {
+      oss << "Error: " << rc << std::endl;
+    }
+    oss << output;
+    SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, oss.str());
+  };
+  Anki::ExecCommandInBackground(args, callback);
+}
+
 static void EnableWiFiInterface(const bool enable)
 {
   if (enable) {
-    ExecCommandInBackground({"ifconfig", "wlan0", "up"});
+    ExecCommandInBackgroundAndSendOutputToCentral({"ifconfig", "wlan0", "up"});
   } else {
-    ExecCommandInBackground({"ifconfig", "wlan0", "down"});
+    ExecCommandInBackgroundAndSendOutputToCentral({"ifconfig", "wlan0", "down"});
   }
-  ExecCommandInBackground({"ifconfig", "wlan0"});
+  ExecCommandInBackgroundAndSendOutputToCentral({"ifconfig", "wlan0"});
 }
 
 static std::string GetPathToWiFiConfigFile()
@@ -418,10 +407,10 @@ static void SetWiFiConfig(const std::map<std::string, std::string> networks)
     return;
   }
 
-  ExecCommandInBackground({"wpa_cli", "reconfigure"});
-  ExecCommandInBackground({"wpa_cli", "enable", "0"});
-  ExecCommandInBackground({"sleep", "10"});
-  ExecCommandInBackground({"wpa_cli", "status"});
+  ExecCommandInBackgroundAndSendOutputToCentral({"wpa_cli", "reconfigure"});
+  ExecCommandInBackgroundAndSendOutputToCentral({"wpa_cli", "enable", "0"});
+  ExecCommandInBackgroundAndSendOutputToCentral({"sleep", "10"});
+  ExecCommandInBackgroundAndSendOutputToCentral({"wpa_cli", "status"});
 }
 
 static std::string GetPathToSSHAuthorizedKeys()
@@ -521,8 +510,8 @@ static void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message
     break;
   case Anki::VictorMsg_Command::MSG_B2V_DEV_RESTART_ADBD:
     logi("Received restart adbd request");
-    ExecCommandInBackground({"/etc/initscripts/adbd", "stop"});
-    ExecCommandInBackground({"/etc/initscripts/adbd", "start"});
+    ExecCommandInBackgroundAndSendOutputToCentral({"/etc/initscripts/adbd", "stop"});
+    ExecCommandInBackgroundAndSendOutputToCentral({"/etc/initscripts/adbd", "start"});
     break;
   case Anki::VictorMsg_Command::MSG_B2V_DEV_EXEC_CMD_LINE:
     {
@@ -537,7 +526,7 @@ static void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message
         args.push_back(arg);
         it = terminator + 1;
       }
-      ExecCommandInBackground(args);
+      ExecCommandInBackgroundAndSendOutputToCentral(args);
     }
     break;
   case Anki::VictorMsg_Command::MSG_B2V_MULTIPART_START:
@@ -569,7 +558,7 @@ static void PeripheralConnectionCallback(int conn_id, int connected) {
   sCentralToPeripheralValue.clear();
   sNotificationQueue.clear();
   sCongested = false;
-  Anki::KillChildProcess();
+  Anki::CancelBackgroundCommands();
   if (connected) {
     sConnectionId = conn_id;
     StopAdvertisement();

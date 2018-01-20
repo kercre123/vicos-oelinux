@@ -26,6 +26,7 @@ ankibluetoothd_SOURCES = 	main.cpp \
 				btutils.cpp \
 				peripheral.cpp \
 				device_info.cpp \
+				exec_command.cpp \
 				fork_and_exec.cpp \
 				taskExecutor.cpp \
 				log.cpp
