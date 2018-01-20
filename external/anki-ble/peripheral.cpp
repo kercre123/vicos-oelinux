@@ -16,6 +16,7 @@
 #include "btutils.h"
 #include "constants.h"
 #include "exec_command.h"
+#include "fileutils.h"
 #include "gatt_constants.h"
 #include "log.h"
 #include "taskExecutor.h"
@@ -27,14 +28,7 @@
 #include <mutex>
 #include <sstream>
 
-#include <fcntl.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-const uid_t kRootUid = 0;
-const gid_t kRootGid = 0;
 
 static std::mutex sMutex;
 static Anki::TaskExecutor sHeartBeatTaskExecutor;
@@ -347,42 +341,6 @@ p2p_no_group_iface=1
   }
 }
 
-static int WriteFileAtomically(const std::string& path,
-                               const std::string& data,
-                               mode_t mode,
-                               uid_t owner,
-                               gid_t group)
-{
-  std::string tmpPath = path + ".tmp";
-
-  {
-    std::ofstream ofstrm(tmpPath, std::ios::binary | std::ios::out | std::ios::trunc);
-    if (!ofstrm.is_open()) {
-      logi("Failed to open '%s'", tmpPath.c_str());
-      return -1;
-    }
-
-    ofstrm << data;
-  }
-
-  int rc = chmod(tmpPath.c_str(), mode);
-  if (rc) {
-    logi("Error chmoding '%s' errno = %d", tmpPath.c_str(), errno);
-    return rc;
-  }
-  rc = chown(tmpPath.c_str(), owner, group);
-  if (rc) {
-    logi("Error chowning '%s' errno = %d", tmpPath.c_str(), errno);
-    return rc;
-  }
-  rc = rename(tmpPath.c_str(), path.c_str());
-  if (rc) {
-    logi("Error renaming '%s' to '%s' errno = %d", tmpPath.c_str(), path.c_str(), errno);
-    return rc;
-  }
-  return 0;
-}
-
 static void SetWiFiConfig(const std::map<std::string, std::string> networks)
 {
   std::ostringstream wifiConfigStream;
@@ -396,11 +354,8 @@ static void SetWiFiConfig(const std::map<std::string, std::string> networks)
                      << "}" << std::endl << std::endl;
   }
 
-  int rc = WriteFileAtomically(GetPathToWiFiConfigFile(),
-                               wifiConfigStream.str(),
-                               (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP),
-                               kRootUid,
-                               kRootGid);
+  int rc = Anki::WriteFileAtomically(GetPathToWiFiConfigFile(), wifiConfigStream.str());
+
   if (rc) {
     SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
                                   "Failed to write wifi config. rc = " + std::to_string(rc));
@@ -420,11 +375,8 @@ static std::string GetPathToSSHAuthorizedKeys()
 
 static void SetSSHAuthorizedKeys(const std::string& keys)
 {
-  int rc = WriteFileAtomically(GetPathToSSHAuthorizedKeys(),
-                               keys,
-                               (S_IRUSR | S_IWUSR),
-                               kRootUid,
-                               kRootGid);
+  int rc =
+      Anki::WriteFileAtomically(GetPathToSSHAuthorizedKeys(), keys, (S_IRUSR | S_IWUSR));
 
   if (rc) {
     SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
