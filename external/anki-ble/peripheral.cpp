@@ -48,7 +48,6 @@ static uint8_t sHeartBeatCount = 1;
 static std::vector<uint8_t> sMultipartMessage;
 
 static std::vector<uint8_t> sPeripheralToCentralValue;
-static std::vector<uint8_t> sCentralToPeripheralValue;
 
 std::deque<std::vector<uint8_t>> sNotificationQueue;
 
@@ -63,6 +62,7 @@ void TransmitNextNotification()
                               false,
                               value)) {
       transmitted = true;
+      sPeripheralToCentralValue = value;
     } else {
       logi("Failed to send notification");
       if (sConnected && sConnectionId) {
@@ -304,7 +304,6 @@ static void PeripheralConnectionCallback(int conn_id, int connected) {
   sCCCValue = 0;
   sHeartBeatCount = 1;
   sPeripheralToCentralValue.clear();
-  sCentralToPeripheralValue.clear();
   sNotificationQueue.clear();
   sCongested = false;
   Anki::CancelBackgroundCommands();
@@ -344,8 +343,7 @@ static void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, 
   if (attr_handle == sPeripheralToCentralCharacteristicHandle) {
     error = kGattErrorWriteNotPermitted;
   } else if (attr_handle == sCentralToPeripheralCharacteristicHandle) {
-    sCentralToPeripheralValue = value;
-    HandleIncomingMessageFromCentral(sCentralToPeripheralValue);
+    HandleIncomingMessageFromCentral(value);
   } else if (attr_handle == sCCCDescriptorHandle) {
     if (value.size() != 2 || value[1] != 0x00 || value[0] > 0x01) {
       error = kGattErrorCCCDImproperlyConfigured;
