@@ -10,9 +10,6 @@
  *
  **/
 
-
-#pragma once
-
 #include "fileutils.h"
 #include "log.h"
 #include <fstream>

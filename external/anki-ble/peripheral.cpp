@@ -20,10 +20,10 @@
 #include "gatt_constants.h"
 #include "log.h"
 #include "taskExecutor.h"
+#include "wifi.h"
 
 #include <algorithm>
 #include <deque>
-#include <fstream>
 #include <map>
 #include <mutex>
 #include <sstream>
@@ -161,122 +161,16 @@ static void ScheduleNextHeartBeat() {
   sHeartBeatTaskExecutor.WakeAfter(std::bind(SendHeartBeat), when);
 };
 
-static int CalculateSignalLevel(int rssi, int numLevels)
-{
-  if (rssi <= Anki::kMinRssi) {
-    return 0;
-  } else if (rssi >= Anki::kMaxRssi) {
-    return (numLevels - 1);
-  } else {
-    float inputRange = (Anki::kMaxRssi - Anki::kMinRssi);
-    float outputRange = (numLevels - 1);
-    return (int)((float)(rssi - Anki::kMinRssi) * outputRange / inputRange);
-  }
-}
-
-class WiFiScanResult {
- public:
-  Anki::WiFiAuth auth;
-  bool           encrypted;
-  bool           wps;
-  uint8_t        signal_level;
-  std::string ssid;
-};
-
-static void ParseWiFiScanResults(const std::string& in, std::vector<WiFiScanResult>& outResults)
-{
-  outResults.clear();
-  std::istringstream input(in);
-  std::string header1;
-  std::string header2;
-
-  std::getline(input, header1);
-  std::getline(input, header2);
-
-  for (std::string line; std::getline(input, line); ) {
-    std::stringstream linestream(line);
-    std::string bssid;
-    std::string frequency;
-    std::string signal_level;
-    std::string flags;
-    std::string ssid;
-
-    std::getline(linestream, bssid, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, frequency, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, signal_level, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, flags, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, ssid, '\t');
-    if (!linestream.good() && !linestream.eof()) break;
-
-    WiFiScanResult result;
-    result.ssid = ssid;
-    if (flags.find("[WPA2-EAP") != std::string::npos) {
-      result.auth = Anki::WiFiAuth::AUTH_WPA2_EAP;
-    } else if (flags.find("[WPA-EAP") != std::string::npos) {
-      result.auth = Anki::WiFiAuth::AUTH_WPA_EAP;
-    } else if (flags.find("[WPA2-PSK") != std::string::npos) {
-      result.auth = Anki::WiFiAuth::AUTH_WPA2_PSK;
-    } else if (flags.find("[WPA-PSK") != std::string::npos) {
-      result.auth = Anki::WiFiAuth::AUTH_WPA_PSK;
-    } else {
-      result.auth = Anki::WiFiAuth::AUTH_NONE_OPEN;
-    }
-
-    if (flags.find("-CCMP") != std::string::npos) {
-      result.encrypted = true;
-    } else if (flags.find("-TKIP") != std::string::npos) {
-      result.encrypted = false;
-    } else if (flags.find("WEP") != std::string::npos) {
-      result.encrypted = true;
-      if (result.auth == Anki::WiFiAuth::AUTH_NONE_OPEN) {
-        result.auth = Anki::WiFiAuth::AUTH_NONE_WEP;
-      }
-    } else {
-      result.encrypted = false;
-    }
-
-    if (flags.find("[WPS") != std::string::npos) {
-      result.wps = true;
-    } else {
-      result.wps = false;
-    }
-
-    result.signal_level = (uint8_t) CalculateSignalLevel(std::stoi(signal_level), 4);
-    outResults.push_back(result);
-  }
-
-}
-
-static void ScanForWiFiAccessPoints()
-{
-  std::string output;
-  int rc = Anki::ExecCommand({"wpa_cli", "scan"}, output);
-  if (rc) {
-    loge("Error scanning for WiFi access points. rc = %d", rc);
+static void SendOutputToConnectedCentral(int rc, const std::string& output) {
+  if (!sConnected) {
     return;
   }
-  rc = Anki::ExecCommand({"wpa_cli", "scan_results"}, output);
+  std::ostringstream oss;
   if (rc) {
-    loge("Error getting WiFi scan results. rc = %d", rc);
-    return;
+    oss << "Error: " << rc << std::endl;
   }
-  std::vector<WiFiScanResult> results;
-  ParseWiFiScanResults(output, results);
-  std::vector<uint8_t> packed_results;
-  // Payload is (<auth><encrypted><wps><signal_level><ssid>\0)*
-  for (auto const& r : results) {
-    packed_results.push_back(r.auth);
-    packed_results.push_back(r.encrypted);
-    packed_results.push_back(r.wps);
-    packed_results.push_back(r.signal_level);
-    std::copy(r.ssid.begin(), r.ssid.end(), std::back_inserter(packed_results));
-    packed_results.push_back(0);
-  }
-  SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_WIFI_SCAN_RESULTS, packed_results);
+  oss << output;
+  SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, oss.str());
 }
 
 static void ExecCommandInBackgroundAndSendOutputToCentral(const std::vector<std::string>& args)
@@ -289,83 +183,7 @@ static void ExecCommandInBackgroundAndSendOutputToCentral(const std::vector<std:
                                   "Invalid argument: args in empty");
     return;
   }
-  auto callback = [](int rc, const std::string& output) {
-    if (!sConnected) {
-      return;
-    }
-    std::ostringstream oss;
-    if (rc) {
-      oss << "Error: " << rc << std::endl;
-    }
-    oss << output;
-    SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE, oss.str());
-  };
-  Anki::ExecCommandInBackground(args, callback);
-}
-
-static void EnableWiFiInterface(const bool enable)
-{
-  if (enable) {
-    ExecCommandInBackgroundAndSendOutputToCentral({"ifconfig", "wlan0", "up"});
-  } else {
-    ExecCommandInBackgroundAndSendOutputToCentral({"ifconfig", "wlan0", "down"});
-  }
-  ExecCommandInBackgroundAndSendOutputToCentral({"ifconfig", "wlan0"});
-}
-
-static std::string GetPathToWiFiConfigFile()
-{
-  return "/data/misc/wifi/wpa_supplicant.conf";
-}
-
-static std::string GetPathToWiFiDefaultConfigFile()
-{
-  return "/system/etc/wpa_supplicant_default.conf";
-}
-
-static std::string GetWiFiDefaultConfig()
-{
-  std::string defaultConfigPath = GetPathToWiFiDefaultConfigFile();
-  std::ifstream istrm(defaultConfigPath, std::ios::binary | std::ios::in);
-  if (istrm.is_open()) {
-    std::ostringstream ss;
-    ss << istrm.rdbuf();
-    return ss.str();
-  } else {
-    const char* defaultConfig = R"foo(ctrl_interface=/var/run/wpa_supplicant
-update_config=1
-p2p_no_group_iface=1
-
-)foo";
-    return defaultConfig;
-  }
-}
-
-static void SetWiFiConfig(const std::map<std::string, std::string> networks)
-{
-  std::ostringstream wifiConfigStream;
-
-  wifiConfigStream << GetWiFiDefaultConfig();
-
-  for (auto const& kv : networks) {
-    wifiConfigStream << "network={" << std::endl
-                     << "\tssid=\"" << kv.first << "\"" << std::endl
-                     << "\tpsk=\"" << kv.second << "\"" << std::endl
-                     << "}" << std::endl << std::endl;
-  }
-
-  int rc = Anki::WriteFileAtomically(GetPathToWiFiConfigFile(), wifiConfigStream.str());
-
-  if (rc) {
-    SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
-                                  "Failed to write wifi config. rc = " + std::to_string(rc));
-    return;
-  }
-
-  ExecCommandInBackgroundAndSendOutputToCentral({"wpa_cli", "reconfigure"});
-  ExecCommandInBackgroundAndSendOutputToCentral({"wpa_cli", "enable", "0"});
-  ExecCommandInBackgroundAndSendOutputToCentral({"sleep", "10"});
-  ExecCommandInBackgroundAndSendOutputToCentral({"wpa_cli", "status"});
+  Anki::ExecCommandInBackground(args, SendOutputToConnectedCentral);
 }
 
 static std::string GetPathToSSHAuthorizedKeys()
@@ -411,37 +229,27 @@ static void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_START:
     logi("Received WiFi start");
-    EnableWiFiInterface(true);
+    Anki::EnableWiFiInterface(true, SendOutputToConnectedCentral);
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_STOP:
     logi("Received WiFi stop");
-    EnableWiFiInterface(false);
+    Anki::EnableWiFiInterface(false, SendOutputToConnectedCentral);
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_SCAN:
-    logi("Received WiFi scan");
-    ScanForWiFiAccessPoints();
+    {
+      logi("Received WiFi scan");
+      std::vector<Anki::WiFiScanResult> results = Anki::ScanForWiFiAccessPoints();
+      std::vector<uint8_t> packed_results = Anki::PackWiFiScanResults(results);
+      SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_WIFI_SCAN_RESULTS,
+                                    packed_results);
+    }
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_SET_CONFIG:
     {
       logi("Receive WiFi Set Config");
-      std::map<std::string, std::string> networks;
-      // The payload is (<SSID>\0<PSK>\0)*
-      for (auto it = message.begin() + 2 ; it != message.end(); ) {
-        auto terminator = std::find(it, message.end(), 0);
-        if (terminator == message.end()) {
-          break;
-        }
-        std::string ssid(it, terminator);
-        it = terminator + 1;
-        terminator = std::find(it, message.end(), 0);
-        if (terminator == message.end()) {
-          break;
-        }
-        std::string psk(it, terminator);
-        networks.emplace(ssid, psk);
-        it = terminator + 1;
-      }
-      SetWiFiConfig(networks);
+      std::vector<uint8_t> packedWiFiConfig(message.begin() + 2, message.end());
+      std::map<std::string, std::string> networks = Anki::UnPackWiFiConfig(packedWiFiConfig);
+      Anki::SetWiFiConfig(networks, SendOutputToConnectedCentral);
     }
     break;
   case Anki::VictorMsg_Command::MSG_B2V_SSH_SET_AUTHORIZED_KEYS:
