@@ -19,6 +19,7 @@
 #include "fileutils.h"
 #include "gatt_constants.h"
 #include "log.h"
+#include "ssh.h"
 #include "taskExecutor.h"
 #include "wifi.h"
 
@@ -186,25 +187,6 @@ static void ExecCommandInBackgroundAndSendOutputToCentral(const std::vector<std:
   Anki::ExecCommandInBackground(args, SendOutputToConnectedCentral);
 }
 
-static std::string GetPathToSSHAuthorizedKeys()
-{
-  return "/data/root/.ssh/authorized_keys";
-}
-
-static void SetSSHAuthorizedKeys(const std::string& keys)
-{
-  int rc =
-      Anki::WriteFileAtomically(GetPathToSSHAuthorizedKeys(), keys, (S_IRUSR | S_IWUSR));
-
-  if (rc) {
-    SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
-                                  "Failed to set SSH authorized keys. rc = " + std::to_string(rc));
-  } else {
-    SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_DEV_EXEC_CMD_LINE_RESPONSE,
-                                  "SSH authorized keys set");
-  }
-}
-
 static void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message)
 {
   if (message.size() < 2) {
@@ -257,7 +239,14 @@ static void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message
       logi("Receive SSH authorized keys");
       // Payload is text for the .ssh/authorized_keys file
       std::string keys(message.begin() + 2, message.end());
-      SetSSHAuthorizedKeys(keys);
+      int rc = Anki::SetSSHAuthorizedKeys(keys);
+      std::string output;
+      if (rc) {
+        output = "Failed to set SSH authorized keys";
+      } else {
+        output = "SSH authorized keys set";
+      }
+      SendOutputToConnectedCentral(rc, output);
     }
     break;
   case Anki::VictorMsg_Command::MSG_B2V_DEV_PING_WITH_DATA_REQUEST:
