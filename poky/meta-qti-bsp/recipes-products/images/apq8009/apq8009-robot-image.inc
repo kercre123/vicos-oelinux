@@ -13,7 +13,7 @@ IMAGE_INSTALL += "chronyc"
 
 IMAGE_INSTALL += "openssh"
 IMAGE_INSTALL += "connman connman-client connman-tools"
-IMAGE_INSTALL += "${@base_conditional('PRODUCT','robot-rome', 'iw', '', d)}"
+IMAGE_INSTALL += "iw"
 IMAGE_INSTALL += "${@base_conditional('PRODUCT','robot-rome', 'sigma-dut', '', d)}"
 IMAGE_INSTALL += "${@base_conditional('PRODUCT','robot-rome', 'libcap', '', d)}"
 IMAGE_INSTALL += "${@base_conditional('PRODUCT','robot-rome', 'attr', '', d)}"
