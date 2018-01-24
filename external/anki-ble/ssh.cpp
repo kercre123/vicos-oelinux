@@ -10,9 +10,6 @@
  *
  **/
 
-
-#pragma once
-
 #include "fileutils.h"
 
 namespace Anki {
