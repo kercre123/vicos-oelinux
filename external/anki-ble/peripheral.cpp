@@ -12,6 +12,7 @@
 
 #include "peripheral.h"
 
+#include "ble_advertise_settings.h"
 #include "btstack.h"
 #include "btutils.h"
 #include "constants.h"
@@ -34,6 +35,7 @@
 static std::mutex sMutex;
 static Anki::TaskExecutor sHeartBeatTaskExecutor;
 
+static Anki::BLEAdvertiseSettings sBLEAdvertiseSettings;
 static BluetoothGattService sBluetoothGattService;
 static int sCentralToPeripheralCharacteristicHandle = -1;
 static int sPeripheralToCentralCharacteristicHandle = -1;
@@ -312,7 +314,7 @@ static void PeripheralConnectionCallback(int conn_id, int connected) {
     StopAdvertisement();
   } else {
     sConnectionId = -1;
-    StartAdvertisement(sBluetoothGattService.uuid);
+    StartAdvertisement(sBLEAdvertiseSettings);
   }
 }
 
@@ -447,8 +449,10 @@ bool StartBLEPeripheral() {
   }
 
   logv("Anki BLE peripheral service started.");
-
-  if (!StartAdvertisement(sBluetoothGattService.uuid)) {
+  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeName(true);
+  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeTxPower(true);
+  sBLEAdvertiseSettings.GetScanResponse().SetServiceUUID(Anki::kAnkiBLEService_128_BIT_UUID);
+  if (!StartAdvertisement(sBLEAdvertiseSettings)) {
     loge("Failed to start advertising Anki BLE peripheral service");
     return false;
   }

@@ -1066,43 +1066,62 @@ bool StartGattService(BluetoothGattService* service) {
 
 }
 
-bool StartAdvertisement(std::string service_uuid)
+bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings)
 {
-  bt_uuid_t uuid;
-  bt_uuid_t_from_string(service_uuid, &uuid);
+  const Anki::BLEAdvertiseData& advertisement = settings.GetAdvertisement();
+  bt_uuid_t adv_uuid;
+  uint16_t service_uuid_len = 0;
+  char* service_uuid = nullptr;
+  if (!advertisement.GetServiceUUID().empty()) {
+    bt_uuid_t_from_string(advertisement.GetServiceUUID(), &adv_uuid);
+    service_uuid_len = sizeof(adv_uuid.uu);
+    service_uuid = (char *) adv_uuid.uu;
+  }
 
-  bt_status_t status = sBtGattInterface->client->set_adv_data(sBtGattClientIf,
-                                                              false /* set_scan_rsp */,
-                                                              true /* include_name */,
-                                                              true /* include_txpower */,
-                                                              100 /* min_interval */,
-                                                              1000 /* max_interval */,
-                                                              0 /* appearance */,
-                                                              0 /* manufacturer_len */,
-                                                              nullptr /* manufacturer_data */,
-                                                              0 /* service_data_len */,
-                                                              nullptr /* service_data */,
-                                                              0 /* service_uuid_len */,
-                                                              nullptr /* service_uuid */);
+  bt_status_t status =
+      sBtGattInterface->client->set_adv_data(sBtGattClientIf,
+                                             false /* set_scan_rsp */,
+                                             advertisement.GetIncludeName(),
+                                             advertisement.GetIncludeTxPower(),
+                                             settings.GetMinInterval(),
+                                             settings.GetMaxInterval(),
+                                             settings.GetAppearance(),
+                                             advertisement.GetManufacturerData().size(),
+                                             (char *)(advertisement.GetManufacturerData().data()),
+                                             advertisement.GetServiceData().size(),
+                                             (char *)(advertisement.GetServiceData().data()),
+                                             service_uuid_len,
+                                             service_uuid);
 
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to set advertisement data");
     return false;
   }
+  const Anki::BLEAdvertiseData& scanResponse = settings.GetScanResponse();
+  service_uuid_len = 0;
+  service_uuid = nullptr;
+  bt_uuid_t scn_uuid;
+  if (!scanResponse.GetServiceUUID().empty()) {
+    bt_uuid_t_from_string(scanResponse.GetServiceUUID(), &scn_uuid);
+    service_uuid_len = sizeof(scn_uuid.uu);
+    service_uuid = (char *) scn_uuid.uu;
+  }
 
-  status = sBtGattInterface->client->set_adv_data(sBtGattClientIf,
-                                                  true /* set_scan_rsp */,
-                                                  false /* include_name */,
-                                                  false /* include_txpower */,
-                                                  100 /* min_interval */,
-                                                  1000 /* max_interval */,
-                                                  0 /* appearance */,
-                                                  0 /* manufacturer_len */,
-                                                  nullptr /* manufacturer_data */,
-                                                  0 /* service_data_len */,
-                                                  nullptr /* service_data */,
-                                                  sizeof(uuid.uu) /* service_uuid_len */,
-                                                  (char *) uuid.uu /* service_uuid */);
+  status =
+      sBtGattInterface->client->set_adv_data(sBtGattClientIf,
+                                             true /* set_scan_rsp */,
+                                             scanResponse.GetIncludeName(),
+                                             scanResponse.GetIncludeTxPower(),
+                                             settings.GetMinInterval(),
+                                             settings.GetMaxInterval(),
+                                             settings.GetAppearance(),
+                                             scanResponse.GetManufacturerData().size(),
+                                             (char *)(scanResponse.GetManufacturerData().data()),
+                                             scanResponse.GetServiceData().size(),
+                                             (char *)(scanResponse.GetServiceData().data()),
+                                             service_uuid_len,
+                                             service_uuid);
+
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to set scan response data");
     return false;

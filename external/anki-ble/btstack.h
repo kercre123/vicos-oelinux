@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "ble_advertise_settings.h"
 #include <string>
 #include <vector>
 
@@ -65,5 +66,5 @@ bool SendGattIndication(int attribute_handle, int conn_id, int confirm,
                         const std::vector<uint8_t>& value);
 bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
                   const std::vector<uint8_t>& value);
-bool StartAdvertisement(std::string service_uuid);
+bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings);
 bool StopAdvertisement();
