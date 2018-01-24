@@ -1081,8 +1081,8 @@ bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings)
   bt_status_t status =
       sBtGattInterface->client->set_adv_data(sBtGattClientIf,
                                              false /* set_scan_rsp */,
-                                             advertisement.GetIncludeName(),
-                                             advertisement.GetIncludeTxPower(),
+                                             advertisement.GetIncludeDeviceName(),
+                                             advertisement.GetIncludeTxPowerLevel(),
                                              settings.GetMinInterval(),
                                              settings.GetMaxInterval(),
                                              settings.GetAppearance(),
@@ -1110,8 +1110,8 @@ bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings)
   status =
       sBtGattInterface->client->set_adv_data(sBtGattClientIf,
                                              true /* set_scan_rsp */,
-                                             scanResponse.GetIncludeName(),
-                                             scanResponse.GetIncludeTxPower(),
+                                             scanResponse.GetIncludeDeviceName(),
+                                             scanResponse.GetIncludeTxPowerLevel(),
                                              settings.GetMinInterval(),
                                              settings.GetMaxInterval(),
                                              settings.GetAppearance(),

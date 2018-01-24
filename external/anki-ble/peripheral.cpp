@@ -449,8 +449,8 @@ bool StartBLEPeripheral() {
   }
 
   logv("Anki BLE peripheral service started.");
-  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeName(true);
-  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeTxPower(true);
+  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeDeviceName(true);
+  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeTxPowerLevel(true);
   sBLEAdvertiseSettings.GetScanResponse().SetServiceUUID(Anki::kAnkiBLEService_128_BIT_UUID);
   if (!StartAdvertisement(sBLEAdvertiseSettings)) {
     loge("Failed to start advertising Anki BLE peripheral service");

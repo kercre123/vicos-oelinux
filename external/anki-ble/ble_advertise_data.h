@@ -20,16 +20,19 @@ namespace Anki {
 class BLEAdvertiseData {
  public:
   BLEAdvertiseData()
-      : include_name_(false)
-      , include_tx_power_(false)
+      : include_device_name_(false)
+      , include_tx_power_level_(false)
   { }
   ~BLEAdvertiseData() = default;
 
-  void SetIncludeName(const bool enable) { include_name_ = enable; }
-  bool GetIncludeName() const { return include_name_; }
+  // Whether the device name should be included in the advertisement
+  // The device's name is the name we have assigned to the Bluetooth adapter
+  void SetIncludeDeviceName(const bool value) { include_device_name_ = value; }
+  bool GetIncludeDeviceName() const { return include_device_name_; }
 
-  void SetIncludeTxPower(const bool enable) { include_tx_power_ = enable; }
-  bool GetIncludeTxPower() const { return include_tx_power_; }
+  // Whether or not to include the tranmission power level in the advertisement
+  void SetIncludeTxPowerLevel(const bool value) { include_tx_power_level_ = value; }
+  bool GetIncludeTxPowerLevel() const { return include_tx_power_level_; }
 
   void SetManufacturerData(const std::vector<uint8_t>& data) { manufacturer_data_ = data; }
   const std::vector<uint8_t>& GetManufacturerData() const { return manufacturer_data_; }
@@ -43,8 +46,8 @@ class BLEAdvertiseData {
   const std::string& GetServiceUUID() const { return service_uuid_; }
 
  private:
-  bool include_name_;
-  bool include_tx_power_;
+  bool include_device_name_;
+  bool include_tx_power_level_;
   std::vector<uint8_t> manufacturer_data_;
   std::vector<uint8_t> service_data_;
   std::string service_uuid_;
