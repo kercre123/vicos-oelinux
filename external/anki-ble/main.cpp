@@ -10,59 +10,40 @@
  *
  **/
 
-
+#include "include_ev.h"
 #include "btstack.h"
 #include "device_info.h"
 #include "log.h"
 #include "peripheral.h"
 
-#include <signal.h>
 #include <unistd.h>
-
-#include <thread>
-#include <mutex>
-#include <condition_variable>
 
 static void ExitHandler(int status = 0) {
   UnLoadBtStack();
   _exit(status);
 }
 
-static void SignalHandler(int sig) {
+static void SignalCallback(struct ev_loop* loop, struct ev_signal* w, int revents)
+{
+  logi("Exiting for signal %d", w->signum);
+  ev_unloop(loop, EVUNLOOP_ALL);
   ExitHandler();
 }
 
-static void SetupSignalHandler() {
-  struct sigaction new_action, old_action;
+static struct ev_signal sIntSig;
+static struct ev_signal sHupSig;
+static struct ev_signal sTermSig;
 
-  new_action.sa_handler = SignalHandler;
-  sigemptyset(&new_action.sa_mask);
-  new_action.sa_flags = 0;
-
-  (void) sigaction(SIGINT, NULL, &old_action);
-  if (old_action.sa_handler != SIG_IGN) {
-    (void) sigaction(SIGINT, &new_action, NULL);
-  }
-  (void) sigaction(SIGHUP, NULL, &old_action);
-  if (old_action.sa_handler != SIG_IGN) {
-    (void) sigaction(SIGHUP, &new_action, NULL);
-  }
-  (void) sigaction(SIGTERM, NULL, &old_action);
-  if (old_action.sa_handler != SIG_IGN) {
-    (void) sigaction(SIGTERM, &new_action, NULL);
-  }
-}
-
-static std::mutex m;
-static std::condition_variable cv;
-
-void WaitForever() {
-  std::unique_lock<std::mutex> lk(m);
-  cv.wait(lk, []{return false;});
-}
+static struct ev_loop* sDefaultLoop = ev_default_loop(0);
 
 int main(int argc, char *argv[]) {
-  SetupSignalHandler();
+  ev_signal_init(&sIntSig, SignalCallback, SIGINT);
+  ev_signal_start(sDefaultLoop, &sIntSig);
+  ev_signal_init(&sHupSig, SignalCallback, SIGHUP);
+  ev_signal_start(sDefaultLoop, &sHupSig);
+  ev_signal_init(&sTermSig, SignalCallback, SIGTERM);
+  ev_signal_start(sDefaultLoop, &sTermSig);
+
   setAndroidLoggingTag("ankibtd");
   setMinLogLevel(kLogLevelVerbose);
   if (!LoadBtStack()) {
@@ -84,7 +65,7 @@ int main(int argc, char *argv[]) {
   if (!StartBLEPeripheral()) {
     ExitHandler(1);
   }
-  WaitForever();
+  ev_loop(sDefaultLoop, 0);
   ExitHandler();
   return 0;
 }

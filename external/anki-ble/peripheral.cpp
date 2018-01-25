@@ -19,9 +19,9 @@
 #include "exec_command.h"
 #include "fileutils.h"
 #include "gatt_constants.h"
+#include "include_ev.h"
 #include "log.h"
 #include "ssh.h"
-#include "taskExecutor.h"
 #include "wifi.h"
 
 #include <algorithm>
@@ -33,7 +33,7 @@
 #include <string.h>
 
 static std::mutex sMutex;
-static Anki::TaskExecutor sHeartBeatTaskExecutor;
+static ev_timer sHeartBeatTimer;
 
 static Anki::BLEAdvertiseSettings sBLEAdvertiseSettings;
 static BluetoothGattService sBluetoothGattService;
@@ -136,7 +136,6 @@ static void SendMessageToConnectedCentral(uint8_t msgID, const std::string& str)
   SendMessageToConnectedCentral(msgID, value);
 }
 
-static void ScheduleNextHeartBeat();
 static void SendHeartBeat() {
   std::lock_guard<std::mutex> lock(sMutex);
   if (!sConnected) {
@@ -155,14 +154,14 @@ static void SendHeartBeat() {
   std::vector<uint8_t> value;
   value.push_back(sHeartBeatCount++);
   SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_HEARTBEAT, value);
-
-  ScheduleNextHeartBeat();
+  return;
 }
 
-static void ScheduleNextHeartBeat() {
-  auto when = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-  sHeartBeatTaskExecutor.WakeAfter(std::bind(SendHeartBeat), when);
-};
+
+static void HeartBeatCallback(struct ev_loop* loop, struct ev_timer* w, int revents)
+{
+  SendHeartBeat();
+}
 
 static void SendOutputToConnectedCentral(int rc, const std::string& output) {
   if (!sConnected) {
@@ -352,9 +351,6 @@ static void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, 
     } else {
       uint8_t previous_value = sCCCValue;
       sCCCValue = value[0];
-      if (!previous_value && sCCCValue) {
-        ScheduleNextHeartBeat();
-      }
     }
   }
 
@@ -391,6 +387,10 @@ static void PeripheralCongestionCallback(int conn_id, bool congested) {
 }
 
 bool StartBLEPeripheral() {
+  // Send heartbeats every 10 seconds if we are connected to a central
+  ev_timer_init(&sHeartBeatTimer, HeartBeatCallback, 10., 10.);
+  ev_timer_start(ev_default_loop(0), &sHeartBeatTimer);
+
   sBluetoothGattService.uuid = Anki::kAnkiBLEService_128_BIT_UUID;
   sBluetoothGattService.connection_cb = PeripheralConnectionCallback;
   sBluetoothGattService.request_read_cb = PeripheralReadCallback;

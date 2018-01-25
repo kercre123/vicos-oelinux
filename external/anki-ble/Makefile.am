@@ -32,7 +32,8 @@ ankibluetoothd_SOURCES = 	main.cpp \
 				taskExecutor.cpp \
 				log.cpp \
 				ssh.cpp \
-				wifi.cpp
+				wifi.cpp \
+				static_ev.c
 
 pkgconfigdir = $(libdir)/pkgconfig
 
