@@ -34,7 +34,7 @@ static struct ev_signal sIntSig;
 static struct ev_signal sHupSig;
 static struct ev_signal sTermSig;
 
-static struct ev_loop* sDefaultLoop = ev_default_loop(0);
+static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
 
 int main(int argc, char *argv[]) {
   ev_signal_init(&sIntSig, SignalCallback, SIGINT);

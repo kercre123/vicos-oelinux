@@ -389,7 +389,7 @@ static void PeripheralCongestionCallback(int conn_id, bool congested) {
 bool StartBLEPeripheral() {
   // Send heartbeats every 10 seconds if we are connected to a central
   ev_timer_init(&sHeartBeatTimer, HeartBeatCallback, 10., 10.);
-  ev_timer_start(ev_default_loop(0), &sHeartBeatTimer);
+  ev_timer_start(ev_default_loop(EVBACKEND_SELECT), &sHeartBeatTimer);
 
   sBluetoothGattService.uuid = Anki::kAnkiBLEService_128_BIT_UUID;
   sBluetoothGattService.connection_cb = PeripheralConnectionCallback;

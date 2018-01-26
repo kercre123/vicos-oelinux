@@ -13,8 +13,8 @@
 #define EV_STANDALONE 1
 #define EV_USE_MONOTONIC 1
 #define EV_USE_SELECT 1
-#define EV_USE_POLL 1
-#define EV_USE_EPOLL 1
+#define EV_USE_EPOLL 0
+#define EV_USE_POLL 0
 #define EV_MULTIPLICITY 1
 #define EV_IDLE_ENABLE 1
 
