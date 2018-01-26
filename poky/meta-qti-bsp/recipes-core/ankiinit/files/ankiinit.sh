@@ -2,9 +2,11 @@
 
 set -e
 
-# Enable L10 and L8 power rails required for GPIO, LCD, IMU and Camera
-echo 1 > /sys/kernel/debug/regulator/8916_l10/enable
+# Enable power rails required for GPIO, LCD, IMU and Camera but not yet controlled by device tree
+# TODO Configure device tree to properly control these regulators.
 echo 1 > /sys/kernel/debug/regulator/8916_l8/enable
+echo 1 > /sys/kernel/debug/regulator/8916_l17/enable
+echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
 
 # @nathan-anki  - to stop overheating, limit CPU to 533MHz, RAM to 400MHz
 echo 533333 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
