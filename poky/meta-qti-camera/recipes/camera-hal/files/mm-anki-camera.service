@@ -1,0 +1,10 @@
+[Unit]
+Description= Anki Camera Service
+SourcePath=/usr/bin/mm-anki-camera
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/mm-anki-camera
+
+[Install]
+WantedBy=multi-user.target
