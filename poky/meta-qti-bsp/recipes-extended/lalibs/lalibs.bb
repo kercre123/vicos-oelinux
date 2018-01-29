@@ -10,6 +10,7 @@ do_install_append() {
   install -m 755 ${WORKDIR}/linker ${D}/system/bin
   install -d ${D}/system/lib
   install -m 755 ${WORKDIR}/lib*.so ${D}/system/lib
+  install -m 644 ${WORKDIR}/*.o ${D}/system/lib
 }
 
 do_package_qa() {
