@@ -18,7 +18,7 @@
 
 namespace Anki {
 
-static TaskExecutor sBackgroundTaskExecutor;
+static TaskExecutor* sBackgroundTaskExecutor;
 static bool sBackgroundCommandsCancelled = false;
 
 int ExecCommand(const std::vector<std::string>& args, std::string& output)
@@ -33,7 +33,9 @@ int ExecCommand(const std::vector<std::string>& args, std::string& output)
 
 }
 
-void ExecCommandInBackground(const std::vector<std::string>& args, ExecCommandCallback callback)
+void ExecCommandInBackground(const std::vector<std::string>& args,
+                             ExecCommandCallback callback,
+                             long delayMillis)
 {
   sBackgroundCommandsCancelled = false;
   auto f = [args, callback]() {
@@ -43,13 +45,24 @@ void ExecCommandInBackground(const std::vector<std::string>& args, ExecCommandCa
       callback(rc, output);
     }
   };
-  sBackgroundTaskExecutor.Wake(f);
+  if (!sBackgroundTaskExecutor) {
+    sBackgroundTaskExecutor = new TaskExecutor();
+  }
+  if (delayMillis > 0L) {
+    auto when = std::chrono::steady_clock::now() + std::chrono::milliseconds(delayMillis);
+    sBackgroundTaskExecutor->WakeAfter(f, when);
+  } else {
+    sBackgroundTaskExecutor->Wake(f);
+  }
 }
 
 void CancelBackgroundCommands()
 {
   sBackgroundCommandsCancelled = true;
   KillChildProcess();
+  if (sBackgroundTaskExecutor) {
+    delete sBackgroundTaskExecutor; sBackgroundTaskExecutor = nullptr;
+  }
 }
 
 } // namespace Anki

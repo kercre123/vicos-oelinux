@@ -212,8 +212,8 @@ void SetWiFiConfig(const std::map<std::string, std::string> networks, ExecComman
 
   ExecCommandInBackground({"wpa_cli", "reconfigure"}, callback);
   ExecCommandInBackground({"wpa_cli", "enable", "0"}, callback);
-  ExecCommandInBackground({"sleep", "10"}, callback);
-  ExecCommandInBackground({"wpa_cli", "status"}, callback);
+  ExecCommandInBackground({"echo", "Give me about 10 seconds to setup WiFi...."}, callback);
+  ExecCommandInBackground({"wpa_cli", "status"}, callback, 10L * 1000L);
 }
 
 

@@ -2,18 +2,20 @@
  * File: taskExecutor
  *
  * Author: seichert
- * Created: 07/15/14
+ * Created: 01/29/2018
  *
- * Description: Execute arbitrary tasks on
- * a background thread serially.
+ * Description: Execute arbitrary tasks on a background thread serially.
+ * Uses libev to signal the background thread to process its queue.
  *
  * Based on original work from Michael Sung on May 30, 2014, 10:10 AM
  *
- * Copyright: Anki, Inc. 2014
+ * Copyright: Anki, Inc. 2014-2018
  *
  **/
 #ifndef __TaskExecutor_H__
 #define	__TaskExecutor_H__
+
+#include "include_ev.h"
 
 #include <chrono>
 #include <condition_variable>
@@ -46,24 +48,27 @@ public:
 protected:
   TaskExecutor(const TaskExecutor&) = delete;
   TaskExecutor& operator=(const TaskExecutor&) = delete;
-  void Wait(std::unique_lock<std::mutex> &lock,
-            std::condition_variable &condition,
-            const std::vector<TaskHolder>* tasks) const;
+
 private:
   void AddTaskHolder(TaskHolder taskHolder);
   void AddTaskHolderToDeferredQueue(TaskHolder taskHolder);
   void Execute();
   void ProcessDeferredQueue();
-  void Run(std::unique_lock<std::mutex> &lock);
+  void ProcessTaskQueue();
+  void CommonCallback();
+  void PipeWatcherCallback(ev::io& w, int revents);
+  void TimerWatcherCallback(ev::timer& w, int revents);
+  void WakeUpBackgroundThread(const char c = 'x');
 
 private:
+  int _pipeFileDescriptors[2];
+  ev::io* _pipeWatcher;
+  ev::timer* _timerWatcher;
+  struct ev_loop* _loop;
   std::thread _taskExecuteThread;
   std::mutex _taskQueueMutex;
-  std::condition_variable _taskQueueCondition;
   std::vector<TaskHolder> _taskQueue;
-  std::thread _taskDeferredThread;
   std::mutex _taskDeferredQueueMutex;
-  std::condition_variable _taskDeferredCondition;
   std::vector<TaskHolder> _deferredTaskQueue;
   std::mutex _addSyncTaskMutex;
   std::mutex _syncTaskCompleteMutex;

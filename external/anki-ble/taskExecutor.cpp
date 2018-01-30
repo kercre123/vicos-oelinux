@@ -15,20 +15,37 @@
 
 #include "taskExecutor.h"
 #include <algorithm>
+#include <fcntl.h>
+#include <unistd.h>
 
 namespace Anki
 {
 
 TaskExecutor::TaskExecutor()
 : _executing(true)
+, _pipeFileDescriptors{-1, -1}
 {
+  (void) pipe2(_pipeFileDescriptors, O_NONBLOCK);
   _taskExecuteThread = std::thread(&TaskExecutor::Execute, this);
-  _taskDeferredThread = std::thread(&TaskExecutor::ProcessDeferredQueue, this);
 }
 
 TaskExecutor::~TaskExecutor()
 {
   StopExecution();
+  if (_pipeFileDescriptors[1] >= 0) {
+    (void) close(_pipeFileDescriptors[1]); _pipeFileDescriptors[1] = -1;
+  }
+  if (_pipeFileDescriptors[0] >= 0) {
+    (void) close(_pipeFileDescriptors[0]); _pipeFileDescriptors[0] = -1;
+  }
+}
+
+void TaskExecutor::WakeUpBackgroundThread(const char c)
+{
+  if (_pipeFileDescriptors[1] >= 0) {
+    char buf[1] = {c};
+    (void) write(_pipeFileDescriptors[1], buf, sizeof(buf));
+  }
 }
 
 void TaskExecutor::StopExecution()
@@ -41,24 +58,22 @@ void TaskExecutor::StopExecution()
   {
     std::lock_guard<std::mutex> lock(_taskQueueMutex);
     _taskQueue.clear();
-    _taskQueueCondition.notify_one();
   }
 
   // Clear the _deferredTaskQueue and also use a scope.
   {
     std::lock_guard<std::mutex> lock(_taskDeferredQueueMutex);
     _deferredTaskQueue.clear();
-    _taskDeferredCondition.notify_one();
   }
+
+  // Wake up the background thread so that it exits
+  WakeUpBackgroundThread('q');
 
   // Join the background threads.  We created the threads in the constructor, so they
   // should be cleaned up in our destructor.
   try {
     if (_taskExecuteThread.joinable()) {
       _taskExecuteThread.join();
-    }
-    if (_taskDeferredThread.joinable()) {
-      _taskDeferredThread.join();
     }
   } catch ( ... )
   {
@@ -97,8 +112,7 @@ void TaskExecutor::WakeSync(std::function<void()> task)
   AddTaskHolder(std::move(taskHolder));
 
   std::unique_lock<std::mutex> lk(_syncTaskCompleteMutex);
-  _syncTaskCondition.wait(lk, [this]{return _syncTaskDone;});
-
+  _syncTaskCondition.wait(lk, [this]{return _syncTaskDone || !_executing;});
 }
 
 void TaskExecutor::WakeAfter(std::function<void()> task, std::chrono::time_point<std::chrono::steady_clock> when)
@@ -126,7 +140,7 @@ void TaskExecutor::AddTaskHolder(TaskHolder taskHolder)
     return;
   }
   _taskQueue.push_back(std::move(taskHolder));
-  _taskQueueCondition.notify_one();
+  WakeUpBackgroundThread();
 }
 
 void TaskExecutor::AddTaskHolderToDeferredQueue(TaskHolder taskHolder)
@@ -138,71 +152,91 @@ void TaskExecutor::AddTaskHolderToDeferredQueue(TaskHolder taskHolder)
   _deferredTaskQueue.push_back(std::move(taskHolder));
   // Sort the tasks so that the next one due is at the back of the queue
   std::sort(_deferredTaskQueue.begin(), _deferredTaskQueue.end());
-  _taskDeferredCondition.notify_one();
+  WakeUpBackgroundThread();
 }
 
+void TaskExecutor::CommonCallback() {
+  if (_executing) {
+    ProcessTaskQueue();
+    ProcessDeferredQueue();
+  } else {
+    if (_loop) {
+      ev_unloop(_loop, EVUNLOOP_ALL);
+    }
+  }
+}
 
-
-void TaskExecutor::Wait(std::unique_lock<std::mutex> &lock,
-                        std::condition_variable &condition,
-                        const std::vector<TaskHolder>* tasks) const
+void TaskExecutor::PipeWatcherCallback(ev::io& w, int revents)
 {
-  condition.wait(lock, [this, tasks] {
-      return tasks->size() > 0 || !_executing;
-  });
+  if (revents & ev::READ) {
+    char buf[1];
+    ssize_t bytesRead;
+    do {
+      bytesRead = read(w.fd, buf, sizeof(buf));
+    } while (bytesRead > 0);
+  }
+  CommonCallback();
+}
+
+void TaskExecutor::TimerWatcherCallback(ev::timer& w, int revents)
+{
+  CommonCallback();
 }
 
 void TaskExecutor::Execute()
 {
-  while (_executing) {
-    std::unique_lock<std::mutex> lock(_taskQueueMutex);
-    Wait(lock, _taskQueueCondition, &_taskQueue);
-    Run(lock);
+  _loop = ev_loop_new(EVBACKEND_SELECT);
+  _pipeWatcher = new ev::io(_loop);
+  _pipeWatcher->set <TaskExecutor, &TaskExecutor::PipeWatcherCallback> (this);
+  _timerWatcher = new ev::timer(_loop);
+  _timerWatcher->set <TaskExecutor, &TaskExecutor::TimerWatcherCallback> (this);
+  _pipeWatcher->start (_pipeFileDescriptors[0], ev::READ);
+  ev_loop(_loop, 0);
+  delete _timerWatcher; _timerWatcher = nullptr;
+  delete _pipeWatcher; _pipeWatcher = nullptr;
+  ev_loop_destroy(_loop); _loop = nullptr;
+}
+
+void TaskExecutor::ProcessTaskQueue()
+{
+  std::vector<TaskHolder> taskQueue;
+  {
+    // Briefly lock the mutex to move the task queue to a local variable.
+    // This prevents us from blocking other threads that want to add to
+    // the task queue.
+    std::lock_guard<std::mutex> lock(_taskQueueMutex);
+    taskQueue = std::move(_taskQueue);
+    _taskQueue.clear();
+  }
+  for (auto const& taskHolder : taskQueue) {
+    if (_executing) {
+      taskHolder.task();
+      if (taskHolder.sync) {
+        std::lock_guard<std::mutex> lk(_syncTaskCompleteMutex);
+        _syncTaskDone = true;
+        _syncTaskCondition.notify_one();
+      }
+    }
   }
 }
 
 void TaskExecutor::ProcessDeferredQueue()
 {
-  auto abs_time = std::chrono::time_point<std::chrono::steady_clock>::max();
-  size_t queueSize = 0;
-  while (_executing) {
-    std::unique_lock<std::mutex> lock(_taskDeferredQueueMutex);
-    _taskDeferredCondition.wait_until(lock, abs_time, [this, queueSize] {
-        return _deferredTaskQueue.size() > queueSize || !_executing;
-      });
-
-    bool endLoop = false;
-    while (_executing && !_deferredTaskQueue.empty() && !endLoop) {
-      auto now = std::chrono::steady_clock::now();
-      auto& taskHolder = _deferredTaskQueue.back();
-      if (now >= taskHolder.when) {
-        AddTaskHolder(std::move(taskHolder));
-        _deferredTaskQueue.pop_back();
-      } else {
-        endLoop = true;
-        abs_time = std::max(taskHolder.when, std::chrono::steady_clock::now());
-      }
-    }
-    if (_deferredTaskQueue.empty()) {
-      abs_time = std::chrono::time_point<std::chrono::steady_clock>::max();
-    }
-    queueSize = _deferredTaskQueue.size();
-  }
-}
-
-void TaskExecutor::Run(std::unique_lock<std::mutex> &lock)
-{
-  // copy
-  std::vector<TaskHolder> taskQueue = std::move(_taskQueue);
-  _taskQueue.clear();
-  // we only need the lock when we're reading from _taskQueue
-  lock.unlock();
-  for (auto const& taskHolder : taskQueue) {
-    taskHolder.task();
-    if (taskHolder.sync) {
-      std::lock_guard<std::mutex> lk(_syncTaskCompleteMutex);
-      _syncTaskDone = true;
-      _syncTaskCondition.notify_one();
+  std::lock_guard<std::mutex> lock(_taskDeferredQueueMutex);
+  bool endLoop = false;
+  while (_executing && !_deferredTaskQueue.empty() && !endLoop) {
+    auto now = std::chrono::steady_clock::now();
+    auto& taskHolder = _deferredTaskQueue.back();
+    if (now >= taskHolder.when) {
+      AddTaskHolder(std::move(taskHolder));
+      _deferredTaskQueue.pop_back();
+    } else {
+      endLoop = true;
+      using ev_tstamp_duration = std::chrono::duration<ev_tstamp, std::ratio<1, 1>>;
+      ev_tstamp_duration duration =
+          std::chrono::duration_cast<ev_tstamp_duration>(taskHolder.when - std::chrono::steady_clock::now());
+      ev_tstamp after = duration.count();
+      _timerWatcher->start(after);
     }
   }
 }
