@@ -13,6 +13,8 @@
 #include "fileutils.h"
 #include "log.h"
 #include <fstream>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 namespace Anki {
 
@@ -52,5 +54,32 @@ int WriteFileAtomically(const std::string& path,
   return 0;
 }
 
+int CreateDirectory(const std::string& path,
+                    mode_t mode,
+                    uid_t owner,
+                    gid_t group)
+{
+  int rc = mkdir(path.c_str(), mode);
+  if ((rc == -1) && (errno == EEXIST)) {
+    rc = 0;
+  }
+
+  if (rc) {
+    logi("Error mkdiring '%s' errno = %d", path.c_str(), errno);
+    return rc;
+  }
+
+  rc = chmod(path.c_str(), mode);
+  if (rc) {
+    logi("Error chmoding '%s' errno = %d", path.c_str(), errno);
+    return rc;
+  }
+  rc = chown(path.c_str(), owner, group);
+  if (rc) {
+    logi("Error chowning '%s' errno = %d", path.c_str(), errno);
+    return rc;
+  }
+  return 0;
+}
 
 } // namespace Anki

@@ -14,14 +14,23 @@
 
 namespace Anki {
 
-static std::string GetPathToSSHAuthorizedKeys()
+static std::string GetPathToRootSSHDir()
 {
-  return "/data/root/.ssh/authorized_keys";
+  return "/home/root/.ssh";
+}
+
+static std::string GetPathToRootSSHAuthorizedKeys()
+{
+  return GetPathToRootSSHDir() + "/authorized_keys";
 }
 
 int SetSSHAuthorizedKeys(const std::string& keys)
 {
-  int rc = WriteFileAtomically(GetPathToSSHAuthorizedKeys(), keys, (S_IRUSR | S_IWUSR));
+  int rc = CreateDirectory(GetPathToRootSSHDir());
+  if (rc) {
+    return rc;
+  }
+  rc = WriteFileAtomically(GetPathToRootSSHAuthorizedKeys(), keys, Anki::kModeUserReadWrite);
   return rc;
 }
 
