@@ -21,7 +21,14 @@ echo 1 > /sys/kernel/debug/msm-bus-dbg/shell-client/update_request
 
 # TODO Move this power rail controll into the camera driver
 CAM_REG_GPIO=83
-echo $CAM_REG_GPIO > /sys/class/gpio/export
+if [ ! -d /sys/class/gpio/gpio$CAM_REG_GPIO ]; then
+    echo $CAM_REG_GPIO > /sys/class/gpio/export
+fi
 echo out > /sys/class/gpio/gpio$CAM_REG_GPIO/direction
 echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # End camera force hack
+
+# Alsa: JMR/BRC
+tinymix set "PRI_MI2S_RX Audio Mixer MultiMedia1" 1
+tinymix set "RX3 MIX1 INP1" "RX1"
+tinymix set "SPK" 1
