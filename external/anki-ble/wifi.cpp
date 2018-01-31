@@ -144,31 +144,9 @@ void EnableWiFiInterface(const bool enable, ExecCommandCallback callback) {
 
 static std::string GetPathToWiFiConfigFile()
 {
-  return "/data/misc/wifi/wpa_supplicant.conf";
+  return "/var/lib/connman/wifi.config";
 }
 
-static std::string GetPathToWiFiDefaultConfigFile()
-{
-  return "/system/etc/wpa_supplicant_default.conf";
-}
-
-static std::string GetWiFiDefaultConfig()
-{
-  std::string defaultConfigPath = GetPathToWiFiDefaultConfigFile();
-  std::ifstream istrm(defaultConfigPath, std::ios::binary | std::ios::in);
-  if (istrm.is_open()) {
-    std::ostringstream ss;
-    ss << istrm.rdbuf();
-    return ss.str();
-  } else {
-    const char* defaultConfig = R"foo(ctrl_interface=/var/run/wpa_supplicant
-update_config=1
-p2p_no_group_iface=1
-
-)foo";
-    return defaultConfig;
-  }
-}
 std::map<std::string, std::string> UnPackWiFiConfig(const std::vector<uint8_t>& packed) {
   std::map<std::string, std::string> networks;
   // The payload is (<SSID>\0<PSK>\0)*
@@ -193,13 +171,17 @@ std::map<std::string, std::string> UnPackWiFiConfig(const std::vector<uint8_t>& 
 void SetWiFiConfig(const std::map<std::string, std::string> networks, ExecCommandCallback callback) {
   std::ostringstream wifiConfigStream;
 
-  wifiConfigStream << GetWiFiDefaultConfig();
-
+  int count = 0;
   for (auto const& kv : networks) {
-    wifiConfigStream << "network={" << std::endl
-                     << "\tssid=\"" << kv.first << "\"" << std::endl
-                     << "\tpsk=\"" << kv.second << "\"" << std::endl
-                     << "}" << std::endl << std::endl;
+    if (count > 0) {
+      wifiConfigStream << std::endl;
+    }
+    wifiConfigStream << "[service_wifi_" << count++ << "]" << std::endl
+                     << "Type = wifi" << std::endl
+                     << "IPv4 = dhcp" << std::endl
+                     << "IPv6 = auto" << std::endl
+                     << "Name = " << kv.first << std::endl
+                     << "Passphrase = " << kv.second << std::endl;
   }
 
   int rc = WriteFileAtomically(GetPathToWiFiConfigFile(), wifiConfigStream.str());
@@ -210,10 +192,9 @@ void SetWiFiConfig(const std::map<std::string, std::string> networks, ExecComman
     return;
   }
 
-  ExecCommandInBackground({"wpa_cli", "reconfigure"}, callback);
-  ExecCommandInBackground({"wpa_cli", "enable", "0"}, callback);
-  ExecCommandInBackground({"echo", "Give me about 10 seconds to setup WiFi...."}, callback);
-  ExecCommandInBackground({"wpa_cli", "status"}, callback, 10L * 1000L);
+  ExecCommandInBackground({"connmanctl", "enable", "wifi"}, callback);
+  ExecCommandInBackground({"echo", "Give me about 15 seconds to setup WiFi...."}, callback);
+  ExecCommandInBackground({"ifconfig", "wlan0"}, callback, 15L * 1000L);
 }
 
 
