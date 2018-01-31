@@ -135,11 +135,13 @@ std::vector<uint8_t> PackWiFiScanResults(const std::vector<WiFiScanResult>& resu
 
 void EnableWiFiInterface(const bool enable, ExecCommandCallback callback) {
   if (enable) {
-    ExecCommandInBackground({"ifconfig", "wlan0", "up"}, callback);
+    ExecCommandInBackground({"connmanctl", "enable", "wifi"}, callback);
+    ExecCommandInBackground({"echo", "Give me about 15 seconds to start WiFi and get an IP...."}, callback);
+    ExecCommandInBackground({"ifconfig", "wlan0"}, callback, 15L * 1000L);
   } else {
-    ExecCommandInBackground({"ifconfig", "wlan0", "down"}, callback);
+    ExecCommandInBackground({"connmanctl", "disable", "wifi"}, callback);
+    ExecCommandInBackground({"ifconfig", "wlan0"}, callback);
   }
-  ExecCommandInBackground({"ifconfig", "wlan0"}, callback);
 }
 
 static std::string GetPathToWiFiConfigFile()
