@@ -9,6 +9,8 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 FILESPATH =+ "${WORKSPACE}:"
 SRC_URI   = "file://system/core/"
 
+SRC_URI += "file://init_post_boot.diff"
+
 S = "${WORKDIR}/system/core"
 PR = "r19"
 
