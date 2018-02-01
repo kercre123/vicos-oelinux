@@ -1,0 +1,15 @@
+[Unit]
+Description=Victor robot daemon
+SourcePath=/anki/bin/vic-robot
+PartOf=anki-robot.target
+
+[Service]
+EnvironmentFile=/anki/etc/vic-robot.env
+Restart=on-failure
+ExecStart=/anki/bin/vic-robot $VIC_ROBOT_OPTS
+Nice=-20
+# Uncomment next line to set CPUAffinity (required isolcpus kernel arg)
+# CPUAffinity=3
+
+[Install]
+WantedBy=anki-robot.target

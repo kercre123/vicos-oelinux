@@ -1,0 +1,14 @@
+[Unit]
+Description=Victor cloud services daemon
+SourcePath=/anki/bin/vic-cloud
+After=vic-engine.service
+Wants=vic-engine.service
+PartOf=anki-robot.target
+
+[Service]
+EnvironmentFile=/anki/etc/vic-cloud.env
+Restart=on-failure
+ExecStart=/anki/bin/vic-cloud $VIC_CLOUD_OPTS
+
+[Install]
+WantedBy=anki-robot.target

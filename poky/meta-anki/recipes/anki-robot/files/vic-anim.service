@@ -1,0 +1,16 @@
+[Unit]
+Description=Victor animator daemon
+SourcePath=/anki/bin/vic-anim
+After=vic-robot.service anki-audio-init.service
+Requires=anki-audio-init.service
+Wants=vic-robot.service
+PartOf=anki-robot.target
+
+[Service]
+EnvironmentFile=/anki/etc/vic-anim.env
+Restart=on-failure
+ExecStart=/anki/bin/vic-anim $VIC_ANIM_OPTS
+Nice=-2
+
+[Install]
+WantedBy=anki-robot.target

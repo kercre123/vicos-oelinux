@@ -1,0 +1,7 @@
+#Include the robot settings
+IMAGE_INSTALL += "vic-robot"
+IMAGE_INSTALL += "vic-anim"
+IMAGE_INSTALL += "vic-engine"
+IMAGE_INSTALL += "vic-cloud"
+IMAGE_INSTALL += "anki-audio-init"
+IMAGE_INSTALL += "anki-robot-target"
