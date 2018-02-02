@@ -22,9 +22,6 @@
 
 namespace Anki {
 
-const int kMinRssi = -100;
-const int kMaxRssi = -55;
-
 enum WiFiAuth : uint8_t {
       AUTH_NONE_OPEN       = 0,
       AUTH_NONE_WEP        = 1,

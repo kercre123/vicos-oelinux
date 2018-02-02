@@ -37,7 +37,18 @@ ankibluetoothd_SOURCES = 	main.cpp \
 				log.cpp \
 				ssh.cpp \
 				wifi.cpp \
-				static_ev.c
+				static_ev.c \
+				connmanbus.c
+
+EXTRA_ankibluetoothd_DEPENDENCIES = connmanbus.c connmanbus.h
+
+wifi.$(OBJEXT): connmanbus.h
 
 pkgconfigdir = $(libdir)/pkgconfig
+
+connmanbus.c connmanbus.h: net.connman.xml
+	gdbus-codegen 	--generate-c-code connmanbus \
+			--c-namespace ConnManBus \
+			--interface-prefix=net.connman \
+			$(srcdir)/net.connman.xml
 

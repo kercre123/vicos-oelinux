@@ -11,9 +11,12 @@
  **/
 
 #include "wifi.h"
+#include "connmanbus.h"
 #include "exec_command.h"
 #include "fileutils.h"
 #include "log.h"
+
+#include <glib.h>
 
 #include <algorithm>
 #include <fstream>
@@ -21,101 +24,164 @@
 
 namespace Anki {
 
-static int CalculateSignalLevel(int rssi, int numLevels)
-{
-  if (rssi <= kMinRssi) {
+static int CalculateSignalLevel(const int strength, const int min, const int max, const int numLevels) {
+  if (strength < min) {
     return 0;
-  } else if (rssi >= kMaxRssi) {
+  } else if (strength >= max) {
     return (numLevels - 1);
   } else {
-    float inputRange = (kMaxRssi - kMinRssi);
+    float inputRange = (max - min);
     float outputRange = (numLevels - 1);
-    return (int)((float)(rssi - kMinRssi) * outputRange / inputRange);
+    return (int)((float)(strength - min) * outputRange / inputRange);
   }
-}
-
-static void ParseWiFiScanResults(const std::string& in, std::vector<WiFiScanResult>& outResults)
-{
-  outResults.clear();
-  std::istringstream input(in);
-  std::string header1;
-  std::string header2;
-
-  std::getline(input, header1);
-  std::getline(input, header2);
-
-  for (std::string line; std::getline(input, line); ) {
-    std::stringstream linestream(line);
-    std::string bssid;
-    std::string frequency;
-    std::string signal_level;
-    std::string flags;
-    std::string ssid;
-
-    std::getline(linestream, bssid, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, frequency, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, signal_level, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, flags, '\t');
-    if (!linestream.good()) break;
-    std::getline(linestream, ssid, '\t');
-    if (!linestream.good() && !linestream.eof()) break;
-
-    WiFiScanResult result;
-    result.ssid = ssid;
-    if (flags.find("[WPA2-EAP") != std::string::npos) {
-      result.auth = WiFiAuth::AUTH_WPA2_EAP;
-    } else if (flags.find("[WPA-EAP") != std::string::npos) {
-      result.auth = WiFiAuth::AUTH_WPA_EAP;
-    } else if (flags.find("[WPA2-PSK") != std::string::npos) {
-      result.auth = WiFiAuth::AUTH_WPA2_PSK;
-    } else if (flags.find("[WPA-PSK") != std::string::npos) {
-      result.auth = WiFiAuth::AUTH_WPA_PSK;
-    } else {
-      result.auth = WiFiAuth::AUTH_NONE_OPEN;
-    }
-
-    if (flags.find("-CCMP") != std::string::npos) {
-      result.encrypted = true;
-    } else if (flags.find("-TKIP") != std::string::npos) {
-      result.encrypted = false;
-    } else if (flags.find("WEP") != std::string::npos) {
-      result.encrypted = true;
-      if (result.auth == WiFiAuth::AUTH_NONE_OPEN) {
-        result.auth = WiFiAuth::AUTH_NONE_WEP;
-      }
-    } else {
-      result.encrypted = false;
-    }
-
-    if (flags.find("[WPS") != std::string::npos) {
-      result.wps = true;
-    } else {
-      result.wps = false;
-    }
-
-    result.signal_level = (uint8_t) CalculateSignalLevel(std::stoi(signal_level), 4);
-    outResults.push_back(result);
-  }
-
 }
 
 std::vector<WiFiScanResult> ScanForWiFiAccessPoints() {
   std::vector<WiFiScanResult> results;
-  std::string output;
-  int rc = ExecCommand({"wpa_cli", "scan"}, output);
-  if (rc) {
-    loge("Error scanning for WiFi access points. rc = %d", rc);
+  ConnManBusTechnology* tech_proxy;
+  GError* error;
+
+  error = nullptr;
+  tech_proxy = conn_man_bus_technology_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
+                                                              G_DBUS_PROXY_FLAGS_NONE,
+                                                              "net.connman",
+                                                              "/net/connman/technology/wifi",
+                                                              nullptr,
+                                                              &error);
+  if (error) {
+    loge("error getting proxy for net.connman /net/connman/technology/wifi");
     return results;
   }
-  rc = ExecCommand({"wpa_cli", "scan_results"}, output);
-  if (rc) {
-    loge("Error getting WiFi scan results. rc = %d", rc);
+
+  gboolean success = conn_man_bus_technology_call_scan_sync(tech_proxy,
+                                                            nullptr,
+                                                            &error);
+  g_object_unref(tech_proxy);
+  if (error) {
+    loge("error asking connman to scan for wifi access points");
     return results;
   }
-  ParseWiFiScanResults(output, results);
+
+  if (!success) {
+    loge("connman failed to scan for wifi access points");
+    return results;
+  }
+
+  ConnManBusManager* manager_proxy;
+  manager_proxy = conn_man_bus_manager_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
+                                                              G_DBUS_PROXY_FLAGS_NONE,
+                                                              "net.connman",
+                                                              "/",
+                                                              nullptr,
+                                                              &error);
+  if (error) {
+    loge("error getting proxy for net.connman /");
+    return results;
+  }
+
+  GVariant* services = nullptr;
+  success = conn_man_bus_manager_call_get_services_sync(manager_proxy,
+                                                        &services,
+                                                        nullptr,
+                                                        &error);
+  g_object_unref(manager_proxy);
+  if (error) {
+    loge("Error getting services from connman");
+    return results;
+  }
+
+  if (!success) {
+    loge("connman failed to get list of services");
+    return results;
+  }
+
+  for (gsize i = 0 ; i < g_variant_n_children(services); i++) {
+    WiFiScanResult result{WiFiAuth::AUTH_NONE_OPEN, false, false, 0, ""};
+    GVariant* child = g_variant_get_child_value(services, i);
+    GVariant* attrs = g_variant_get_child_value(child, 1);
+    bool type_is_wifi = false;
+    bool iface_is_wlan0 = false;
+
+    for (gsize j = 0 ; j < g_variant_n_children(attrs); j++) {
+      GVariant* attr = g_variant_get_child_value(attrs, j);
+      GVariant* key_v = g_variant_get_child_value(attr, 0);
+      GVariant* val_v = g_variant_get_child_value(attr, 1);
+      GVariant* val = g_variant_get_variant(val_v);
+      const char* key = g_variant_get_string(key_v, nullptr);
+
+      // Make sure this is a wifi service and not something else
+      if (g_str_equal(key, "Type")) {
+        if (g_str_equal(g_variant_get_string(val, nullptr), "wifi")) {
+          type_is_wifi = true;
+        } else {
+          type_is_wifi = false;
+          break;
+        }
+      }
+
+      // Make sure this is for the wlan0 interface and not p2p0
+      if (g_str_equal(key, "Ethernet")) {
+        for (gsize k = 0 ; k < g_variant_n_children(val); k++) {
+          GVariant* ethernet_attr = g_variant_get_child_value(val, k);
+          GVariant* ethernet_key_v = g_variant_get_child_value(ethernet_attr, 0);
+          GVariant* ethernet_val_v = g_variant_get_child_value(ethernet_attr, 1);
+          GVariant* ethernet_val = g_variant_get_variant(ethernet_val_v);
+          const char* ethernet_key = g_variant_get_string(ethernet_key_v, nullptr);
+          if (g_str_equal(ethernet_key, "Interface")) {
+            if (g_str_equal(g_variant_get_string(ethernet_val, nullptr), "wlan0")) {
+              iface_is_wlan0 = true;
+            } else {
+              iface_is_wlan0 = false;
+              break;
+            }
+          }
+        }
+      }
+
+      if (g_str_equal(key, "Name")) {
+        result.ssid = std::string(g_variant_get_string(val, nullptr));
+      }
+
+      if (g_str_equal(key, "Strength")) {
+        result.signal_level =
+            (uint8_t) CalculateSignalLevel((int) g_variant_get_byte(val),
+                                           0, // min
+                                           100, // max
+                                           4 /* number of levels */);
+      }
+
+      if (g_str_equal(key, "Security")) {
+        for (gsize k = 0 ; k < g_variant_n_children(val); k++) {
+          GVariant* security_val = g_variant_get_child_value(val, k);
+          const char* security_val_str = g_variant_get_string(security_val, nullptr);
+          if (g_str_equal(security_val_str, "wps")) {
+            result.wps = true;
+          }
+          if (g_str_equal(security_val_str, "none")) {
+            result.auth = WiFiAuth::AUTH_NONE_OPEN;
+            result.encrypted = false;
+          }
+          if (g_str_equal(security_val_str, "wep")) {
+            result.auth = WiFiAuth::AUTH_NONE_WEP;
+            result.encrypted = true;
+          }
+          if (g_str_equal(security_val_str, "ieee8021x")) {
+            result.auth = WiFiAuth::AUTH_IEEE8021X;
+            result.encrypted = true;
+          }
+          if (g_str_equal(security_val_str, "psk")) {
+            result.auth = WiFiAuth::AUTH_WPA2_PSK;
+            result.encrypted = true;
+          }
+        }
+      }
+
+    }
+
+    if (type_is_wifi && iface_is_wlan0) {
+      results.push_back(result);
+    }
+  }
   return results;
 }
 
