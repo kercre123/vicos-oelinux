@@ -1,5 +1,7 @@
 AM_CPPFLAGS = 	-O2 \
 		-D_GNU_SOURCE \
+		-DUSE_GLIB \
+		@GLIB_CFLAGS@ \
 		-std=gnu++14 \
 		-I${WORKSPACE}/vendor/qcom/opensource/bluetooth/hal/include/ \
 		-I${WORKSPACE}/vendor/qcom/opensource/bluetooth/vhal/include \
@@ -10,6 +12,8 @@ AM_CFLAGS = 	-Wall \
 		-Wstrict-prototypes \
 		-Wno-trigraphs \
 		-DLINUX \
+		-DUSE_GLIB \
+		@GLIB_CFLAGS@ \
 		-std=c11 \
 		-I${WORKSPACE}/vendor/qcom/opensource/bluetooth/hal/include/ \
 		-I${WORKSPACE}/vendor/qcom/opensource/bluetooth/vhal/include \
@@ -17,7 +21,7 @@ AM_CFLAGS = 	-Wall \
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_LDFLAGS := $(LDFLAGS) -lpthread -lhardware
+AM_LDFLAGS := $(LDFLAGS) -lpthread -lhardware @GLIB_LIBS@
 
 bin_PROGRAMS = ankibluetoothd
 ankibluetoothd_CC = @CC@
