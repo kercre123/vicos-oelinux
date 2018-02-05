@@ -21,12 +21,21 @@
 namespace Anki
 {
 
-TaskExecutor::TaskExecutor()
-: _executing(true)
-, _pipeFileDescriptors{-1, -1}
+TaskExecutor::TaskExecutor(struct ev_loop* loop)
+    : _loop(loop)
+    , _pipeFileDescriptors{-1, -1}
+    , _pipeWatcher(nullptr)
+    , _timerWatcher(nullptr)
+    , _taskExecuteThread(nullptr)
+    , _syncTaskDone(false)
+    , _executing(true)
 {
   (void) pipe2(_pipeFileDescriptors, O_NONBLOCK);
-  _taskExecuteThread = std::thread(&TaskExecutor::Execute, this);
+  if (loop) {
+    InitWatchers();
+  } else {
+    _taskExecuteThread = new std::thread(&TaskExecutor::Execute, this);
+  }
 }
 
 TaskExecutor::~TaskExecutor()
@@ -72,13 +81,14 @@ void TaskExecutor::StopExecution()
   // Join the background threads.  We created the threads in the constructor, so they
   // should be cleaned up in our destructor.
   try {
-    if (_taskExecuteThread.joinable()) {
-      _taskExecuteThread.join();
+    if (_taskExecuteThread && _taskExecuteThread->joinable()) {
+      _taskExecuteThread->join();
     }
   } catch ( ... )
   {
     // Suppress exceptions
   }
+  DestroyWatchers();
 }
 
 void TaskExecutor::Wake(std::function<void()> task)
@@ -94,7 +104,7 @@ void TaskExecutor::WakeSync(std::function<void()> task)
   if (!_executing) {
     return;
   }
-  if (std::this_thread::get_id() == _taskExecuteThread.get_id()) {
+  if (std::this_thread::get_id() == _loop_thread_id) {
     task();
     return;
   }
@@ -160,7 +170,7 @@ void TaskExecutor::CommonCallback() {
     ProcessTaskQueue();
     ProcessDeferredQueue();
   } else {
-    if (_loop) {
+    if (_loop && _taskExecuteThread) {
       ev_unloop(_loop, EVUNLOOP_ALL);
     }
   }
@@ -183,17 +193,28 @@ void TaskExecutor::TimerWatcherCallback(ev::timer& w, int revents)
   CommonCallback();
 }
 
-void TaskExecutor::Execute()
+void TaskExecutor::InitWatchers()
 {
-  _loop = ev_loop_new(EVBACKEND_SELECT);
+  _loop_thread_id = std::this_thread::get_id();
   _pipeWatcher = new ev::io(_loop);
   _pipeWatcher->set <TaskExecutor, &TaskExecutor::PipeWatcherCallback> (this);
   _timerWatcher = new ev::timer(_loop);
   _timerWatcher->set <TaskExecutor, &TaskExecutor::TimerWatcherCallback> (this);
   _pipeWatcher->start (_pipeFileDescriptors[0], ev::READ);
-  ev_loop(_loop, 0);
+}
+
+void TaskExecutor::DestroyWatchers()
+{
   delete _timerWatcher; _timerWatcher = nullptr;
   delete _pipeWatcher; _pipeWatcher = nullptr;
+}
+
+void TaskExecutor::Execute()
+{
+  _loop = ev_loop_new(EVBACKEND_SELECT);
+  InitWatchers();
+  ev_loop(_loop, 0);
+  DestroyWatchers();
   ev_loop_destroy(_loop); _loop = nullptr;
 }
 

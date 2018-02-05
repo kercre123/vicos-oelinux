@@ -18,6 +18,8 @@
 
 #include <unistd.h>
 
+static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
+
 static void ExitHandler(int status = 0) {
   UnLoadBtStack();
   _exit(status);
@@ -32,8 +34,6 @@ static void SignalCallback(struct ev_loop* loop, struct ev_signal* w, int revent
 
 static struct ev_signal sIntSig;
 static struct ev_signal sTermSig;
-
-static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
 
 int main(int argc, char *argv[]) {
   ev_signal_init(&sIntSig, SignalCallback, SIGINT);
