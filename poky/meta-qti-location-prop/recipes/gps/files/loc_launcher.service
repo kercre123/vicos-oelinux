@@ -1,0 +1,19 @@
+# Copyright (c) 2017 Qualcomm Technologies, Inc.
+# All Rights Reserved.
+# Confidential and Proprietary - Qualcomm Technologies, Inc.
+#
+
+[Unit]
+Description=GPS Location process launcher
+SourcePath=/etc/initscripts/start_loc_launcher
+After=data.mount mount-data.service
+
+[Service]
+User=root
+Restart=always
+RemainAfterExit=yes
+ExecStart=/etc/initscripts/start_loc_launcher start
+ExecStop=/etc/initscripts/start_loc_launcher stop
+
+[Install]
+WantedBy=multi-user.target

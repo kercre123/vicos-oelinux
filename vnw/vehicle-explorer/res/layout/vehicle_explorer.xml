@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (c) 2014-2016 Qualcomm Technologies, Inc.
+All Rights Reserved.
+Confidential and Proprietary - Qualcomm Technologies, Inc.
+-->
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:id="@+id/homeuiscroll"
+android:layout_height="fill_parent"
+android:layout_weight="1.0">
+
+    <GridLayout
+    android:id="@+id/vehicleApppUI"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2"
+    android:rowCount="1"
+    android:orientation="horizontal" >
+
+        <LinearLayout
+        android:id="@+id/autoAppLeftPane"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+            <Button
+            android:id="@+id/statusBtn"
+            android:layout_width="match_parent"
+            android:layout_height="60px"
+            android:text="@string/Status" />
+            <Button
+            android:id="@+id/maintenanceBtn"
+            android:layout_width="match_parent"
+            android:layout_height="60px"
+            android:text="@string/Maintenance" />
+            <Button
+            android:id="@+id/transmissionBtn"
+            android:layout_width="match_parent"
+            android:layout_height="60px"
+            android:text="@string/Transmission" />
+            <Button
+            android:id="@+id/safetyBtn"
+            android:layout_width="match_parent"
+            android:layout_height="60px"
+            android:text="@string/Safety" />
+            <Button
+            android:id="@+id/lightsBtn"
+            android:layout_width="match_parent"
+            android:layout_height="60px"
+            android:text="@string/Lights" />
+            <Button
+            android:id="@+id/hvacBtn"
+            android:layout_width="match_parent"
+            android:layout_height="60px"
+            android:text="@string/Hvac" />
+            <Button
+            android:id="@+id/testsButton"
+            android:layout_width="match_parent"
+            android:layout_height="60px"
+            android:text="@string/Tests" />
+        </LinearLayout>
+        <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingTop="24dp"
+            android:paddingRight="16dp" >
+            <TextView
+            android:id="@+id/vehicleHistoryTextArea"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentLeft="true" />
+        </RelativeLayout>
+    </GridLayout>
+</ScrollView>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2015 Qualcomm Technologies, Inc. All Rights Reserved. -->
+<!-- Qualcomm Technologies Proprietary and Confidential. -->
+<!--
+*
+*VNW Mappings:
+*Please refer to VehicleInterfaceSignals for signal Ids.
+*The mappings are configurable and you can edit signal Ids and their associated values.
+*key-mapping corresponds to the Android key event.
+*Please refer to Android's KeyEvent.java for key-mappings.
+*
+*Mapping/intent is triggered when (reported-value & value-mask) == value (if value-mask is specified).
+*If value-mask not specified, value-mask by default is ~0.
+*This attribute was defined as flag in previous releases, and it is still parsed for compatibility
+*
+*One can configure whether vnw should send intent and injectEvent or one of them.
+*handling-mask= 0x00000001 will make vnw send out intent.
+*handling-mask= 0x00000002 will make vnw inject the actual key-event.
+*We can OR multiple mask values if needed.
+*handling-mask= 0x00000003 will make vnw send intent as well as inject event.
+*handling-mask is optional, handling-mask by default is 0x00000003.
+*
+*type attribute default value is 'on_change'
+*type='on_change' has to be selected when changes in value signal have to trigger
+* an android key event, and same value refreshes need to be dropped
+*type='on_refresh' has to be used when signals repeating same value on every key press
+* have to trigger an android key event, this can flood android events if signal is
+* periodically sending same values at a fixed rate
+*NOTE:when receiving the 1st frame with many signal values set to 0, they are dropped to
+* prevent sending all key events when first key data is sent
+*
+*action attribute default value is 'keydownup'
+*action='keydown' will send key event with ACTION_DOWN in android when value is received
+*action='keyup' will send key event with ACTION_UP on android when value is received
+*action='keydownup' will send key event with ACTION_DOWN followed by ACTION_UP when value is received
+*
+*Following are some of the keys events being supported right now.
+*Please refer to VehicleSignalConstants for corresponding intent strings.
+*
+*KEYCODE_VOLUME_UP           0x00000018
+*KEYCODE_VOLUME_DOWN         0x00000019
+*KEYCODE_MEDIA_FAST_FORWARD  0x0000005a
+*KEYCODE_MEDIA_REWIND        0x00000059
+*KEYCODE_MEDIA_NEXT          0x00000057
+*KEYCODE_MEDIA_PREVIOUS      0x00000058
+*KEYCODE_MEDIA_PAUSE         0x0000007f
+*KEYCODE_MEDIA_PLAY          0x0000007e
+*KEYCODE_POWER               0x0000001a
+*KEYCODE_CALL                0x00000005
+*KEYCODE_ENDCALL             0x00000006
+*KEYCODE_DPAD_CENTER         0x00000017
+*KEYCODE_DPAD_UP             0x00000013
+*KEYCODE_DPAD_DOWN           0x00000014
+*KEYCODE_DPAD_LEFT           0x00000015
+*KEYCODE_DPAD_RIGHT          0x00000016
+*KEYCODE_HOME                0x00000003
+*KEYCODE_BACK                0x00000004
+*KEYCODE_MENU                0x00000052
+*KEYCODE_ENTER               0x00000042
+*KEYCODE_VOICE_ASSIST        0x000000e7
+-->
+<vnwmappings>
+    <signal id='1132' value ='0x01'   key-mapping='0x00000018' value-mask='0x01' handling-mask='0x00000002' />
+    <signal id='1132' value ='0x02'   key-mapping='0x00000019' value-mask='0x02' handling-mask='0x00000002' />
+    <signal id='1176' value ='0x01'   key-mapping='0x00000003' action='keydown' />
+    <signal id='1176' value ='0x00'   key-mapping='0x00000003' action='keyup' />
+    <signal id='1177' value ='0x01'   key-mapping='0x00000004' action='keydown' />
+    <signal id='1177' value ='0x00'   key-mapping='0x00000004' action='keyup' />
+    <signal id='1178' value ='0x01'   key-mapping='0x00000052' action='keydown' />
+    <signal id='1178' value ='0x00'   key-mapping='0x00000052' action='keyup' />
+    <signal id='1179' value ='0x01'   key-mapping='0x00000014' />
+    <signal id='1180' value ='0x01'   key-mapping='0x00000013' />
+    <signal id='1181' value ='0x01'   key-mapping='0x00000017' />
+    <signal id='1182' value ='0x01'   key-mapping='0x00000015' />
+    <signal id='1183' value ='0x01'   key-mapping='0x00000016' />
+    <signal id='1184' value ='0x01'   key-mapping='0x00000042' action='keydown' />
+    <signal id='1184' value ='0x00'   key-mapping='0x00000042' action='keyup' />
+    <signal id='1188' value ='0x01'   key-mapping='0x00000018' />
+    <signal id='1189' value ='0x01'   key-mapping='0x00000019' />
+    <signal id='1190' value ='0x01'   key-mapping='0x00000057' />
+    <signal id='1191' value ='0x01'   key-mapping='0x00000058' />
+    <signal id='1192' value ='0x01'   key-mapping='0x0000007f' handling-mask='0x00000001'/>
+    <signal id='1193' value ='0x01'   key-mapping='0x0000007e' handling-mask='0x00000001'/>
+    <signal id='1194' value ='0x01'   key-mapping='0x0000005a' />
+    <signal id='1195' value ='0x01'   key-mapping='0x00000059' />
+    <signal id='1196' value ='0x01'   key-mapping='0x0000001a' handling-mask='0x00000003'/>
+    <signal id='1197' value ='0x01'   key-mapping='0x00000005' handling-mask='0x00000001'/>
+    <signal id='1198' value ='0x01'   key-mapping='0x00000006' handling-mask='0x00000001'/>
+    <signal id='1199' value ='0x01'   key-mapping='0x000000e7' handling-mask='0x00000001' />
+</vnwmappings>

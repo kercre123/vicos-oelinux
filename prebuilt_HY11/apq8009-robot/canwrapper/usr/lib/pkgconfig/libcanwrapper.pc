@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=/usr
+libdir=/usr/lib
+includedir=/usr/include
+
+Name: libcanwrapper
+Description: libcanwrapper
+Version: @VERSION
+Libs: -L${libdir} -lcanwrapper
+Cflags: -I${includedir}/canwrapper

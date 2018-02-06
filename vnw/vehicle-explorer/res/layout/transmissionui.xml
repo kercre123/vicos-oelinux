@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:id="@+id/transmissionuiscroll"
+android:layout_height="fill_parent"
+android:layout_weight="1.0">
+
+    <GridLayout
+    android:id="@+id/vehicleHomeUI"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2"
+    android:rowCount="1"
+    android:orientation="horizontal" >
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="8"
+        android:orientation="vertical" >
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/VehiclePowerMode"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RemainingFuelInGallons"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RemainingDrivingRange"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RemainingEngineOil"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/CoolantLevel"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/CoolantTemp"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/StrngWheelAngle"/>
+
+            <Button
+            android:id="@+id/HomeUIbackBtn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/UIBackBtn" />
+        </GridLayout>
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="7"
+        android:orientation="vertical" >
+
+            <EditText
+            android:id="@+id/VehiclePowerMode"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:id="@+id/RemainingFuelInGallons"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:id="@+id/RemainingDrivingRange"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:id="@+id/RemainingEngineOil"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:id="@+id/CoolantLevel"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:id="@+id/CoolantTemp"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:id="@+id/StrngWheelAngle"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+        </GridLayout>
+    </GridLayout>
+</ScrollView>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
+android:id="@+id/parkingUI"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:columnCount="2"
+android:rowCount="1"
+android:orientation="horizontal" >
+
+    <GridLayout
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:columnCount="1"
+    android:rowCount="4"
+    android:orientation="vertical" >
+
+        <TextView
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/ParkingSecurityAlert"/>
+
+
+        <TextView
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/ParkingLights"/>
+
+        <TextView
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/ParkingBrakes"/>
+
+        <Button
+        android:id="@+id/HomeUIbackBtn"
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/UIBackBtn" />
+    </GridLayout>
+    <GridLayout
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:columnCount="1"
+    android:rowCount="3"
+    android:orientation="vertical" >
+
+        <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <RadioButton
+        android:id="@+id/rdbtnParkingSecAlertOn"
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/RadioBtnOn"
+        android:checked="false" />
+        <RadioButton
+        android:id="@+id/rdbtnParkingSecAlertOff"
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/RadioBtnOff"
+        android:checked="false" />
+        </RadioGroup>
+        <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <RadioButton
+        android:id="@+id/rdbtnParkingLightsOn"
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/RadioBtnOn"
+        android:checked="false" />
+        <RadioButton
+        android:id="@+id/rdbtnParkingLightsOff"
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/RadioBtnOff"
+        android:checked="false" />
+        </RadioGroup>
+        <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <RadioButton
+        android:id="@+id/rdbtnParkingBrakesOn"
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/RadioBtnOn"
+        android:checked="false" />
+        <RadioButton
+        android:id="@+id/rdbtnParkingBrakesOff"
+        android:layout_width="240px"
+        android:layout_height="60px"
+        android:text="@string/RadioBtnOff"
+        android:checked="false" />
+        </RadioGroup>
+    </GridLayout>
+</GridLayout>

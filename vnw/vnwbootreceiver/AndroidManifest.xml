@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+package="com.qualcomm.qti.vnwboot"
+android:versionCode="1"
+android:versionName="1" >
+
+<permission android:name="com.qti.permission.vehicleService"
+    android:description="@string/vehicleservice_desc"
+    android:label="@string/vehicleservice_label"
+    android:protectionLevel="signature"/>
+
+<permission android:name="com.qti.permission.driverDistractionService"
+    android:description="@string/driverdistractionservice_desc"
+    android:label="@string/driverdistractionservice_label"
+    android:protectionLevel="signature"/>
+
+<permission android:name="com.qti.permission.CAN"
+    android:description="@string/can_desc"
+    android:label="@string/can_label"
+    android:protectionLevel="signature"/>
+
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
+<uses-permission android:name="android.permission.INJECT_EVENTS"></uses-permission>
+<uses-permission android:name="com.qti.permission.CAN"></uses-permission>
+<uses-permission android:name="com.qti.permission.vehicleService"></uses-permission>
+<uses-permission android:name="com.qti.permission.driverDistractionService"></uses-permission>
+
+<uses-sdk android:minSdkVersion="11" android:targetSdkVersion="16" />
+
+<application android:label="@string/vnw_app_name"
+android:icon="@drawable/vnwbootrecvr_icon">
+    <receiver android:name="com.qualcomm.qti.vnwboot.VnwBootReceiver"
+    android:enabled="true">
+        <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"></action>
+        </intent-filter>
+    </receiver>
+    <service android:name="com.qualcomm.qti.ivi.VehicleService"
+        android:exported="true"
+        android:label="@string/vnw_serv_name"
+        android:enabled = "true"
+        android:isolatedProcess = "false"
+        android:permission = "com.qti.permission.vehicleService"
+        android:process= ":vehicleService">
+        <intent-filter><action android:name="com.qualcomm.qti.ivi.VehicleService"></action>
+        </intent-filter>
+    </service>
+    <service android:name="com.qualcomm.qti.driver.distraction.DriverDistractionService"
+        android:exported="true"
+        android:label="@string/vnw_distraction_name"
+        android:enabled = "true"
+        android:isolatedProcess = "false"
+        android:permission ="com.qti.permission.driverDistractionService"
+        android:process= ":driverDistractionService">
+        <intent-filter>
+            <action android:name="com.qualcomm.qti.driver.distraction.DriverDistractionService"/>
+        </intent-filter>
+    </service>
+</application>
+</manifest>

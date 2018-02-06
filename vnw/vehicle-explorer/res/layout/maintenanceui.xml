@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:id="@+id/maintenanceuiscroll"
+android:layout_height="fill_parent"
+android:layout_weight="1.0">
+
+    <GridLayout
+    android:id="@+id/vehicleHomeUI"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2"
+    android:rowCount="1"
+    android:orientation="horizontal" >
+
+
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="13"
+        android:orientation="vertical" >
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/Odometer"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TransmissionOilLvl"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TransmissionOilTemp"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/BrakeFluidLvl"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/WasherFluidLvl"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/MalfunctionIndicator"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TirePressureFL"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TirePressureFR"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TirePressureRL"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TirePressureRR"/>
+             <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/BatteryVoltage"/>
+              <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/BatteryCurrent"/>
+            <Button
+            android:id="@+id/HomeUIbackBtn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/UIBackBtn" />
+        </GridLayout>
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="12"
+        android:orientation="vertical" >
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntOdometer"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntOilLevel"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntOilTemp"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntBrakeFluidLevel"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntWasherFluidLevel"
+            android:gravity="right|center_vertical"/>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnMaintenanceMalfunctionOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnMaintenanceMalfunctionOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntTirePressureFL"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntTirePressureFR"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntTirePressureRL"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntTirePressureRR"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntBatteryVoltage"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:id="@+id/mntBatteryCurrent"
+            android:gravity="right|center_vertical"/>
+        </GridLayout>
+    </GridLayout>
+</ScrollView>

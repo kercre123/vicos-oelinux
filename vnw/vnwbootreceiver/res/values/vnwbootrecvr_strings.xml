@@ -1,0 +1,18 @@
+<!--
+/*
+*    Copyright (c) 2014 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<resources>
+    <string name="vnw_app_name">Vnw Boot Receiver</string>
+    <string name="vnw_serv_name">Vnw Boot Receiver Service</string>
+    <string name="vnw_distraction_name">Driver Distraction Service</string>
+    <string name="can_desc">Restrict access to SocketCAN</string>
+    <string name="can_label">Restrict access to SocketCAN</string>
+    <string name="vehicleservice_desc">Restrict access to VehicleService</string>
+    <string name="vehicleservice_label">Restrict access to VehicleService</string>
+    <string name="driverdistractionservice_desc">Restrict access to DirverDistractionService</string>
+    <string name="driverdistractionservice_label">Restrict access to DirverDistractionService</string>
+</resources>

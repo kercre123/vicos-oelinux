@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:id="@+id/statusuiscroll"
+android:layout_height="fill_parent"
+android:layout_weight="1.0">
+
+    <GridLayout
+    android:id="@+id/vehicleHomeUI"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2"
+    android:rowCount="1"
+    android:orientation="horizontal" >
+
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="13"
+        android:orientation="vertical" >
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/IsCruiseOn"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/GearStatus"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/VehicleType"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RemainingFuel"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/CurrSpeed"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RPM"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TripMeter1"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TripMeter2"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TripMeter1AvgSpeed"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TripMeter2AvgSpeed"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TripMeter1FuelConsumption"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/TripMeter2FuelConsumption"/>
+            <Button
+            android:id="@+id/HomeUIbackBtn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/UIBackBtn" />
+        </GridLayout>
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="12"
+        android:orientation="vertical" >
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/CruiseControlRbs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+                <RadioButton
+                android:id="@+id/rdbtnStatusCruiseControlOn"
+                android:layout_width="240px"
+                android:layout_height="60px"
+                android:text="@string/RadioBtnOn"
+                android:checked="false" />
+                <RadioButton
+                android:id="@+id/rdbtnStatusCruiseControlOff"
+                android:layout_width="240px"
+                android:layout_height="60px"
+                android:text="@string/RadioBtnOff"
+                android:checked="false" />
+            </RadioGroup>
+            <EditText
+            android:id="@+id/GearStatus"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/VehicleType"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/RemainingFuel"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/CurrentSpeed"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/RPM"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/TripMeter1"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/TripMeter2"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/TripMeter1AvgSpeed"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/TripMeter2AvgSpeed"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/TripMeter1FuelConsumption"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:id="@+id/TripMeter2FuelConsumption"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+        </GridLayout>
+    </GridLayout>
+</ScrollView>

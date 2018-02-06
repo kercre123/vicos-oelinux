@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:id="@+id/hvacuiscroll"
+    android:layout_height="fill_parent"
+    android:layout_weight="1.0">
+    <GridLayout
+        android:id="@+id/hvacUI"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:columnCount="1"
+        android:rowCount="1"
+        android:orientation="horizontal" >
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+                <TextView
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:text="@string/driverTemp"/>
+                <EditText
+                    android:id="@+id/driverTempStatus"
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:gravity="right|center_vertical"
+                    android:text="@string/defaultTemp"
+                    android:inputType="number"/>
+                <Button
+                    android:id="@+id/driverTempDownBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/minusBtn" />
+                <Button
+                    android:id="@+id/driverTempUpBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/plusBtn" />
+            </LinearLayout>
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+                <TextView
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:text="@string/passengerTemp"/>
+                <EditText
+                    android:id="@+id/passengerTempStatus"
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:gravity="right|center_vertical"
+                    android:text="@string/defaultTemp"
+                    android:inputType="number"/>
+                <Button
+                    android:id="@+id/passengerTempDownBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/minusBtn" />
+                <Button
+                    android:id="@+id/passengerTempUpBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/plusBtn" />
+            </LinearLayout>
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+                <TextView
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:text="@string/rearTemp"/>
+                <EditText
+                    android:id="@+id/rearTempStatus"
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:gravity="right|center_vertical"
+                    android:text="@string/defaultTemp"
+                    android:inputType="number"/>
+                <Button
+                    android:id="@+id/rearTempDownBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/minusBtn" />
+                <Button
+                    android:id="@+id/rearTempUpBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/plusBtn" />
+            </LinearLayout>
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+                <TextView
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:text="@string/hvacSpeed"/>
+                <EditText
+                    android:id="@+id/hvacFanSpeedStatus"
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:gravity="right|center_vertical"
+                    android:text="@string/defaultHvacSpeed"
+                     android:inputType="number"/>
+                <Button
+                    android:id="@+id/hvacFanSpeedDownBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/minusBtn" />
+                <Button
+                    android:id="@+id/hvacFanSpeedUpBtn"
+                    android:layout_width="60px"
+                    android:layout_height="60px"
+                    android:text="@string/plusBtn" />
+            </LinearLayout>
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+                <TextView
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:text="@string/hvacDirection"/>
+                <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+                    android:id="@+id/hvacSpeedRbs"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <RadioButton
+                        android:id="@+id/rdbtnHvacDirectionHead"
+                        android:layout_width="240px"
+                        android:layout_height="60px"
+                        android:text="@string/radioBtnHvacHead"
+                        android:checked="false" />
+                    <RadioButton
+                        android:id="@+id/rdbtnHvacDirectionLegs"
+                        android:layout_width="240px"
+                        android:layout_height="60px"
+                        android:text="@string/radioBtnHvacLegs"
+                        android:checked="false" />
+                    <RadioButton
+                        android:id="@+id/rdbtnHvacDirectionHeadAndLegs"
+                        android:layout_width="240px"
+                        android:layout_height="60px"
+                        android:text="@string/radioBtnHvacHeadAndLegs"
+                        android:checked="false" />
+                </RadioGroup>
+            </LinearLayout>
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" >
+                <TextView
+                    android:layout_width="240px"
+                    android:layout_height="60px"
+                    android:text="@string/AC"/>
+                <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+                    android:id="@+id/hvacAcControl"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <RadioButton
+                        android:id="@+id/rdbtnHvacAcOn"
+                        android:layout_width="240px"
+                        android:layout_height="60px"
+                        android:text="@string/RadioBtnOn"
+                        android:checked="false" />
+                    <RadioButton
+                        android:id="@+id/rdbtnHvacAcOff"
+                        android:layout_width="240px"
+                        android:layout_height="60px"
+                        android:text="@string/RadioBtnOff"
+                        android:checked="false" />
+                </RadioGroup>
+            </LinearLayout>
+            <Button
+                android:id="@+id/HomeUIbackBtn"
+                android:layout_width="240px"
+                android:layout_height="60px"
+                android:text="@string/UIBackBtn" />
+        </LinearLayout>
+    </GridLayout>
+</ScrollView>

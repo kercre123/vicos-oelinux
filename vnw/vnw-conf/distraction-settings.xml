@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2015 Qualcomm Technologies, Inc. All Rights Reserved. -->
+<!-- Qualcomm Technologies Proprietary and Confidential. -->
+<!-- Sample vnw distraction settings for VNW -->
+
+<vnwsettings>
+        <!-- Enable driver distraction type A when reported speed is < 6-->
+        <!-- Enable means driver is allowed to operate UI -->
+        <!-- As per XML specification, The ampersand character (&) and the left angle bracket (<)-->
+        <!-- must not appear in their literal form, except when used as markup delimiters,-->
+        <!-- or within a comment, a processing instruction, or a CDATA section. -->
+        <!-- To embed special characters such as <, <=, >, >= in xml document, -->
+        <!-- we need to escaped using numeric character references.-->
+        <!-- &#60; represents < , &#62; represents > , &#61; represents = , &#33; represents ! -->
+        <event string='ENABLE_DRIVER_DISTRACTION_TYPE_A'>
+            <signal id='1061'> <!-- speed -->
+                <threshold value='6' condition='&#60;' /> <!-- speed < 6-->
+            </signal>
+        </event>
+        <!-- Disable driver distraction type A when reported speed is > 6-->
+        <!-- Disable means driver is now allowed to operate UI -->
+        <event string='DISABLE_DRIVER_DISTRACTION_TYPE_A'>
+            <signal id='1061'> <!-- speed -->
+                <threshold value='6' condition='&#62;' /> <!-- speed > 6 -->
+            </signal>
+        </event>
+        <!-- Enable driver distraction type B when reported speed is < 2-->
+        <!-- Enable means driver is allowed to operate UI -->
+        <event string='ENABLE_DRIVER_DISTRACTION_TYPE_B'>
+        <signal id='1061'> <!-- speed -->
+            <threshold value='2' condition='&#60;' /> <!-- speed < 2-->
+        </signal>
+        </event>
+        <!-- Disable driver distraction type B when reported speed is >= 2 & gear != parking-->
+        <!-- Disable means driver is now allowed to operate UI -->
+        <event string='DISABLE_DRIVER_DISTRACTION_TYPE_B'>
+            <signal id='1061'> <!-- speed -->
+                <threshold value='2' condition='&#62;&#61;' />
+            </signal>
+            <signal id='1041'> <!-- gear -->
+                <threshold value='64' condition='&#33;&#61;' /> <!-- 64 indicates parking gear. -->
+            </signal>
+       </event>
+</vnwsettings>

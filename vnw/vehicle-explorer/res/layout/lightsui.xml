@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:id="@+id/lightsuiscroll"
+android:layout_height="fill_parent"
+android:layout_weight="1.0">
+
+    <GridLayout
+    android:id="@+id/vehicleHomeUI"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2"
+    android:rowCount="1"
+    android:orientation="horizontal" >
+
+
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="15"
+        android:orientation="vertical" >
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/HeadLights"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/AutomaticHeadLights"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/DynamicHighBeam"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/HighBeam"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/LeftIndicator"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RightIndicator"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/BrakeLight"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/FogFrontLight"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/FogRearLight"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/HazardLight"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/IntDriverLight"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/IntPsngrLight"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/IntCenterLight"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/Int3rdRowLight"/>
+
+            <Button
+            android:id="@+id/HomeUIbackBtn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/UIBackBtn" />
+        </GridLayout>
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="14"
+        android:orientation="vertical" >
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsHeadLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsHeadLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsAutoHeadLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsAutoHeadLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsAutoHighBeamStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsAutoHighBeamStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsHighBeamStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsHighBeamStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsLeftTurnStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsLeftTurnStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsRightTurnStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsRightTurnStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsBrakeLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsBrakeLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsFogFrontLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsFogFrontLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsFogRearLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsFogRearLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsHazardLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsHazardLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsDriverLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsDriverLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsPsngrLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsPsngrLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLightsCenterLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLightsCenterLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnLights3rdRowLightStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnLights3rdRowLightStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+        </GridLayout>
+    </GridLayout>
+</ScrollView>

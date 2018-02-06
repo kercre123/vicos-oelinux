@@ -1,0 +1,140 @@
+From 8057ac936e40e5777c26da6b4c0d8e9c7df2b9da Mon Sep 17 00:00:00 2001
+From: drunwal <drunwal@qti.qualcomm.com>
+Date: Thu, 28 Jul 2016 17:49:27 +0530
+Subject: [PATCH] mm-rtp: Compile out external dependency
+
+-- certain external modules are not avaialble on this platform.
+   Hence compile out dependency on them
+
+-- Temporary declarations of datatypes not avaialble in stdint on
+   this platform
+
+Change-Id: I05847319c3ce2e421b39a6c6014ae8492aca5a65
+---
+ decoder/Android.mk                  |  2 +-
+ decoder/inc/RTPStats.h              |  4 ++++
+ decoder/src/RTCPTransmitHandler.cpp | 10 +++++-----
+ decoder/src/RTPParser.cpp           |  2 +-
+ encoder/Android.mk                  |  2 +-
+ encoder/src/RTPPacketizer.cpp       |  2 +-
+ 6 files changed, 13 insertions(+), 9 deletions(-)
+
+diff --git a/decoder/Android.mk b/decoder/Android.mk
+index c941290..a6a7887 100644
+--- a/decoder/Android.mk
++++ b/decoder/Android.mk
+@@ -52,7 +52,7 @@ ifneq ($(HAS_PREBUILT_PATH),true)
+ 
+   LOCAL_SHARED_LIBRARIES := libutils liblog libcutils
+   LOCAL_SHARED_LIBRARIES += libmmosal
+-  LOCAL_SHARED_LIBRARIES += libwfdcommonutils
++#  LOCAL_SHARED_LIBRARIES += libwfdcommonutils
+ 
+   ifeq ($(TARGET_ARCH),arm)
+       LOCAL_CFLAGS += -Wno-psabi
+diff --git a/decoder/inc/RTPStats.h b/decoder/inc/RTPStats.h
+index 378ba02..f801a7b 100644
+--- a/decoder/inc/RTPStats.h
++++ b/decoder/inc/RTPStats.h
+@@ -26,6 +26,10 @@
+ #include "AEEstd.h"
+ #include "MMCriticalSection.h"
+ 
++typedef unsigned char uint8_t;
++typedef unsigned short uint16_t;
++typedef unsigned int uint32_t;
++
+ struct RTCPRRInfo
+ {
+     RTCPRRInfo() :
+diff --git a/decoder/src/RTCPTransmitHandler.cpp b/decoder/src/RTCPTransmitHandler.cpp
+index 1f7831a..0083d08 100644
+--- a/decoder/src/RTCPTransmitHandler.cpp
++++ b/decoder/src/RTCPTransmitHandler.cpp
+@@ -161,7 +161,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
+              {
+                  MM_MSG_PRIO(MM_GENERAL, MM_PRIO_HIGH, "RTCPTransmitHandler:FLUSH_DATA_SIGNAL received");
+                  RRTransmitStatus transmitStatus = composePacketRRTransmit();
+-                 if (RRTransmitStatus::Ok == transmitStatus)
++                 if (Ok == transmitStatus)
+                  {
+                      MM_MSG_PRIO(MM_GENERAL, MM_PRIO_HIGH, "Successfully sent rtcp rr");
+ 
+@@ -179,7 +179,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
+                          MM_Timer_StartEx( m_hTimer, timerSecs, timerNanos);
+                      }
+                  }
+-                 else if(RRTransmitStatus::BackOff == transmitStatus)
++                 else if(BackOff == transmitStatus)
+                  {
+                      // no rtp packets received for a while
+                      MM_MSG_PRIO(MM_GENERAL, MM_PRIO_HIGH,
+@@ -516,7 +516,7 @@ RTCPTransmitHandler::RRTransmitStatus RTCPTransmitHandler::composePacketRRTransm
+ 
+     if(false == bOkToGenerateRR)
+     {
+-        return RRTransmitStatus::BackOff;
++        return BackOff;
+     }
+ 
+     /***************************************************/
+@@ -530,7 +530,7 @@ RTCPTransmitHandler::RRTransmitStatus RTCPTransmitHandler::composePacketRRTransm
+     if(composeFlag == false)
+     {
+         MM_MSG_PRIO(MM_GENERAL, MM_PRIO_ERROR, " Composing RTCP Feedback Packet is failed");
+-        return RRTransmitStatus::Error;
++        return Error;
+     }
+ 
+     /***************************************************/
+@@ -542,7 +542,7 @@ RTCPTransmitHandler::RRTransmitStatus RTCPTransmitHandler::composePacketRRTransm
+      MM_MSG_PRIO(MM_GENERAL, MM_PRIO_ERROR,"RTCP Failed to send");
+     }
+ 
+-    return RRTransmitStatus::Ok;
++    return Ok;
+ }
+ 
+ /*==============================================================================
+diff --git a/decoder/src/RTPParser.cpp b/decoder/src/RTPParser.cpp
+index 7e1fec6..ba6e3a0 100644
+--- a/decoder/src/RTPParser.cpp
++++ b/decoder/src/RTPParser.cpp
+@@ -31,7 +31,7 @@
+ #define RTP_DUMP_TS_DATA
+ #include "RTCPTransmitHandler.h"
+ 
+-extern bool bRTPDumpEnable;
++bool bRTPDumpEnable = true;
+ #define PAT_PID  0
+ #define WRAP_AROUND_MAGIC_NUM 95443717
+ #define WRAPAROUND_THRESHOLD  100000
+diff --git a/encoder/Android.mk b/encoder/Android.mk
+index 96a03fc..2b17596 100644
+--- a/encoder/Android.mk
++++ b/encoder/Android.mk
+@@ -69,7 +69,7 @@ ifneq ($(HAS_PREBUILT_PATH),true)
+   LOCAL_SHARED_LIBRARIES += libmmosal
+   LOCAL_SHARED_LIBRARIES += liblog
+   LOCAL_SHARED_LIBRARIES += libutils
+-  LOCAL_SHARED_LIBRARIES += libwfdcommonutils
++#  LOCAL_SHARED_LIBRARIES += libwfdcommonutils
+   LOCAL_SHARED_LIBRARIES += libcutils
+ 
+   LOCAL_MODULE := libmmrtpencoder
+diff --git a/encoder/src/RTPPacketizer.cpp b/encoder/src/RTPPacketizer.cpp
+index 17c9b2a..d07ba1b 100644
+--- a/encoder/src/RTPPacketizer.cpp
++++ b/encoder/src/RTPPacketizer.cpp
+@@ -43,7 +43,7 @@ unsigned int ngSleepTime;
+ 
+ // WFD:STATISTICS -- start
+ static FILE *fp = NULL;
+-extern bool bRTPDumpEnable;
++bool bRTPDumpEnable = true;
+ // WFD:STATISTICS -- end
+ 
+     const uint32 CRTPPacketizer::m_RTPEncodeEvent = 0;   //! Event-process incomingdata
+-- 
+1.9.1
+

@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:id="@+id/climateuiscroll"
+android:layout_height="fill_parent"
+android:layout_weight="1.0">
+
+    <GridLayout
+    android:id="@+id/vehicleHomeUI"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2"
+    android:rowCount="1"
+    android:orientation="horizontal" >
+
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="21"
+        android:orientation="vertical" >
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/IntTemp"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/ExtTemp"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RainSensorStatus"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/MWSWiper"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RWSWiper"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/HVACFanDirn"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/HVACFanSpeed"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/AC"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/AirCirculation"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/Heater"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/DriverSeatHeater"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/PsngrSeatHeater"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/DefrostMWS"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/DefrostRWS"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/DefrostFrontWindow"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/DefrostRearWindow"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/DefrostSideMirrors"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/SunRoofOpenStatus"/>
+
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/SunRoofTiltStatus"/>
+            <TextView
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/ConvertibleRoof"/>
+
+            <Button
+            android:id="@+id/HomeUIbackBtn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/UIBackBtn" />
+        </GridLayout>
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="25"
+        android:orientation="vertical" >
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateRainSensorStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateRainSensorStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateMWSWiperStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateMWSWiperStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateRWSWiperStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateRWSWiperStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateACStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateACStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <EditText
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateHeaterStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateHeaterStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateDrvrSeatHeaterStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateDrvrSeatHeaterStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimatePsngrSeatHeaterStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimatePsngrSeatHeaterStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateMWSDefrostStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateMWSDefrostStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateRWSDefrostStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateRWSDefrostStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateFrontWindowDefrostStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateFrontWindowDefrostStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateRearWindowDefrostStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateRearWindowDefrostStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateSideMirrorsDefrostStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateSideMirrorsDefrostStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateSunRoofStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateSunRoofStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateSunRoofTiltStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateSunRoofTiltStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnClimateConvRoofStatusON"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnClimateConvRoofStatusOFF"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+        </GridLayout>
+    </GridLayout>
+</ScrollView>

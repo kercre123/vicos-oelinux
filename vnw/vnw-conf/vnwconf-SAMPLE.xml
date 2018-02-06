@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved. -->
+<!-- Qualcomm Technologies Proprietary and Confidential. -->
+<!-- Sample vnwconf file for VNW -->
+<vnwconf>
+    <endian>big</endian>
+    <bus type='can' num='0' autoReg='on'>
+        <frame id='0x7C' dlen='3' dir='in' >
+            <signal id='1061'> <!-- speed -->
+                <field start='0' end='1' />
+                <format type='int' />
+            </signal>
+            <signal id='1041'> <!-- Gear -->
+                <field start='2' end='2' />
+                <format type='int' />
+            </signal>
+        </frame>
+        <frame id='0x7D' dlen='8' autoReg='1' autoRegType='on_change' dir='in' rtr='1' cycleTime='5000'>
+            <signal id='1117'> <!-- headlight -->
+                <field start='1' end='1' sbit='7' ebit='7' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1118'> <!-- auto head light -->
+                <field start='1' end='1' sbit='6' ebit='6' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1119'> <!-- dynamic high beam -->
+                <field start='1' end='1' sbit='5' ebit='5' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1120'> <!-- high beam -->
+                <field start='1' end='1' sbit='4' ebit='4' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1121'> <!-- left turn -->
+                <field start='1' end='1' sbit='3' ebit='3' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1122'> <!-- right turn -->
+                <field start='1' end='1' sbit='2' ebit='2' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1123'> <!-- brake light -->
+                <field start='1' end='1' sbit='1' ebit='1' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1124'> <!-- fog front light -->
+                <field start='1' end='1' sbit='0' ebit='0' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1125'> <!-- fog rear light -->
+                <field start='0' end='0' sbit='7' ebit='7' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1126'> <!-- hazard light -->
+                <field start='0' end='0' sbit='6' ebit='6' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1128'> <!-- int. light driver -->
+               <field start='0' end='0' sbit='5' ebit='5' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1129'> <!-- int. light psngr -->
+                <field start='0' end='0' sbit='4' ebit='4' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1130'> <!-- int. light 2nd row -->
+                <field start='0' end='0' sbit='3' ebit='3' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1131'> <!-- int. light 3rd row -->
+                <field start='0' end='0' sbit='2' ebit='2' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1069'> <!-- cruise control status -->
+                <field start='0' end='0' sbit='1' ebit='1' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1005'> <!-- maintenance malfunction indicator -->
+                <field start='0' end='0' sbit='0' ebit='0' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1065'> <!-- avg. speed 1 -->
+                <field start='2' end='3' />
+                <format type='int' />
+            </signal>
+            <signal id='1066'> <!-- avg. speed 2 -->
+                <field start='4' end='5' />
+                <format type='int' />
+            </signal>
+            <signal id='1062'> <!-- rpm -->
+                <field start='6' end='6' />
+                <format type='int' />
+            </signal>
+            <signal id='1043'> <!-- fuel level % -->
+                <field start='7' end='7' />
+                <format type='int' />
+            </signal>
+        </frame>
+        <frame id='0x7E' dlen='8' autoReg='off' dir='in' >
+            <signal id='1063'> <!-- trip meter1 mileage -->
+                <endian>little</endian>
+                <field start='0' end='3' />
+                <format type='int' />
+                <formula mult='1.8' pow='1' add='0' />
+            </signal>
+            <signal id='1064'> <!-- trip meter2 mileage -->
+                <endian>little</endian>
+                <field start='4' end='7' />
+                <format type='int' />
+                <formula mult='1.8' pow='1' add='0' />
+            </signal>
+        </frame>
+        <frame id='0x7F' dlen='8' autoReg='off' dir='in' >
+            <endian>little</endian>
+            <signal id='1067'> <!-- trip meter1 fuel usage (gallons) -->
+                <field start='0' end='3' />
+                <format type='int' />
+                <formula mult='1.8' pow='1' add='0' />
+            </signal>
+            <signal id='1068'> <!-- trip meter2 fuel usage (gallons) -->
+                <field start='4' end='7' />
+                <format type='int' />
+                <formula mult='1.8' pow='1' add='0' />
+            </signal>
+        </frame>
+        <frame id='0x80' dlen='8' autoReg='off' dir='in'>
+            <signal id='1042'> <!-- power mode -->
+                <field start='0' end='0' />
+                <format type='int' />
+            </signal>
+            <signal id='1152'> <!-- remaining fuel (gallons) -->
+                <field start='1' end='2' />
+                <format type='int' />
+            </signal>
+             <signal id='1044'> <!-- remaining driving range -->
+                <field start='3' end='4' />
+                <format type='int' />
+                <formula mult='1.8' pow='1' add='0' />
+            </signal>
+            <signal id='1045'> <!-- engine oil % -->
+                <field start='5' end='5' />
+                <format type='int' />
+            </signal>
+             <signal id='1048'> <!-- coolant level % -->
+                <field start='6' end='6' />
+                <format type='int' />
+            </signal>
+            <signal id='1053'> <!-- vehicle type -->
+                <field start='7' end='7' />
+                <format type='int' />
+            </signal>
+        </frame>
+        <frame id='0x81' dlen='1' autoReg='1' dir='in' >
+            <signal id='1181'> <!-- VIM_DPAD_CENTER_MAPPING_SIGNAL -->
+                <field start='0' end='0' sbit='7' ebit='7' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1183'> <!-- VIM_DPAD_RIGHT_MAPPING_SIGNAL -->
+                <field start='0' end='0' sbit='6' ebit='6' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1182'> <!-- VIM_DPAD_LEFT_MAPPING_SIGNAL -->
+                <field start='0' end='0' sbit='5' ebit='5' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1179'> <!-- VIM_DPAD_DOWN_MAPPING_SIGNAL -->
+                <field start='0' end='0' sbit='4' ebit='4' />
+                <format type='int' />
+            </signal>
+            <signal id='1180'> <!-- VIM_DPAD_UP_MAPPING_SIGNAL -->
+                <field start='0' end='0' sbit='3' ebit='3' />
+                <format type='int' />
+            </signal>
+        </frame>
+        <frame id='0x18A' dlen='5' autoReg='1' dir='in' >
+            <signal id='1132'> <!-- VIM_VOLUME_MAPPING_SIGNAL -->
+                <field start='0' end='2' />
+                <format type='int' />
+            </signal>
+            <signal id='1176'> <!-- VIM_HOME_MAPPING_SIGNAL -->
+                <field start='3' end='3' sbit='1' ebit='1' />
+                <format type='int' />
+            </signal>
+            <signal id='1177'> <!-- VIM_BACK_MAPPING_SIGNAL -->
+                <field start='3' end='3' sbit='4' ebit='4' />
+                <format type='int' />
+            </signal>
+            <signal id='1178'> <!-- VIM_MENU_MAPPING_SIGNAL -->
+                <field start='3' end='3' sbit='3' ebit='3' />
+                <format type='int' />
+            </signal>
+            <signal id='1184'> <!-- VIM_ENTER_MAPPING_SIGNAL -->
+                <field start='3' end='3' sbit='0' ebit='0' />
+                <format type='int' />
+            </signal>
+        </frame>
+        <frame id='0x8B' dlen='8' autoReg='off' dir='in' >
+            <signal id='1000'> <!--odometer -->
+                <field start='0' end='3' />
+                <format type='float' />
+            </signal>
+            <signal id='1001'> <!--oil level -->
+                <field start='4' end='4' />
+                <format type='uint' />
+            </signal>
+            <signal id='1003'> <!--brake fluid level -->
+                <field start='5' end='5' />
+                <format type='uint' />
+            </signal>
+            <signal id='1004'> <!--washer level -->
+                <field start='6' end='6' />
+                <format type='uint' />
+            </signal>
+        </frame>
+        <frame id='0x8C' dlen='4' autoReg='off' dir='in' >
+            <signal id='1002'> <!-- oil temperature-->
+                <field start='0' end='3' />
+                <format type='float' />
+            </signal>
+        </frame>
+        <frame id='0x8D' dlen='8' autoReg='off' dir='in'>
+            <signal id='1008'> <!-- front left tire pressure-->
+                <field start='0' end='3' />
+                <format type='float' />
+            </signal>
+            <signal id='1009'> <!-- front right tire pressure-->
+                <field start='4' end='7' />
+                <format type='float' />
+            </signal>
+        </frame>
+        <frame id='0x8E' dlen='8' autoReg='off' dir='in' >
+            <signal id='1010'> <!-- rear left tire pressure-->
+                <field start='0' end='3' />
+                <format type='float' />
+            </signal>
+            <signal id='1011'> <!-- rear right tire pressure-->
+                <field start='4' end='7' />
+                <format type='float' />
+            </signal>
+        </frame>
+        <frame id='0x8F' dlen='8' autoReg='off' dir='in' >
+            <signal id='1006'> <!-- battery voltage-->
+                <field start='0' end='3' />
+                <format type='float' />
+            </signal>
+            <signal id='1007'> <!-- battery current-->
+                <field start='4' end='7' />
+                <format type='float' />
+            </signal>
+        </frame>
+        <frame id='0x90' dlen='8' autoReg='off' dir='in'>
+            <signal id='1049'> <!-- coolant temperature-->
+                <field start='0' end='3' />
+                <format type='float' />
+            </signal>
+            <signal id='1050'> <!-- steering wheel angle-->
+                <field start='4' end='7' />
+                <format type='float' />
+            </signal>
+        </frame>
+        <frame id='0x91' dlen='8' autoReg='0' dir='out' autoSend='1' cycleTime ='0'>
+            <init base='16' value='CA FE CA FE CA FE CA FE' />
+        </frame>
+        <frame id='0x2E3' dlen='8' autoReg='0' dir='out' autoSend='1' cycleTime ='4500'>
+            <init base='16' value='02 00 00 00 00 00 00 00' />
+        </frame>
+        <frame id='0x229' dlen='8' autoReg='0' dir='out' autoSend='1' cycleTime ='10000'>
+            <init base='16' value='00 00 00 00 00 00 00 00' />
+        </frame>
+        <frame id='0x5E2' dlen='8' autoReg='0' dir='out' autoSend='1' cycleTime ='25000'>
+            <init base='16' value='E2 00 FF FF FF FF FF FF' />
+        </frame>
+        <frame id='0x1337BEEF' dlen='6' autoReg='0' dir='out' extended='1'>
+            <init base='16' value='44 00 44 44 00 00' />
+            <signal id='1185'> <!-- driver temperature-->
+                <endian>little</endian>
+                <field start='0' end='1' />
+                <format type='int' />
+            </signal>
+            <signal id='1186'> <!-- passenger temperature-->
+                <cache>no</cache>
+                <field start='2' end='2' />
+                <format type='int' />
+            </signal>
+            <signal id='1187'> <!-- rear temperature-->
+                <field start='3' end='3' />
+                <format type='int' />
+            </signal>
+            <signal id='1022'> <!-- fan speed -->
+                <field start='4' end='4' />
+                <format type='int' />
+            </signal>
+            <signal id='1021'> <!-- fan direction -->
+                <field start='5' end='5' sbit='5' ebit='2' />
+                <format type='int' />
+            </signal>
+            <signal id='1024'> <!-- AC -->
+                <field start='5' end='5' sbit='1' ebit='1' />
+                <format type='boolean' />
+            </signal>
+        </frame>
+        <frame id='0x93' dlen='2' autoReg='1' dir='in' >
+            <signal id='1188'> <!-- VIM_VOLUME_UP_SIGNAL-->
+                <field start='0' end='0' sbit='0' ebit='0' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1189'> <!-- VIM_VOLUME_DOWN_SIGNAL-->
+                <field start='0' end='0' sbit='1' ebit='1' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1190'> <!-- VIM_MEDIA_NEXT_SIGNAL-->
+                <field start='0' end='0' sbit='2' ebit='2' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1191'> <!-- VIM_MEDIA_PREV_SIGNAL -->
+                <field start='0' end='0' sbit='3' ebit='3' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1192'> <!-- VIM_MEDIA_PAUSE_SIGNAL -->
+                <field start='0' end='0' sbit='4' ebit='4' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1193'> <!-- VIM_MEDIA_PLAY_SIGNAL -->
+                <field start='0' end='0' sbit='5' ebit='5' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1194'> <!-- VIM_MEDIA_FWD_SIGNAL -->
+                <field start='0' end='0' sbit='6' ebit='6' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1195'> <!-- VIM_MEDIA_RWD_SIGNAL -->
+                <field start='0' end='0' sbit='7' ebit='7' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1196'> <!-- VIM_IVI_POWER_SIGNAL -->
+                <field start='1' end='1' sbit='0' ebit='0' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1197'> <!-- VIM_START_VOICE_CALL_SIGNAL -->
+                <field start='1' end='1' sbit='1' ebit='1' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1198'> <!-- VIM_END_VOICE_CALL_SIGNAL -->
+                <field start='1' end='1' sbit='2' ebit='2' />
+                <format type='boolean' />
+            </signal>
+            <signal id='1199'> <!-- VIM_VOICE_ASSIST_SIGNAL -->
+                <field start='1' end='1' sbit='3' ebit='3' />
+                <format type='boolean' />
+            </signal>
+        </frame>
+        <frame id='0x7FF' dlen='0' autoReg='0' dir='in'>
+            <signal id='1012'/> <!-- security alert -->
+        </frame>
+        <frame id='0xAF5' dlen='5' autoReg='0' dir='in'>
+            <signal id='2050'> <!-- multi signal frame -->
+                <field start='0' end='0' sbit='7' ebit='7' />
+                <format type='int' />
+            </signal>
+            <signal id='2051'>
+                <field start='1' end='1' sbit='7' ebit='7' />
+                <format type='int' />
+            </signal>
+            <signal id='2052'>
+                <field start='2' end='2' sbit='7' ebit='7' />
+                <format type='int' />
+            </signal>
+        </frame>
+        <frame id='0x2AA' dlen='0' autoReg='0' dir='out'>
+            <signal id='1026'/> <!-- heater signal-->
+        </frame>
+        <!-- following frame is for testing variable DLC in bigendian mode-->
+        <frame id='0x1337BEED' dlen='8' autoReg='0' dir='in' extended='1'>
+            <signal id='1409'>
+                <field start='1' end='1' sbit='7' ebit='0' />
+                <format type='int' />
+            </signal>
+            <signal id='1410'>
+                <field start='0' end='0' sbit='7' ebit='7' />
+                <format type='int' />
+            </signal>
+            <signal id='1411'>
+                <field start='0' end='0' sbit='6' ebit='6' />
+                <format type='int' />
+            </signal>
+            <signal id='1412'>
+                <field start='2' end='7'/>
+                <format type='int' />
+            </signal>
+        </frame>
+        <!-- following frame is for testing variable DLC in little endian mode -->
+        <frame id='0x1337BEEE' dlen='6' autoReg='0' dir='in' extended='1'>
+            <signal id='1413'>
+                <field start='0' end='0' sbit='7' ebit='0' />
+                <format type='int' />
+            </signal>
+            <signal id='1415'>
+                <endian>little</endian>
+                <field start='1' end='5'/>
+                <format type='int' />
+            </signal>
+        </frame>
+        <!-- following frame is for testing zero DLC-->
+        <frame id='0x1337BEEC' dlen='0' autoReg='0' dir='in' extended='1'>
+            <signal id='1420'>
+                <format type='int' />
+            </signal>
+        </frame>
+    </bus>
+</vnwconf>

@@ -1,0 +1,11 @@
+[Unit]
+Description=qmuxd service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/qmuxd
+StandardError=null
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+*    Copyright (c) 2014-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+*    Qualcomm Technologies Proprietary and Confidential.
+*
+*/
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+android:layout_width="match_parent"
+android:id="@+id/safetyuiscroll"
+android:layout_height="fill_parent"
+android:layout_weight="1.0">
+
+    <GridLayout
+    android:id="@+id/vehicleHomeUI"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2"
+    android:rowCount="1"
+    android:orientation="horizontal" >
+
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="13"
+        android:orientation="vertical" >
+
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistSensorStatus"/>
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistFrontCenter"/>
+
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistFrontLeft"/>
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistFrontRight"/>
+
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistRearCenter"/>
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistRearLeft"/>
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistRearRight"/>
+
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistMiddleLeft"/>
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/ObstacleDistMiddleRight"/>
+
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/FrontCollisonDetectionStatus"/>
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/FrontCollisonDetectionDistance"/>
+            <TextView
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/FrontCollisonDetectionTime"/>
+
+            <Button
+            android:id="@+id/HomeUIbackBtn"
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/UIBackBtn" />
+        </GridLayout>
+        <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="1"
+        android:rowCount="13"
+        android:orientation="vertical" >
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnSafety3ObstacleDistanceSensorStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnSafety3ObstacleDistanceSensorStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton
+            android:id="@+id/rdbtnSafety3FrontCollisionDetectionStatusOn"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOn"
+            android:checked="false" />
+            <RadioButton
+            android:id="@+id/rdbtnSafety3FrontCollisionDetectionStatusOff"
+            android:layout_width="240px"
+            android:layout_height="60px"
+            android:text="@string/RadioBtnOff"
+            android:checked="false" />
+            </RadioGroup>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+
+            <EditText
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:gravity="right|center_vertical"/>
+            <Button
+            android:id="@+id/safetythreetotwo"
+            android:layout_width="320px"
+            android:layout_height="60px"
+            android:text="@string/UIThreetoTwoBtn" />
+        </GridLayout>
+    </GridLayout>
+</ScrollView>

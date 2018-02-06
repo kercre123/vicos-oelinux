@@ -1,0 +1,10 @@
+[Unit]
+Description= Sensors Daemon Service
+SourcePath=/usr/bin/sensors.qcom
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/sensors.qcom
+
+[Install]
+WantedBy=multi-user.target
