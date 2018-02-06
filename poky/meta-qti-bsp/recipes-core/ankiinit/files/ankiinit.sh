@@ -1,6 +1,10 @@
 #!/bin/sh
+### This file should only contain hardware initalization commands that will only fail if the hardware is
+##  bad. Anything that we can limp along without should be put somewhere else so that this script exits
+##  with status 0 and the system init process can continue.
 
 set -e
+
 
 # Enable power rails required for GPIO, LCD, IMU and Camera but not yet controlled by device tree
 # TODO Configure device tree to properly control these regulators.
@@ -27,8 +31,3 @@ fi
 echo out > /sys/class/gpio/gpio$CAM_REG_GPIO/direction
 echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # End camera force hack
-
-# Alsa: JMR/BRC
-tinymix set "PRI_MI2S_RX Audio Mixer MultiMedia1" 1
-tinymix set "RX3 MIX1 INP1" "RX1"
-tinymix set "SPK" 1
