@@ -103,6 +103,91 @@ bool BluetoothLowEnergyBinderServer::SetMtu(int client_id,
   return client->SetMtu(address, mtu);
 }
 
+bool BluetoothLowEnergyBinderServer::DiscoverServices(int client_id,
+						      const char* address) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+          << " address: " << address;
+  std::lock_guard<std::mutex> lock(*maps_lock());
+
+  auto client = GetLEClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown client_id: " << client_id;
+    return false;
+  }
+
+  return client->DiscoverServices(address);
+}
+
+bool BluetoothLowEnergyBinderServer::GetGattDb(int client_id,
+					       const char* address) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+          << " address: " << address;
+  std::lock_guard<std::mutex> lock(*maps_lock());
+
+  auto client = GetLEClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown client_id: " << client_id;
+    return false;
+  }
+
+  return client->GetGattDb(address);
+}
+
+bool BluetoothLowEnergyBinderServer::ReadCharacteristic(int client_id,
+                                                        const char* address,
+                                                        int handle) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+          << " address: " << address
+          << " handle: " << handle;
+  std::lock_guard<std::mutex> lock(*maps_lock());
+
+  auto client = GetLEClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown client_id: " << client_id;
+    return false;
+  }
+
+  return client->ReadCharacteristic(address, handle);
+}
+
+bool BluetoothLowEnergyBinderServer::WriteCharacteristic(int client_id,
+                                                         const char* address,
+                                                         int handle,
+                                                         int write_type,
+                                                         const std::vector<uint8_t>& value) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+          << " address: " << address
+          << " handle: " << handle;
+  std::lock_guard<std::mutex> lock(*maps_lock());
+
+  auto client = GetLEClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown client_id: " << client_id;
+    return false;
+  }
+
+  return client->WriteCharacteristic(address, handle, write_type, value);
+}
+
+bool BluetoothLowEnergyBinderServer::WriteDescriptor(int client_id,
+                                                     const char* address,
+                                                     int handle,
+                                                     int write_type,
+                                                     const std::vector<uint8_t>& value) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+          << " address: " << address
+          << " handle: " << handle;
+  std::lock_guard<std::mutex> lock(*maps_lock());
+
+  auto client = GetLEClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown client_id: " << client_id;
+    return false;
+  }
+
+  return client->WriteDescriptor(address, handle, write_type, value);
+}
+
 bool BluetoothLowEnergyBinderServer::StartScan(
     int client_id,
     const bluetooth::ScanSettings& settings,
@@ -246,6 +331,112 @@ void BluetoothLowEnergyBinderServer::OnMtuChanged(
   }
 
   cb->OnMtuChanged(status, address, mtu);
+}
+
+void BluetoothLowEnergyBinderServer::OnServicesDiscovered(
+      bluetooth::LowEnergyClient* client, int status, const char* address) {
+  VLOG(2) << __func__ << " address: " << address
+          << " status: " << status;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnServicesDiscovered(status, address);
+}
+
+void BluetoothLowEnergyBinderServer::OnGattDbUpdated(
+     bluetooth::LowEnergyClient* client, const char* address,
+     btgatt_db_element_t* db, int size) {
+  VLOG(2) << __func__ << " address: " << address
+          << " size: " << size;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnGattDbUpdated(address, db, size);
+}
+
+void BluetoothLowEnergyBinderServer::OnCharacteristicRead(
+     bluetooth::LowEnergyClient* client, const char* address,
+     int status, btgatt_read_params_t* data) {
+  VLOG(2) << __func__ << " address: " << address;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnCharacteristicRead(address, status, data);
+}
+
+void BluetoothLowEnergyBinderServer::OnCharacteristicWrite(
+     bluetooth::LowEnergyClient* client, const char* address,
+     int status, uint16_t handle) {
+  VLOG(2) << __func__ << " address: " << address;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnCharacteristicWrite(address, status, handle);
+}
+
+void BluetoothLowEnergyBinderServer::OnDescriptorWrite(
+     bluetooth::LowEnergyClient* client, const char* address,
+     int status, uint16_t handle) {
+  VLOG(2) << __func__ << " address: " << address;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnDescriptorWrite(address, status, handle);
+}
+
+void BluetoothLowEnergyBinderServer::OnCharacteristicNotificationRegistration(
+     bluetooth::LowEnergyClient* client, const char* address,
+     int registered, int status, uint16_t handle) {
+  VLOG(2) << __func__ << " address: " << address;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnCharacteristicNotificationRegistration(address, registered, status, handle);
+}
+
+void BluetoothLowEnergyBinderServer::OnCharacteristicChanged(
+     bluetooth::LowEnergyClient* client, const char* address,
+     btgatt_notify_params_t* notification) {
+  VLOG(2) << __func__ << " address: " << address;
+
+  int client_id = client->GetInstanceId();
+  auto cb = GetLECallback(client_id);
+  if (!cb.get()) {
+    VLOG(2) << "Client was unregistered - client_id: " << client_id;
+    return;
+  }
+
+  cb->OnCharacteristicChanged(address, notification);
 }
 
 void BluetoothLowEnergyBinderServer::OnScanResult(

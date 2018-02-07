@@ -1,0 +1,12 @@
+[Unit]
+SourcePath=/etc/initscripts/ankiinit
+Description=Anki Post Boot Service
+After=init_post_boot.service
+
+[Service]
+Type=oneshot
+IgnoreSIGPIPE=no
+KillMode=process
+RemainAfterExit=yes
+ExecStart=/etc/initscripts/ankiinit
+

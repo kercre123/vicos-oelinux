@@ -116,46 +116,6 @@
 		};
 	};
 
-	i2c@78b9000 { /* BLSP1 QUP5 */
-		synaptics@20 {
-			compatible = "synaptics,dsx";
-			reg = <0x20>;
-			interrupt-parent = <&msm_gpio>;
-			interrupts = <13 0x2008>;
-			avdd-supply = <&pm8909_l17>;
-			vdd-supply = <&pm8909_l6>;
-			/* pins used by touchscreen */
-			pinctrl-names = "pmx_ts_active","pmx_ts_suspend","pmx_ts_release";
-			pinctrl-0 = <&ts_int_active &ts_reset_active>;
-			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-			pinctrl-2 = <&ts_release>;
-			synaptics,irq-gpio = <&msm_gpio 13 0x2008>;
-			synaptics,reset-gpio = <&msm_gpio 12 0x0>;
-			synaptics,disable-gpios;
-			synaptics,display-coords = <0 0 719 1279>;
-			synaptics,panel-coords = <0 0 719 1405>;
-		};
-	};
-
-	i2c@78b6000 { /* BLSP1 QUP2 */
-		nq@28 {
-			compatible = "qcom,nq-nci";
-			reg = <0x28>;
-			qcom,nq-irq = <&msm_gpio 21 0x00>;
-			qcom,nq-ven = <&msm_gpio 20 0x00>;
-			qcom,nq-firm = <&msm_gpio 45 0x00>;
-			qcom,clk-src = "BBCLK2";
-			interrupt-parent = <&msm_gpio>;
-			interrupts = <21 0>;
-			interrupt-names = "nfc_irq";
-			pinctrl-names = "nfc_active","nfc_suspend";
-			pinctrl-0 = <&nfc_int_active &nfc_disable_active>;
-			pinctrl-1 = <&nfc_int_suspend &nfc_disable_suspend>;
-			clocks = <&clock_rpm clk_bb_clk2_pin>;
-			clock-names = "ref_clk";
-		};
-	};
-
 	gen-vkeys {
 		compatible = "qcom,gen-vkeys";
 		label = "synaptics_dsx";
@@ -292,6 +252,11 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart_console_sleep>;
 };
+&blsp1_uart2 { // NDM
+	status = "okay";
+	pinctrl-0 = <&hsuart_sleep>;
+	pinctrl-1 = <&hsuart_active>;
+};
 
 / {
 	mtp_batterydata: qcom,battery-data {
@@ -371,7 +336,7 @@
 	pinctrl-0 = <&sdc2_clk_on &sdc2_cmd_on &sdc2_data_on &sdc2_cd_on>;
 	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &sdc2_cd_off>;
 
-	status = "ok";
+	status = "disabled";
 };
 
 &i2c_1 { /* BLSP1 QUP1 */
@@ -423,10 +388,6 @@
 		ak,layout = <0x6>;
 		ak,auto-report;
 	};
-};
-
-&mdss_mdp {
-	qcom,mdss-pref-prim-intf = "dsi";
 };
 
 &dsi_auo_cx_qvga_cmd {

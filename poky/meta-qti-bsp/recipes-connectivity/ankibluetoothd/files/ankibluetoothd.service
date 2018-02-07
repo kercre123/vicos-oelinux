@@ -1,0 +1,14 @@
+[Unit]
+Description=Anki Bluetooth Daemon
+SourcePath=/etc/initscripts/start_ankibluetoothd
+Requires=btproperty.service
+After=btproperty.service
+
+[Service]
+Restart=no
+RemainAfterExit=yes
+ExecStart=/etc/initscripts/start_ankibluetoothd start
+ExecStop=/etc/initscripts/start_ankibluetoothd stop
+
+[Install]
+WantedBy=multi-user.target

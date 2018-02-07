@@ -69,6 +69,42 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
     virtual void OnMtuChanged(LowEnergyClient* client, int status, const char* address,
                               int mtu) = 0;
 
+    // Called asynchronously to notify that services have been discovered
+    virtual void OnServicesDiscovered(LowEnergyClient* client, int status,
+				      const char* address) = 0;
+
+    // Called asynchronously to notify that the gatt db has been updated
+    virtual void OnGattDbUpdated(LowEnergyClient* client, const char* address,
+				 btgatt_db_element_t* db, int size) = 0;
+
+    // Called asynchronously to notify that the gatt characteristic has been read
+    virtual void OnCharacteristicRead(LowEnergyClient* client, const char* address,
+                                      int status, btgatt_read_params_t* data) = 0;
+
+    // Called asynchronously to notify that the gatt characteristic has been written
+    virtual void OnCharacteristicWrite(LowEnergyClient* client, const char* address,
+                                       int status, uint16_t handle) = 0;
+
+    // Called asynchronously to notify that the gatt descriptor has been written
+    virtual void OnDescriptorWrite(LowEnergyClient* client, const char* address,
+                                   int status, uint16_t handle) = 0;
+
+    // Called asynchronously to inform whether or not the client is registered
+    // for notifications on a particular characteristic
+    virtual void
+        OnCharacteristicNotificationRegistration(LowEnergyClient* client,
+                                                 const char* address,
+                                                 int registered,
+                                                 int status,
+                                                 uint16_t handle) = 0;
+
+    // Called asynchronously to inform the client that the remote device
+    // sent an indication or notification that the client is registered for
+    virtual void
+        OnCharacteristicChanged(LowEnergyClient* client,
+                                const char* address,
+                                btgatt_notify_params_t *p_data) = 0;
+
    private:
     DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
@@ -96,6 +132,31 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   // Sends request to set MTU to |mtu| for device with address |address|.
   // Return true on success, false otherwise.
   bool SetMtu(std::string address, int mtu);
+
+  // Sends request to discover services for device with address |address|.
+  // Return true on success, false otherwise.
+  bool DiscoverServices(std::string address);
+
+  // Sends request to get GATT db for device with address |address|.
+  // Return true on success, false otherwise.
+  bool GetGattDb(std::string address);
+
+  // Sends request to read GATT characteristic for device with address |address|
+  // and handle |handle|.
+  // Return true on success, false otherwise.
+  bool ReadCharacteristic(std::string address, int handle);
+
+  // Sends request to write GATT characteristic for device with address |address|
+  // and handle |handle|.
+  // Return true on success, false otherwise.
+  bool WriteCharacteristic(std::string address, int handle, int write_type,
+                           const std::vector<uint8_t>& value);
+
+  // Sends request to write GATT descriptor for device with address |address|
+  // and handle |handle|.
+  // Return true on success, false otherwise.
+  bool WriteDescriptor(std::string address, int handle, int write_type,
+                       const std::vector<uint8_t>& value);
 
   // Initiates a BLE device scan for this client using the given |settings| and
   // |filters|. See the documentation for ScanSettings and ScanFilter for how
@@ -160,6 +221,27 @@ class LowEnergyClient : private hal::BluetoothGattInterface::ClientObserver,
   void MtuChangedCallback(
       hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
       int mtu) override;
+  void SearchCompleteCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id,
+      int status) override;
+  void RegisterForNotificationCallback(
+      hal::BluetoothGattInterface* gatt_iface,
+      int conn_id, int registered, int status, uint16_t handle) override;
+  void NotifyCallback(
+      hal::BluetoothGattInterface* gatt_iface,
+      int conn_id, btgatt_notify_params_t *p_data) override;
+  void GetGattDbCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id,
+      btgatt_db_element_t *db, int size) override;
+  void ReadCharacteristicCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+      btgatt_read_params_t *data) override;
+  void WriteCharacteristicCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+      uint16_t handle) override;
+  void WriteDescriptorCallback(
+      hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+      uint16_t handle) override;
   void MultiAdvEnableCallback(
       hal::BluetoothGattInterface* gatt_iface,
       int client_id, int status) override;

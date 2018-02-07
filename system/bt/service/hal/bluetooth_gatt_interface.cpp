@@ -134,7 +134,7 @@ void RegisterForNotificationCallback(int conn_id, int registered, int status, ui
   shared_lock<shared_timed_mutex> lock(g_instance_lock);
   VERIFY_INTERFACE_OR_RETURN();
 
-  LOG(INFO) << __func__ << " - conn_id: " << conn_id
+  VLOG(2) << __func__ << " - conn_id: " << conn_id
           << " - status: " << status
           << " - registered: " << registered
           << " - handle: " << handle;
@@ -150,7 +150,7 @@ void NotifyCallback(int conn_id, btgatt_notify_params_t *p_data) {
           << " - address: " << BtAddrString(&p_data->bda)
           << " - handle: " << p_data->handle
           << " - len: " << p_data->len
-          << " - is_notify: " << p_data->is_notify;
+          << " - is_notify: " << (int) p_data->is_notify;
 
   FOR_EACH_CLIENT_OBSERVER(
     NotifyCallback(g_interface, conn_id, p_data));
@@ -241,6 +241,15 @@ void GetGattDbCallback(int conn_id, btgatt_db_element_t *db, int size) {
 
   FOR_EACH_CLIENT_OBSERVER(
       GetGattDbCallback(g_interface, conn_id, db, size));
+}
+
+void ReadCharacteristicCallback(int conn_id, int status, btgatt_read_params_t *data) {
+  shared_lock<shared_timed_mutex> lock(g_instance_lock);
+  VLOG(2) << __func__ << " - conn_id: " << conn_id << " status: " << status;
+  VERIFY_INTERFACE_OR_RETURN();
+
+  FOR_EACH_CLIENT_OBSERVER(
+      ReadCharacteristicCallback(g_interface, conn_id, status, data));
 }
 
 void ServicesRemovedCallback(int conn_id, uint16_t start_handle, uint16_t end_handle) {
@@ -439,7 +448,7 @@ const btgatt_client_callbacks_t gatt_client_callbacks = {
     SearchCompleteCallback,
     RegisterForNotificationCallback,
     NotifyCallback,
-    nullptr,  // read_characteristic_cb
+    ReadCharacteristicCallback,  // read_characteristic_cb
     WriteCharacteristicCallback,
     nullptr,  // read_descriptor_cb
     WriteDescriptorCallback,
@@ -714,6 +723,14 @@ void BluetoothGattInterface::ClientObserver::GetGattDbCallback(
     int /* conn_id */,
     btgatt_db_element_t* /* gatt_db */,
     int /* size */) {
+  // Do nothing.
+}
+
+void BluetoothGattInterface::ClientObserver::ReadCharacteristicCallback(
+    BluetoothGattInterface* /* gatt_iface */,
+    int /* conn_id */,
+    int /* status */,
+    btgatt_read_params_t* /* data */) {
   // Do nothing.
 }
 

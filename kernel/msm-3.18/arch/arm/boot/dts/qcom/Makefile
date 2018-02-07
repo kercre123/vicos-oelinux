@@ -299,54 +299,7 @@ dtb-$(CONFIG_ARCH_MSM8916) += msm8952-qrd-skum.dtb \
        msm8952-ext-codec-cdp.dtb \
        msm8952-mtp.dtb
 
-dtb-$(CONFIG_ARCH_MSM8909) += msm8909-pm8916-mtp.dtb \
-        msm8909-1gb-qrd-skuc.dtb \
-        msm8909-1gb-qrd-skue.dtb \
-	msm8909w-wtp.dtb \
-	apq8009w-wtp.dtb \
-	apq8009w-cdp.dtb \
-	msm8909w-swoctp.dtb \
-	msm8909w-swoctp-circpanel.dtb \
-	apq8009w-swoctp.dtb \
-	apq8009w-swoctp-circpanel.dtb \
-	apq8009w-nowgr-swoctp.dtb \
-	apq8009w-nowgr-swoctp-circpanel.dtb \
-	msm8909-pm8916-cdp.dtb \
-	msm8909w-cdp.dtb \
-	msm8909w-1gb-wtp.dtb \
-	apq8009w-1gb-wtp.dtb \
-	msm8909w-1gb-cdp.dtb \
-	apq8009w-1gb-cdp.dtb \
-	msm8909w-1gb-swoctp.dtb \
-	msm8909w-1gb-swoctp-circpanel.dtb \
-	apq8009w-1gb-swoctp.dtb \
-	apq8009w-1gb-swoctp-circpanel.dtb \
-	apq8009w-1gb-nowgr-swoctp.dtb \
-	apq8009w-1gb-nowgr-swoctp-circpanel.dtb \
-	msm8909w-bg-wtp-v1.dtb \
-	msm8909w-bg-wtp-v2.dtb \
-	apq8009w-bg-wtp-v1.dtb \
-	apq8009w-bg-wtp-v2.dtb \
-	apq8009-mtp-wcd9326.dtb \
-	msm8909-mtp-wcd9326.dtb \
-	msm8909-mtp-wcd9326-refboard.dtb \
-	msm8909-512mb-mtp-wcd9326-refboard.dtb \
-	msm8909-512mb-cdp-wcd9326-refboard.dtb \
-	msm8909-512mb-rcm-wcd9326-refboard.dtb \
-	msm8909-cdp-wcd9326-refboard.dtb \
-	msm8909-rcm-wcd9326-refboard.dtb \
-	apq8009-mtp-wcd9326-refboard.dtb \
-	apq8009-512mb-mtp-wcd9326-refboard.dtb \
-	apq8009-512mb-cdp-wcd9326-refboard.dtb \
-	apq8009-512mb-rcm-wcd9326-refboard.dtb \
-	apq8009-cdp-wcd9326-refboard.dtb \
-	apq8009-rcm-wcd9326-refboard.dtb \
-	apq8009-robot-refboard.dtb \
-	apq8009-robot-rome.dtb \
-	apq8009-mtp-drone.dtb \
-	msm8909-mtp.dtb \
-	msm8909-1gb-mtp.dtb
-
+dtb-$(CONFIG_ARCH_MSM8909) += msm8909-anki.dtb
 
 ifeq ($(CONFIG_ARM64),y)
 always          := $(dtb-y)

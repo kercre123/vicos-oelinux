@@ -52,6 +52,33 @@ void BluetoothGattClientBinderServer::UnregisterAll() {
   UnregisterAllBase();
 }
 
+bool BluetoothGattClientBinderServer::RefreshDevice(int client_id, const char* address) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+	  << " address: " << address;
+  auto client = GetGattClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown gatt client_id : " << client_id;
+    return false;
+  }
+  return client->RefreshDevice(std::string(address));
+}
+
+bool BluetoothGattClientBinderServer::SetCharacteristicNotification(int client_id,
+                                                                    const char* address,
+                                                                    int handle,
+                                                                    bool enable) {
+  VLOG(2) << __func__ << " client_id: " << client_id
+	  << " address: " << address
+          << " handle: " << handle
+          << " enable: " << enable;
+  auto client = GetGattClient(client_id);
+  if (!client) {
+    LOG(ERROR) << "Unknown gatt client_id : " << client_id;
+    return false;
+  }
+  return client->SetCharacteristicNotification(std::string(address), handle, enable);
+}
+
 android::sp<IBluetoothGattClientCallback>
 BluetoothGattClientBinderServer::GetGattClientCallback(int client_id) {
   auto cb = GetCallback(client_id);

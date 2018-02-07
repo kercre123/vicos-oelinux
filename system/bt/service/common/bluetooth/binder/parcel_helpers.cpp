@@ -301,5 +301,106 @@ std::unique_ptr<bluetooth::ScanResult> CreateScanResultFromParcel(
   return std::unique_ptr<ScanResult>(new ScanResult(
       device_address, *scan_record, rssi));
 }
+
+void WriteBtGattDbArrayToParcel(const btgatt_db_element_t* db, int size,
+                                android::Parcel* parcel) {
+  parcel->writeInt32(size);
+  for (int i = 0 ; i < size; i++) {
+    parcel->writeInt32(db[i].id);
+    parcel->writeByteVector(std::vector<uint8_t>(&(db[i].uuid.uu[0]), &(db[i].uuid.uu[sizeof(db[i].uuid.uu)])));
+    parcel->writeInt32(db[i].type);
+    parcel->writeInt32(db[i].attribute_handle);
+    parcel->writeInt32(db[i].start_handle);
+    parcel->writeInt32(db[i].end_handle);
+    parcel->writeInt32(db[i].properties);
+  }
+}
+
+void CreateBtGattDbArrayFromParcel(const android::Parcel& parcel,
+                                   btgatt_db_element_t** pDb, int* pSize) {
+  int size = parcel.readInt32();
+  *pSize = size;
+  if (size <= 0) {
+    *pDb = nullptr;
+    return;
+  }
+  btgatt_db_element_t* db = (btgatt_db_element_t *) malloc(sizeof(*db) * size);
+  (void) memset(db, 0, sizeof(*db) * size);
+  for (int i = 0 ; i < size; i++) {
+    db[i].id = (uint16_t) parcel.readInt32();
+    std::vector<uint8_t> uuidBytes;
+    (void) parcel.readByteVector(&uuidBytes);
+    memcpy(db[i].uuid.uu, uuidBytes.data(), uuidBytes.size());
+    db[i].type = (bt_gatt_db_attribute_type_t) parcel.readInt32();
+    db[i].attribute_handle = (uint16_t) parcel.readInt32();
+    db[i].start_handle = (uint16_t) parcel.readInt32();
+    db[i].end_handle = (uint16_t) parcel.readInt32();
+    db[i].properties = (uint8_t) parcel.readInt32();
+  }
+  *pDb = db;
+}
+
+void WriteBtGattReadParamsToParcel(const btgatt_read_params_t* data,
+                                   android::Parcel* parcel)
+{
+  parcel->writeInt32(data->handle);
+  std::vector<uint8_t> value(&(data->value.value[0]),
+                             &(data->value.value[data->value.len]));
+  parcel->writeByteVector(value);
+  parcel->writeInt32(data->value_type);
+  parcel->writeInt32(data->status);
+}
+
+void CreateBtGattReadParamsFromParcel(const android::Parcel& parcel,
+                                      btgatt_read_params_t** pData)
+{
+  btgatt_read_params_t* data = (btgatt_read_params_t *) malloc(sizeof(*data));
+  (void) memset(data, 0, sizeof(*data));
+  data->handle = (uint16_t) parcel.readInt32();
+  std::vector<uint8_t> value;
+  (void) parcel.readByteVector(&value);
+  memcpy(&(data->value.value[0]), value.data(), value.size());
+  data->value.len = (uint16_t) value.size();
+  data->value_type = (uint16_t) parcel.readInt32();
+  data->status = (uint8_t) parcel.readInt32();
+  *pData = data;
+}
+
+void WriteBtGattNotifyParamsToParcel(const btgatt_notify_params_t* notification,
+                                     android::Parcel* parcel)
+{
+  std::vector<uint8_t> value(&(notification->value[0]),
+                             &(notification->value[notification->len]));
+  parcel->writeByteVector(value);
+  std::vector<uint8_t> bda(&notification->bda.address[0],
+                           &notification->bda.address[sizeof(notification->bda.address)]);
+  parcel->writeByteVector(bda);
+  parcel->writeInt32(notification->handle);
+  parcel->writeInt32(notification->len);
+  parcel->writeInt32(notification->is_notify);
+}
+
+void CreateBtGattNotifyParamsFromParcel(const android::Parcel& parcel,
+                                        btgatt_notify_params_t** pNotification)
+{
+  btgatt_notify_params_t* notification =
+      (btgatt_notify_params_t *) malloc(sizeof(*notification));
+  (void) memset(notification, 0, sizeof(*notification));
+  std::vector<uint8_t> value;
+  (void) parcel.readByteVector(&value);
+  size_t n = std::min(value.size(), sizeof(notification->value));
+  memcpy(&(notification->value), value.data(), n);
+  notification->len = n;
+  std::vector<uint8_t> bda;
+  (void) parcel.readByteVector(&bda);
+  n = std::min(bda.size(), sizeof(notification->bda.address));
+  memcpy(&(notification->bda.address), bda.data(), n);
+  notification->handle = (uint16_t) parcel.readInt32();
+  notification->len = (uint16_t) parcel.readInt32();
+  notification->is_notify = (uint8_t) parcel.readInt32();
+  *pNotification = notification;
+}
+
+
 }  // namespace binder
 }  // namespace ipc

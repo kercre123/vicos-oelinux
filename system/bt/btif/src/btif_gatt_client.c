@@ -1897,6 +1897,7 @@ static bt_status_t btif_gattc_reg_for_notification(int client_if, const bt_bdadd
     btif_cb.client_if = (uint8_t) client_if;
     bdcpy(btif_cb.bd_addr.address, bd_addr->address);
     btif_cb.handle = handle;
+    btif_cb.conn_id = 0;
     return btif_transfer_context(btgattc_handle_event, BTIF_GATTC_REG_FOR_NOTIFICATION,
                                  (char*) &btif_cb, sizeof(btif_gattc_cb_t), NULL);
 }
@@ -1909,6 +1910,7 @@ static bt_status_t btif_gattc_dereg_for_notification(int client_if, const bt_bda
     btif_cb.client_if = (uint8_t) client_if;
     bdcpy(btif_cb.bd_addr.address, bd_addr->address);
     btif_cb.handle = handle;
+    btif_cb.conn_id = 0;
     return btif_transfer_context(btgattc_handle_event, BTIF_GATTC_DEREG_FOR_NOTIFICATION,
                                  (char*) &btif_cb, sizeof(btif_gattc_cb_t), NULL);
 }

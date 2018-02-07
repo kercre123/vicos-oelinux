@@ -227,7 +227,7 @@ class AdapterImpl : public Adapter,
 
   // hal::BluetoothInterface::Observer overrides.
   void AdapterStateChangedCallback(bt_state_t state) override {
-    LOG(INFO) << "Adapter state changed: " << BtStateText(state);
+    VLOG(1) << "Adapter state changed: " << BtStateText(state);
 
     AdapterState prev_state = GetState();
 
@@ -250,7 +250,7 @@ class AdapterImpl : public Adapter,
   void AdapterPropertiesCallback(bt_status_t status,
                                  int num_properties,
                                  bt_property_t* properties) override {
-    LOG(INFO) << "Adapter properties changed";
+    VLOG(1) << "Adapter properties changed";
 
     if (status != BT_STATUS_SUCCESS) {
       LOG(ERROR) << "status: " << BtStatusText(status);
@@ -263,14 +263,14 @@ class AdapterImpl : public Adapter,
         case BT_PROPERTY_BDADDR: {
           std::string address = BtAddrString(reinterpret_cast<bt_bdaddr_t*>(
               property->val));
-          LOG(INFO) << "Adapter address changed: " << address;
+          VLOG(1) << "Adapter address changed: " << address;
           address_.Set(address);
           break;
         }
         case BT_PROPERTY_BDNAME: {
           bt_bdname_t* hal_name = reinterpret_cast<bt_bdname_t*>(property->val);
           std::string name = reinterpret_cast<char*>(hal_name->name);
-          LOG(INFO) << "Adapter name changed: " << name;
+          VLOG(1) << "Adapter name changed: " << name;
           name_.Set(name);
           break;
         }
@@ -284,7 +284,7 @@ class AdapterImpl : public Adapter,
           bt_local_le_features_t* features =
               reinterpret_cast<bt_local_le_features_t*>(property->val);
           memcpy(&local_le_features_, features, sizeof(*features));
-          LOG(INFO) << "Supported LE features updated";
+          VLOG(1) << "Supported LE features updated";
           break;
         }
         default:
@@ -302,8 +302,8 @@ class AdapterImpl : public Adapter,
                                bt_acl_state_t state) override {
     std::string device_address = BtAddrString(&remote_bdaddr);
     bool connected = (state == BT_ACL_STATE_CONNECTED);
-    LOG(INFO) << "ACL state changed: " << device_address << " - connected: "
-              << (connected ? "true" : "false");
+    VLOG(1) << "ACL state changed: " << device_address << " - connected: "
+            << (connected ? "true" : "false");
 
     // If this is reported with an error status, I suppose the best thing we can
     // do is to log it and ignore the event.

@@ -8,6 +8,7 @@ ${LICENSE};md5=3775480a712fc46a69647678acb234cb"
 
 FILESPATH =+ "${WORKSPACE}:"
 SRC_URI   = "file://camera/lib-legacy"
+SRC_URI  += "file://mm-anki-camera.service"
 
 SRCREV = "${AUTOREV}"
 S      = "${WORKDIR}/lib-legacy"
@@ -96,4 +97,19 @@ do_install () {
 
     oe_runmake -f ${LA_COMPAT_DIR}/build/core/main.mk BUILD_MODULES_IN_PATHS=${S} \
         all_modules SHOW_COMMANDS=true USE_INSTALL=true || die "make failed"
+
+   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+       install -d ${D}${systemd_unitdir}/system/
+       install -m 0644 ${WORKDIR}/mm-anki-camera.service -D ${D}${systemd_unitdir}/system/mm-anki-camera.service
+       install -d ${D}${systemd_unitdir}/system/multi-user.target.wants/
+       install -d ${D}${systemd_unitdir}/system/ffbm.target.wants/
+       # enable the service for multi-user.target
+       ln -sf ${systemd_unitdir}/system/mm-anki-camera.service \
+            ${D}${systemd_unitdir}/system/multi-user.target.wants/mm-anki-camera.service
+       # enable the service for ffbm.target
+       ln -sf ${systemd_unitdir}/system/mm-anki-camera.service \
+            ${D}${systemd_unitdir}/system/ffbm.target.wants/mm-anki-camera.service
+   fi
 }
+
+FILES_${PN} += "${systemd_unitdir}/system/"

@@ -54,27 +54,27 @@
 
 &i2c_3 {
 	qcom,actuator@0 {
-		cam_vaf-supply = <&pm8916_l8>;
+		cam_vaf-supply = <&pm8916_l5>;
 	};
 
 
 	qcom,eeprom@6c{
-		cam_vdig-supply = <&pm8916_l2>;
-		cam_vana-supply = <&pm8916_l10>;
-		cam_vio-supply = <&pm8916_l6>;
-		cam_vaf-supply = <&pm8916_l8>;
+		cam_vdig-supply = <&pm8916_l5>;
+		cam_vana-supply = <&pm8916_l17>;
+		cam_vio-supply = <&pm8916_l4>;
+		cam_vaf-supply = <&pm8916_l5>;
 	};
 
 	qcom,camera@0 {
-		cam_vdig-supply = <&pm8916_l2>;
-		cam_vana-supply = <&pm8916_l10>;
-		cam_vio-supply = <&pm8916_l6>;
-		cam_vaf-supply = <&pm8916_l8>;
+		cam_vdig-supply = <&pm8916_l5>;
+		cam_vana-supply = <&pm8916_l17>;
+		cam_vio-supply = <&pm8916_l4>;
+		cam_vaf-supply = <&pm8916_l5>;
 	};
 
 	qcom,camera@1 {
-		cam_vana-supply = <&pm8916_l10>;
-		cam_vio-supply = <&pm8916_l6>;
+		cam_vana-supply = <&pm8916_l17>;
+		cam_vio-supply = <&pm8916_l4>;
 	};
 };
 
@@ -105,7 +105,7 @@
 };
 
 &pm8916_bms {
-	status = "ok";
+	status = "disabled";
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,batt-aging-comp;
 };
@@ -189,4 +189,3 @@
 		status = "disabled";
 	};
 };
-

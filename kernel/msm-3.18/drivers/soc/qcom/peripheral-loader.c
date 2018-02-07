@@ -455,6 +455,10 @@ static int pil_alloc_region(struct pil_priv *priv, phys_addr_t min_addr,
 	dma_set_attr(DMA_ATTR_SKIP_ZEROING, &priv->desc->attrs);
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &priv->desc->attrs);
 
+        pil_info(priv->desc, "Allocating region at %pa size 0x%zx\n",
+						&priv->region_start,
+						aligned_size);
+
 	region = dma_alloc_attrs(priv->desc->dev, aligned_size,
 				&priv->region_start, GFP_KERNEL,
 				&priv->desc->attrs);

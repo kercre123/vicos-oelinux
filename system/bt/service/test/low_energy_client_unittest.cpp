@@ -100,6 +100,45 @@ class TestDelegate : public LowEnergyClient::Delegate {
     last_mtu_ = mtu;
   }
 
+  void OnServicesDiscovered(LowEnergyClient* client, int status, const char* address) {
+    ASSERT_TRUE(client);
+  }
+
+  void OnGattDbUpdated(LowEnergyClient* client, const char* address,
+		       btgatt_db_element_t* db, int size) {
+    ASSERT_TRUE(client);
+  }
+
+  void OnCharacteristicRead(LowEnergyClient* client, const char* address, int status,
+                            btgatt_read_params_t* data) {
+    ASSERT_TRUE(client);
+  }
+
+  void OnCharacteristicWrite(LowEnergyClient* client, const char* address, int status,
+                             uint16_t handle) {
+    ASSERT_TRUE(client);
+  }
+
+  void OnDescriptorWrite(LowEnergyClient* client, const char* address, int status,
+                         uint16_t handle) {
+    ASSERT_TRUE(client);
+  }
+
+  void OnCharacteristicNotificationRegistration(LowEnergyClient* client,
+                                                const char* address,
+                                                int registered,
+                                                int status,
+                                                uint16_t handle) {
+    ASSERT_TRUE(client);
+  }
+
+  void OnCharacteristicChanged(LowEnergyClient* client,
+                               const char* address,
+                               btgatt_notify_params_t *p_data) {
+    ASSERT_TRUE(client);
+  }
+
+
   void OnScanResult(LowEnergyClient* client, const ScanResult& scan_result) {
     ASSERT_TRUE(client);
     scan_result_count_++;

@@ -1,0 +1,12 @@
+[Unit]
+Description=BT Property Service
+SourcePath=/etc/initscripts/start_btproperty
+
+[Service]
+Restart=always
+RemainAfterExit=yes
+ExecStart=/etc/initscripts/start_btproperty start
+ExecStop=/etc/initscripts/start_btproperty stop
+
+[Install]
+WantedBy=multi-user.target

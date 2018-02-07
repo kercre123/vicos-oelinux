@@ -404,6 +404,153 @@ bool LowEnergyClient::SetMtu(std::string address, int mtu) {
   return true;
 }
 
+bool LowEnergyClient::DiscoverServices(std::string address) {
+  VLOG(2) << __func__ << "Address: " << address;
+
+  bt_bdaddr_t bda;
+  util::BdAddrFromString(address, &bda);
+
+  std::map<const bt_bdaddr_t, int>::iterator conn_id;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    conn_id = connection_ids_.find(bda);
+    if (conn_id == connection_ids_.end()) {
+      LOG(WARNING) << "Can't discover services, no existing connection to " << address;
+      return false;
+    }
+  }
+
+  bt_status_t status = hal::BluetoothGattInterface::Get()->
+      GetClientHALInterface()->search_service(conn_id->second, nullptr);
+  if (status != BT_STATUS_SUCCESS) {
+    LOG(ERROR) << "HAL call to search service failed";
+    return false;
+  }
+
+  return true;
+}
+
+bool LowEnergyClient::GetGattDb(std::string address) {
+  VLOG(2) << __func__ << "Address: " << address;
+
+  bt_bdaddr_t bda;
+  util::BdAddrFromString(address, &bda);
+
+  std::map<const bt_bdaddr_t, int>::iterator conn_id;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    conn_id = connection_ids_.find(bda);
+    if (conn_id == connection_ids_.end()) {
+      LOG(WARNING) << "Can't get gatt db, no existing connection to " << address;
+      return false;
+    }
+  }
+
+  bt_status_t status = hal::BluetoothGattInterface::Get()->
+      GetClientHALInterface()->get_gatt_db(conn_id->second);
+  if (status != BT_STATUS_SUCCESS) {
+    LOG(ERROR) << "HAL call to get gatt db failed";
+    return false;
+  }
+
+  return true;
+}
+
+bool LowEnergyClient::ReadCharacteristic(std::string address, int handle) {
+  VLOG(2) << __func__ << "Address: " << address
+          << " handle: " << handle;
+
+  bt_bdaddr_t bda;
+  util::BdAddrFromString(address, &bda);
+
+  std::map<const bt_bdaddr_t, int>::iterator conn_id;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    conn_id = connection_ids_.find(bda);
+    if (conn_id == connection_ids_.end()) {
+      LOG(WARNING) << "Can't get gatt db, no existing connection to " << address;
+      return false;
+    }
+  }
+
+  bt_status_t status = hal::BluetoothGattInterface::Get()->
+      GetClientHALInterface()->read_characteristic(conn_id->second, handle, 0 /* auth_req */);
+  if (status != BT_STATUS_SUCCESS) {
+    LOG(ERROR) << "HAL call to read characteristic failed";
+    return false;
+  }
+
+  return true;
+}
+
+bool LowEnergyClient::WriteCharacteristic(std::string address, int handle, int write_type,
+                                          const std::vector<uint8_t>& value) {
+  VLOG(2) << __func__ << "Address: " << address
+          << " handle: " << handle
+          << " write_type: " << write_type;
+
+  bt_bdaddr_t bda;
+  util::BdAddrFromString(address, &bda);
+
+  std::map<const bt_bdaddr_t, int>::iterator conn_id;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    conn_id = connection_ids_.find(bda);
+    if (conn_id == connection_ids_.end()) {
+      LOG(WARNING) << "Can't get gatt db, no existing connection to " << address;
+      return false;
+    }
+  }
+
+  bt_status_t status = hal::BluetoothGattInterface::Get()->
+      GetClientHALInterface()->write_characteristic(conn_id->second,
+                                                    handle,
+                                                    write_type,
+                                                    value.size(),
+                                                    0 /* auth_req */,
+                                                    (char *) value.data());
+  if (status != BT_STATUS_SUCCESS) {
+    LOG(ERROR) << "HAL call to write characteristic failed";
+    return false;
+  }
+
+  return true;
+}
+
+bool LowEnergyClient::WriteDescriptor(std::string address, int handle, int write_type,
+                                      const std::vector<uint8_t>& value) {
+  VLOG(2) << __func__ << "Address: " << address
+          << " handle: " << handle
+          << " write_type: " << write_type;
+
+  bt_bdaddr_t bda;
+  util::BdAddrFromString(address, &bda);
+
+  std::map<const bt_bdaddr_t, int>::iterator conn_id;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    conn_id = connection_ids_.find(bda);
+    if (conn_id == connection_ids_.end()) {
+      LOG(WARNING) << "Can't get gatt db, no existing connection to " << address;
+      return false;
+    }
+  }
+
+  bt_status_t status = hal::BluetoothGattInterface::Get()->
+      GetClientHALInterface()->write_descriptor(conn_id->second,
+                                                handle,
+                                                write_type,
+                                                value.size(),
+                                                0 /* auth_req */,
+                                                (char *) value.data());
+  if (status != BT_STATUS_SUCCESS) {
+    LOG(ERROR) << "HAL call to write descriptor failed";
+    return false;
+  }
+
+  return true;
+}
+
 void LowEnergyClient::SetDelegate(Delegate* delegate) {
   lock_guard<mutex> lock(delegate_mutex_);
   delegate_ = delegate;
@@ -589,7 +736,9 @@ void LowEnergyClient::ConnectCallback(
   if (client_id != client_id_)
     return;
 
-  VLOG(1) << __func__ << "client_id: " << client_id << " status: " << status;
+  VLOG(1) << __func__ << "client_id: " << client_id
+          << " conn_id: " << conn_id
+          << " status: " << status;
 
   {
     lock_guard<mutex> lock(connection_fields_lock_);
@@ -646,6 +795,191 @@ void LowEnergyClient::MtuChangedCallback(
   const char *addr = BtAddrString(bda).c_str();
   if (delegate_)
     delegate_->OnMtuChanged(this, status, addr, mtu);
+}
+
+void LowEnergyClient::SearchCompleteCallback(
+  hal::BluetoothGattInterface* gatt_iface, int conn_id, int status) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id << " status: " << status;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnServicesDiscovered(this, status, addr);
+}
+
+
+void LowEnergyClient::GetGattDbCallback(
+     hal::BluetoothGattInterface* gatt_iface, int conn_id,
+     btgatt_db_element_t *db, int size) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id << " size: " << size;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnGattDbUpdated(this, addr, db, size);
+}
+
+void LowEnergyClient::ReadCharacteristicCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+    btgatt_read_params_t *data) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnCharacteristicRead(this, addr, status, data);
+}
+
+void LowEnergyClient::WriteCharacteristicCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+    uint16_t handle) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnCharacteristicWrite(this, addr, status, handle);
+}
+
+void LowEnergyClient::WriteDescriptorCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id, int status,
+    uint16_t handle) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnDescriptorWrite(this, addr, status, handle);
+}
+
+void LowEnergyClient::RegisterForNotificationCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id, int registered,
+    int status, uint16_t handle) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id;
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnCharacteristicNotificationRegistration(this, addr,
+                                                        registered, status,
+                                                        handle);
+}
+
+void LowEnergyClient::NotifyCallback(
+    hal::BluetoothGattInterface* gatt_iface, int conn_id,
+    btgatt_notify_params_t* notification) {
+
+  VLOG(1) << __func__ << " conn_id: " << conn_id
+          << " address: " << BtAddrString(&(notification->bda));
+
+  const bt_bdaddr_t *bda = nullptr;
+  {
+    lock_guard<mutex> lock(connection_fields_lock_);
+    for (auto& connection: connection_ids_) {
+      if (connection.second == conn_id) {
+        bda = &connection.first;
+        break;
+      }
+    }
+    if (!bda) {
+      std::map<const bt_bdaddr_t, int>::iterator conn_id_itr;
+      conn_id_itr = connection_ids_.find(notification->bda);
+      if (conn_id_itr != connection_ids_.end()) {
+        bda = &(notification->bda);
+      }
+    }
+  }
+
+  if (!bda)
+    return;
+
+  const char *addr = BtAddrString(bda).c_str();
+  if (delegate_)
+    delegate_->OnCharacteristicChanged(this, addr, notification);
 }
 
 void LowEnergyClient::MultiAdvEnableCallback(

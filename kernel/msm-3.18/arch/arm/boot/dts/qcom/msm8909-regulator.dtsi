@@ -130,9 +130,9 @@
 	};
 
 	rpm-regulator-ldoa6 {
-			status = "okay";
+			status = "disabled";
 		pm8909_l6: regulator-l6 {
-			status = "okay";
+			status = "disabled";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			qcom,init-voltage = <1800000>;

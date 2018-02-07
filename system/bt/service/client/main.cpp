@@ -15,6 +15,7 @@
 //
 
 #include <iostream>
+#include <iomanip>
 #include <string>
 
 #ifdef BT_LIBCHROME_NDEBUG
@@ -138,7 +139,7 @@ class CLIBluetoothCallback : public ipc::binder::BnBluetoothCallback {
     cout << COLOR_BOLDWHITE "Adapter state changed: " COLOR_OFF
          << COLOR_MAGENTA << AdapterStateToString(prev_state) << COLOR_OFF
          << COLOR_BOLDWHITE " -> " COLOR_OFF
-         << COLOR_BOLDYELLOW << AdapterStateToString(new_state) << COLOR_OFF;
+         << COLOR_BOLDYELLOW << AdapterStateToString(new_state) << COLOR_OFF << endl;
     EndAsyncOut();
    }
 
@@ -160,7 +161,7 @@ class CLIBluetoothLowEnergyCallback
     } else {
       ble_client_id = client_id;
       cout << COLOR_BOLDWHITE "Registered BLE client with ID: " COLOR_OFF
-           << COLOR_GREEN << client_id << COLOR_OFF;
+           << COLOR_GREEN << client_id << COLOR_OFF << endl;
     }
     EndAsyncOut();
 
@@ -174,7 +175,7 @@ class CLIBluetoothLowEnergyCallback
          << COLOR_BOLDYELLOW "[" << address
          << " connected: " << (connected ? "true" : "false") << " ] "
          << COLOR_BOLDWHITE "- status: " << status
-         << COLOR_BOLDWHITE " - client_id: " << client_id << COLOR_OFF;
+         << COLOR_BOLDWHITE " - client_id: " << client_id << COLOR_OFF << endl;
     EndAsyncOut();
   }
 
@@ -183,9 +184,172 @@ class CLIBluetoothLowEnergyCallback
     cout << COLOR_BOLDWHITE "MTU changed: "
          << COLOR_BOLDYELLOW "[" << address << " ] "
          << COLOR_BOLDWHITE " - status: " << status
-         << COLOR_BOLDWHITE " - mtu: " << mtu << COLOR_OFF;
+         << COLOR_BOLDWHITE " - mtu: " << mtu << COLOR_OFF << endl;
     EndAsyncOut();
   }
+
+  void OnServicesDiscovered(int status, const char *address) override {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Services Discovered: "
+	 << COLOR_BOLDYELLOW "[" << address << " ] "
+	 << COLOR_BOLDWHITE " - status: " << status << COLOR_OFF << endl;
+    EndAsyncOut();
+  }
+
+  void uuid_to_string(bt_uuid_t *p_uuid, std::string& str) {
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0');
+    for (int i = 15 ; i >= 0; i--) {
+      ss << std::setw(2) << static_cast<int>(p_uuid->uu[i]);
+      if (i == 12 || i == 10 || i == 8 || i == 6) {
+        ss << "-";
+      }
+    }
+    str = ss.str();
+  }
+
+  void bt_gatt_db_attribute_type_t_to_string(bt_gatt_db_attribute_type_t t, std::string& type) {
+    switch(t) {
+      case BTGATT_DB_PRIMARY_SERVICE:
+        type = "Primary Service";
+        break;
+      case BTGATT_DB_SECONDARY_SERVICE:
+        type = "Secondary Service";
+        break;
+      case BTGATT_DB_INCLUDED_SERVICE:
+        type = "Included Service";
+        break;
+      case BTGATT_DB_CHARACTERISTIC:
+        type = "Characteristic";
+        break;
+      case BTGATT_DB_DESCRIPTOR:
+        type = "Descriptor";
+        break;
+      default:
+        type = "Unknown (" + std::to_string(t) + ")";;
+        break;
+    }
+  }
+
+  void gatt_properties_to_string(uint8_t btaCharProperties, std::string& properties) {
+    const std::map<uint8_t, std::string> props {
+      { 0x01, "broadcast"},
+      { 0x02, "read"},
+      { 0x04, "write_no_response"},
+      { 0x08, "write"},
+      { 0x10, "notify"},
+      { 0x20, "indicate"},
+      { 0x40, "auth"},
+      { 0x80, "ext_prop"},
+    };
+    std::ostringstream oss;
+    for (auto p : props) {
+      if (btaCharProperties & p.first) {
+        if (oss.tellp()) {
+          oss << "|";
+        }
+        oss << p.second;
+      }
+    }
+    properties = oss.str();
+    
+  }
+
+  void OnGattDbUpdated(const char *address, btgatt_db_element_t* db, int size) override {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Gatt Db Updated: "
+	 << COLOR_BOLDYELLOW "[" << address << " ] "
+	 << COLOR_BOLDWHITE " - size: " << size << endl;
+    for (int i = 0 ; i < size ; i++) {
+      std::string uuid;
+      uuid_to_string(&(db[i].uuid), uuid);
+      std::string type;
+      bt_gatt_db_attribute_type_t_to_string(db[i].type, type);
+      cout << COLOR_BOLDYELLOW " - id: " << db[i].id
+           << ", uuid: " << uuid
+           << ", type: " << type;
+      if (db[i].attribute_handle) {
+        cout << ", attribute_handle: " << db[i].attribute_handle;
+      }
+      if (db[i].start_handle) {
+        cout  << ", start_handle: " << db[i].start_handle;
+      }
+      if (db[i].end_handle) {
+        cout << ", end_handle: " << db[i].end_handle;
+      }
+      if (db[i].properties) {
+        std::string charProperties;
+        gatt_properties_to_string(db[i].properties, charProperties);
+        cout << ", properties: " << charProperties;
+      }
+      cout << endl;
+    }
+    cout << COLOR_OFF;
+    EndAsyncOut();
+    free(db);
+  }
+
+  void OnCharacteristicRead(const char* address, int status, btgatt_read_params_t* p_data)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Characteristic Read Result: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << COLOR_BOLDWHITE " - status: " << status << endl;
+    if (status == BT_STATUS_SUCCESS) {
+      cout << COLOR_BOLDWHITE "Value: "
+           << COLOR_BOLDYELLOW << base::HexEncode(p_data->value.value, p_data->value.len)
+           << endl;
+    }
+    cout << COLOR_OFF;
+    EndAsyncOut();
+    free(p_data);
+  }
+
+  void OnCharacteristicWrite(const char* address, int status, uint16_t handle)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Characteristic Write Result: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << COLOR_BOLDWHITE " - status: " << status
+         << COLOR_BOLDWHITE " - handle: " << handle << COLOR_OFF << endl;
+    EndAsyncOut();
+  }
+
+  void OnDescriptorWrite(const char* address, int status, uint16_t handle)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Descriptor Write Result: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << COLOR_BOLDWHITE " - status: " << status
+         << COLOR_BOLDWHITE " - handle: " << handle << COLOR_OFF << endl;
+    EndAsyncOut();
+  }
+
+  void OnCharacteristicNotificationRegistration(const char* address, int registered,
+                                                int status, uint16_t handle)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Characteristic Notification Registration Result: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << COLOR_BOLDWHITE " - registered: " << registered
+         << COLOR_BOLDWHITE " - status: " << status
+         << COLOR_BOLDWHITE " - handle: " << handle << COLOR_OFF << endl;
+    EndAsyncOut();
+  }
+
+  void OnCharacteristicChanged(const char* address,
+                               btgatt_notify_params_t *p_data)
+  {
+    BeginAsyncOut();
+    cout << COLOR_BOLDWHITE "Characteristic Notification: "
+         << COLOR_BOLDYELLOW "[" << address << " ] "
+         << " - handle: " << p_data->handle
+         << " - value: " << base::HexEncode(p_data->value, p_data->len)
+         << COLOR_OFF << endl;
+    EndAsyncOut();
+    free(p_data);
+  }
+
 
   void OnScanResult(const bluetooth::ScanResult& scan_result) override {
     BeginAsyncOut();
@@ -229,7 +393,7 @@ class CLIGattClientCallback
     } else {
       gatt_client_id = client_id;
       cout << COLOR_BOLDWHITE "Registered GATT client with ID: " COLOR_OFF
-           << COLOR_GREEN << client_id << COLOR_OFF;
+           << COLOR_GREEN << client_id << COLOR_OFF << endl;
     }
     EndAsyncOut();
 
@@ -433,6 +597,207 @@ void HandleUnregisterGATT(IBluetooth* bt_iface, const vector<string>& args) {
   gatt_iface->UnregisterClient(gatt_client_id.load());
   gatt_client_id = 0;
   PrintCommandStatus(true);
+}
+
+void HandleRefreshDevice(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+
+  if (args.size() != 1) {
+    PrintError("Expected MAC address as only argument");
+    return;
+  }
+
+  address = args[0];
+
+  if (!gatt_client_id.load()) {
+    PrintError("Not registered");
+    return;
+  }
+
+  sp<IBluetoothGattClient> gatt_iface = bt_iface->GetGattClientInterface();
+  if (!gatt_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth GATT Client interface");
+    return;
+  }
+
+  gatt_iface->RefreshDevice(gatt_client_id.load(), address.c_str());
+  PrintCommandStatus(true);
+}
+
+void HandleSetCharNotify(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+  int handle;
+  bool enable;
+
+  if (args.size() != 3) {
+    PrintError("Expected 3 arguments: MAC address, handle of characteristic, true|false");
+    return;
+  }
+
+  address = args[0];
+  handle = std::stoi(args[1]);
+  enable = (args[2] == "true");
+
+  if (!gatt_client_id.load()) {
+    PrintError("Not registered");
+    return;
+  }
+
+  sp<IBluetoothGattClient> gatt_iface = bt_iface->GetGattClientInterface();
+  if (!gatt_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth GATT Client interface");
+    return;
+  }
+
+  gatt_iface->SetCharacteristicNotification(gatt_client_id.load(), address.c_str(), handle, enable);
+  PrintCommandStatus(true);
+}
+
+void HandleDiscoverServices(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+
+  if (args.size() != 1) {
+    PrintError("Expected MAC address as only argument");
+    return;
+  }
+
+  address = args[0];
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->DiscoverServices(ble_client_id.load(), address.c_str());
+  PrintCommandStatus(status);
+}
+
+void HandleGetGattDb(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+
+  if (args.size() != 1) {
+    PrintError("Expected MAC address as only argument");
+    return;
+  }
+
+  address = args[0];
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->GetGattDb(ble_client_id.load(), address.c_str());
+  PrintCommandStatus(status);
+}
+
+void HandleReadChar(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+  int handle;
+
+  if (args.size() != 2) {
+    PrintError("Expected MAC address and handle as only arguments");
+    return;
+  }
+
+  address = args[0];
+  handle = std::stoi(args[1]);
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->ReadCharacteristic(ble_client_id.load(), address.c_str(), handle);
+  PrintCommandStatus(status);
+}
+
+void HandleWriteChar(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+  int handle;
+  int write_type;
+  std::vector<uint8_t> value;
+
+  if (args.size() != 4) {
+    PrintError("Expected MAC address, handle, write type and hex-string value as only arguments");
+    return;
+  }
+
+  address = args[0];
+  handle = std::stoi(args[1]);
+  write_type = std::stoi(args[2]);
+  base::HexStringToBytes(args[3], &value);
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->WriteCharacteristic(ble_client_id.load(),
+                                               address.c_str(),
+                                               handle,
+                                               write_type,
+                                               value);
+  PrintCommandStatus(status);
+}
+
+void HandleWriteDesc(IBluetooth* bt_iface, const vector<string>& args) {
+  string address;
+  int handle;
+  int write_type;
+  std::vector<uint8_t> value;
+
+  if (args.size() != 4) {
+    PrintError("Expected MAC address, handle, write type and hex-string value as only arguments");
+    return;
+  }
+
+  address = args[0];
+  handle = std::stoi(args[1]);
+  write_type = std::stoi(args[2]);
+  base::HexStringToBytes(args[3], &value);
+
+  if (!ble_client_id.load()) {
+    PrintError("BLE not registered");
+    return;
+  }
+
+  sp<IBluetoothLowEnergy> ble_iface = bt_iface->GetLowEnergyInterface();
+  if (!ble_iface.get()) {
+    PrintError("Failed to obtain handle to Bluetooth Low Energy interface");
+    return;
+  }
+
+  bool status = ble_iface->WriteDescriptor(ble_client_id.load(),
+                                           address.c_str(),
+                                           handle,
+                                           write_type,
+                                           value);
+  PrintCommandStatus(status);
 }
 
 void HandleStartAdv(IBluetooth* bt_iface, const vector<string>& args) {
@@ -733,10 +1098,24 @@ struct {
     "\t\tRegister with the Bluetooth GATT Client interface" },
   { "unregister-gatt", HandleUnregisterGATT,
     "\t\tUnregister from the Bluetooth GATT Client interface" },
+  { "refresh-device", HandleRefreshDevice,
+    "\t\tRefresh Device GATT information" },
+  { "discover-services", HandleDiscoverServices,
+    "\tDiscover GATT Services offered by connected device" },
+  { "get-gatt-db", HandleGetGattDb,
+    "\t\tGet GATT DB offered by connected device" },
+  { "read-char", HandleReadChar,
+    "\t\tRead the value of a characteristic by handle" },
+  { "write-char", HandleWriteChar,
+    "\t\tWrite the value of a characteristic by handle" },
+  { "write-desc", HandleWriteDesc,
+    "\t\tWrite the value of a descriptor by handle" },
+  { "set-char-notify", HandleSetCharNotify,
+    "\t\tEnable or disable notifications/indications for a given characteristic" },
   { "connect-le", HandleConnect, "\t\tConnect to LE device (-h for options)"},
   { "disconnect-le", HandleDisconnect,
     "\t\tDisconnect LE device (-h for options)"},
-  { "set-mtu", HandleSetMtu, "\t\tSet MTU (-h for options)"},
+  { "set-mtu", HandleSetMtu, "\t\t\tSet MTU (-h for options)"},
   { "start-adv", HandleStartAdv, "\t\tStart advertising (-h for options)" },
   { "stop-adv", HandleStopAdv, "\t\tStop advertising" },
   { "start-le-scan", HandleStartLeScan,

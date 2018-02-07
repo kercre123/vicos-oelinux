@@ -47,11 +47,7 @@ class IBluetoothGattClient : public android::IInterface {
     UNREGISTER_CLIENT_TRANSACTION,
     UNREGISTER_ALL_TRANSACTION,
     REFRESH_DEVICE_TRANSACTION,
-    DISCOVER_SERVICES_TRANSACTION,
-    READ_CHARACTERISTIC_TRANSACTION,
-    WRITE_CHARACTERISTIC_TRANSACTION,
     READ_DESCRIPTOR_TRANSACTION,
-    WRITE_DESCRIPTOR_TRANSACTION,
     REGISTER_FOR_NOTIFICATIONS_TRANSACTION,
     UNREGISTER_FOR_NOTIFICATIONS_TRANSACTION,
     BEGIN_RELIABLE_WRITE_TRANSACTION,
@@ -62,6 +58,9 @@ class IBluetoothGattClient : public android::IInterface {
       const android::sp<IBluetoothGattClientCallback>& callback) = 0;
   virtual void UnregisterClient(int client_id) = 0;
   virtual void UnregisterAll() = 0;
+  virtual bool RefreshDevice(int client_id, const char* address) = 0;
+  virtual bool SetCharacteristicNotification(int client_id, const char* address,
+                                             int handle, bool enable) = 0;
 
   // TODO(armansito): Complete interface definition.
 
@@ -99,6 +98,9 @@ class BpBluetoothGattClient
       const android::sp<IBluetoothGattClientCallback>& callback) override;
   void UnregisterClient(int client_id) override;
   void UnregisterAll() override;
+  bool RefreshDevice(int client_id, const char* address) override;
+  bool SetCharacteristicNotification(int client_id, const char* address,
+                                     int handle, bool enable) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(BpBluetoothGattClient);
