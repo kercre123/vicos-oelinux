@@ -1,0 +1,21 @@
+diff --git a/wlan_apq8017_snap/hostapd.conf b/wlan_apq8017_snap/hostapd.conf
+index be6cdae..42168bf 100644
+--- a/wlan_apq8017_snap/hostapd.conf
++++ b/wlan_apq8017_snap/hostapd.conf
+@@ -986,7 +986,7 @@ eap_server=1
+ # and/or WPA2 (full IEEE 802.11i/RSN):
+ # bit0 = WPA
+ # bit1 = IEEE 802.11i/RSN (WPA2) (dot11RSNAEnabled)
+-wpa=2
++#wpa=2
+ 
+ # WPA pre-shared keys for WPA-PSK. This can be either entered as a 256-bit
+ # secret in hex format (64 hex digits), wpa_psk, or as an ASCII passphrase
+@@ -995,7 +995,6 @@ wpa=2
+ # wpa_psk (dot11RSNAConfigPSKValue)
+ # wpa_passphrase (dot11RSNAConfigPSKPassPhrase)
+ #wpa_psk=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+-wpa_passphrase=1234567890
+ 
+ # Optionally, WPA PSKs can be read from a separate text file (containing list
+ # of (PSK,MAC address) pairs. This allows more than one PSK to be configured.
