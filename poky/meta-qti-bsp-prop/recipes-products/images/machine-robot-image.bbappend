@@ -1,6 +1,9 @@
 # Additional non-open source packages to be put to the image filesystem.
 include ${BASEMACHINE}/${BASEMACHINE}-robot-qti-image.inc
 
+# BRC: Set systemd default target to run victor processes
+SYSTEMD_DEFAULT_TARGET="anki-robot.target"
+
 inherit qimage
 
 require internal-image.inc
