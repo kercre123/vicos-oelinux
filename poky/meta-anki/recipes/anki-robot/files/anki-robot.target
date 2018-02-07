@@ -2,3 +2,4 @@
 Description=Anki Robotics System
 Requires=multi-user.target init_post_boot.service
 After=multi-user.target init_post_boot.service
+AllowIsolate=yes

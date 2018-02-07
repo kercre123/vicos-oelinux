@@ -1,6 +1,7 @@
 [Unit]
 SourcePath=/etc/initscripts/anki-audio-init
 Description=Anki ALSA init
+Wants=init_post_boot.service init_audio.service
 After=init_post_boot.service init_audio.service
 
 [Service]
@@ -10,3 +11,5 @@ KillMode=process
 RemainAfterExit=yes
 ExecStart=/etc/initscripts/anki-audio-init
 
+[Install]
+WantedBy=anki-robot.target

@@ -16,13 +16,14 @@ DEPENDS += "anki-audio-init"
 inherit systemd
 
 do_install_append () {
-   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
-       install -d ${D}${systemd_unitdir}/system/
-       install -m 0644 ${WORKDIR}/${SERVICE_FILE} -D ${D}${systemd_unitdir}/system/${SERVICE_FILE}
-       install -d ${D}${systemd_unitdir}/system/anki-robot.target.wants/
-       # add dependency on multi-user.target?
-       # ln -sf ${systemd_unitdir}/system/multi-user.target
-       #     ${D}${systemd_unitdir}/system/${SERVICE_FILE}.wants/multi-user.target
+    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+        install -d ${D}${systemd_unitdir}/system/
+        install -m 0644 ${WORKDIR}/${SERVICE_FILE} -D ${D}${systemd_unitdir}/system/${SERVICE_FILE}
+        install -d ${D}${systemd_unitdir}/system/anki-robot.target.wants/
+
+        # create a symlink named victor.target for cli alias
+        ln -sf ${systemd_unitdir}/system/${SERVICE_FILE} \                                           
+            ${D}${systemd_unitdir}/system/victor.target
    fi
 }
 
