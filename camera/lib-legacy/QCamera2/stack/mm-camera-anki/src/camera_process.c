@@ -146,7 +146,7 @@ int anki_camera_frame_callback(const uint8_t* image,
   }
 
   logd("%s: FRAME frame_id=%u slot=%u ts=%lld",
-       __func__, frame_id, current_write_idx, timestamp);
+       __func__, frame_id, slot, timestamp);
 
   return 0;
 }
@@ -212,6 +212,9 @@ int camera_capture_alloc(struct anki_camera_capture* capture,
 
   // size of pixel payload for 1 frame
   size_t frame_data_len = frame_info.bytes_per_row * frame_info.height;
+
+  // align frame data len to 64 byte boundary
+  frame_data_len = (frame_data_len + 63U) & (~63U);
 
   // calc size of metadata
   size_t header_len = sizeof(anki_camera_buf_header_t);

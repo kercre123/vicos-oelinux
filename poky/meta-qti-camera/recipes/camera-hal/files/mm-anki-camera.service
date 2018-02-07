@@ -1,10 +1,12 @@
 [Unit]
-Description= Anki Camera Service
+Description=Anki Camera Service
 SourcePath=/usr/bin/mm-anki-camera
+Wants=mm-qcamera-daemon.service
 
 [Service]
+EnvironmentFile=/anki/etc/mm-anki-camera.env
 Restart=always
-ExecStart=/usr/bin/mm-anki-camera
+ExecStart=/usr/bin/mm-anki-camera $MM_ANKI_CAMERA_OPTS
 
 [Install]
 WantedBy=multi-user.target

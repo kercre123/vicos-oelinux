@@ -18,7 +18,7 @@
 #include "camera_format.h"
 #include "camera_params.h"
 
-#define ANKI_CAMERA_MAX_FRAME_COUNT 5
+#define ANKI_CAMERA_MAX_FRAME_COUNT 6
 
 // capture buffer memory
 typedef struct {
@@ -44,6 +44,7 @@ typedef struct {
   uint8_t  bits_per_pixel;
   uint8_t  format;
   uint8_t  _reserved[2];
+  uint32_t _pad_to_64[8];
   uint8_t  data[0];
 } anki_camera_frame_t;
 
