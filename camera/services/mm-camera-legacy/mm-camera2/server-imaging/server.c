@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 
   old_mode = umask(S_IRWXO);
 
-  CDBG_ERROR("CAMERA_DAEMON: start of camera Daemon\n");
+  CDBG_ERROR("CAMERA_DAEMON: [legacy] start of camera Daemon\n");
   /* 1. find server node name and open the node */
   serv_hal_node_name = malloc((size_t)MAX_DEV_NAME_SIZE);
   if (!serv_hal_node_name)
