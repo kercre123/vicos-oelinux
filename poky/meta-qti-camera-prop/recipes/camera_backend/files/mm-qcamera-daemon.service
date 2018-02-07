@@ -1,6 +1,8 @@
 [Unit]
 Description= MM Camera Daemon Service
 SourcePath=/system/bin/mm-qcamera-daemon
+Wants=ankiinit.service
+After=ankiinit.service
 
 [Service]
 Restart=always
