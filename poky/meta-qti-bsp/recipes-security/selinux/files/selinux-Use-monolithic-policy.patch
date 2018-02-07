@@ -1,0 +1,26 @@
+From c700350251eb41e8df672455d10a36c38c80cced Mon Sep 17 00:00:00 2001
+From: Dennis Cagle <d-cagle@codeaurora.org>
+Date: Wed, 21 Sep 2016 14:54:28 -0700
+Subject: [PATCH] selinux: Use monolithic policy
+
+Monolithic policies are preferred for embedded systems
+---
+ build.conf | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/build.conf b/build.conf
+index 087d952..d1e41ac 100644
+--- a/build.conf
++++ b/build.conf
+@@ -50,7 +50,7 @@ SYSTEMD = n
+ 
+ # Build monolithic policy.  Putting y here
+ # will build a monolithic policy.
+-MONOLITHIC = n
++MONOLITHIC = y
+ 
+ # User-based access control (UBAC)
+ # Enable UBAC for role separations.
+-- 
+1.9.1
+

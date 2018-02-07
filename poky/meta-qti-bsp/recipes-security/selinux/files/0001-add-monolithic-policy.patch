@@ -1,0 +1,39 @@
+From 92ca2c26e9b735ceae44de0dcfc0a6b8ead107c6 Mon Sep 17 00:00:00 2001
+From: Dennis Cagle <d-cagle@codeaurora.org>
+Date: Tue, 1 Nov 2016 15:10:25 -0700
+Subject: [PATCH] add monolithic policy
+
+---
+ build.conf | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/build.conf b/build.conf
+index 087d952..0bc51c2 100644
+--- a/build.conf
++++ b/build.conf
+@@ -12,7 +12,7 @@
+ 
+ # Policy Type
+ # standard, mls, mcs
+-TYPE = standard
++TYPE = mls
+ 
+ # Policy Name
+ # If set, this will be used as the policy
+@@ -50,11 +50,11 @@ SYSTEMD = n
+ 
+ # Build monolithic policy.  Putting y here
+ # will build a monolithic policy.
+-MONOLITHIC = n
++MONOLITHIC = y
+ 
+ # User-based access control (UBAC)
+ # Enable UBAC for role separations.
+-UBAC = y
++UBAC = n
+ 
+ # Custom build options.  This field enables custom
+ # build options.  Putting foo here will enable
+-- 
+1.9.1
+

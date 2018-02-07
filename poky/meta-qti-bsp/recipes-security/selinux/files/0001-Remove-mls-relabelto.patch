@@ -1,0 +1,26 @@
+From b2f8942e36f44482e62317759266966c5137c1ad Mon Sep 17 00:00:00 2001
+From: Dennis Cagle <d-cagle@codeaurora.org>
+Date: Tue, 1 Nov 2016 15:24:26 -0700
+Subject: [PATCH] Remove mls relabelto
+
+---
+ policy/mls | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/policy/mls b/policy/mls
+index d290b7d..66c170c 100644
+--- a/policy/mls
++++ b/policy/mls
+@@ -65,7 +65,7 @@ gen_levels(mls_num_sens,mls_num_cats)
+ #
+ 
+ # make sure these file classes are "single level"
+-mlsconstrain { file lnk_file fifo_file } { create relabelto }
+-	( l2 eq h2 );
++mlsconstrain { fifo_file } { create }
++	( l2 eq h2 );
+ 
+ ') dnl end enable_mls
+-- 
+1.9.1
+
