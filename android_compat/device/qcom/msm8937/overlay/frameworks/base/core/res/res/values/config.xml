@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (c) 2014, The Linux Foundation. All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are
+    met:
+        * Redistributions of source code must retain the above copyright
+          notice, this list of conditions and the following disclaimer.
+        * Redistributions in binary form must reproduce the above
+          copyright notice, this list of conditions and the following
+          disclaimer in the documentation and/or other materials provided
+          with the distribution.
+        * Neither the name of The Linux Foundation nor the names of its
+          contributors may be used to endorse or promote products derived
+          from this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+    WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+    ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+    BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+    BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+    OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+    IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+-->
+
+<resources>
+   <!-- Whether cpu boost is enabled for overscroller fling. -->
+   <bool name="config_enableCpuBoostForOverScrollerFling">true</bool>
+   <integer-array name="flingboost_param_value">
+       <item>0x40C00000</item> <!-- SCHEDBOOST resource opcode-->
+       <item>0x1</item>        <!-- SCHEDBOOST resource value-->
+       <item>0x40800000</item> <!-- CPUBOOST_MIN_FREQ resource opcode-->
+       <item>0x514</item>      <!-- CPUBOOST MIN_FREQ resource value-->
+       <item>0x40C04000</item> <!-- SCHED_PREFER_IDLE resource opcode -->
+       <item>0x1</item>        <!-- SCHED_PREFER_IDLE resource value -->
+   </integer-array>
+   <!-- Whether cpu boost is enabled for horizontal scroll. -->
+   <bool name="config_enableCpuBoostForScroller">true</bool>
+   <integer-array name="scrollboost_param_value">
+       <item>0x40C00000</item> <!-- SCHEDBOOST resource opcode-->
+       <item>0x1</item>        <!-- SCHEDBOOST resource value-->
+       <item>0x40800000</item> <!-- CPUBOOST_MIN_FREQ resource opcode-->
+       <item>0x514</item>      <!-- CPUBOOST MIN_FREQ resource value-->
+       <item>0x40C04000</item> <!-- SCHED_PREFER_IDLE resource opcode -->
+       <item>0x1</item>        <!-- SCHED_PREFER_IDLE resource value -->
+   </integer-array>
+   <!-- Whether cpu boost is enabled for application's 1st launch. -->
+   <bool name="config_enableCpuBoostForAppLaunch">true</bool>
+   <integer name="launchboost_timeout_param">2000</integer>
+   <integer-array name="launchboost_param_value">
+       <item>0x40C00000</item> <!-- SCHEDBOOST resource opcode-->
+       <item>0x1</item>        <!-- SCHEDBOOST resource value-->
+       <item>0x40800000</item> <!-- CPUBOOST_MIN_FREQ resource opcode-->
+       <item>0x5DC</item>      <!-- CPUBOOST MIN_FREQ resource value-->
+       <item>0x40400000</item> <!-- DISABLE_POWER_COLLAPSE resource opcode-->
+       <item>0x1</item>        <!-- DISABLE_POWER_COLLAPSE resource value-->
+       <item>0x41000000</item> <!-- Minimum number of cores online resource opcode-->
+       <item>0x4</item>        <!-- Minimum number of cores online resource value-->
+       <item>0x42804000</item> <!-- GPU_MIN_PWRLVL resource opcode-->
+       <item>0x1</item>        <!-- GPU_MIN_PWRLVL resource value-->
+       <item>0x42C0C000</item> <!-- SWAP_RATIO resource opcode-->
+       <item>0x64</item>       <!-- SWAP_RATIO resource value-->
+<!--   <item>          </item>  KSMBOOST resource opcode -->
+<!--   <item>0x0</item>         KSMBOOST resource value -->
+   </integer-array>
+   <!-- Whether packing disable is enabled.  -->
+   <bool name="config_disablePacking">true</bool>
+   <integer name="disablepacking_timeout_param">5000</integer>
+   <integer-array name="launchboost_packing_param_value">
+       <item>0x40C04000</item> <!-- SCHED_PREFER_IDLE resource opcode -->
+       <item>0x1</item>        <!-- SCHED_PREFER_IDLE resource value -->
+       <item>0x40C0C000</item> <!-- SCHED_SMALL_TASK resource opcode -->
+       <item>0x1</item>        <!-- SCHED_SMALL_TASK resource value -->
+       <item>0x40C14000</item> <!-- SCHED_IDLE_NR_RUN resource opcode -->
+       <item>0x1</item>        <!-- SCHED_IDLE_NR_RUN resource value -->
+       <item>0x40C10000</item> <!-- SCHED_IDLE_LOAD resource opcode -->
+       <item>0x1</item>        <!-- SCHED_IDLE_LOAD resource value -->
+   </integer-array>
+   <!-- Whether cpu boost is enabled for PanelView fling -->
+   <bool name="config_enableCpuBoostForPanelViewFling">false</bool>
+   <integer-array name="panelview_flingboost_param_value">
+       <item>0x40C00000</item> <!-- SCHEDBOOST resource opcode-->
+       <item>0x1</item>        <!-- SCHEDBOOST resource value-->
+       <item>0x40800000</item> <!-- CPUBOOST_MIN_FREQ resource opcode-->
+       <item>0x514</item>      <!-- CPUBOOST MIN_FREQ resource value-->
+   </integer-array>
+   <!-- Whether cpu boost is enabled for animation during exit and entry -->
+   <bool name="config_enablePerfBoostForAnimation">true</bool>
+   <integer name="animationboost_timeout_param">600</integer>
+   <integer-array name="animationboost_param_value">
+       <item>0x40C00000</item> <!-- SCHEDBOOST resource opcode-->
+       <item>0x1</item>        <!-- SCHEDBOOST resource value-->
+       <item>0x40800000</item> <!-- CPUBOOST_MIN_FREQ resource opcode-->
+       <item>0x44C</item>      <!-- CPUBOOST MIN_FREQ resource value-->
+       <item>0x42804000</item> <!-- GPU_MIN_PWRLVL resource opcode-->
+       <item>0x1</item>        <!-- GPU_MIN_PWRLVL resource value-->
+   </integer-array>
+   <!-- Indicate whether to allow the device to suspend when the screen is off
+   due to the proximity sensor.  This resource should only be set to true
+   if the sensor HAL correctly handles the proximity sensor as a wake-up source.
+   Otherwise, the device may fail to wake out of suspend reliably.
+   The default is false. -->
+   <bool name="config_suspendWhenScreenOffDueToProximity">true</bool>
+
+   <!-- Should the device show AM/PM in unlock screen -->
+  <!-- <bool name="config_show_ampm_in_unlock_screen">true</bool> -->
+</resources>
