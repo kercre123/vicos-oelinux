@@ -8,6 +8,6 @@ usbdevfs             /proc/bus/usb   usbdevfs  noauto                0  0
 tmpfs                /media/ram      tmpfs     defaults,noauto       0  0
 
 PARTLABEL=userdata   /data           auto      defaults              0  2
-PARTLABEL=modem      /firmware       auto      defaults              0  2
-PARTLABEL=persist    /persist        auto      defaults              0  2
-PARTLABEL=cache      /cache          auto      defaults              0  2
+PARTLABEL=modem      /firmware       vfat      defaults              0  0
+PARTLABEL=persist    /persist        auto      defaults,noauto       0  0
+PARTLABEL=cache      /cache          auto      defaults,noauto       0  0
