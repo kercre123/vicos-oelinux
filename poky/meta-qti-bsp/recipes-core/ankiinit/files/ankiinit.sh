@@ -31,3 +31,7 @@ fi
 echo out > /sys/class/gpio/gpio$CAM_REG_GPIO/direction
 echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # End camera force hack
+
+# Print the ID on the face
+SERIALNO=`tr ' ' '\n' < /proc/cmdline | awk -F= /androidboot.serialno/'{print $2}'`
+echo 2 1 $SERIALNO | /system/bin/display
