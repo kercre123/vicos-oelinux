@@ -25,11 +25,19 @@ USERADD_PACKAGES = "${PN} ${PN}-user3"
 # You must also set USERADD_PARAM and/or GROUPADD_PARAM when
 # you inherit useradd.
 
+# VIC-826 related work
+# We modify the sample recipe useradd_example to 
+# complete the proof of concept
+# a more ANKI specific recipe will be created at a 
+# later stage.
+# We will copy the meta-skeleton layer to a 
+# meta-user-management layer as a starting point
+#
 # USERADD_PARAM specifies command line options to pass to the
 # useradd command. Multiple users can be created by separating
-# the commands with a semicolon. Here we'll create two users,
-# user1 and user2:
-USERADD_PARAM_${PN} = "-u 1200 -d /home/user1 -r -s /bin/bash user1; -u 1201 -d /home/user2 -r -s /bin/bash user2"
+# the commands with a semicolon. Here we'll create three users,
+# robot, bluetooth, net:
+USERADD_PARAM_${PN} = "-u 1500 -d /home/robot -r -s /bin/bash robot; -u 1501 -d /home/bluetooth -r -s /bin/bash bluetooth; -u 1502 -d /home/net -r -s /bin/bash net"
 
 # user3 will be managed in the useradd-example-user3 pacakge:
 # As an example, we use the -P option to set clear text password for user3
@@ -37,40 +45,56 @@ USERADD_PARAM_${PN}-user3 = "-u 1202 -d /home/user3 -r -s /bin/bash -P 'user3' u
 
 # GROUPADD_PARAM works the same way, which you set to the options
 # you'd normally pass to the groupadd command. This will create
-# groups group1 and group2:
-GROUPADD_PARAM_${PN} = "-g 880 group1; -g 890 group2"
+# groups robotics, wireless, networking:
+GROUPADD_PARAM_${PN} = "-g 891 robotics; -g 892 wireless; -g 893 networking"
 
-# Likewise, we'll manage group3 in the useradd-example-user3 package:
-GROUPADD_PARAM_${PN}-user3 = "-g 900 group3"
 
 do_install () {
-	install -d -m 755 ${D}${datadir}/user1
-	install -d -m 755 ${D}${datadir}/user2
-	install -d -m 755 ${D}${datadir}/user3
+	install -d -m 755 ${D}${datadir}/robot
+	install -d -m 755 ${D}${datadir}/bluetooth
+	install -d -m 755 ${D}${datadir}/net
 
-	install -p -m 644 file1 ${D}${datadir}/user1/
-	install -p -m 644 file2 ${D}${datadir}/user1/
+	install -p -m 644 file1 ${D}${datadir}/robot/
+	install -p -m 644 file2 ${D}${datadir}/robot/
 
-	install -p -m 644 file2 ${D}${datadir}/user2/
-	install -p -m 644 file3 ${D}${datadir}/user2/
+	install -p -m 644 file2 ${D}${datadir}/bluetooth/
+	install -p -m 644 file3 ${D}${datadir}/bluetooth/
 
-	install -p -m 644 file3 ${D}${datadir}/user3/
-	install -p -m 644 file4 ${D}${datadir}/user3/
+	install -p -m 644 file3 ${D}${datadir}/net/
+	install -p -m 644 file4 ${D}${datadir}/net/
 
 	# The new users and groups are created before the do_install
 	# step, so you are now free to make use of them:
-	chown -R user1 ${D}${datadir}/user1
-	chown -R user2 ${D}${datadir}/user2
-	chown -R user3 ${D}${datadir}/user3
+        # ephraim note: this step is failing to change owner and group 
+	# more info required
+	
+	# for debugging the line below will put on the log_do_install file 
+	# the actual user doing this work
+	whoami
 
-	chgrp -R group1 ${D}${datadir}/user1
-	chgrp -R group2 ${D}${datadir}/user2
-	chgrp -R group3 ${D}${datadir}/user3
+	chown -R robot ${D}${datadir}/robot
+	chown -R bluetooth ${D}${datadir}/bluetooth
+	chown -R net ${D}${datadir}/net
+
+	# for debugging those lines below should show in the the log_do_install file 
+        # the actual permission of the files in the respective directories
+	ls -al ${D}${datadir}/robot
+	ls -al ${D}${datadir}/bluetooth
+	ls -al ${D}${datadir}/net
+
+	chgrp -R robotics ${D}${datadir}/robot
+	chgrp -R wireless ${D}${datadir}/bluetooth
+	chgrp -R networking ${D}${datadir}/net
+
+	# idem as above
+	ls -al ${D}${datadir}/robot
+	ls -al ${D}${datadir}/bluetooth
+	ls -al ${D}${datadir}/net
 }
 
-FILES_${PN} = "${datadir}/user1/* ${datadir}/user2/*"
-FILES_${PN}-user3 = "${datadir}/user3/*"
+FILES_${PN} = "${datadir}/robot/* ${datadir}/bluetooth/* ${datadir}/net/*"
 
 # Prevents do_package failures with:
 # debugsources.list: No such file or directory:
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
+
