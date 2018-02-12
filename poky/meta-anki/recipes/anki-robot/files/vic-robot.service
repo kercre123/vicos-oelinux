@@ -9,7 +9,7 @@ Restart=on-failure
 ExecStart=/anki/bin/vic-robot $VIC_ROBOT_OPTS
 Nice=-20
 # Uncomment next line to set CPUAffinity (required isolcpus kernel arg)
-# CPUAffinity=3
+CPUAffinity=3
 
 [Install]
 WantedBy=anki-robot.target

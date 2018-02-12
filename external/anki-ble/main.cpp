@@ -31,7 +31,6 @@ static void SignalCallback(struct ev_loop* loop, struct ev_signal* w, int revent
 }
 
 static struct ev_signal sIntSig;
-static struct ev_signal sHupSig;
 static struct ev_signal sTermSig;
 
 static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
@@ -39,8 +38,6 @@ static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
 int main(int argc, char *argv[]) {
   ev_signal_init(&sIntSig, SignalCallback, SIGINT);
   ev_signal_start(sDefaultLoop, &sIntSig);
-  ev_signal_init(&sHupSig, SignalCallback, SIGHUP);
-  ev_signal_start(sDefaultLoop, &sHupSig);
   ev_signal_init(&sTermSig, SignalCallback, SIGTERM);
   ev_signal_start(sDefaultLoop, &sTermSig);
 
