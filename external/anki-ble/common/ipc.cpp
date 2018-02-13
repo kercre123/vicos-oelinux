@@ -42,80 +42,78 @@ void IPCEndpoint::CloseSocket()
   (void) close(sockfd_); sockfd_ = -1;
 }
 
-void IPCEndpoint::ReceiveMessage(const int sockfd)
+void IPCEndpoint::ReceiveMessage(PeerState& p)
 {
-  IPCMessage message = {0};
-  ssize_t bytesRead = recv(sockfd, &message, sizeof(message), 0);
+  ssize_t bytesRead;
+  do {
+    uint8_t buf[kIPCMessageMaxSize];
+    bytesRead = recv(p.GetFD(), buf, sizeof(buf), 0);
+    if (bytesRead > 0) {
+      std::vector<uint8_t>& incoming_data = p.GetIncomingDataVector();
+      std::copy(buf, buf + bytesRead, std::back_inserter(incoming_data));
+      IPCMessage* message;
+
+      while (incoming_data.size() >= sizeof(*message)) {
+        message = (IPCMessage *) incoming_data.data();
+
+        if (0 != memcmp(message->magic, kIPCMessageMagic, sizeof(message->magic))) {
+          loge("ipc-endpoint: recv'd bad magic '%c%c%c%c' (%02X %02X %02X %02X)"
+               ", expected '%c%c%c%c'",
+               std::isprint(message->magic[0]) ? message->magic[0] : '?',
+               std::isprint(message->magic[1]) ? message->magic[1] : '?',
+               std::isprint(message->magic[2]) ? message->magic[2] : '?',
+               std::isprint(message->magic[3]) ? message->magic[3] : '?',
+               message->magic[0], message->magic[1], message->magic[2], message->magic[3],
+               kIPCMessageMagic[0], kIPCMessageMagic[1], kIPCMessageMagic[2], kIPCMessageMagic[3]);
+
+          OnReceiveError(p.GetFD());
+          return;
+        }
+        if (message->version != kIPCMessageVersion) {
+          loge("ipc-endpoint: recv'd version %u, expected %u",
+               message->version, kIPCMessageVersion);
+          OnReceiveError(p.GetFD());
+          return;
+        }
+        if (message->length > kIPCMessageMaxLength) {
+          loge("ipc-endpoint: recv'd bad length (%u). max is %zu",
+               message->length, kIPCMessageMaxLength);
+          OnReceiveError(p.GetFD());
+          return;
+        }
+        size_t totalLength = sizeof(*message) + message->length;
+        if (incoming_data.size() >= totalLength) {
+          std::vector<uint8_t> data;
+          if (message->length > 0) {
+            std::copy(incoming_data.begin() + sizeof(*message),
+                      incoming_data.begin() + totalLength,
+                      std::back_inserter(data));
+          }
+          OnReceiveIPCMessage(p.GetFD(), message->type, data);
+          incoming_data.erase(incoming_data.begin(),
+                              incoming_data.begin() + totalLength);
+        } else {
+          break;
+        }
+      }
+    }
+  } while (bytesRead > 0);
 
   if (bytesRead == -1) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      // These are not real errors for a non-blocking socket
       return;
     }
-    loge("ipc-endpoint: recv. sockfd = %d, errno = %d (%s)",
-         sockfd, errno, strerror(errno));
-    OnReceiveError(sockfd);
+    loge("ipc-endpoint: recv. p.GetFD() = %d, errno = %d (%s)",
+         p.GetFD(), errno, strerror(errno));
+    OnReceiveError(p.GetFD());
     return;
   }
 
   if (bytesRead == 0) {
     // Other side closed the socket in an orderly manner
-    OnPeerClose(sockfd);
+    OnPeerClose(p.GetFD());
     return;
   }
-
-  if (bytesRead < sizeof(message)){
-    // With Unix Domain Sockets, we expect to receive a full message
-    // each time we do a recv
-    loge("ipc-endpoint: recv'd %zd bytes, expected %zd bytes from sockfd = %d",
-         bytesRead, bytesRead, sizeof(message), sockfd);
-    OnReceiveError(sockfd);
-    return;
-  }
-
-  if (0 != memcmp(message.magic, kIPCMessageMagic, sizeof(message.magic))) {
-    loge("ipc-endpoint: recv'd bad magic '%c%c%c%c' (%02X %02X %02X %02X)"
-         ", expected '%c%c%c%c'",
-         std::isprint(message.magic[0]) ? message.magic[0] : '?',
-         std::isprint(message.magic[1]) ? message.magic[1] : '?',
-         std::isprint(message.magic[2]) ? message.magic[2] : '?',
-         std::isprint(message.magic[3]) ? message.magic[3] : '?',
-         message.magic[0], message.magic[1], message.magic[2], message.magic[3],
-         kIPCMessageMagic[0], kIPCMessageMagic[1], kIPCMessageMagic[2], kIPCMessageMagic[3]);
-
-    OnReceiveError(sockfd);
-    return;
-  }
-  if (message.version != kIPCMessageVersion) {
-    loge("ipc-endpoint: recv'd version %u, expected %u",
-         message.version, kIPCMessageVersion);
-    OnReceiveError(sockfd);
-    return;
-  }
-  std::vector<uint8_t> data(message.length);
-  if (message.length > 0) {
-    bytesRead = recv(sockfd, data.data(), data.size(), 0);
-    if (bytesRead == -1) {
-      loge("ipc-endpoint: recv data. sockfd = %d, errno = %d (%s)",
-           sockfd, errno, strerror(errno));
-      OnReceiveError(sockfd);
-      return;
-    }
-
-    if (bytesRead == 0) {
-      OnPeerClose(sockfd);
-      return;
-    }
-
-    if (bytesRead < data.size()) {
-      loge("ipc-endpoint: for data recv'd %zd bytes, expected %zd bytes. sockfd = %d",
-           bytesRead, data.size(), sockfd);
-      OnReceiveError(sockfd);
-      return;
-    }
-  }
-
-  OnReceiveIPCMessage(sockfd, message.type, data);
 }
 
 void IPCEndpoint::AddPeerByFD(const int fd)
@@ -142,23 +140,31 @@ void IPCEndpoint::RemovePeerByFD(const int fd)
     peers_.erase(it);
   }
 }
-void IPCEndpoint::SendMessageToAllPeers(const IPCMessageType type,
+
+bool IPCEndpoint::SendMessageToAllPeers(const IPCMessageType type,
                                         uint32_t length,
                                         uint8_t* val)
 {
   for (auto const& p : peers_) {
-    SendMessageToPeer(p.GetFD(), type, length, val);
+    bool result = SendMessageToPeer(p.GetFD(), type, length, val);
+    if (!result) {
+      return result;
+    }
   }
+  return true;
 }
 
-void IPCEndpoint::SendMessageToPeer(const int fd,
+bool IPCEndpoint::SendMessageToPeer(const int fd,
                                     const IPCMessageType type,
                                     uint32_t length,
                                     uint8_t* val)
 {
   auto it = FindPeerByFD(fd);
   if (it == peers_.end()) {
-    return;
+    return false;
+  }
+  if (length > kIPCMessageMaxLength) {
+    return false;
   }
   IPCMessage message;
   memcpy(message.magic, kIPCMessageMagic, sizeof(message.magic));
@@ -174,6 +180,7 @@ void IPCEndpoint::SendMessageToPeer(const int fd,
   }
 
   it->AddMessageToQueue(packed_message);
+  return true;
 }
 void IPCEndpoint::ReadWriteWatcherCallback(ev::io& w, int revents)
 {
@@ -182,11 +189,13 @@ void IPCEndpoint::ReadWriteWatcherCallback(ev::io& w, int revents)
     return;
   }
   if (revents & ev::WRITE) {
-    logv("ipc-endpoint: RWCB - ev::WRITE");
     SendQueuedMessagesToPeer(w.fd);
   } else if (revents & ev::READ) {
-    logv("ipc-endpoint: RWCB - ev::READ");
-    ReceiveMessage(w.fd);
+    auto it = FindPeerByFD(w.fd);
+    if (it == peers_.end()) {
+      return;
+    }
+    ReceiveMessage(*it);
   }
 
 }

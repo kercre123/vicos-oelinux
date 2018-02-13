@@ -35,6 +35,8 @@ const std::string kSocketName("/data/misc/bluetooth/abtd.socket");
 const char kIPCMessageMagic[4] = {'i', 'p', 'c', 'f'};
 const uint32_t kIPCMessageVersion = 1;
 const size_t kUUIDSize = 37;
+const size_t kIPCMessageMaxSize = 1024;
+const size_t kIPCMessageMaxLength = kIPCMessageMaxSize - 12;
 
 enum class IPCMessageType {
   Invalid = 0,
@@ -82,16 +84,16 @@ class IPCEndpoint {
   IPCEndpoint(struct ev_loop* loop);
   ~IPCEndpoint();
   bool IsSocketValid() const { return (sockfd_ != -1); }
-  void SendMessageToAllPeers(const IPCMessageType type,
+  bool SendMessageToAllPeers(const IPCMessageType type,
                              uint32_t length,
                              uint8_t* val);
-  void SendMessageToPeer(const IPCMessageType type,
+  bool SendMessageToPeer(const IPCMessageType type,
                          uint32_t length,
                          uint8_t* val)
   {
-    SendMessageToPeer(sockfd_, type, length, val);
+    return SendMessageToPeer(sockfd_, type, length, val);
   }
-  void SendMessageToPeer(const int fd,
+  bool SendMessageToPeer(const int fd,
                          const IPCMessageType type,
                          uint32_t length,
                          uint8_t* val);
@@ -109,18 +111,19 @@ class IPCEndpoint {
     void AddMessageToQueue(const std::vector<uint8_t>& message);
     std::vector<uint8_t> GetMessageAtFrontOfQueue();
     void EraseMessageFromFrontOfQueue();
+    std::vector<uint8_t>& GetIncomingDataVector() { return incoming_data_; }
    private:
     std::mutex* mutex_;
     ev::io* read_write_watcher_;
     std::deque<std::vector<uint8_t>> outgoing_queue_;
+    std::vector<uint8_t> incoming_data_;
     TaskExecutor* task_executor_;
   };
   void AddPeerByFD(const int fd);
   std::vector<PeerState>::iterator FindPeerByFD(const int fd);
   void RemovePeerByFD(const int fd);
   void CloseSocket();
-  void ReceiveMessage() { ReceiveMessage(sockfd_); }
-  void ReceiveMessage(const int sockfd);
+  void ReceiveMessage(PeerState& p);
   void SendQueuedMessagesToPeer(const int sockfd);
   virtual void OnReceiveError(const int sockfd);
   virtual void OnPeerClose(const int sockfd);

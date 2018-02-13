@@ -26,12 +26,12 @@ class IPCClient : public IPCEndpoint {
   IPCClient(struct ev_loop* loop);
   ~IPCClient();
   bool Connect();
-  void SendIPCMessageToServer(const IPCMessageType type) {
-    SendIPCMessageToServer(type, 0, nullptr);
+
+  bool SendIPCMessageToServer(const IPCMessageType type,
+                              uint32_t length = 0,
+                              uint8_t* val = nullptr) {
+    return SendMessageToPeer(type, length, val);
   }
-  void SendIPCMessageToServer(const IPCMessageType type,
-                              uint32_t length,
-                              uint8_t* val) { SendMessageToPeer(type, length, val); }
   bool IsConnected() { return !peers_.empty(); }
   void SendMessage(const int connection_id,
                    const std::string& characteristic_uuid,

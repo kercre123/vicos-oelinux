@@ -68,7 +68,7 @@ void IPCServer::AcceptWatcherCallback(ev::io& w, int revents)
   }
   if (revents & ev::READ) {
     logv("ipc-server: AcceptWatcherCallback. ev::READ");
-    int fd = accept(w.fd, nullptr, nullptr);
+    int fd = accept4(w.fd, nullptr, nullptr, SOCK_NONBLOCK);
     if (fd == -1) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         return;
@@ -84,8 +84,6 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
                                     const IPCMessageType type,
                                     const std::vector<uint8_t>& data)
 {
-  logv("ipc-server: OnReceiveIPCMessage(sockfd = %d, type = %d, data.size() = %zd)",
-       sockfd, type, data.size());
   switch(type) {
     case IPCMessageType::Ping:
       logv("ipc-server: Ping received");

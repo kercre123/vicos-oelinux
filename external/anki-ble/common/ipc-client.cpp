@@ -82,8 +82,6 @@ void IPCClient::OnReceiveIPCMessage(const int sockfd,
                                     const IPCMessageType type,
                                     const std::vector<uint8_t>& data)
 {
-  logv("ipc-client: OnReceiveIPCMessage(sockfd = %d, type = %d, data.size() = %zd)",
-       sockfd, type, data.size());
   switch (type) {
     case IPCMessageType::Ping:
       logv("ipc-client: Ping received");

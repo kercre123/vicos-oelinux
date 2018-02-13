@@ -295,7 +295,12 @@ static void TimerWatcherCallback(struct ev_loop* loop, struct ev_timer* w, int r
       (void) sVicDevSetup->Connect();
     }
     if (sVicDevSetup->IsConnected()) {
-      sVicDevSetup->SendIPCMessageToServer(Anki::BluetoothDaemon::IPCMessageType::Ping);
+      bool result =
+          sVicDevSetup->SendIPCMessageToServer(Anki::BluetoothDaemon::IPCMessageType::Ping);
+      if (!result) {
+        loge("Failed to send IPC message to server");
+        ExitHandler();
+      }
     }
   }
 }

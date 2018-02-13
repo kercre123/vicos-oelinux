@@ -10,7 +10,6 @@
  *
  **/
 
-#include "include_ev.h"
 #include "ipc-client.h"
 #include "exec_command.h"
 
