@@ -36,6 +36,7 @@ static int sCentralToPeripheralCharacteristicHandle = -1;
 static int sPeripheralToCentralCharacteristicHandle = -1;
 static int sCCCDescriptorHandle = -1;
 
+static bool sAdvertising = false;
 static bool sConnected = false;
 static int sConnectionId = -1;
 static bool sCongested = false;
@@ -91,11 +92,11 @@ static void PeripheralConnectionCallback(int conn_id, int connected) {
   sCongested = false;
   if (connected) {
     sConnectionId = conn_id;
-    StopAdvertisement();
+    sAdvertising = !StopAdvertisement();
   } else {
     sConnectionId = -1;
     sPeripheral->OnInboundConnectionChange(conn_id, connected);
-    StartAdvertisement(sBLEAdvertiseSettings);
+    sAdvertising = StartAdvertisement(sBLEAdvertiseSettings);
   }
 }
 
@@ -172,6 +173,12 @@ static void PeripheralCongestionCallback(int conn_id, bool congested) {
 }
 namespace Anki {
 namespace BluetoothDaemon {
+void Peripheral::OnNewIPCClient(const int sockfd)
+{
+  (void) sockfd; // not used for now
+  OnPeripheralStateUpdate(sAdvertising, sConnectionId, sConnected, sCongested);
+}
+
 void Peripheral::OnSendMessage(const int connection_id,
                                const std::string& characteristic_uuid,
                                const bool reliable,
@@ -188,6 +195,25 @@ void Peripheral::OnDisconnect(const int connection_id)
 {
   (void) DisconnectGattPeer(connection_id);
 }
+
+void Peripheral::OnStartAdvertising()
+{
+  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeDeviceName(true);
+  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeTxPowerLevel(true);
+  sBLEAdvertiseSettings.GetScanResponse().SetServiceUUID(Anki::kAnkiBLEService_128_BIT_UUID);
+  sAdvertising = StartAdvertisement(sBLEAdvertiseSettings);
+  if (sAdvertising) {
+    logv("Started advertising Anki BLE peripheral service");
+  } else {
+    loge("Failed to start advertising Anki BLE peripheral service");
+  }
+}
+
+void Peripheral::OnStopAdvertising()
+{
+  sAdvertising = !StopAdvertisement();
+}
+
 } // namespace BluetoothDaemon
 } // namespace Anki
 
@@ -253,16 +279,6 @@ bool StartBLEPeripheral() {
   }
 
   logv("Anki BLE peripheral service started.");
-  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeDeviceName(true);
-  sBLEAdvertiseSettings.GetAdvertisement().SetIncludeTxPowerLevel(true);
-  sBLEAdvertiseSettings.GetScanResponse().SetServiceUUID(Anki::kAnkiBLEService_128_BIT_UUID);
-  if (!StartAdvertisement(sBLEAdvertiseSettings)) {
-    loge("Failed to start advertising Anki BLE peripheral service");
-    return false;
-  }
-
-  logv("Started advertising Anki BLE peripheral service");
-
   return true;
 }
 

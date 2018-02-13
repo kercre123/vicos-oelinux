@@ -77,6 +77,7 @@ void IPCServer::AcceptWatcherCallback(ev::io& w, int revents)
       return;
     }
     AddPeerByFD(fd);
+    OnNewIPCClient(fd);
   }
 }
 
@@ -109,10 +110,38 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
         OnDisconnect(args->connection_id);
       }
       break;
+    case IPCMessageType::StartAdvertising:
+      logv("ipc-server: StartAdvertising received");
+      {
+        OnStartAdvertising();
+      }
+      break;
+    case IPCMessageType::StopAdvertising:
+      logv("ipc-server: StopAdvertising received");
+      {
+        OnStopAdvertising();
+      }
+      break;
     default:
       loge("ipc-server: Unknown IPC message (%d)", (int) type);
       break;
   }
+}
+
+void IPCServer::OnPeripheralStateUpdate(const bool advertising,
+                                        const int connection_id,
+                                        const int connected,
+                                        const bool congested)
+{
+  OnPeripheralStateUpdateArgs args = {
+    .advertising = advertising,
+    .connection_id = connection_id,
+    .connected = connected,
+    .congested = congested
+  };
+  SendMessageToAllPeers(IPCMessageType::OnPeripheralStateUpdate,
+                        sizeof(args),
+                        (uint8_t *) &args);
 }
 
 void IPCServer::OnInboundConnectionChange(const int connection_id, const int connected)

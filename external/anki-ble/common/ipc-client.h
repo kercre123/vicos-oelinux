@@ -38,6 +38,8 @@ class IPCClient : public IPCEndpoint {
                    const bool reliable,
                    const std::vector<uint8_t>& value);
   void Disconnect(const int connection_id);
+  void StartAdvertising();
+  void StopAdvertising();
 
  protected:
   virtual void OnReceiveIPCMessage(const int sockfd,
@@ -47,6 +49,10 @@ class IPCClient : public IPCEndpoint {
   virtual void OnReceiveMessage(const int connection_id,
                                 const std::string& characteristic_uuid,
                                 const std::vector<uint8_t>& value) {}
+  virtual void OnPeripheralStateUpdate(const bool advertising,
+                                       const int connection_id,
+                                       const int connected,
+                                       const bool congested) {}
 
  private:
   void ConnectWatcherCallback(ev::io& w, int revents);

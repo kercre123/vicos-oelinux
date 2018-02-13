@@ -28,6 +28,10 @@ class VicDevSetup : public Anki::BluetoothDaemon::IPCClient {
   virtual void OnReceiveMessage(const int connection_id,
                                 const std::string& characteristic_uuid,
                                 const std::vector<uint8_t>& value);
+  virtual void OnPeripheralStateUpdate(const bool advertising,
+                                       const int connection_id,
+                                       const int connected,
+                                       const bool congested);
 
  private:
   void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message);

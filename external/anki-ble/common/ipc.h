@@ -46,6 +46,9 @@ enum class IPCMessageType {
     OnInboundConnectionChange,
     OnReceiveMessage,
     Disconnect,
+    StartAdvertising,
+    StopAdvertising,
+    OnPeripheralStateUpdate
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -78,6 +81,13 @@ typedef struct __attribute__ ((__packed__)) OnReceiveMessageArgs {
 typedef struct __attribute__ ((__packed__)) DisconnectArgs {
   int connection_id;
 } DisconnectArgs;
+
+typedef struct __attribute__ ((__packed__)) OnPeripheralStateUpdateArgs {
+  bool advertising;
+  int connection_id;
+  int connected;
+  bool congested;
+} OnPeripheralStateUpdateArgs;
 
 class IPCEndpoint {
  public:

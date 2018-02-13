@@ -23,11 +23,14 @@ class Peripheral : public IPCServer {
       : IPCServer(loop) {}
 
  protected:
+  virtual void OnNewIPCClient(const int sockfd);
   virtual void OnSendMessage(const int connection_id,
                              const std::string& characteristic_uuid,
                              const bool reliable,
                              const std::vector<uint8_t>& value);
   virtual void OnDisconnect(const int connection_id);
+  virtual void OnStartAdvertising();
+  virtual void OnStopAdvertising();
 };
 
 } // namespace BluetoothDaemon

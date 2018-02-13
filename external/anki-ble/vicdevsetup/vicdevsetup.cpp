@@ -56,6 +56,20 @@ void VicDevSetup::OnReceiveMessage(const int connection_id,
   }
 }
 
+void VicDevSetup::OnPeripheralStateUpdate(const bool advertising,
+                                          const int connection_id,
+                                          const int connected,
+                                          const bool congested)
+{
+  (void) congested; // currently unused
+  OnInboundConnectionChange(connection_id, connected);
+  if (!connected && !advertising) {
+    StartAdvertising();
+  } else if (connected && advertising) {
+    StopAdvertising();
+  }
+}
+
 void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message)
 {
   if (message.size() < 2) {
@@ -288,6 +302,8 @@ static void SignalCallback(struct ev_loop* loop, struct ev_signal* w, int revent
 static struct ev_signal sIntSig;
 static struct ev_signal sTermSig;
 
+static struct ev_timer sTimer;
+
 static void TimerWatcherCallback(struct ev_loop* loop, struct ev_timer* w, int revents)
 {
   if (sVicDevSetup) {
@@ -301,11 +317,14 @@ static void TimerWatcherCallback(struct ev_loop* loop, struct ev_timer* w, int r
         loge("Failed to send IPC message to server");
         ExitHandler();
       }
+      ev_timer_set(&sTimer, 120., 0.);
+    } else {
+      ev_timer_set(&sTimer, 2., 0.);
     }
+    ev_timer_start(sDefaultLoop, &sTimer);
   }
 }
 
-static struct ev_timer sTimer;
 
 int main(int argc, char *argv[]) {
   ev_signal_init(&sIntSig, SignalCallback, SIGINT);
@@ -317,8 +336,7 @@ int main(int argc, char *argv[]) {
   setMinLogLevel(kLogLevelVerbose);
   logi("%s", "Victor Developer Setup over BLE launched");
   sVicDevSetup = new VicDevSetup(sDefaultLoop);
-  (void) sVicDevSetup->Connect();
-  ev_timer_init(&sTimer, TimerWatcherCallback, 2., 120.);
+  ev_timer_init(&sTimer, TimerWatcherCallback, 2., 0.);
   ev_timer_start(sDefaultLoop, &sTimer);
   ev_loop(sDefaultLoop, 0);
   ExitHandler();

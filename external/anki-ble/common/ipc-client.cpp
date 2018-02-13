@@ -90,6 +90,16 @@ void IPCClient::OnReceiveIPCMessage(const int sockfd,
     case IPCMessageType::OnPingResponse:
       logv("ipc-client: Ping response received");
       break;
+    case IPCMessageType::OnPeripheralStateUpdate:
+      {
+        logv("ipc-client: OnPeripheralStateUpdate");
+        OnPeripheralStateUpdateArgs* args = (OnPeripheralStateUpdateArgs *) data.data();
+        OnPeripheralStateUpdate(args->advertising,
+                                args->connection_id,
+                                args->connected,
+                                args->congested);
+      }
+      break;
     case IPCMessageType::OnInboundConnectionChange:
       {
         logv("ipc-client: OnInboundConnectionChange");
@@ -142,6 +152,16 @@ void IPCClient::Disconnect(const int connection_id)
   SendIPCMessageToServer(IPCMessageType::Disconnect,
                          sizeof(args),
                          (uint8_t *) &args);
+}
+
+void IPCClient::StartAdvertising()
+{
+  SendIPCMessageToServer(IPCMessageType::StartAdvertising);
+}
+
+void IPCClient::StopAdvertising()
+{
+  SendIPCMessageToServer(IPCMessageType::StopAdvertising);
 }
 
 IPCClient::~IPCClient()

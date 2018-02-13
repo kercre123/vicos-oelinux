@@ -23,12 +23,17 @@ class IPCServer : public IPCEndpoint {
   IPCServer(struct ev_loop* loop);
   ~IPCServer();
   bool ListenForIPCConnections();
+  void OnPeripheralStateUpdate(const bool advertising,
+                               const int connection_id,
+                               const int connected,
+                               const bool congested);
   void OnInboundConnectionChange(const int connection_id, const int connected);
   void OnReceiveMessage(const int connection_id,
                         const std::string& characteristic_uuid,
                         const std::vector<uint8_t>& data);
 
  protected:
+  virtual void OnNewIPCClient(const int sockfd) {}
   virtual void OnReceiveIPCMessage(const int sockfd,
                                    const IPCMessageType type,
                                    const std::vector<uint8_t>& data);
@@ -37,6 +42,8 @@ class IPCServer : public IPCEndpoint {
                              const bool reliable,
                              const std::vector<uint8_t>& value) {}
   virtual void OnDisconnect(const int connection_id) {}
+  virtual void OnStartAdvertising() {}
+  virtual void OnStopAdvertising() {}
 
  private:
   void AcceptWatcherCallback(ev::io& w, int revents);
