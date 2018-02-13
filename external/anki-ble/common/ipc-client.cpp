@@ -11,6 +11,7 @@
  **/
 
 #include "ipc-client.h"
+#include "include_ev.h"
 #include "log.h"
 #include "memutils.h"
 

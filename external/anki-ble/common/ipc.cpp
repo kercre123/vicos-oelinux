@@ -11,6 +11,7 @@
  **/
 
 #include "ipc.h"
+#include "include_ev.h"
 #include "log.h"
 
 #include <unistd.h>

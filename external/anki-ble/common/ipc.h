@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include "include_ev.h"
 #include "taskExecutor.h"
 
 #include <deque>
@@ -23,6 +22,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+
+// Forward declarations for libev
+struct ev_loop;
+namespace ev {
+class io;
+} // namespace ev
 
 namespace Anki {
 namespace BluetoothDaemon {
