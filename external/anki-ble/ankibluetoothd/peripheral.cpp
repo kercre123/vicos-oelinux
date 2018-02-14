@@ -44,20 +44,25 @@ static uint8_t sCCCValue = 0x00;
 
 static std::vector<uint8_t> sPeripheralToCentralValue;
 
-std::deque<std::vector<uint8_t>> sNotificationQueue;
+typedef struct Notification {
+  int confirm;
+  std::vector<uint8_t> value;
+} Notification;
+
+std::deque<Notification> sNotificationQueue;
 
 void TransmitNextNotification()
 {
   bool transmitted = false;
   while (!sCongested && !transmitted && !sNotificationQueue.empty()) {
-    const std::vector<uint8_t>& value = sNotificationQueue.front();
+    const Notification& notification = sNotificationQueue.front();
     if (sConnected && sConnectionId > 0
         && SendGattIndication(sPeripheralToCentralCharacteristicHandle,
                               sConnectionId,
-                              false,
-                              value)) {
+                              notification.confirm,
+                              notification.value)) {
       transmitted = true;
-      sPeripheralToCentralValue = value;
+      sPeripheralToCentralValue = notification.value;
     } else {
       logi("Failed to send notification");
       if (sConnected && sConnectionId) {
@@ -71,13 +76,13 @@ void TransmitNextNotification()
   }
 }
 
-static void SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
+static void SendMessageToConnectedCentral(int confirm, const std::vector<uint8_t>& value)
 {
   if (!sConnected) {
     return;
   }
 
-  sNotificationQueue.emplace_back(value);
+  sNotificationQueue.push_back((Notification) {confirm, value});
   if (sNotificationQueue.size() == 1) {
     TransmitNextNotification();
   }
@@ -187,7 +192,7 @@ void Peripheral::OnSendMessage(const int connection_id,
   if (sConnected
       && sConnectionId == connection_id
       && characteristic_uuid == Anki::kPeripheralToCentralCharacteristicUUID) {
-    SendMessageToConnectedCentral(value);
+    SendMessageToConnectedCentral(reliable ? 1 : 0, value);
   }
 }
 

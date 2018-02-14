@@ -188,7 +188,7 @@ void VicDevSetup::SendMessageToConnectedCentral(const std::vector<uint8_t>& valu
   if (value.size() <= Anki::kAnkiVictorMsgMaxSize) {
     SendMessage(connection_id_,
                 Anki::kPeripheralToCentralCharacteristicUUID,
-                false,
+                true,
                 value);
   } else {
     // Fragment large message into multipart messages to queue
