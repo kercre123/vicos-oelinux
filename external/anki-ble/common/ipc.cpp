@@ -188,9 +188,12 @@ void IPCEndpoint::ReadWriteWatcherCallback(ev::io& w, int revents)
     loge("ipc-endpoint: RWCB error");
     return;
   }
+
   if (revents & ev::WRITE) {
     SendQueuedMessagesToPeer(w.fd);
-  } else if (revents & ev::READ) {
+  }
+
+  if (revents & ev::READ) {
     auto it = FindPeerByFD(w.fd);
     if (it == peers_.end()) {
       return;
