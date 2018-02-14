@@ -14,6 +14,7 @@
 #include <hardware/bluetooth.h>
 #include <string>
 
+std::string bt_value_to_string(int length, uint8_t* value);
 std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr);
 std::string bt_uuid_t_to_string(const bt_uuid_t* uuid);
 void bt_uuid_t_from_string(const std::string& uuidStr, bt_uuid_t* uuid);

@@ -704,10 +704,10 @@ void btgatts_request_write_cb(int conn_id, int trans_id, bt_bdaddr_t *bda, int a
                               int offset, int length, bool need_rsp, bool is_prep,
                               uint8_t* value)
 {
-  logv("%s(conn_id = %d, trans_id = %d, bda = %s, attr_handle = %d, offset = %d, length = %d, need_rsp = %s, is_prep = %s, value = 0x%lx)",
+  logv("%s(conn_id = %d, trans_id = %d, bda = %s, attr_handle = %d, offset = %d, length = %d, need_rsp = %s, is_prep = %s, value = %s)",
        __FUNCTION__, conn_id, trans_id, bt_bdaddr_t_to_string(bda).c_str(), attr_handle,
        offset, length, need_rsp ? "true" : "false", is_prep ? "true" : "false",
-       (uint32_t) value);
+       bt_value_to_string(length, value).c_str());
   if (is_prep) {
     /* We do not support prepared writes */
     std::vector<uint8_t> dummy;

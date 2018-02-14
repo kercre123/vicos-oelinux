@@ -31,6 +31,25 @@ static uint8_t hex_char_to_byte(char input) {
   return 0;
 }
 
+std::string bt_value_to_string(int length, uint8_t* value) {
+  if (length < 0) {
+    return "";
+  }
+  if (value) {
+    std::ostringstream oss;
+    char hex[17] = "0123456789abcdef";
+    for (int i = 0 ; i < length && i < 20 ; i++) {
+      if (i > 0) {
+        oss << " ";
+      }
+      oss << hex[(value[i] >> 4) & 0xf] << hex[value[i] & 0xf];
+    }
+    return oss.str();
+  } else {
+    return "<null>";
+  }
+}
+
 std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr) {
   char str[18];
 

@@ -12,6 +12,10 @@
 
 #pragma once
 
+const uint16_t kCCCDefaultValue = 0x0000;
+const uint16_t kCCCNotificationValue = 0x0001;
+const uint16_t kCCCIndicationValue = 0x0002;
+
 const int kGattPermRead = (1 << 0);
 const int kGattPermReadEncrypted = (1 << 1);
 const int kGattPermReadEncMitm = (1 << 2);
