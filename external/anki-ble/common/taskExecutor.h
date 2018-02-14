@@ -39,7 +39,9 @@ typedef struct _TaskHolder {
 
 class TaskExecutor {
 public:
-  TaskExecutor();
+  TaskExecutor()
+      :TaskExecutor(nullptr) { }
+  TaskExecutor(struct ev_loop* loop);
   ~TaskExecutor();
   void Wake(std::function<void()> task);
   void WakeSync(std::function<void()> task);
@@ -52,6 +54,8 @@ protected:
 private:
   void AddTaskHolder(TaskHolder taskHolder);
   void AddTaskHolderToDeferredQueue(TaskHolder taskHolder);
+  void InitWatchers();
+  void DestroyWatchers();
   void Execute();
   void ProcessDeferredQueue();
   void ProcessTaskQueue();
@@ -61,11 +65,12 @@ private:
   void WakeUpBackgroundThread(const char c = 'x');
 
 private:
+  struct ev_loop* _loop;
+  std::thread::id _loop_thread_id;
   int _pipeFileDescriptors[2];
   ev::io* _pipeWatcher;
   ev::timer* _timerWatcher;
-  struct ev_loop* _loop;
-  std::thread _taskExecuteThread;
+  std::thread* _taskExecuteThread;
   std::mutex _taskQueueMutex;
   std::vector<TaskHolder> _taskQueue;
   std::mutex _taskDeferredQueueMutex;

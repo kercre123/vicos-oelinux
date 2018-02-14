@@ -914,8 +914,7 @@ bool SetAdapterName(const std::string& name) {
   }
   bt_property_t property;
   property.type = BT_PROPERTY_BDNAME;
-  bt_bdname_t bd_name;
-  (void) memset(&bd_name, 0, sizeof(bd_name));
+  bt_bdname_t bd_name = {0};
   strncpy((char *) &bd_name.name[0], name.c_str(), sizeof(bd_name) - 1);
   property.val = &bd_name;
   property.len = strlen((char *)bd_name.name);
@@ -983,8 +982,7 @@ bool RegisterGattServer() {
 bool AddGattService(BluetoothGattService* service) {
   sBluetoothGattService = service;
 
-  btgatt_srvc_id_t srvc_id;
-  memset(&srvc_id, 0, sizeof(srvc_id));
+  btgatt_srvc_id_t srvc_id = {0};
   bt_uuid_t_from_string(service->uuid, &(srvc_id.id.uuid));
   srvc_id.id.inst_id = 0;
   srvc_id.is_primary = 1;
@@ -1150,8 +1148,7 @@ bool StopAdvertisement() {
 bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
                   const std::vector<uint8_t>& value)
 {
-  btgatt_response_t response;
-  memset(&response, 0, sizeof(response));
+  btgatt_response_t response = {0};
   response.handle = (uint16_t) handle;
   response.attr_value.handle = handle;
   memcpy(response.attr_value.value, value.data(), value.size());
