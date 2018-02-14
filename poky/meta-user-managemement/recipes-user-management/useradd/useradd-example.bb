@@ -9,7 +9,10 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/LICENSE;md5=4d92cd373abda3937c2bc47fbc49d
 SRC_URI = "file://file1 \
            file://file2 \
            file://file3 \
+<<<<<<< HEAD
            file://hello \
+=======
+>>>>>>> 6ae53f7... VIC-826 - Added the meta-user-management
            file://file4"
 
 S = "${WORKDIR}"
@@ -55,10 +58,13 @@ do_install () {
 	install -d -m 755 ${D}${datadir}/bluetooth
 	install -d -m 755 ${D}${datadir}/net
 
+<<<<<<< HEAD
 	install -d -m 755 ${D}/ephraim_test
 	install -p -m 644 hello ${D}/ephraim_test
 	chown -R robot ${D}/ephraim_test
 
+=======
+>>>>>>> 6ae53f7... VIC-826 - Added the meta-user-management
 	install -p -m 644 file1 ${D}${datadir}/robot/
 	install -p -m 644 file2 ${D}${datadir}/robot/
 
@@ -115,7 +121,11 @@ pkg_postinst_${PN}_append () {
 #	fi
 } 
 
+<<<<<<< HEAD
 FILES_${PN} = "${datadir}/robot/* ${datadir}/bluetooth/* ${datadir}/net/* /ephraim_test/*"
+=======
+FILES_${PN} = "${datadir}/robot/* ${datadir}/bluetooth/* ${datadir}/net/*"
+>>>>>>> 6ae53f7... VIC-826 - Added the meta-user-management
 
 # Prevents do_package failures with:
 # debugsources.list: No such file or directory:
