@@ -1,0 +1,118 @@
+SUMMARY = "Example recipe for using inherit useradd"
+DESCRIPTION = "This recipe serves as an example for using features from useradd.bbclass"
+SECTION = "examples"
+PR = "r1"
+LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://${COREBASE}/LICENSE;md5=4d92cd373abda3937c2bc47fbc49d690 \
+                    file://${COREBASE}/meta/COPYING.MIT;md5=3da9cfbcb788c80a0384361b4de20420"
+
+SRC_URI = "file://file1 \
+           file://file2 \
+           file://file3 \
+           file://file4"
+
+S = "${WORKDIR}"
+
+PACKAGES =+ "${PN}-user3"
+
+inherit useradd
+
+# You must set USERADD_PACKAGES when you inherit useradd. This
+# lists which output packages will include the user/group
+# creation code.
+USERADD_PACKAGES = "${PN} ${PN}-user3"
+
+# You must also set USERADD_PARAM and/or GROUPADD_PARAM when
+# you inherit useradd.
+
+# VIC-826 related work
+# We modify the sample recipe useradd_example to 
+# complete the proof of concept
+# a more ANKI specific recipe will be created at a 
+# later stage.
+# We will copy the meta-skeleton layer to a 
+# meta-user-management layer as a starting point
+#
+# USERADD_PARAM specifies command line options to pass to the
+# useradd command. Multiple users can be created by separating
+# the commands with a semicolon. Here we'll create three users,
+# robot, bluetooth, net:
+USERADD_PARAM_${PN} = "-u 1500 -d /home/robot -r -s /bin/bash robot; -u 1501 -d /home/bluetooth -r -s /bin/bash bluetooth; -u 1502 -d /home/net -r -s /bin/bash net"
+
+# user3 will be managed in the useradd-example-user3 pacakge:
+# As an example, we use the -P option to set clear text password for user3
+USERADD_PARAM_${PN}-user3 = "-u 1202 -d /home/user3 -r -s /bin/bash -P 'user3' user3"
+
+# GROUPADD_PARAM works the same way, which you set to the options
+# you'd normally pass to the groupadd command. This will create
+# groups robotics, wireless, networking:
+GROUPADD_PARAM_${PN} = "-g 891 robotics; -g 892 wireless; -g 893 networking"
+
+
+do_install () {
+	install -d -m 755 ${D}${datadir}/robot
+	install -d -m 755 ${D}${datadir}/bluetooth
+	install -d -m 755 ${D}${datadir}/net
+
+	install -p -m 644 file1 ${D}${datadir}/robot/
+	install -p -m 644 file2 ${D}${datadir}/robot/
+
+	install -p -m 644 file2 ${D}${datadir}/bluetooth/
+	install -p -m 644 file3 ${D}${datadir}/bluetooth/
+
+	install -p -m 644 file3 ${D}${datadir}/net/
+	install -p -m 644 file4 ${D}${datadir}/net/
+
+	# The new users and groups are created before the do_install
+	# step, so you are now free to make use of them:
+        # ephraim note: this step is failing to change owner and group 
+	# more info required
+	
+	# for debugging the line below will put on the log_do_install file 
+	# the actual user doing this work
+	whoami
+
+	chown -R robot ${D}${datadir}/robot
+	chown -R bluetooth ${D}${datadir}/bluetooth
+	chown -R net ${D}${datadir}/net
+
+	# for debugging those lines below should show in the the log_do_install file 
+        # the actual permission of the files in the respective directories
+	ls -al ${D}${datadir}/robot
+	ls -al ${D}${datadir}/bluetooth
+	ls -al ${D}${datadir}/net
+
+	chgrp -R robotics ${D}${datadir}/robot
+	chgrp -R wireless ${D}${datadir}/bluetooth
+	chgrp -R networking ${D}${datadir}/net
+
+	# idem as above
+	ls -al ${D}${datadir}/robot
+	ls -al ${D}${datadir}/bluetooth
+	ls -al ${D}${datadir}/net
+}
+
+# this post install does not change permissions
+# 
+pkg_postinst_${PN}_append () {
+
+#	if [ x"$D" = "x" ]; then 
+
+		chown -R robot $D${datadir}/robot
+		chown -R bluetooth $D${datadir}/bluetooth
+		chown -R net $D${datadir}/net
+
+		chgrp -R robotics $D${datadir}/robot
+		chgrp -R wireless $D${datadir}/bluetooth
+		chgrp -R networking $D${datadir}/net
+#	else 
+		# do nothing on host
+#	fi
+} 
+
+FILES_${PN} = "${datadir}/robot/* ${datadir}/bluetooth/* ${datadir}/net/*"
+
+# Prevents do_package failures with:
+# debugsources.list: No such file or directory:
+INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
+
