@@ -40,7 +40,7 @@ static bool sAdvertising = false;
 static bool sConnected = false;
 static int sConnectionId = -1;
 static bool sCongested = false;
-static uint8_t sCCCValue = 0x00;
+static uint16_t sCCCValue = kCCCDefaultValue;
 
 static std::vector<uint8_t> sPeripheralToCentralValue;
 
@@ -56,10 +56,10 @@ void TransmitNextNotification()
   bool transmitted = false;
   while (!sCongested && !transmitted && !sNotificationQueue.empty()) {
     const Notification& notification = sNotificationQueue.front();
-    if (sConnected && sConnectionId > 0
+    if (sConnected && sConnectionId > 0 && (sCCCValue != kCCCDefaultValue)
         && SendGattIndication(sPeripheralToCentralCharacteristicHandle,
                               sConnectionId,
-                              notification.confirm,
+                              (sCCCValue == kCCCIndicationValue) ? notification.confirm : 0,
                               notification.value)) {
       transmitted = true;
       sPeripheralToCentralValue = notification.value;
@@ -91,7 +91,7 @@ static void SendMessageToConnectedCentral(int confirm, const std::vector<uint8_t
 static void PeripheralConnectionCallback(int conn_id, int connected) {
   std::lock_guard<std::mutex> lock(sMutex);
   sConnected = (bool) connected;
-  sCCCValue = 0;
+  sCCCValue = kCCCDefaultValue;
   sPeripheralToCentralValue.clear();
   sNotificationQueue.clear();
   sCongested = false;
@@ -134,13 +134,16 @@ static void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, 
   } else if (attr_handle == sCentralToPeripheralCharacteristicHandle) {
     sPeripheral->OnReceiveMessage(conn_id, Anki::kCentralToPeripheralCharacteristicUUID, value);
   } else if (attr_handle == sCCCDescriptorHandle) {
-    if (value.size() != 2 || value[1] != 0x00 || value[0] > 0x01) {
-      error = kGattErrorCCCDImproperlyConfigured;
-    } else {
-      uint8_t previous_value = sCCCValue;
-      sCCCValue = value[0];
-      if (!previous_value && sCCCValue) {
-        sPeripheral->OnInboundConnectionChange(conn_id, 1);
+    error = kGattErrorCCCDImproperlyConfigured;
+    if (value.size() == 2) {
+      uint16_t ccc = ((value[1] << 8) | value[0]);
+      if (ccc == kCCCDefaultValue || ccc == kCCCNotificationValue || ccc == kCCCIndicationValue) {
+        uint16_t old_ccc = sCCCValue;
+        sCCCValue = ccc;
+        if ((old_ccc == kCCCDefaultValue) && (sCCCValue != kCCCDefaultValue)) {
+          sPeripheral->OnInboundConnectionChange(conn_id, 1);
+        }
+        error = kGattErrorNone;
       }
     }
   }
