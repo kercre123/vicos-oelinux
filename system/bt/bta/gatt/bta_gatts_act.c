@@ -772,6 +772,17 @@ void bta_gatts_close (tBTA_GATTS_CB *p_cb, tBTA_GATTS_DATA * p_msg)
         else
         {
             status= BTA_GATT_OK;
+            /* VIC-1341 - GATT_SetIdleTimeout (GATT_LINK_IDLE_TIMEOUT_WHEN_NO_APP) will
+             * result in a true disconnect from the central that connected to us.
+             *
+             * Why doesn't GATT_Disconnect do this for us?
+             * GATT_Disconnect calls gatt_update_app_use_link_flag which calls
+             * gatt_update_app_hold_link_status to see if it can find a record of this
+             * connection.  Unfortunately, it cannot and it bails out before reaching
+             * the call to GATT_SetIdleTimeout (GATT_LINK_IDLE_TIMEOUT_WHEN_NO_APP).
+             *
+             */
+            GATT_SetIdleTimeout(remote_bda, GATT_LINK_IDLE_TIMEOUT_WHEN_NO_APP, transport);
         }
 
         p_rcb = bta_gatts_find_app_rcb_by_app_if(gatt_if);
