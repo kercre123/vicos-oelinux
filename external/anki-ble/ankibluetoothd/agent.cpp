@@ -19,6 +19,7 @@
 #include "gatt_constants.h"
 #include "include_ev.h"
 #include "log.h"
+#include "stringutils.h"
 
 #include <algorithm>
 #include <deque>
@@ -200,6 +201,93 @@ void Agent::PeripheralCongestionCallback(int conn_id, bool congested) {
   }
 }
 
+void Agent::CentralScanResultCallback(const std::string& address,
+                                      int rssi,
+                                      const std::vector<uint8_t>& adv_data) {
+  if (!scanning_) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  bool passes_filter = scan_filter_service_uuid_.empty();
+  ScanResultRecord record = {0};
+  strncpy(record.address, address.c_str(), sizeof(record.address) - 1);
+  record.rssi = rssi;
+
+  auto it = adv_data.begin();
+  while (it != adv_data.end()) {
+    uint8_t length = *it;
+    if (length == 0) {
+      break;
+    }
+    it++;
+    uint8_t type = *it;
+    if (length > 1) {
+      if (std::distance(adv_data.begin(), it) + length > adv_data.size()) {
+        break;
+      }
+      std::vector<uint8_t> data(it + 1, it + length);
+      switch(type) {
+        case kADTypeFlags:
+          // ignore for now
+          break;
+        case kADTypeCompleteListOf16bitServiceClassUUIDs:
+          {
+            // Check for the Device Information Service
+            std::vector<std::string> uuids = bt_16bit_service_uuid_array_to_vector(data);
+            for (auto const& u : uuids) {
+              if (AreCaseInsensitiveStringsEqual(u, kDeviceInformationService_16_BIT_UUID)) {
+                record.has_device_information_service = true;
+              }
+            }
+          }
+          break;
+        case kADTypeCompleteListOf128bitServiceClassUUIDs:
+          {
+            // Check for Victor Cube Service and do filtering
+            std::vector<std::string> uuids = bt_128bit_service_uuid_array_to_vector(data);
+            for (auto const& u : uuids) {
+              if (AreCaseInsensitiveStringsEqual(u, kCubeService_128_BIT_UUID)) {
+                record.is_victor_cube = true;
+              }
+              if (AreCaseInsensitiveStringsEqual(u, scan_filter_service_uuid_)) {
+                passes_filter = true;
+              }
+            }
+          }
+          break;
+        case kADTypeCompleteLocalName:
+          {
+            strncpy(record.local_name,
+                    (char *) data.data(),
+                    std::min(sizeof(record.local_name) - 1, (size_t) length - 1));
+          }
+          break;
+        case kADTypeManufacturerSpecificData:
+          {
+            record.manufacturer_data_len = length - 1;
+            memcpy(record.manufacturer_data,
+                   data.data(),
+                   std::min(sizeof(record.manufacturer_data), (size_t) length - 1));
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    it += length;
+  }
+  if (!passes_filter) {
+    return;
+  }
+  record.advertisement_length = adv_data.size();
+  memcpy(record.advertisement_data,
+         adv_data.data(),
+         std::min(sizeof(record.advertisement_data), (size_t) record.advertisement_length));
+  std::vector<ScanResultRecord> records;
+  records.push_back(record);
+  OnScanResults(0, records);
+}
+
 void Agent::OnNewIPCClient(const int sockfd)
 {
   (void) sockfd; // not used for now
@@ -267,6 +355,13 @@ void Agent::StaticPeripheralIndicationSentCallback(int conn_id, int status) {
 void Agent::StaticPeripheralCongestionCallback(int conn_id, bool congested) {
   sAgent->PeripheralCongestionCallback(conn_id, congested);
 }
+
+void Agent::StaticCentralScanResultCallback(const std::string& address,
+                                            int rssi,
+                                            const std::vector<uint8_t>& adv_data) {
+  sAgent->CentralScanResultCallback(address, rssi, adv_data);
+}
+
 
 bool Agent::StartPeripheral()
 {
@@ -361,6 +456,19 @@ bool Agent::StartPeripheral()
 
   logv("Anki BLE peripheral service started.");
   return true;
+}
+
+void Agent::StartScan(const std::string& serviceUUID) {
+  scan_filter_service_uuid_ = serviceUUID;
+  scanning_ = true;
+  logv("Agent::StartScan(serviceUUID = '%s')", serviceUUID.c_str());
+  (void) BluetoothStack::StartScan(true, &Agent::StaticCentralScanResultCallback);
+}
+
+void Agent::StopScan() {
+  scanning_ = false;
+  (void) BluetoothStack::StartScan(false, nullptr);
+  scan_filter_service_uuid_.clear();
 }
 
 } // namespace BluetoothDaemon

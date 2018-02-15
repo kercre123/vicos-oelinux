@@ -70,6 +70,7 @@ static int sBtGattClientIf;
 static int sBtGattServerIf;
 
 static BluetoothGattService* sBluetoothGattService;
+static ScanResultCallback sScanResultCallback = nullptr;
 
 static bool set_wake_alarm(uint64_t delay_millis, bool should_wake, alarm_cb cb,
                          void *data) {
@@ -321,7 +322,32 @@ void btgattc_register_client_cb(int status, int client_if, bt_uuid_t *app_uuid)
 
 void btgattc_scan_result_cb(bt_bdaddr_t* bda, int rssi, uint8_t* adv_data)
 {
-  logv("%s", __FUNCTION__);
+  if (!bda || !adv_data) {
+    return;
+  }
+  std::string address = bt_bdaddr_t_to_string(bda);
+  std::vector<uint8_t> advertising_data;
+
+  uint8_t* p = adv_data;
+  uint8_t* end = p + 62; // maximum of 62 bytes for advertisement + scan response
+  while (p < end) {
+    uint8_t length = *p;
+    if (length == 0 || (p + length) > end) {
+      break;
+    }
+    advertising_data.push_back(length);
+    p++;
+    std::vector<uint8_t> data(p, p + length);
+    std::copy(data.begin(), data.end(), std::back_inserter(advertising_data));
+    p += length;
+  }
+
+  logv("%s(bda = %s, rssi = %d, adv_data = %s)",
+       __FUNCTION__, address.c_str(),
+       rssi, bt_value_to_string(advertising_data.size(), advertising_data.data()).c_str());
+  if (sScanResultCallback) {
+    sScanResultCallback(address, rssi, advertising_data);
+  }
 }
 
 void btgattc_open_cb(int conn_id, int status, int clientIf, bt_bdaddr_t* bda)
@@ -1213,6 +1239,25 @@ bool DisconnectGattPeer(int conn_id)
                                                             conn_id);
   if (status != BT_STATUS_SUCCESS) {
     loge("Failed to disconnect");
+    return false;
+  }
+
+  return true;
+}
+
+bool StartScan(const bool enable, ScanResultCallback callback)
+{
+  sScanResultCallback = callback;
+  if (!sBtGattInterface || !sBtGattInterface->client) {
+    return false;
+  }
+
+  bt_status_t status = sBtGattInterface->client->scan(enable);
+
+  if (status != BT_STATUS_SUCCESS) {
+    loge("Failed to %s scanning. status = %s",
+         enable ? "start" : "stop",
+         bt_status_t_to_string(status).c_str());
     return false;
   }
 

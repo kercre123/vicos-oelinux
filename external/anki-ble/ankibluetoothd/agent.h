@@ -38,6 +38,8 @@ class Agent : public IPCServer {
   virtual void Disconnect(const int connection_id);
   virtual void StartAdvertising();
   virtual void StopAdvertising();
+  virtual void StartScan(const std::string& serviceUUID);
+  virtual void StopScan();
 
  private:
   void TransmitNextNotification();
@@ -49,6 +51,9 @@ class Agent : public IPCServer {
                                bool need_rsp, const std::vector<uint8_t>& value);
   void PeripheralIndicationSentCallback(int conn_id, int status);
   void PeripheralCongestionCallback(int conn_id, bool congested);
+  void CentralScanResultCallback(const std::string& address,
+                                 int rssi,
+                                 const std::vector<uint8_t>& adv_data);
 
   static void StaticPeripheralConnectionCallback(int conn_id, int connected);
   static void StaticPeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
@@ -56,6 +61,9 @@ class Agent : public IPCServer {
                                       bool need_rsp, const std::vector<uint8_t>& value);
   static void StaticPeripheralIndicationSentCallback(int conn_id, int status);
   static void StaticPeripheralCongestionCallback(int conn_id, bool congested);
+  static void StaticCentralScanResultCallback(const std::string& address,
+                                              int rssi,
+                                              const std::vector<uint8_t>& adv_data);
 
   std::mutex mutex_;
   BLEAdvertiseSettings ble_advertise_settings_;
@@ -82,6 +90,8 @@ class Agent : public IPCServer {
   } Notification;
 
   std::deque<Notification> notification_queue_;
+  bool scanning_;
+  std::string scan_filter_service_uuid_;
 };
 
 } // namespace BluetoothDaemon

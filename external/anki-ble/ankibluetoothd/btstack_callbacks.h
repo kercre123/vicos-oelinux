@@ -20,3 +20,6 @@ typedef void (*RequestWriteCallback)(int conn_id, int trans_id, int attr_handle,
                                      bool need_rsp, const std::vector<uint8_t>& value);
 typedef void (*IndicationSentCallback)(int conn_id, int status);
 typedef void (*CongestionCallback)(int conn_id, bool congested);
+typedef void (*ScanResultCallback)(const std::string& address,
+                                   const int rssi,
+                                   const std::vector<uint8_t>& adv_data);

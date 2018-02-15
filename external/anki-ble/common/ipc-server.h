@@ -33,6 +33,7 @@ class IPCServer : public IPCEndpoint {
   void OnReceiveMessage(const int connection_id,
                         const std::string& characteristic_uuid,
                         const std::vector<uint8_t>& data);
+  void OnScanResults(int error, const std::vector<ScanResultRecord>& records);
 
   virtual void OnNewIPCClient(const int sockfd) {}
   virtual void OnReceiveIPCMessage(const int sockfd,
@@ -45,6 +46,8 @@ class IPCServer : public IPCEndpoint {
   virtual void Disconnect(const int connection_id) {}
   virtual void StartAdvertising() {}
   virtual void StopAdvertising() {}
+  virtual void StartScan(const std::string& serviceUUID) {}
+  virtual void StopScan() {}
 
  private:
   void AcceptWatcherCallback(ev::io& w, int revents);

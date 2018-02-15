@@ -13,6 +13,7 @@
 #pragma once
 #include <hardware/bluetooth.h>
 #include <string>
+#include <vector>
 
 std::string bt_value_to_string(int length, uint8_t* value);
 std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr);
@@ -27,4 +28,5 @@ const char* bt_cb_thread_evt_to_string(const bt_cb_thread_evt evt);
 const char* bt_property_type_t_to_string(const bt_property_type_t property_type);
 const char* bt_device_type_t_to_string(const bt_device_type_t type);
 std::string bt_acl_state_t_to_string(const bt_acl_state_t state);
-
+std::vector<std::string> bt_16bit_service_uuid_array_to_vector(const std::vector<uint8_t>& data);
+std::vector<std::string> bt_128bit_service_uuid_array_to_vector(const std::vector<uint8_t>& data);

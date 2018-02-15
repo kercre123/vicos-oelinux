@@ -41,6 +41,7 @@ bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings);
 bool StopAdvertisement();
 
+bool StartScan(const bool enable, ScanResultCallback callback);
 
 } // namespace BluetoothStack
 } // namespace Anki

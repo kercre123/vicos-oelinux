@@ -28,6 +28,7 @@
 struct ev_loop;
 namespace ev {
 class io;
+class timer;
 } // namespace ev
 
 namespace Anki {
@@ -35,7 +36,12 @@ namespace BluetoothDaemon {
 const std::string kSocketName("/data/misc/bluetooth/abtd.socket");
 const char kIPCMessageMagic[4] = {'i', 'p', 'c', 'f'};
 const uint32_t kIPCMessageVersion = 1;
-const size_t kUUIDSize = 37;
+const size_t k128BitUUIDSize = 37;
+const size_t k16BitUUIDSize = 5;
+const size_t kAddressSize = 18;
+const size_t kLocalNameSize = 32;
+const size_t kManufacturerDataMaxSize = 32;
+const size_t kMaxAdvertisingLength = 62;
 const size_t kIPCMessageMaxSize = 1024;
 const size_t kIPCMessageMaxLength = kIPCMessageMaxSize - 12;
 
@@ -49,7 +55,10 @@ enum class IPCMessageType {
     Disconnect,
     StartAdvertising,
     StopAdvertising,
-    OnPeripheralStateUpdate
+    OnPeripheralStateUpdate,
+    StartScan,
+    StopScan,
+    OnScanResults,
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -61,7 +70,7 @@ typedef struct __attribute__ ((__packed__)) IPCMessage {
 
 typedef struct __attribute__ ((__packed__)) SendMessageArgs {
   int connection_id;
-  char characteristic_uuid[kUUIDSize];
+  char characteristic_uuid[k128BitUUIDSize];
   bool reliable;
   uint32_t length;
   uint8_t value[];
@@ -74,7 +83,7 @@ typedef struct __attribute__ ((__packed__)) OnInboundConnectionChangeArgs {
 
 typedef struct __attribute__ ((__packed__)) OnReceiveMessageArgs {
   int connection_id;
-  char characteristic_uuid[kUUIDSize];
+  char characteristic_uuid[k128BitUUIDSize];
   uint32_t length;
   uint8_t value[];
 } OnReceiveMessageArgs;
@@ -89,6 +98,28 @@ typedef struct __attribute__ ((__packed__)) OnPeripheralStateUpdateArgs {
   int connected;
   bool congested;
 } OnPeripheralStateUpdateArgs;
+
+typedef struct __attribute__ ((__packed__)) StartScanArgs {
+  char service_uuid[k128BitUUIDSize];
+} StartScanArgs;
+
+typedef struct __attribute__ ((__packed__)) ScanResultRecord {
+  char address[kAddressSize];
+  int rssi;
+  bool is_victor_cube;
+  bool has_device_information_service;
+  char local_name[kLocalNameSize];
+  int manufacturer_data_len;
+  uint8_t manufacturer_data[kManufacturerDataMaxSize];
+  int advertisement_length;
+  uint8_t advertisement_data[kMaxAdvertisingLength];
+} ScanResultRecord;
+
+typedef struct __attribute__ ((__packed__)) OnScanResultsArgs {
+  int error;
+  int record_count;
+  ScanResultRecord records[];
+} OnScanResultsArgs;
 
 class IPCEndpoint {
  public:

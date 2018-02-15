@@ -40,6 +40,8 @@ class IPCClient : public IPCEndpoint {
   void Disconnect(const int connection_id);
   void StartAdvertising();
   void StopAdvertising();
+  void StartScan(const std::string& serviceUUID);
+  void StopScan();
 
  protected:
   virtual void OnReceiveIPCMessage(const int sockfd,
@@ -53,6 +55,7 @@ class IPCClient : public IPCEndpoint {
                                        const int connection_id,
                                        const int connected,
                                        const bool congested) {}
+  virtual void OnScanResults(int error, const std::vector<ScanResultRecord>& records) {}
 
  private:
   void ConnectWatcherCallback(ev::io& w, int revents);

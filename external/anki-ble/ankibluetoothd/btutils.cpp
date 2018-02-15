@@ -12,6 +12,8 @@
 
 #include "btutils.h"
 #include "gatt_constants.h"
+#include "stringutils.h"
+#include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <sstream>
@@ -32,22 +34,14 @@ static uint8_t hex_char_to_byte(char input) {
 }
 
 std::string bt_value_to_string(int length, uint8_t* value) {
-  if (length < 0) {
-    return "";
-  }
-  if (value) {
-    std::ostringstream oss;
-    char hex[17] = "0123456789abcdef";
-    for (int i = 0 ; i < length && i < 20 ; i++) {
-      if (i > 0) {
-        oss << " ";
-      }
-      oss << hex[(value[i] >> 4) & 0xf] << hex[value[i] & 0xf];
-    }
-    return oss.str();
-  } else {
+  if (!value) {
     return "<null>";
   }
+  if (length < 1) {
+    return "";
+  }
+  std::vector<uint8_t> v(value, value + length);
+  return byteVectorToHexString(v, 1, true);
 }
 
 std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr) {
@@ -323,4 +317,45 @@ std::string bt_acl_state_t_to_string(const bt_acl_state_t state) {
       }
   }
 
+}
+
+std::vector<std::string> bt_16bit_service_uuid_array_to_vector(const std::vector<uint8_t>& data)
+{
+  std::vector<std::string> uuids;
+
+  size_t sz = data.size();
+  size_t offset = 0;
+  while ((offset + 2) <= sz) {
+    std::vector<uint8_t> v(data.begin() + offset, data.begin() + offset + 2);
+    std::reverse(std::begin(v), std::end(v));
+    uuids.push_back(byteVectorToHexString(v));
+    offset += 2;
+  }
+  return uuids;
+}
+
+std::vector<std::string> bt_128bit_service_uuid_array_to_vector(const std::vector<uint8_t>& data)
+{
+  std::vector<std::string> uuids;
+
+  size_t sz = data.size();
+  size_t offset = 0;
+  while ((offset + 16) <= sz) {
+    std::vector<uint8_t> v(data.begin() + offset, data.begin() + offset + 16);
+    std::reverse(std::begin(v), std::end(v));
+    auto it = v.begin();
+    std::vector<int> lengths = {4,2,2,2,6};
+    std::string uuidString;
+    for (auto l : lengths) {
+      if (it != v.begin()) {
+        uuidString.push_back('-');
+      }
+      std::vector<uint8_t> part(it, it + l);
+      uuidString += byteVectorToHexString(part);
+      it += l;
+    }
+    uuids.push_back(uuidString);
+    offset += 16;
+  }
+  return uuids;
 }

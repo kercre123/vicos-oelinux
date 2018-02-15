@@ -118,6 +118,19 @@ void IPCClient::OnReceiveIPCMessage(const int sockfd,
                          value);
       }
       break;
+    case IPCMessageType::OnScanResults:
+      {
+        logv("ipc-client: OnScanResults");
+        OnScanResultsArgs* args = (OnScanResultsArgs *) data.data();
+        std::vector<ScanResultRecord> records;
+        for (int i = 0 ; i < args->record_count; i++) {
+          ScanResultRecord record = {0};
+          memcpy(&record, &(args->records[i]), sizeof(record));
+          records.push_back(record);
+        }
+        OnScanResults(args->error, records);
+      }
+      break;
     default:
       loge("ipc-client: Unknown IPC message : %d", (int) type);
       break;
@@ -162,6 +175,20 @@ void IPCClient::StartAdvertising()
 void IPCClient::StopAdvertising()
 {
   SendIPCMessageToServer(IPCMessageType::StopAdvertising);
+}
+
+void IPCClient::StartScan(const std::string& serviceUUID)
+{
+  StartScanArgs args = {0};
+  strncpy(args.service_uuid, serviceUUID.c_str(), sizeof(args.service_uuid) - 1);
+  SendIPCMessageToServer(IPCMessageType::StartScan,
+                         sizeof(args),
+                         (uint8_t *) &args);
+}
+
+void IPCClient::StopScan()
+{
+  SendIPCMessageToServer(IPCMessageType::StopScan);
 }
 
 IPCClient::~IPCClient()
