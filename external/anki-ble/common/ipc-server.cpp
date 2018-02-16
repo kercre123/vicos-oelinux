@@ -97,29 +97,29 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
       logv("ipc-server: SendMessage received");
       {
         SendMessageArgs* args = (SendMessageArgs *) data.data();
-        OnSendMessage(args->connection_id,
-                      std::string(args->characteristic_uuid),
-                      args->reliable,
-                      std::vector<uint8_t>(args->value, args->value + args->length));
+        SendMessage(args->connection_id,
+                    std::string(args->characteristic_uuid),
+                    args->reliable,
+                    std::vector<uint8_t>(args->value, args->value + args->length));
       }
       break;
     case IPCMessageType::Disconnect:
       logv("ipc-server: Disconnect received");
       {
         DisconnectArgs* args = (DisconnectArgs *) data.data();
-        OnDisconnect(args->connection_id);
+        Disconnect(args->connection_id);
       }
       break;
     case IPCMessageType::StartAdvertising:
       logv("ipc-server: StartAdvertising received");
       {
-        OnStartAdvertising();
+        StartAdvertising();
       }
       break;
     case IPCMessageType::StopAdvertising:
       logv("ipc-server: StopAdvertising received");
       {
-        OnStopAdvertising();
+        StopAdvertising();
       }
       break;
     default:

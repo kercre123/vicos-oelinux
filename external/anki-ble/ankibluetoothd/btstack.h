@@ -13,8 +13,13 @@
 #pragma once
 
 #include "ble_advertise_settings.h"
+#include "bluetooth_gatt.h"
+#include "btstack_callbacks.h"
+
 #include <string>
-#include <vector>
+
+namespace Anki {
+namespace BluetoothStack {
 
 bool LoadBtStack();
 void UnLoadBtStack();
@@ -23,39 +28,6 @@ std::string GetAdapterName();
 bool SetAdapterName(const std::string& name);
 bool RegisterGattClient();
 bool RegisterGattServer();
-
-typedef void (*ConnectionCallback)(int conn_id, int connected);
-typedef void (*RequestReadCallback)(int conn_id, int trans_id, int attr_handle, int offset);
-typedef void (*RequestWriteCallback)(int conn_id, int trans_id, int attr_handle, int offset,
-                                     bool need_rsp, const std::vector<uint8_t>& value);
-typedef void (*IndicationSentCallback)(int conn_id, int status);
-typedef void (*CongestionCallback)(int conn_id, bool congested);
-
-
-typedef struct {
-  std::string uuid;
-  int permissions;
-  int desc_handle;
-} BluetoothGattDescriptor;
-
-typedef struct {
-  std::string uuid;
-  int properties;
-  int permissions;
-  int char_handle;
-  std::vector<BluetoothGattDescriptor> descriptors;
-} BluetoothGattCharacteristic;
-
-typedef struct {
-  std::string uuid;
-  std::vector<BluetoothGattCharacteristic> characteristics;
-  ConnectionCallback connection_cb;
-  RequestReadCallback request_read_cb;
-  RequestWriteCallback request_write_cb;
-  IndicationSentCallback indication_sent_cb;
-  CongestionCallback congestion_cb;
-  int service_handle;
-} BluetoothGattService;
 
 bool AddGattService(BluetoothGattService* service);
 bool StartGattService(BluetoothGattService* service);
@@ -68,3 +40,7 @@ bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
                   const std::vector<uint8_t>& value);
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings);
 bool StopAdvertisement();
+
+
+} // namespace BluetoothStack
+} // namespace Anki

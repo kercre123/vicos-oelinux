@@ -32,6 +32,9 @@
 
 using namespace std::chrono_literals;
 
+namespace Anki {
+namespace BluetoothStack {
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1215,3 +1218,7 @@ bool DisconnectGattPeer(int conn_id)
 
   return true;
 }
+
+
+} // namespace BluetoothStack
+} // namespace Anki
