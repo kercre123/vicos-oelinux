@@ -235,8 +235,12 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
     rsp->payload[0] = ANKI_CAMERA_MSG_C2S_STOP;
   }
   break;
-  case ANKI_CAMERA_MSG_C2S_PARAMS:
-    break;
+  case ANKI_CAMERA_MSG_C2S_PARAMS: {
+    anki_camera_exposure_t exposure;
+    memcpy(&exposure, msg->payload, sizeof(exposure));
+    camera_capture_set_exposure(exposure);
+  }
+  break;
   default:
     loge("%s: received unknown message: %d", __FUNCTION__, msg_id);
     rc = -1;

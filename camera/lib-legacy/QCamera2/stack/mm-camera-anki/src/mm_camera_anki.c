@@ -352,8 +352,144 @@ int anki_mm_camera_start_rdi_capture(mm_camera_lib_handle *handle)
   return 0;
 }
 
-/**************************************************************/
+int initBatchUpdate(mm_camera_test_obj_t *test_obj)
+{
+    parm_buffer_new_t *param_buf = ( parm_buffer_new_t * ) test_obj->parm_buf.mem_info.data;
 
+    memset(param_buf, 0, sizeof(ONE_MB_OF_PARAMS));
+    param_buf->num_entry = 0;
+    param_buf->curr_size = 0;
+    param_buf->tot_rem_size = ONE_MB_OF_PARAMS - sizeof(parm_buffer_new_t);
+
+    return MM_CAMERA_OK;
+}
+
+int commitSetBatch(mm_camera_test_obj_t *test_obj)
+{
+    int rc = MM_CAMERA_OK;
+    parm_buffer_new_t *param_buf = (parm_buffer_new_t *)test_obj->parm_buf.mem_info.data;
+
+    if (param_buf->num_entry > 0) {
+        rc = test_obj->cam->ops->set_parms(test_obj->cam->camera_handle, param_buf);
+        CDBG("%s: commitSetBatch done\n",__func__);
+    }
+
+    return rc;
+}
+
+
+int commitGetBatch(mm_camera_test_obj_t *test_obj)
+{
+    int rc = MM_CAMERA_OK;
+    parm_buffer_new_t *param_buf = (parm_buffer_new_t *)test_obj->parm_buf.mem_info.data;
+
+    if (param_buf->num_entry > 0) {
+        rc = test_obj->cam->ops->get_parms(test_obj->cam->camera_handle, param_buf);
+        CDBG("%s: commitGetBatch done\n",__func__);
+    }
+    return rc;
+}
+
+int AddSetParmEntryToBatch(mm_camera_test_obj_t *test_obj,
+                           cam_intf_parm_type_t paramType,
+                           uint32_t paramLength,
+                           void *paramValue)
+{
+    uint32_t j = 0;
+    parm_buffer_new_t *param_buf = (parm_buffer_new_t *) test_obj->parm_buf.mem_info.data;
+    uint32_t num_entry = param_buf->num_entry;
+    uint32_t size_req = paramLength + sizeof(parm_entry_type_new_t);
+    uint32_t aligned_size_req = (size_req + 3U) & (~3U);
+    parm_entry_type_new_t *curr_param = (parm_entry_type_new_t *)&param_buf->entry[0];
+
+    /* first search if the key is already present in the batch list
+     * this is a search penalty but as the batch list is never more
+     * than a few tens of entries at most,it should be ok.
+     * if search performance becomes a bottleneck, we can
+     * think of implementing a hashing mechanism.
+     * but it is still better than the huge memory required for
+     * direct indexing
+     */
+    for (j = 0; j < num_entry; j++) {
+      if (paramType == curr_param->entry_type) {
+        CDBG_ERROR("%s:Batch parameter overwrite for param: %d\n",
+                                                __func__, paramType);
+        break;
+      }
+      curr_param = GET_NEXT_PARAM(curr_param, parm_entry_type_new_t);
+    }
+
+    //new param, search not found
+    if (j == num_entry) {
+      if (aligned_size_req > param_buf->tot_rem_size) {
+        CDBG_ERROR("%s:Batch buffer running out of size, commit and resend\n",__func__);
+        commitSetBatch(test_obj);
+        initBatchUpdate(test_obj);
+      }
+
+      curr_param = (parm_entry_type_new_t *)(&param_buf->entry[0] +
+                                                  param_buf->curr_size);
+      param_buf->curr_size += aligned_size_req;
+      param_buf->tot_rem_size -= aligned_size_req;
+      param_buf->num_entry++;
+    }
+
+    curr_param->entry_type = paramType;
+    curr_param->size = (size_t)paramLength;
+    curr_param->aligned_size = aligned_size_req;
+    memcpy(&curr_param->data[0], paramValue, paramLength);
+    CDBG("%s: num_entry: %d, paramType: %d, paramLength: %d, aligned_size_req: %d\n",
+            __func__, param_buf->num_entry, paramType, paramLength, aligned_size_req);
+
+    return MM_CAMERA_OK;
+}
+
+int setExposure(mm_camera_test_obj_t *test_obj, uint16_t exposure_ms, float gain)
+{
+    int rc = MM_CAMERA_OK;
+
+    rc = initBatchUpdate(test_obj);
+    if (rc != MM_CAMERA_OK) {
+        CDBG_ERROR("%s: Batch camera parameter update failed\n", __func__);
+        goto ERROR;
+    }
+
+    cam_manual_exposure_t manual_exp;
+    // Best case camera can capture 746 (window height + vBlank) lines @ 30fps
+    // which is 22.38 lines/ms
+    manual_exp.linecnt = (uint16_t)(((float)exposure_ms * 22.38));
+    manual_exp.gain = gain;
+
+    rc = AddSetParmEntryToBatch(test_obj,
+                                CAM_INTF_PARM_RAW_MANUAL_EXPOSURE,
+                                sizeof(manual_exp),
+                                &manual_exp);
+
+    if (rc != MM_CAMERA_OK) {
+        CDBG_ERROR("%s: Exposure parameter not added to batch\n", __func__);
+        goto ERROR;
+    }
+
+    rc = commitSetBatch(test_obj);
+    if (rc != MM_CAMERA_OK) {
+        CDBG_ERROR("%s: Batch parameters commit failed\n", __func__);
+        goto ERROR;
+    }
+
+ERROR:
+    return rc;
+}
+
+/**************************************************************/
+int camera_set_exposure(uint16_t exposure_ms, float gain)
+{
+  int rc;
+  CameraObj* camera = &gTheCamera;
+
+  rc = setExposure(&(camera->lib_handle.test_obj), exposure_ms, gain);
+
+  return rc;
+}
 
 int camera_init()
 {

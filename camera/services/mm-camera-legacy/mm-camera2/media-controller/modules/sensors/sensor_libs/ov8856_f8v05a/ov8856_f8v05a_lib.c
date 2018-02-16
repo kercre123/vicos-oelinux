@@ -192,8 +192,8 @@ static struct msm_camera_i2c_reg_array init_reg_array1[] = {
 /////////   Analog   ////////////
 /////////////////////////////////
   {0xfe, 0x00, 0x00},
-  {0x03, 0x02, 0x00},
-  {0x04, 0xb5, 0x00},
+  {0x03, 0x02, 0x00}, // Exposure[12:8]
+  {0x04, 0xb5, 0x00}, // Exposure[7:0]
   {0x05, 0x02, 0x00},
   {0x06, 0x48, 0x00},
   {0x07, 0x00, 0x00}, //vb
@@ -545,19 +545,14 @@ static struct sensor_lib_chromatix_array ov8856_f8v05a_lib_chromatix_array = {
  *
  * DESCRIPTION:
  *==========================================================================*/
-static uint16_t ov8856_f8v05a_real_to_register_gain(float gain)
+// Convert to fixed point u8 with 6 places after the decimal (2^6 = 64)
+// as defined by the camera specs for the format of gain
+#define GAIN_TO_FIXED_POINT(gain) ((uint8_t)((gain) * (64)))
+// 1/64 = 0.015625
+#define FIXED_POINT_TO_GAIN(fp) ((float)((fp) * (0.015625)))
+static uint8_t real_to_register_gain(float gain)
 {
-  uint16_t reg_gain;
-
-  if (gain < 1.0) {
-      gain = 1.0;
-  } else if (gain > 15.5) {
-      gain = 15.5;
-  }
-  gain = (gain) * 128.0;
-  reg_gain = (uint16_t) gain;
-
-  return reg_gain;
+  return GAIN_TO_FIXED_POINT(gain);
 }
 
 /*===========================================================================
@@ -565,18 +560,9 @@ static uint16_t ov8856_f8v05a_real_to_register_gain(float gain)
  *
  * DESCRIPTION:
  *==========================================================================*/
-static float ov8856_f8v05a_register_to_real_gain(uint16_t reg_gain)
+static float register_to_real_gain(uint8_t reg_gain)
 {
-  float real_gain;
-
-  if (reg_gain < 0x80) {
-      reg_gain = 0x80;
-  } else if (reg_gain > 0x7C0) {
-      reg_gain = 0x7C0;
-  }
-  real_gain = (float) reg_gain / 128.0;
-
-  return real_gain;
+  return FIXED_POINT_TO_GAIN(reg_gain);
 }
 
 /*===========================================================================
@@ -590,8 +576,8 @@ static int32_t ov8856_f8v05a_calculate_exposure(float real_gain,
   if (!exp_info) {
     return -1;
   }
-  exp_info->reg_gain = ov8856_f8v05a_real_to_register_gain(real_gain);
-  exp_info->sensor_real_gain = ov8856_f8v05a_register_to_real_gain(exp_info->reg_gain);
+  exp_info->reg_gain = real_to_register_gain(real_gain);
+  exp_info->sensor_real_gain = register_to_real_gain(exp_info->reg_gain);
   exp_info->digital_gain = real_gain / exp_info->sensor_real_gain;
   exp_info->line_count = line_count;
   exp_info->sensor_digital_gain = 0x1;
@@ -603,9 +589,12 @@ static int32_t ov8856_f8v05a_calculate_exposure(float real_gain,
  *
  * DESCRIPTION:
  *==========================================================================*/
-static int32_t ov8856_f8v05a_fill_exposure_array(uint16_t gain, uint32_t line,
-  uint32_t fl_lines, int32_t luma_avg, uint32_t fgain,
-  struct msm_camera_i2c_reg_setting* reg_setting)
+static int32_t ov8856_f8v05a_fill_exposure_array(uint16_t gain, 
+                                                 uint32_t line,
+                                                 uint32_t fl_lines, 
+                                                 int32_t luma_avg, 
+                                                 uint32_t fgain,
+                                                 struct msm_camera_i2c_reg_setting* reg_setting)
 {
   int32_t rc = 0;
   uint16_t reg_count = 0;
@@ -615,56 +604,21 @@ static int32_t ov8856_f8v05a_fill_exposure_array(uint16_t gain, uint32_t line,
     return -1;
   }
 
-  for (i = 0; i < sensor_lib_ptr.groupon_settings->size; i++) {
-    reg_setting->reg_setting[reg_count].reg_addr =
-      sensor_lib_ptr.groupon_settings->reg_setting[i].reg_addr;
-    reg_setting->reg_setting[reg_count].reg_data =
-      sensor_lib_ptr.groupon_settings->reg_setting[i].reg_data;
-    reg_count = reg_count + 1;
-  }
-
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.output_reg_addr->frame_length_lines;
-  reg_setting->reg_setting[reg_count].reg_data = (fl_lines & 0xFF00) >> 8;
+  reg_setting->reg_setting[reg_count].reg_addr = 0xfe;
+  reg_setting->reg_setting[reg_count].reg_data = 0x00;
   reg_count++;
 
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.output_reg_addr->frame_length_lines + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (fl_lines & 0xFF);
+  reg_setting->reg_setting[reg_count].reg_addr = 0x03;
+  reg_setting->reg_setting[reg_count].reg_data = (line & 0xFF00) >> 8;
   reg_count++;
 
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info->coarse_int_time_addr;
-  reg_setting->reg_setting[reg_count].reg_data = (line & 0xffff) >> 12;
+  reg_setting->reg_setting[reg_count].reg_addr = 0x04;
+  reg_setting->reg_setting[reg_count].reg_data = line & 0xFF;
   reg_count++;
 
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info->coarse_int_time_addr + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (line & 0x0fff) >> 4;
+  reg_setting->reg_setting[reg_count].reg_addr = 0xb0;
+  reg_setting->reg_setting[reg_count].reg_data = gain & 0xFF;
   reg_count++;
-
-    reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info->coarse_int_time_addr + 2;
-  reg_setting->reg_setting[reg_count].reg_data = (line & 0x0f) << 4;
-  reg_count++;
-
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info->global_gain_addr;
-  reg_setting->reg_setting[reg_count].reg_data = (gain & 0x7FF) >> 8;
-  reg_count++;
-
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info->global_gain_addr + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (gain & 0xFF);
-  reg_count++;
-
-  for (i = 0; i < sensor_lib_ptr.groupoff_settings->size; i++) {
-    reg_setting->reg_setting[reg_count].reg_addr =
-      sensor_lib_ptr.groupoff_settings->reg_setting[i].reg_addr;
-    reg_setting->reg_setting[reg_count].reg_data =
-      sensor_lib_ptr.groupoff_settings->reg_setting[i].reg_data;
-    reg_count = reg_count + 1;
-  }
 
   reg_setting->size = reg_count;
   reg_setting->addr_type = MSM_CAMERA_I2C_BYTE_ADDR;

@@ -54,6 +54,8 @@ int camera_stop();
 // De-initializes camera, makes it available to rest of system
 int camera_cleanup();
 
+int camera_set_exposure(uint16_t exposure_ms, float gain);
+
 #ifdef __cplusplus
 }
 #endif

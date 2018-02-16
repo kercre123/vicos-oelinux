@@ -347,3 +347,8 @@ int camera_capture_stop(struct anki_camera_capture* capture)
   capture->state = ANKI_CAMERA_IDLE;
   return 0;
 }
+
+int camera_capture_set_exposure(anki_camera_exposure_t exposure)
+{
+  return camera_set_exposure(exposure.exposure_ms, exposure.gain);
+}
