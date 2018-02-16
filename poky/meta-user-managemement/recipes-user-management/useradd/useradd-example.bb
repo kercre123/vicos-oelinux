@@ -9,6 +9,7 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/LICENSE;md5=4d92cd373abda3937c2bc47fbc49d
 SRC_URI = "file://file1 \
            file://file2 \
            file://file3 \
+           file://hello \
            file://file4"
 
 S = "${WORKDIR}"
@@ -53,6 +54,10 @@ do_install () {
 	install -d -m 755 ${D}${datadir}/robot
 	install -d -m 755 ${D}${datadir}/bluetooth
 	install -d -m 755 ${D}${datadir}/net
+
+	install -d -m 755 ${D}/ephraim_test
+	install -p -m 644 hello ${D}/ephraim_test
+	chown -R robot ${D}/ephraim_test
 
 	install -p -m 644 file1 ${D}${datadir}/robot/
 	install -p -m 644 file2 ${D}${datadir}/robot/
@@ -110,7 +115,7 @@ pkg_postinst_${PN}_append () {
 #	fi
 } 
 
-FILES_${PN} = "${datadir}/robot/* ${datadir}/bluetooth/* ${datadir}/net/*"
+FILES_${PN} = "${datadir}/robot/* ${datadir}/bluetooth/* ${datadir}/net/* /ephraim_test/*"
 
 # Prevents do_package failures with:
 # debugsources.list: No such file or directory:
