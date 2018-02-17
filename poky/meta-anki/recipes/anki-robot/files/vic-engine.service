@@ -5,10 +5,13 @@ After=vic-anim.service
 Wants=vic-anim.service
 PartOf=anki-robot.target
 
+ConditionFileIsExecutable=/usr/bin/logwrapper
+ConditionFileIsExecutable=/anki/bin/vic-engine
+
 [Service]
 EnvironmentFile=/anki/etc/vic-engine.env
-Restart=on-failure
-ExecStart=/anki/bin/vic-engine $VIC_ENGINE_OPTS
+Restart=always
+ExecStart=/usr/bin/logwrapper /anki/bin/vic-engine $VIC_ENGINE_OPTS
 
 [Install]
 WantedBy=anki-robot.target
