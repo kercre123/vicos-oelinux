@@ -15,6 +15,7 @@
 #include "taskExecutor.h"
 
 #include <deque>
+#include <map>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -112,8 +113,7 @@ class IPCEndpoint {
   class PeerState {
    public:
     PeerState(ev::io* read_write_watcher, TaskExecutor* task_executor)
-        : mutex_(new std::mutex())
-        , read_write_watcher_(read_write_watcher)
+        : read_write_watcher_(read_write_watcher)
         , task_executor_(task_executor) { }
     ~PeerState();
     int GetFD() const;
@@ -123,17 +123,15 @@ class IPCEndpoint {
     void EraseMessageFromFrontOfQueue();
     std::vector<uint8_t>& GetIncomingDataVector() { return incoming_data_; }
    private:
-    std::mutex* mutex_;
+    std::mutex mutex_;
     ev::io* read_write_watcher_;
     std::deque<std::vector<uint8_t>> outgoing_queue_;
     std::vector<uint8_t> incoming_data_;
     TaskExecutor* task_executor_;
   };
   void AddPeerByFD(const int fd);
-  std::vector<PeerState>::iterator FindPeerByFD(const int fd);
-  void RemovePeerByFD(const int fd);
   void CloseSocket();
-  void ReceiveMessage(PeerState& p);
+  void ReceiveMessage(PeerState* p);
   void SendQueuedMessagesToPeer(const int sockfd);
   virtual void OnReceiveError(const int sockfd);
   virtual void OnPeerClose(const int sockfd);
@@ -147,7 +145,7 @@ class IPCEndpoint {
   TaskExecutor* task_executor_;
   int sockfd_;
   struct sockaddr_un addr_;
-  std::vector<PeerState> peers_;
+  std::map<int,PeerState*> peers_;
 };
 
 } // namespace BluetoothDaemon
