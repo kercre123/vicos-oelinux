@@ -35,7 +35,10 @@ export RETRY_LIMIT=3
 HELP="Usage $0 {start | stop | restart} <ap | sta,ap>"
 DUMP_TO_KMSG=/dev/kmsg
 serialno=`cat /sys/devices/virtual/android_usb/android0/iSerial`
-
+target_name=`cat /sys/devices/soc0/machine`
+if [ "$target_name" == "APQ8053" ]; then
+ user="-c system"
+fi
 do_ctrl_cld_ll () {
     case "$1" in
     start)
@@ -61,8 +64,8 @@ do_ctrl_cld_ll () {
         fi
 
         echo "Starting PTT Socket App... $@" > $DUMP_TO_KMSG
-        /usr/bin/ptt_socket_app -d &
-
+        ptt_args=" -d &"
+        start-stop-daemon $user -S -b -a /usr/bin/ptt_socket_app --$ptt_args
         set -e
         insmod $MODULE_BASE/extra/wlan.ko $@
         set +e

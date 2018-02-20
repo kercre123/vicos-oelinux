@@ -2,7 +2,10 @@
 
 DUMP_TO_KMSG=/dev/kmsg
 flag_file="/data/misc/wifi/FIRST_BOOT.flag"
-
+target_name=`cat /sys/devices/soc0/machine`
+if [ "$target_name" == "APQ8053" ]; then
+ user="-c system"
+fi
 mac=`cat /sys/class/net/wlan0/address`
 var1=`echo $mac|cut -d: -f4| tr '[a-z]' '[A-Z]'`
 var2=`echo $mac|cut -d: -f5| tr '[a-z]' '[A-Z]'`
@@ -15,8 +18,12 @@ if [ -f "$flag_file" ]; then
     sync
 fi
 
-/usr/sbin/hostapd -B -P /var/run/hostapd.wlan0.pid /data/misc/wifi/hostapd.conf
-
+if [ "$user" == "-c system" ]; then
+ mkdir -p /data/misc/wifi/hostapd
+ chown -R 1000:0 /data/misc/wifi/hostapd
+fi
+hostapd_args=" -B -P /var/run/hostapd.wlan0.pid /data/misc/wifi/hostapd.conf"
+start-stop-daemon $user -S -b -a /usr/sbin/hostapd --$hostapd_args
 /sbin/brctl addbr br0
 ifconfig eth0 down
 /sbin/brctl addif br0 wlan0
@@ -25,12 +32,11 @@ ifconfig eth0 up
 ifconfig wlan0 up
 ifconfig br0 hw ether $mac up
 
-/sbin/ip -4 monitor addr dev br0 | /usr/bin/ipmon &
+ip_arg=" -4 monitor addr dev br0"
+start-stop-daemon $user -S -a /sbin/ip --$ip_arg | start-stop-daemon $user -S -a /usr/bin/ipmon &
 #for discovery tcp connect bug
 sleep 1
-/usr/bin/discovery IPC8053_$ssid &
-/usr/bin/ipc-webserver &
-/usr/bin/rebootkey &
+start-stop-daemon $user -S -b -a /usr/bin/discovery
 
 echo "IPC8053 boot completed" > $DUMP_TO_KMSG
 
