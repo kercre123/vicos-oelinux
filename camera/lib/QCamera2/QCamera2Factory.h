@@ -32,6 +32,7 @@
 
 // Camera dependencies
 #include "hardware/camera_common.h"
+#include <pthread.h>
 
 namespace qcamera {
 
@@ -72,6 +73,7 @@ private:
     int mNumOfCameras_expose;
     hal_desc *mHalDescriptors;
     const camera_module_callbacks_t *mCallbacks;
+    static pthread_mutex_t mFactoryLock;
 };
 
 }; /*namespace qcamera*/

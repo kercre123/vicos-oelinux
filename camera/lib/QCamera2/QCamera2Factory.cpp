@@ -55,6 +55,8 @@ using namespace android;
 namespace qcamera {
 
 QCamera2Factory *gQCamera2Factory = NULL;
+pthread_mutex_t QCamera2Factory::mFactoryLock = PTHREAD_MUTEX_INITIALIZER;
+
 pthread_mutex_t gCamLock = PTHREAD_MUTEX_INITIALIZER;
 #ifdef QCAMERA_HAL1_SUPPORT
 QCameraMuxer *gQCameraMuxer = NULL;
@@ -136,6 +138,8 @@ QCamera2Factory::QCamera2Factory()
     } else {
         LOGI("%d camera devices detected!", mNumOfCameras);
     }
+
+    LOGI("%d camera devices detected!", mNumOfCameras);
 }
 
 /*===========================================================================
@@ -171,8 +175,8 @@ QCamera2Factory::~QCamera2Factory()
  *==========================================================================*/
 int QCamera2Factory::get_number_of_cameras()
 {
+    pthread_mutex_lock(&mFactoryLock);
     int numCameras = 0;
-
     if (!gQCamera2Factory) {
         gQCamera2Factory = new QCamera2Factory();
         if (!gQCamera2Factory) {
@@ -188,6 +192,7 @@ int QCamera2Factory::get_number_of_cameras()
         numCameras = gQCamera2Factory->getNumberOfCameras();
 
     LOGH("num of cameras: %d", numCameras);
+    pthread_mutex_unlock(&mFactoryLock);
     return numCameras;
 }
 
@@ -324,6 +329,8 @@ int QCamera2Factory::getNumberOfCameras()
 int QCamera2Factory::getCameraInfo(int camera_id, struct camera_info *info)
 {
     int rc;
+
+    LOGI("mNumOfCameras=%d", mNumOfCameras);
 
     if (!mNumOfCameras || camera_id >= mNumOfCameras || !info ||
         (camera_id < 0)) {

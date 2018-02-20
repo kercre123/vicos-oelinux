@@ -61,6 +61,7 @@ typedef enum {
 #define QOMX_IMAGE_EXT_MEM_OPS_NAME      "OMX.QCOM.image.exttype.mem_ops"
 #define QOMX_IMAGE_EXT_JPEG_SPEED_NAME      "OMX.QCOM.image.exttype.jpeg.speed"
 #define QOMX_IMAGE_EXT_MULTI_IMAGE_NAME  "OMX.QCOM.image.exttype.multi.image"
+#define QOMX_IMAGE_EXT_SECOND_THUMBNAIL_NAME "OMX.QCOM.image.exttype.second.thumbnail"
 
 /** QOMX_IMAGE_EXT_INDEXTYPE
 *  This enum is an extension of the OMX_INDEXTYPE enum and
@@ -102,6 +103,9 @@ typedef enum {
 
   //Name: OMX.QCOM.image.exttype.multi.image
   QOMX_IMAGE_EXT_MULTI_IMAGE = 0x07F000C,
+
+  //Name: OMX.QCOM.image.exttype.second.thumbnail
+  QOMX_IMAGE_EXT_SECOND_THUMBNAIL = 0x07F000D,
 
 } QOMX_IMAGE_EXT_INDEXTYPE;
 

@@ -166,6 +166,9 @@ typedef struct {
   /* should create thumbnail from main image or not */
   uint32_t encode_thumbnail;
 
+  /* should create second thumbnail from main image or not */
+  uint32_t encode_second_thumbnail;
+
   /* src img bufs */
   mm_jpeg_buf_t src_main_buf[MM_JPEG_MAX_BUF];
 
@@ -199,6 +202,9 @@ typedef struct {
 
   /* thumbnail dimension */
   mm_jpeg_dim_t thumb_dim;
+
+  /* second thumbnail dimension */
+  mm_jpeg_dim_t second_thumb_dim;
 
   /* rotation informaiton */
   uint32_t rotation;
@@ -268,6 +274,7 @@ typedef struct {
   int32_t dst_index;
   uint32_t thumb_index;
   mm_jpeg_dim_t thumb_dim;
+  mm_jpeg_dim_t second_thumb_dim;
 
   /* rotation informaiton */
   uint32_t rotation;

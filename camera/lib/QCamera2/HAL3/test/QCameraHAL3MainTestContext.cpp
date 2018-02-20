@@ -184,6 +184,9 @@ int MainTestContext::hal3appGetUserEvent()
         }
     }while(choice != MENU_EXIT);
     exit:
+    mCamHal3Base->hal3appCameraLibClose();
+    delete mCamHal3Base;
+    mCamHal3Base = NULL;
     return 0;
 }
 
@@ -643,7 +646,8 @@ int main(int argc, char *argv[])
             delete[] camInstances;
         }
     }
-    dlclose(binderHandle);
+    if (binderHandle)
+        dlclose(binderHandle);
     printf("Exiting application\n");
     return rc;
 }
