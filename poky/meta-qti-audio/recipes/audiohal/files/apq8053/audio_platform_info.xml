@@ -50,6 +50,8 @@
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS2" type="in" id="38"/>
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS3" type="in" id="39"/>
         <usecase name="USECASE_AUDIO_RECORD_COMPRESS4" type="in" id="40"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS5" type="in" id="41"/>
+        <usecase name="USECASE_AUDIO_RECORD_COMPRESS6" type="in" id="42"/>
     </pcm_ids>
     <config_params>
         <param key="spkr_1_tz_name" value="wsa881x.0f"/>
