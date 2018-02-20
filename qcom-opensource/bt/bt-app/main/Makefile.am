@@ -22,6 +22,8 @@ AM_CPPFLAGS += -I${WORKSPACE}/qcom-opensource/bt/bt-app \
                -I${WORKSPACE}/qcom-opensource/bt/bt-app/gap/include \
                -I${WORKSPACE}/qcom-opensource/bt/bt-app/pan/include \
                -I${WORKSPACE}/qcom-opensource/bt/bt-app/rsp/include \
+               -I${WORKSPACE}/qcom-opensource/bt/bt-app/gattctest/include \
+               -I${WORKSPACE}/qcom-opensource/bt/bt-app/gattstest/include \
                -I${WORKSPACE}/qcom-opensource/bt/bt-app/main/include \
                -I${WORKSPACE}/qcom-opensource/bt/bt-app/hfp_client/include \
                -I${WORKSPACE}/qcom-opensource/bt/bt-app/hfp_ag/include \
@@ -65,7 +67,9 @@ c_sources = ../utils/src/utils.c \
             ../hfp_ag/src/HfpAG.cpp \
             ../pan/src/Pan.cpp \
             ../sdp_client/src/SdpClient.cpp\
-            ../rsp/src/Rsp.cpp
+            ../rsp/src/Rsp.cpp \
+            ../gattctest/src/GattcTest.cpp \
+            ../gattstest/src/GattsTest.cpp
 
 if USE_BT_OBEX
 c_sources +=  ../pbap_client/src/PbapClient.cpp \

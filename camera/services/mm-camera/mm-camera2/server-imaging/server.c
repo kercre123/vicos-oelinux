@@ -590,7 +590,7 @@ int main(int argc __unused, char *argv[] __unused)
           close(mct_fd_info->fd[1]);
           free(mct_fd_info);
         }
-#ifdef FDLEAK_FLAG
+#if (defined(_ANDROID_) && defined(FDLEAK_FLAG) && !defined(_DRONE_))
   property_get("persist.camera.fdleak.enable", prop, "0");
   enable_fdleak = atoi(prop);
   if (enable_fdleak) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -104,7 +104,7 @@ void ol_rx_trigger_restore(htt_pdev_handle htt_pdev, adf_nbuf_t head_msdu,
     while (head_msdu) {
         next = adf_nbuf_next(head_msdu);
         VOS_TRACE(VOS_MODULE_ID_TXRX, VOS_TRACE_LEVEL_INFO,
-            "freeing %p\n", head_msdu);
+            "freeing %pK\n", head_msdu);
         adf_nbuf_free(head_msdu);
         head_msdu = next;
     }
@@ -297,6 +297,45 @@ ol_rx_mon_indication_handler(
 
 	if (peer)
 		ol_txrx_peer_unref_delete(peer);
+}
+
+/*
+ * ol_rx_mon_mac_header_handler() - htt rx mac header msg handler
+ * @pdev: pointer to struct ol_txrx_pdev_handle
+ * @rx_ind_msg: htt rx indication message
+ */
+void
+ol_rx_mon_mac_header_handler(
+	ol_txrx_pdev_handle pdev,
+	adf_nbuf_t rx_ind_msg)
+{
+	adf_nbuf_t head_msdu = NULL;
+	adf_nbuf_t tail_msdu = NULL;
+	adf_nbuf_t next;
+	htt_pdev_handle htt_pdev;
+
+	htt_pdev = pdev->htt_pdev;
+
+	/* only if the rx callback is ready */
+	if (NULL == pdev->osif_rx_mon_cb)
+	    return;
+
+	htt_rx_mac_header_mon_process(htt_pdev,
+				      rx_ind_msg,
+				      &head_msdu,
+				      &tail_msdu);
+
+	if (head_msdu) {
+	   if (pdev->osif_rx_mon_cb) {
+	       pdev->osif_rx_mon_cb(head_msdu);
+	   } else {
+	      while (head_msdu) {
+		next = adf_nbuf_next(head_msdu);
+		adf_nbuf_free(head_msdu);
+		head_msdu = next;
+		}
+	   }
+	}
 }
 
 void
@@ -654,7 +693,7 @@ ol_rx_sec_ind_handler(
         return;
     }
     TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1,
-        "sec spec for peer %p (%02x:%02x:%02x:%02x:%02x:%02x): "
+        "sec spec for peer %pK (%02x:%02x:%02x:%02x:%02x:%02x): "
         "%s key of type %d\n",
         peer,
         peer->mac_addr.raw[0], peer->mac_addr.raw[1], peer->mac_addr.raw[2],
@@ -815,7 +854,7 @@ void
 ol_rx_offload_deliver_ind_handler(
     ol_txrx_pdev_handle pdev,
     adf_nbuf_t msg,
-    int msdu_cnt)
+    u_int16_t msdu_cnt)
 {
     int vdev_id, peer_id, tid;
     adf_nbuf_t head_buf, tail_buf, buf;
@@ -823,6 +862,17 @@ ol_rx_offload_deliver_ind_handler(
     struct ol_txrx_vdev_t *vdev = NULL;
     u_int8_t fw_desc;
     htt_pdev_handle htt_pdev = pdev->htt_pdev;
+
+    if (msdu_cnt > htt_rx_offload_msdu_cnt(htt_pdev)) {
+        TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
+            "%s: invalid msdu_cnt=%u\n",
+            __func__,
+            msdu_cnt);
+        if (pdev->cfg.is_high_latency)
+            htt_rx_desc_frame_free(htt_pdev, msg);
+
+        return;
+    }
 
     while (msdu_cnt) {
         if (!htt_rx_offload_msdu_pop(
@@ -1055,7 +1105,7 @@ ol_rx_deliver(
         if (OL_RX_DECAP(vdev, peer, msdu, &info) != A_OK) {
             discard = 1;
             TXRX_PRINT(TXRX_PRINT_LEVEL_WARN,
-                "decap error %p from peer %p "
+                "decap error %pK from peer %pK "
                 "(%02x:%02x:%02x:%02x:%02x:%02x) len %d\n",
                  msdu, peer,
                  peer->mac_addr.raw[0], peer->mac_addr.raw[1],
@@ -1224,7 +1274,7 @@ ol_rx_discard(
 
         msdu_list = adf_nbuf_next(msdu_list);
         TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1,
-            "discard rx %p from partly-deleted peer %p "
+            "discard rx %pK from partly-deleted peer %pK "
             "(%02x:%02x:%02x:%02x:%02x:%02x)\n",
             msdu, peer,
             peer->mac_addr.raw[0], peer->mac_addr.raw[1],

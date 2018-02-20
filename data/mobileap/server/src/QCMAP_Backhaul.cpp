@@ -58,6 +58,7 @@ SERVICES:
 #include "ds_util.h"
 #include "qualcomm_mobile_access_point_msgr_v01.h"
 #include "QCMAP_Backhaul.h"
+#include "QCMAP_Backhaul_WWAN.h"
 #include "QCMAP_WLAN.h"
 #include "QCMAP_Firewall.h"
 #include "QCMAP_NATALG.h"
@@ -1297,6 +1298,7 @@ void QCMAP_Backhaul::UpdateGlobalV6addr
   QCMAP_Backhaul_Cradle* QcMapBackhaulCradleMgr=GET_DEFAULT_BACKHAUL_CRADLE_OBJECT();
   QCMAP_Tethering *QcMapTetheringMgr = QCMAP_Tethering::Get_Instance(false);
   QCMAP_Backhaul_WWAN* QcMapBackhaulWWANMgr=GET_DEFAULT_BACKHAUL_WWAN_OBJECT();
+  boolean prefix_delegation = false;
 
   struct ps_in6_addr *dst_addr_ptr = NULL, *iid_ptr = NULL;
   struct ps_in6_addr *global_addr_ptr = NULL, *prefix_addr_ptr = NULL;
@@ -1309,6 +1311,8 @@ void QCMAP_Backhaul::UpdateGlobalV6addr
   int qcmap_cm_error = QCMAP_CM_SUCCESS;
   char ipv6addr[INET6_ADDRSTRLEN];
   int ret;
+  struct ps_in6_addr *prefix_ptr;
+
 
   LOG_MSG_INFO1("Entering UpdateGlobalV6addr", 0, 0, 0);
   if(!QcMapBackhaulMgr)
@@ -1319,15 +1323,17 @@ void QCMAP_Backhaul::UpdateGlobalV6addr
   else if(QCMAP_Backhaul::enable_ipv6)
   {
     ret = QcMapBackhaulMgr->GetDeviceName(devname, QCMAP_MSGR_IP_FAMILY_V6_V01, &qmi_err_num);
-    if( QcMapBackhaulWWANMgr && ret==BACKHAUL_TYPE_WWAN &&
+    LOG_MSG_INFO1("GetDeviceName returned %d", ret, 0, 0);
+    if((ret == 0 &&
         !QCMAP_Backhaul_WLAN::IsSTAAvailableV6() &&
         !QCMAP_BT_TETHERING::IsBTBackhaulAvailableV6() &&
         !QCMAP_Backhaul_Cradle::IsCradleBackhaulAvailableV6() &&
-        !QCMAP_Backhaul_Ethernet::IsEthBackhaulAvailableV6() &&
-        QcMapBackhaulWWANMgr->GetIPv6State() != QCMAP_CM_V6_WAN_CONNECTED )
+        !QCMAP_Backhaul_Ethernet::IsEthBackhaulAvailableV6()) ||
+        (QcMapBackhaulWWANMgr && ret == BACKHAUL_TYPE_WWAN &&
+        QcMapBackhaulWWANMgr->GetIPv6State() != QCMAP_CM_V6_WAN_CONNECTED))
     {
       /* QCMAP IPV6 backhaul not up */
-      LOG_MSG_ERROR("QCMAP IPV6 default backhaul not UP", 0, 0, 0);
+      LOG_MSG_ERROR("QCMAP IPv6 default backhaul not UP", 0, 0, 0);
       return;
     }
 
@@ -1381,6 +1387,9 @@ void QCMAP_Backhaul::UpdateGlobalV6addr
           {
             global_addr_ptr->ps_s6_addr64[0] = prefix_addr_ptr->ps_s6_addr64[0];
             global_addr_ptr->ps_s6_addr64[1] = iid_ptr->ps_s6_addr64[1];
+            memset(ipv6addr, 0, INET6_ADDRSTRLEN);
+            inet_ntop(AF_INET6,(void *)clientInfo->ipv6[0].addr,ipv6addr, INET6_ADDRSTRLEN);
+            LOG_MSG_INFO1("Global V6 Address %s updated\n",ipv6addr,0,0);
 
             if (QcMapTetheringMgr && ((clientInfo->device_type ==
                     QCMAP_MSGR_DEVICE_TYPE_USB_V01) &&
@@ -1430,6 +1439,14 @@ void QCMAP_Backhaul::UpdateGlobalV6addr
           QcMapBackhaulMgr->ipv6_prefix_info.cache_info.ifa_valid = IPV6_DEFAULT_VALID_LIFETIME;
           QcMapBackhaulMgr->GetIPV6PrefixInfo(devname,&QcMapBackhaulMgr->ipv6_prefix_info);
         }
+      }
+
+      QCMAP_Backhaul_WWAN::GetPrefixDelegationStatus(&prefix_delegation, &qmi_err_num);
+      if(prefix_delegation)
+      {
+        LOG_MSG_ERROR("Prefix delegation Enabled.Don't update client prefixes",
+                      0, 0, 0);
+        return;
       }
 
       /* Check if the RA received on current backhaul interface. If not ignore the RA. */
@@ -1492,7 +1509,7 @@ boolean QCMAP_Backhaul::GetNetworkConfig
   uint32 default_gw = 0;
   in_addr_t netmask = 0;
   FILE *file_ptr=NULL;
-  char temp_str[16]="";
+  char temp_str[INET6_ADDRSTRLEN]="";
   char devname[DSI_CALL_INFO_DEVICE_NAME_MAX_LEN+2];
   char char_match[] = "nameserver "; //search for this pattern in file
   boolean pri_dns_found = false; // seperates out primary DNS and secondary DNS
@@ -1500,6 +1517,7 @@ boolean QCMAP_Backhaul::GetNetworkConfig
   memset(devname, 0, DSI_CALL_INFO_DEVICE_NAME_MAX_LEN+2);
   QCMAP_ConnectionManager* QcMapMgr=QCMAP_ConnectionManager::Get_Instance(NULL,false);
   QCMAP_LAN *QcMapLANMgr = GET_DEFAULT_LAN_OBJECT();
+  struct sockaddr_in6 sa6;
 
   QCMAP_CM_LOG_FUNC_ENTRY_AND_PROFILE_INFO(profileHandle);
 
@@ -1532,6 +1550,11 @@ boolean QCMAP_Backhaul::GetNetworkConfig
       if(strncmp(temp_str,char_match,strlen(char_match))==0)
       {
         fscanf(file_ptr, "%s", temp_str);
+        if (inet_pton(AF_INET6, temp_str, &(sa6.sin6_addr)) == 1)
+        {
+          LOG_MSG_INFO1("Got ipv6 address %s ignore it",temp_str,0,0);
+          continue;
+        }
         if(!pri_dns_found)
         {
           inet_aton(temp_str, (in_addr *)primary_dns);
@@ -1596,7 +1619,7 @@ boolean QCMAP_Backhaul::GetNetworkConfig
   qmi_error_type_v01 *qmi_err_num
 
 @return
-  true	- on Success
+  true  - on Success
   false - on Failure
 
 @note
@@ -4056,7 +4079,7 @@ boolean QCMAP_Backhaul::DeprecateClientRA(void)
   }
 
   //Remove Delegated Prefix's
-  if (!qcmap_cm_delete_ipv6_delegated_prefix(false, NULL, &qmi_err_num))
+  if (QCMAP_Backhaul_WWAN::SendDeleteDelegatedPrefix(false, NULL, &qmi_err_num) == QCMAP_CM_ERROR)
   {
     LOG_MSG_ERROR("Error: Unable flush prefix's %d", qmi_err_num, 0, 0);
   }
@@ -4113,6 +4136,7 @@ bool QCMAP_Backhaul::AssignGlobalV6AddrAllClients
   struct ps_in6_addr *iid_ptr = NULL;
   struct ps_in6_addr *global_addr_ptr = NULL;
   const void   *dummy = NULL;
+  char ipv6addr[INET6_ADDRSTRLEN];
 
 
   if ( addrList->addrListHead == NULL)
@@ -4138,6 +4162,10 @@ bool QCMAP_Backhaul::AssignGlobalV6AddrAllClients
 
     global_addr_ptr->ps_s6_addr64[0] = prefix_addr_ptr->ps_s6_addr64[0];
     global_addr_ptr->ps_s6_addr64[1] = iid_ptr->ps_s6_addr64[1];
+
+    memset(ipv6addr, 0, INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6,(void *)nodeInfo->ipv6[0].addr,ipv6addr, INET6_ADDRSTRLEN);
+    LOG_MSG_INFO1("Global V6 Address %s updated\n",ipv6addr,0,0);
 
     if (QcMapTetheringMgr && ((nodeInfo->device_type ==
             QCMAP_MSGR_DEVICE_TYPE_USB_V01) &&
@@ -6718,10 +6746,23 @@ void QCMAP_Backhaul::SwitchToWWANBackhaul()
   if ( QcMapBackhaulWWANMgr->GetIPv6State() == QCMAP_CM_V6_WAN_CONNECTED )
   {
     if(QcMapBackhaulMgr)
+    {
       QcMapBackhaulMgr->EnableIPV6Forwarding();
+    }
 
     if(QcMapFirewall)
+    {
       QcMapFirewall->EnableIPV6Firewall();
+    }
+
+    if(QCMAPLANMgr &&
+      (QCMAP_MSGR_DHCPV6_MODE_UP_V01 != QcMapBackhaulWWANMgr->dhcpv6_dns_conf.dhcpv6_enable_state)&&
+      (QcMapBackhaulWWANMgr->GetProfileHandle() == QCMAP_Backhaul::GetDefaultProfileHandle()) &&
+      (QcMapBackhaulWWANMgr->GetProfileHandle() != 0))
+    {
+      QCMAPLANMgr->AddDNSNameServers(QcMapBackhaulWWANMgr->pri_dns_ipv6_addr,
+                                     QcMapBackhaulWWANMgr->sec_dns_ipv6_addr);
+    }
   }
   /* Disable IPv4 MCAST */
   LOG_MSG_INFO1(" Stop PIMD to disable MCAST forwarding on STA interface.",0,0,0);
@@ -7212,7 +7253,8 @@ int QCMAP_Backhaul::GetDeviceName
     strlcpy(devname, BRIDGE_IFACE, strlen(BRIDGE_IFACE)+1);
     return BACKHAUL_TYPE_AP_STA_BRIDGE;
   }
-  else if (QCMAP_Backhaul::current_backhaul == BACKHAUL_TYPE_AP_STA_ROUTER)
+  else if (QcMapBackhaulWLANMgr &&
+           (QCMAP_Backhaul::current_backhaul == BACKHAUL_TYPE_AP_STA_ROUTER))
   {
     strlcpy( devname, QcMapBackhaulWLANMgr->apsta_cfg.sta_interface,\
              QCMAP_MSGR_INTF_LEN);

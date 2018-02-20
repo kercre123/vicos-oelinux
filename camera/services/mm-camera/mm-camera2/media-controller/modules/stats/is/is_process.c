@@ -7,7 +7,9 @@
 #include "is.h"
 #include "eis_dg_interface.h"
 #include "mesh_fusion_interface.h"
-
+#ifdef FEATURE_DG
+#include "digital_gimbal_interface.h"
+#endif
 
 
 /** is_process_is_initialize:
@@ -27,8 +29,12 @@ static void is_process_is_initialize(is_info_t *is_info, int stream_type)
   is_init_data.frame_cfg.frame_fps = is_info->fps;
   is_init_data.frame_cfg.dis_frame_width = is_info->width[stream_type];
   is_init_data.frame_cfg.dis_frame_height = is_info->height[stream_type];
+  is_init_data.frame_cfg.dis_frame_stride = is_info->stride[stream_type];
+  is_init_data.frame_cfg.dis_frame_scanline = is_info->scanline[stream_type];
   is_init_data.frame_cfg.vfe_output_width = is_info->vfe_width[stream_type];
   is_init_data.frame_cfg.vfe_output_height = is_info->vfe_height[stream_type];
+  is_init_data.frame_cfg.vfe_output_stride = is_info->vfe_stride[stream_type];
+  is_init_data.frame_cfg.vfe_output_scanline = is_info->vfe_scanline[stream_type];
   is_init_data.frame_cfg.num_mesh_y = is_info->num_mesh_y;
   is_init_data.rs_cs_config.num_row_sum = is_info->num_row_sum;
   is_init_data.rs_cs_config.num_col_sum = is_info->num_col_sum;
@@ -105,6 +111,25 @@ static void is_process_is_initialize(is_info_t *is_info, int stream_type)
         }
       }
     }
+    #ifdef FEATURE_DG
+    else if (is_info->is_type[stream_type] == IS_TYPE_DIG_GIMB) {
+      is_init_data.dewarp_tuning = (void *)&is_info->dewarp_tuning;
+      rc = digital_gimbal_initialize(&is_info->eis_dg_handle, &is_init_data);
+      if (rc == -1) {
+        IS_ERR("Library not opened");
+      } else {
+        IS_LOW("Library opened");
+        /*Get mesh size*/
+        if(digital_gimbal_get_mesh_size(is_info->eis_dg_handle,
+          &is_info->num_mesh_x,&is_info->num_mesh_y) != -1){
+          IS_HIGH("EIS DG de-warp map size: X: %d Y: %d",
+            is_info->num_mesh_x,is_info->num_mesh_y);
+        } else {
+          IS_ERR("Error getting de-warp size, use default");
+        }
+      }
+    }
+    #endif
 
     if (rc == 0) {
       is_info->is_inited[stream_type] = 1;
@@ -161,6 +186,12 @@ static void is_process_is_deinitialize(is_info_t *is_info, int stream_type)
     int32_t frame_id =0;
     eis_dg_deinitialize(is_info->eis_dg_handle, &frame_id);
   }
+  #ifdef FEATURE_DG
+  else if (is_info->is_type[stream_type] == IS_TYPE_DIG_GIMB) {
+    int32_t frame_id =0;
+    digital_gimbal_deinitialize(&is_info->eis_dg_handle, &frame_id);
+  }
+  #endif
 
   if (is_info->is_type[stream_type] == IS_TYPE_DIS || is_info->dis_bias_correction) {
     dis_exit(&is_info->dis_context);
@@ -304,6 +335,30 @@ static void is_process_run_gyro_dependent_is(is_info_t *is_info,
   }
 }
 
+static void is_process_run_imu_dependent_is(is_info_t *is_info,
+  mct_event_imu_stats_t *imu_data,
+  is_output_type *is_output, int stream_type)
+{
+  frame_times_t frame_times;
+  unsigned int i;
+
+  frame_times.sof = imu_data->sof;
+  frame_times.exposure_time = imu_data->exposure_time;
+  frame_times.frame_time = imu_data->frame_time;
+  IS_LOW("gyro_data.sof = %llu", frame_times.sof);
+
+  #ifdef FEATURE_DG
+  if (is_info->is_type[stream_type] == IS_TYPE_DIG_GIMB) {
+    digital_gimbal_input_t dg_input;
+    is_output->frame_id = is_info->gyro_frame_id;
+    frame_times.linereadout_time = is_info->sensor_out_info.l_readout_time;
+    dg_input.frame_times = frame_times;
+    dg_input.dg_type = is_info->trans_mat_type;
+    dg_input.imu_data = (mct_event_gyro_data_t *)imu_data;
+    digital_gimbal_process(is_info->eis_dg_handle, &dg_input, is_output);
+  }
+  #endif
+}
 
 /** is_process_stats_event:
  *    @stats_data: RS/CS stats
@@ -491,6 +546,61 @@ static boolean is_process_gyro_stats_event(is_gyro_data_t *gyro_stats_data,
   return rc;
 }
 
+static boolean is_process_isp_config_event(is_isp_config_data_t *isp_data)
+{
+  int rc = TRUE;
+  int err = 0;
+  unsigned int i;
+  is_info_t *is_info = isp_data->is_info;
+
+  for (i = 0; i < IS_MAX_STREAMS; i++) {
+    if (is_info->is_inited[i]) {
+      if (is_info->is_type[i] == IS_TYPE_EIS_DG) {
+        IS_LOW("update adapt window for stream = %d",i);
+        err = eis_dg_update_adapt_win(is_info->eis_dg_handle, &is_info->vfe_win, is_info->vfe_width[i], is_info->vfe_height[i]);
+          if (err == -1) {
+            rc = FALSE;
+          }
+        break;
+      }
+    }
+  }
+
+  return rc;
+}
+
+static boolean is_process_imu_stats_event(is_imu_data_t *imu_stats_data,
+  is_output_type *is_output)
+{
+  int rc = TRUE;
+  unsigned int i;
+  is_info_t *is_info = imu_stats_data->is_info;
+  mct_event_imu_stats_t *gyro_data = &imu_stats_data->imu_data;
+
+  is_info->gyro_frame_id = imu_stats_data->frame_id;
+
+  for (i = 0; i < IS_MAX_STREAMS; i++) {
+    if (is_info->is_inited[i]) {
+      is_process_run_imu_dependent_is(is_info,
+          &imu_stats_data->imu_data, &is_output[i], i);
+    } else {
+      /* IS for the stream is not inited which can mean:
+         - Preview and video have the same is_type and hence only one instance
+         of the algorithm may be running.  If this is the case and video stream
+         is on, copy IS preview output to IS video output
+         - The stream (video) is not on
+         - No IS for the stream
+       */
+      if (is_info->is_type[IS_PREVIEW] == is_info->is_type[IS_VIDEO] &&
+        is_info->stream_on[IS_VIDEO] && is_output[IS_PREVIEW].has_output) {
+        STATS_MEMCPY(&is_output[IS_VIDEO], sizeof(is_output_type),
+          &is_output[IS_PREVIEW], sizeof(is_output_type));
+      }
+    }
+  }
+
+  return rc;
+}
 
 int is_process_handle_dewarp_fusion_init(is_info_t *is_info,
   is_output_type* is_output)
@@ -547,6 +657,31 @@ boolean is_process(is_process_parameter_t *param, is_process_output_t *output)
         &output->is_output[IS_VIDEO], is_info->dewarp_eis_bitmask);
     }
     output->type = IS_PROCESS_OUTPUT_GYRO_STATS;
+  }
+    break;
+
+  case IS_PROCESS_ISP_CONFIG_EVENT: {
+    is_info_t *is_info = param->u.isp_data.is_info;
+    IS_LOW("IS_PROCESS_ISP_CONFIG_EVENT, fid = %u is type preview %d video %d", param->u.isp_data.frame_id,
+      is_info->is_type[IS_PREVIEW],is_info->is_type[IS_VIDEO]);
+
+    if(is_info->is_type[IS_PREVIEW] == IS_TYPE_EIS_DG ||
+      is_info->is_type[IS_VIDEO] == IS_TYPE_EIS_DG) {
+      rc = is_process_isp_config_event(&param->u.isp_data);
+    }
+  }
+    break;
+
+  case IS_PROCESS_IMU_STATS: {
+    is_info_t *is_info = param->u.imu_data.is_info;
+    rc = is_process_imu_stats_event(&param->u.imu_data, output->is_output);
+
+  /*Check if the EIS o/p needs to be fused with LDC/Custom warp map*/
+    if(is_info->dewarp_eis_bitmask > EIS_ENABLE) {
+      err = mesh_fusion_intf_process(is_info->mf_handle,
+        &output->is_output[IS_VIDEO], is_info->dewarp_eis_bitmask);
+    }
+    output->type = IS_PROCESS_OUTPUT_IMU_STATS;
   }
     break;
 

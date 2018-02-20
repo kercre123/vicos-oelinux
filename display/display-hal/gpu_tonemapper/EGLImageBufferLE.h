@@ -32,9 +32,9 @@ using namespace drm_utils;
 class EGLImageBufferLE : public EGLImageBufferBase{
 
  public:
-    EGLImageBufferLE(struct gbm_buf_info *gbo_info);
+    EGLImageBufferLE(struct gbm_buf_info *gbo_info, void *userdata, void *userdata2);
     ~EGLImageBufferLE();
-    EGLImageKHR create_eglImage(struct gbm_buf_info *gbo_info);
+    EGLImageKHR create_eglImage(struct gbm_buf_info *gbo_info, void *userdata);
     static EGLImageBufferLE *from(const void *src);
 
     struct gbm_device *gbm_;

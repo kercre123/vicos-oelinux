@@ -6,9 +6,7 @@
  */
 #include "stats_debug.h"
 #include "eis_dg_interface.h"
-#include "mv.h"
-#include "mvDGCommon.h"
-#include "mvDGTC.h"
+#include "eis_dg/mvDGTC.h"
 #include <dlfcn.h>
 //#define PERP_MOUNT
 
@@ -324,6 +322,79 @@ void eis_dg_get_camera_config(mvDGConfiguration *eis_dg_config, is_init_data_t *
         eis_dg_config->imu_calib.Rbc[i*3+j] = eis_dg_config->rotation[i][j];
       }
     }
+}
+
+int eis_dg_update_adapt_win(
+  eis_dg_interface_handle *eis_dg_interface,
+  is_vfe_window_t *vfe_win, long vfe_width, long vfe_height){
+  int err = 0;
+  //ISP win
+  eis_dg_interface->vfe_win.input_width =
+    eis_dg_interface->camif_win.output_width;
+  eis_dg_interface->vfe_win.input_height =
+    eis_dg_interface->camif_win.output_height;
+  eis_dg_interface->vfe_win.output_width = vfe_width;
+    eis_dg_interface->vfe_win.output_height = vfe_height;
+
+  eis_dg_interface->vfe_win.start_x = vfe_win->vfe_start_x;
+  eis_dg_interface->vfe_win.start_y = vfe_win->vfe_start_y;
+  eis_dg_interface->vfe_win.end_x = vfe_win->scaler_output_w;
+  eis_dg_interface->vfe_win.end_y = vfe_win->scaler_output_h;
+  eis_dg_interface->vfe_win.binning_en = 0;
+  eis_dg_interface->vfe_win.hblank = 0;
+  eis_dg_interface->vfe_win.vblank = 0;
+  IS_LOW("VFE_WIN: %d %d %d %d %d %d %d %d %d %d %d",
+    eis_dg_interface->vfe_win.input_width,
+    eis_dg_interface->vfe_win.input_height,
+    eis_dg_interface->vfe_win.output_width,
+    eis_dg_interface->vfe_win.output_height,
+    eis_dg_interface->vfe_win.start_x,
+    eis_dg_interface->vfe_win.start_y,
+    eis_dg_interface->vfe_win.end_x,
+    eis_dg_interface->vfe_win.end_y,
+    eis_dg_interface->vfe_win.binning_en,
+    eis_dg_interface->vfe_win.hblank,
+    eis_dg_interface->vfe_win.vblank);
+  IS_LOW("SEN_WIN: %d %d %d %d %d %d %d %d %d %d %d",
+    eis_dg_interface->sensor_win.input_width,
+    eis_dg_interface->sensor_win.input_height,
+    eis_dg_interface->sensor_win.output_width,
+    eis_dg_interface->sensor_win.output_height,
+    eis_dg_interface->sensor_win.start_x,
+    eis_dg_interface->sensor_win.start_y,
+    eis_dg_interface->sensor_win.end_x,
+    eis_dg_interface->sensor_win.end_y,
+    eis_dg_interface->sensor_win.binning_en,
+    eis_dg_interface->sensor_win.hblank,
+    eis_dg_interface->sensor_win.vblank);
+  IS_LOW("CAMIF_WIN: %d %d %d %d %d %d %d %d %d %d %d",
+    eis_dg_interface->camif_win.input_width,
+    eis_dg_interface->camif_win.input_height,
+    eis_dg_interface->camif_win.output_width,
+    eis_dg_interface->camif_win.output_height,
+    eis_dg_interface->camif_win.start_x,
+    eis_dg_interface->camif_win.start_y,
+    eis_dg_interface->camif_win.end_x,
+    eis_dg_interface->camif_win.end_y,
+    eis_dg_interface->camif_win.binning_en,
+    eis_dg_interface->camif_win.hblank,
+    eis_dg_interface->camif_win.vblank);
+
+  if(eis_dg_interface->funct_pointers.mvDG_Adapt_window) {
+    err = eis_dg_interface->funct_pointers.mvDG_Adapt_window(
+      eis_dg_interface->eis_dg,
+      &eis_dg_interface->sensor_win,
+      &eis_dg_interface->camif_win,
+      &eis_dg_interface->vfe_win);
+    IS_LOW("Adapt window for EIS success err %d",err);
+  } else {
+    err = -1;
+    IS_ERR("Invalid Function Pointer : mvDG_Adapt_window()");
+    free(eis_dg_interface);
+    eis_dg_interface = NULL;
+    return err;
+  }
+  return err;
 }
 
 void eis_dg_update_win_size(

@@ -31,6 +31,7 @@
 
 #include <iomanip>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <string>
 
@@ -77,6 +78,8 @@ class RecorderClientIon
 
   int32_t ion_device_;
   ::std::map<uint32_t, RecorderClientIonBufferMap> buffer_map_;
+
+  std::mutex buffer_map_mutex_;
 
   // disable copy, assignment, and move
   RecorderClientIon(const RecorderClientIon&) = delete;

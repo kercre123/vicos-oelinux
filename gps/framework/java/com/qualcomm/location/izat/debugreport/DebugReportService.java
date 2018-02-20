@@ -9,7 +9,6 @@ package com.qualcomm.location.izat.debugreport;
 import android.content.Context;
 import android.os.IBinder;
 import android.os.Binder;
-import android.os.Parcelable;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.Bundle;
@@ -29,7 +28,7 @@ import com.qti.debugreport.*;
 
 public class DebugReportService {
     private static final String TAG = "DebugReportService";
-    private static final boolean DEBUG_DBG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean VERBOSE = Log.isLoggable(TAG, Log.VERBOSE);
 
     private static final Object sCallBacksLock = new Object();
     private RemoteCallbackList<IDebugReportCallback> mDebugReportCallbacks
@@ -83,7 +82,7 @@ public class DebugReportService {
     }
 
     public DebugReportService(Context ctx) {
-        if (DEBUG_DBG) {
+        if (VERBOSE) {
             Log.d(TAG, "DebugReportService construction");
         }
 
@@ -105,7 +104,7 @@ public class DebugReportService {
 
             synchronized (sCallBacksLock) {
                 String callingPackage = getPackageName(Binder.getCallingPid());
-                if (DEBUG_DBG) {
+                if (VERBOSE) {
                     Log.d(TAG, "registerForDebugReporting: " + callingPackage);
                 }
 
@@ -138,7 +137,7 @@ public class DebugReportService {
                                 clData = entry.getValue();
                                 ownerPackage = entry.getKey();
                                 if (clData.mCallback == callback) {
-                                    if (DEBUG_DBG) {
+                                    if (VERBOSE) {
                                         Log.d(TAG, "Package died: " + ownerPackage);
                                     }
                                     break;
@@ -163,7 +162,7 @@ public class DebugReportService {
 
             synchronized (sCallBacksLock) {
                 String callingPackage = getPackageName(Binder.getCallingPid());
-                 if (DEBUG_DBG) {
+                 if (VERBOSE) {
                     Log.d(TAG, "unregisterForDebugReporting: " + callingPackage);
                 }
 
@@ -175,7 +174,7 @@ public class DebugReportService {
 
         public Bundle getDebugReport() {
             String callingPackage = getPackageName(Binder.getCallingPid());
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "getDebugReport: " + callingPackage);
             }
 
@@ -245,7 +244,7 @@ public class DebugReportService {
         public void startReporting() {
             String callingPackage = getPackageName(Binder.getCallingPid());
 
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "Request to start periodic reporting by package:"
                            + callingPackage);
             }
@@ -259,7 +258,7 @@ public class DebugReportService {
             }
 
             if (mDebugReportTimer != null) {
-                if (DEBUG_DBG) {
+                if (VERBOSE) {
                     Log.d(TAG, "Periodic reporting already in progress");
                 }
                 return;
@@ -305,7 +304,7 @@ public class DebugReportService {
                             mListOfPDRReports.isEmpty() &&
                             mListOfSVHealthReports.isEmpty() &&
                             mListOfXTRAReports.isEmpty()) {
-                            if (DEBUG_DBG) {
+                            if (VERBOSE) {
                                 Log.d(TAG, "Empty debug report");
                             }
                             return;
@@ -387,7 +386,7 @@ public class DebugReportService {
                         ownerPackage = entry.getKey();
 
                         if (clData.mReportPeriodic == true) {
-                            if (DEBUG_DBG) {
+                            if (VERBOSE) {
                                 Log.d(TAG, "Sending report to " + ownerPackage);
                             }
 
@@ -406,7 +405,7 @@ public class DebugReportService {
         public void stopReporting() {
             String callingPackage = getPackageName(Binder.getCallingPid());
 
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "Request to stop periodic reporting by package:"
                            + callingPackage);
             }
@@ -428,7 +427,7 @@ public class DebugReportService {
         ClientData clData = null;
 
         if (mDebugReportTimer == null) {
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "No peridoc reporting in progress !!");
             }
             return;
@@ -444,7 +443,7 @@ public class DebugReportService {
         }
 
         if (continuePeriodicReporting == false) {
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "Service is stopping periodic debug reports");
             }
 

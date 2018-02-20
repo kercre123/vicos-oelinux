@@ -56,8 +56,8 @@ struct wlan_daemon_cfg {
 };
 
 struct wlan_radio_data wlan_radio_data[SCM_RADIO_SUP_MAX] = {
-[ROME_DEV] = {"wlan",      WLAN_BAND_ANY, ROME_DEV, 0, 0, 0, 0, WLAN_BAND_ANY},
-[TUF_DEV] =  {"wlan_sdio", WLAN_BAND_2G,  TUF_DEV,  1, 1, 0, 0, WLAN_BAND_2G}
+[ROME_DEV] = {"wlan",      WLAN_BAND_ANY, ROME_DEV, 0, 0, 0, 0, WLAN_BAND_ANY, true},
+[TUF_DEV] =  {"wlan_sdio", WLAN_BAND_2G,  TUF_DEV,  1, 1, 0, 0, WLAN_BAND_2G, false}
 };
 
 struct wlan_daemon_cfg wif_d_cfg[WLAN_IF_TYPE_MAX] = {

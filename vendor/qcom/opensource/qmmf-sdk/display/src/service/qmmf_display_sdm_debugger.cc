@@ -29,8 +29,8 @@
 
 #define TAG "DisplayDebugHandler"
 
-#include "sdm/include/utils/constants.h"
 #include <cutils/properties.h>
+#include <sdm/utils/constants.h>
 
 #include "display/src/service/qmmf_display_sdm_debugger.h"
 

@@ -26,6 +26,7 @@ SERVICES:
 
 #include <net/if.h>
 #include "QCMAP_NATALG.h"
+#include "QCMAP_ConnectionManager.h"
 
 /*==========================================================
      QC_SOCKSv5 Namespace Definitions
@@ -66,6 +67,14 @@ namespace QC_SOCKSv5_Configure
     pugi::xml_document doc;
     pugi::xml_node node;
     qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
+    QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+    if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+    {
+      LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+      *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+      return false;
+    }
 
     //find out where are configuration files
     if(!QCMAP_NATALG::GetSOCKSv5ConfigFilePathFromXML(&socksv5_file_path))
@@ -206,6 +215,14 @@ namespace QC_SOCKSv5_Configure
     pugi::xml_document doc;
     pugi::xml_node node;
     qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
+    QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+    if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+    {
+      LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+      *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+      return false;
+    }
 
     //find out where are configuration files
     if(!QCMAP_NATALG::GetSOCKSv5ConfigFilePathFromXML(&socksv5_file_path))
@@ -286,6 +303,14 @@ namespace QC_SOCKSv5_Configure
     pugi::xml_document doc;
     pugi::xml_node node;
     qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
+    QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+    if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+    {
+      LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+      *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+      return false;
+    }
 
     //find out where are configuration files
     if(!QCMAP_NATALG::GetSOCKSv5ConfigFilePathFromXML(&socksv5_file_path))
@@ -345,6 +370,14 @@ namespace QC_SOCKSv5_Configure
     pugi::xml_document doc;
     pugi::xml_node node, subchild, grandchild;
     qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
+    QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+    if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+    {
+      LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+      *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+      return false;
+    }
 
     //find out where are configuration files
     if(!QCMAP_NATALG::GetSOCKSv5ConfigFilePathFromXML(&socksv5_file_path))
@@ -360,6 +393,9 @@ namespace QC_SOCKSv5_Configure
       *qmi_err_num = QMI_ERR_INTERNAL_V01;
       return false;
     }
+
+    LOG_MSG_INFO1("Username: %s\n", uname,0,0);
+    LOG_MSG_INFO1("Profile: %u\n", service_no,0,0);
 
     node = doc.child("PROXY_CONFIG").child("USERNAME_PASSWORD_CFG");
     subchild = node.append_child("USER");
@@ -407,6 +443,14 @@ namespace QC_SOCKSv5_Configure
     pugi::xml_document doc;
     pugi::xml_node node;
     qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
+    QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+    if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+    {
+      LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+      *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+      return false;
+    }
 
     //find out where are configuration files
     if(!QCMAP_NATALG::GetSOCKSv5ConfigFilePathFromXML(&socksv5_file_path))

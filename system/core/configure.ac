@@ -92,6 +92,18 @@ AC_ARG_ENABLE(adb-root,
 
 AM_CONDITIONAL(ADB_ROOT, [test "x${adb_root}" = "xyes"])
 
+AC_ARG_ENABLE(debuggerd,
+      AC_HELP_STRING([--disable-debuggerd], [Disable debuggerd for target]),
+         [debuggerd="no"], [debuggerd="yes"])
+
+AM_CONDITIONAL(NO_DEBUGGERD, [test "x${debuggerd}" = "xno"])
+
+AC_ARG_ENABLE(logd-privs,
+      AC_HELP_STRING([--enable-logd-privs], [Drop logd priviledges]),
+         [logd_privs="yes"], [logd_privs="no"])
+
+AM_CONDITIONAL(LOGDPRIVS, [test "x${logd_privs}" = "xyes"])
+
 AC_CONFIG_FILES([ \
     Makefile \
     libutils/Makefile \

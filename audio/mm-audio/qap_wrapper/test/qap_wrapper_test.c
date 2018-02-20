@@ -40,7 +40,7 @@
 #define QAC_LIB_M8        "/usr/lib/libdts_m8_wrapper.so"
 #define FRAME_SIZE_FILE   "data/frame_size_file.txt"
 
-#define FRAME_SIZE 2048 * 2
+#define FRAME_SIZE 2048 * 16
 
 #define print(format, args...) \
     fprintf (stdout, "\nBD_WRAPPER_TEST::  " format "\n", ##args)
@@ -68,7 +68,7 @@ char input_file_name_main[MAX_STR_LEN];
 char input_file_name_main2[MAX_STR_LEN];
 char input_file_name_sys[MAX_STR_LEN];
 char input_file_name_assoc[MAX_STR_LEN];
-unsigned char data_buf[13000];
+unsigned char data_buf[FRAME_SIZE];
 uint32_t out_dev_id = 0;
 uint32_t new_out_dev_id = 0;
 uint32_t system_input_sample_rate = 0;

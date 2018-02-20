@@ -251,13 +251,13 @@ struct qahw_source_tracking_param {
     uint16_t  doa_speech;
     uint16_t  doa_noise[3];
     uint8_t   polar_activity[360];
-};
+} __attribute__((packed));
 
 struct qahw_sound_focus_param {
     uint16_t  start_angle[MAX_SECTORS];
     uint8_t   enable[MAX_SECTORS];
     uint16_t  gain_step;
-};
+} __attribute__((packed));
 
 struct aptx_dec_bt_addr {
     uint32_t nap;
@@ -347,9 +347,9 @@ typedef struct qahw_mix_matrix_params {
     uint16_t num_output_channels;
     uint16_t num_input_channels;
     uint8_t has_output_channel_map;
-    uint32_t output_channel_map[AUDIO_CHANNEL_COUNT_MAX];
+    uint16_t output_channel_map[AUDIO_CHANNEL_COUNT_MAX];
     uint8_t has_input_channel_map;
-    uint32_t input_channel_map[AUDIO_CHANNEL_COUNT_MAX];
+    uint16_t input_channel_map[AUDIO_CHANNEL_COUNT_MAX];
     uint8_t has_mixer_coeffs;
     float mixer_coeffs[AUDIO_CHANNEL_COUNT_MAX][AUDIO_CHANNEL_COUNT_MAX];
 } qahw_mix_matrix_params_t;

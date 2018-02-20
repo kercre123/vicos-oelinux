@@ -79,6 +79,14 @@ public:
 	  uint64_t local_time, uint32_t sync_count, uint32_t pdelay_count,
 	  PortState port_state ) = 0;
 
+	/**
+	 * @brief Updates Grandmaster id and port
+	 * @param id ClockIdentity of grandmaster
+	 * @param portNumber Port of the grandmaster
+	 * @return Implementation dependent
+	 */
+    virtual bool updateGmId(ClockIdentity& id, uint16_t portNumber) = 0;
+
 	/*
 	 * Destroys IPC
 	 */

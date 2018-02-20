@@ -31,6 +31,7 @@ int img_thread_mgr_create_pool()
 {
   int i = 0;
   int num_of_threads = MAX_THREAD_COUNT;
+  pthread_condattr_t cond_attr;
 
   pthread_mutex_lock(&g_thread_pool_lock);
   if (g_thread_pool != NULL) {
@@ -66,8 +67,13 @@ int img_thread_mgr_create_pool()
     IDBG_ERROR("Mutex initialization failed");
     goto MUTEX_INIT_ERROR;
   }
-
-  if (pthread_cond_init(&g_thread_pool->pool_cond, NULL)) {
+  if (pthread_condattr_init(&cond_attr)) {
+    IDBG_ERROR("%s: pthread_condattr_init failed", __func__);
+  }
+  if (pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC)) {
+    IDBG_ERROR("%s: pthread_condattr_setclock failed!!!", __func__);
+  }
+  if (pthread_cond_init(&g_thread_pool->pool_cond, &cond_attr)) {
     IDBG_ERROR("Mutex initialization failed");
     goto COND_INIT_ERROR;
   }

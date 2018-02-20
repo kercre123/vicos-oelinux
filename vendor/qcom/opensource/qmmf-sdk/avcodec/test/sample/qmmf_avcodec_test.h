@@ -35,13 +35,12 @@
 #include <sys/ioctl.h>
 #include <utils/Log.h>
 #include <linux/msm_ion.h>
-#include <utils/Condition.h>
 #include <utils/KeyedVector.h>
 #include <utils/String8.h>
 #include <cutils/native_handle.h>
 #include <media/msm_media_info.h>
 
-#include "common/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils.h"
 #include "qmmf-sdk/qmmf_avcodec.h"
 
 using namespace android;
@@ -101,7 +100,7 @@ private:
 
   IAVCodec*                             avcodec_;
   int32_t                               ion_device_;
-  Mutex                                 stop_lock_;
+  std::mutex                            stop_lock_;
   bool                                  stop_;
   vector<BufferDescriptor>              input_buffer_list_;
   vector<BufferDescriptor>              output_buffer_list_;
@@ -136,8 +135,8 @@ private:
   status_t ReadFile(int32_t fd, uint32_t size, int32_t *byte_read);
 
   FILE*                     input_file_;
-  Mutex                     wait_for_frame_lock_;
-  Condition                 wait_for_frame_;
+  std::mutex                wait_for_frame_lock_;
+  QCondition                wait_for_frame_;
   int32_t                   num_frame_read;
   vector<BufferDescriptor>  input_list_;
   TSQueue<BufferDescriptor> input_free_buffer_queue_;
@@ -166,8 +165,8 @@ public:
 
 private:
   int32_t                   file_fd_;
-  Mutex                     wait_for_frame_lock_;
-  Condition                 wait_for_frame_;
+  std::mutex                wait_for_frame_lock_;
+  QCondition                wait_for_frame_;
   vector<BufferDescriptor>  output_list_;
   TSQueue<BufferDescriptor> output_free_buffer_queue_;
   TSQueue<BufferDescriptor> output_occupy_buffer_queue_;

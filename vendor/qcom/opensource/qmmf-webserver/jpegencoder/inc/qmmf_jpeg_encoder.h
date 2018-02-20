@@ -31,6 +31,7 @@
 
 #include <utils/Log.h>
 #include <utils/Errors.h>
+#include <mutex>
 
 #define JPEG_MAX_BUFFER_PLANES 3
 #define JPEG_THUMBNAIL_WIDTH 320
@@ -54,26 +55,27 @@ enum JpegEncoderFormat {
 };
 
 struct JpegEncoderConfiguration {
-  enum JpegEncoderFormat format;
   uint32_t  num_planes;
   uint32_t stride[JPEG_MAX_BUFFER_PLANES];
   uint32_t scanline[JPEG_MAX_BUFFER_PLANES];
   uint32_t width[JPEG_MAX_BUFFER_PLANES];
   uint32_t height[JPEG_MAX_BUFFER_PLANES];
+  uint32_t quality;
 };
 
 struct JpegFrameInfo {
     uint8_t *plane_addr[JPEG_MAX_BUFFER_PLANES];
+    JpegEncoderFormat format;
 };
 
 class JpegEncoder {
 private:
-  void *cfg_;
-  void *job_result_ptr_;
-  size_t job_result_size_;
+  JpegEncoderConfiguration cfg_;
+  std::mutex encode_lock_;
 
-  static uint8_t DEFAULT_QTABLE_0[];
-  static uint8_t DEFAULT_QTABLE_1[];
+  uint8_t *tmpRowBuf_;
+
+  void cleanUp();
 
 public:
   JpegEncoder(struct JpegEncoderConfiguration *params);

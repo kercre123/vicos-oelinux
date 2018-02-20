@@ -142,7 +142,7 @@ static void DebugReportService_class_init(JNIEnv* env, jclass clazz)
     } else {
         IzatRfStateReportClass = (jclass) env->NewGlobalRef(IzatRfStateReportClassLocal);
         method_rfStateReportCtor = env->GetMethodID(IzatRfStateReportClass, "<init>",
-            "(Lcom/qti/debugreport/IZatUtcSpec;Lcom/qti/debugreport/IZatUtcSpec;IJJJJJJJJ)V");
+            "(Lcom/qti/debugreport/IZatUtcSpec;Lcom/qti/debugreport/IZatUtcSpec;IJJJJJJJJJJJJJJ)V");
         if (method_rfStateReportCtor == 0) {
             ALOGE("Failed to get constructor method for IZatRfStateDebugReport");
         }
@@ -504,14 +504,20 @@ jobject createUtcTimeObject(JNIEnv* env, jlong utcSecondsPart, jlong utcNanoSecP
             jlong utcNanoSecPartLastReported = (*p.second).mUtcReported.tv_nsec;
 
             jint pgaGain = (*p.second).mPgaGain;
-            jlong gpsBpAmplI = (*p.second).mGpsBpAmpI;
-            jlong gpsBpAmplQ = (*p.second).mGpsBpAmpQ;
             jlong adcI = (*p.second).mAdcI;
             jlong adcQ = (*p.second).mAdcQ;
             jlong jammerMetricGps =(*p.second).mJammerGps;
             jlong jammerMetricGlonass = (*p.second).mJammerGlo;
             jlong jammerMetricBds = (*p.second).mJammerBds;
             jlong jammerMetricGal = (*p.second).mJammerGal;
+            jlong gpsBpAmplI = (*p.second).mGpsBpAmpI;
+            jlong gpsBpAmplQ = (*p.second).mGpsBpAmpQ;
+            jlong gloBpAmplI = (*p.second).mGloBpAmpI;
+            jlong gloBpAmplQ = (*p.second).mGloBpAmpQ;
+            jlong bdsBpAmplI = (*p.second).mBdsBpAmpI;
+            jlong bdsBpAmplQ = (*p.second).mBdsBpAmpQ;
+            jlong galBpAmplI = (*p.second).mGalBpAmpI;
+            jlong galBpAmplQ = (*p.second).mGalBpAmpQ;
 
             jobject utcLastUpdatedObj = createUtcTimeObject(env,
                 utcSecondsPartLastUpdated, utcNanoSecPartLastUpdated);
@@ -520,9 +526,11 @@ jobject createUtcTimeObject(JNIEnv* env, jlong utcSecondsPart, jlong utcNanoSecP
                 utcSecondsPartLastReported, utcNanoSecPartLastReported);
 
             jobject rfReportObj = env->NewObject(IzatRfStateReportClass, method_rfStateReportCtor,
-                                                 utcLastUpdatedObj, utcLastReportedObj, pgaGain, gpsBpAmplI,
-                                                 gpsBpAmplQ, adcI, adcQ, jammerMetricGps, jammerMetricGlonass,
-                                                 jammerMetricBds, jammerMetricGal);
+                                                 utcLastUpdatedObj, utcLastReportedObj, pgaGain,
+                                                 adcI, adcQ, jammerMetricGps, jammerMetricGlonass,
+                                                 jammerMetricBds, jammerMetricGal, gpsBpAmplI,
+                                                 gpsBpAmplQ, gloBpAmplI, gloBpAmplQ,
+                                                 bdsBpAmplI, bdsBpAmplQ, galBpAmplI, galBpAmplQ);
             if (rfReportObj == nullptr) {
                 ALOGE("Failed to create IzatRfStateDebugReport object");
             } else {

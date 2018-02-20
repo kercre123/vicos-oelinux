@@ -39,6 +39,8 @@
 #include "screenshooter-client-protocol.h"
 #include "shared/os-compatibility.h"
 
+#define CLIENT_WL_OUTPUT_VERSION 1
+
 /* The screenshooter is a good example of a custom object exposed by
  * the compositor and serves as a test bed for implementing client
  * side marshalling outside libwayland.so */
@@ -136,7 +138,7 @@ handle_global(void *data, struct wl_registry *registry,
 	if (strcmp(interface, "wl_output") == 0) {
 		output = xmalloc(sizeof *output);
 		output->output = wl_registry_bind(registry, name,
-						  &wl_output_interface, 1);
+						  &wl_output_interface, CLIENT_WL_OUTPUT_VERSION);
 		wl_list_insert(&output_list, &output->link);
 		wl_output_add_listener(output->output, &output_listener, output);
 	} else if (strcmp(interface, "wl_shm") == 0) {

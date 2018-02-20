@@ -1,5 +1,5 @@
 /**********************************************************************
-*  Copyright (c) 2013-2017 Qualcomm Technologies, Inc.
+*  Copyright (c) 2013-2018 Qualcomm Technologies, Inc.
 *  All Rights Reserved.
 *  Confidential and Proprietary - Qualcomm Technologies, Inc.
 **********************************************************************/
@@ -549,6 +549,14 @@ static void module_imgbase_client_handle_buf_done(
         IMG_EVT_ACK_FORCE_RELEASE, p_buf_divert);
       if (IMG_ERROR(rc)) {
         IDBG_ERROR("%s:%d] Error in sending ack", __func__, __LINE__);
+        /* Even if sending ACK fail when stream-off, call imgbase_client_flush_done
+           to advoid timeout issue for DG */
+        if (!p_stream->streamon) {
+          /* override*/
+          if (p_mod->modparams.imgbase_client_flush_done) {
+            p_mod->modparams.imgbase_client_flush_done(p_client, p_stream);
+          }
+        }
       }
     } else {
       rc = module_imglib_common_release_buffer(p_mod->subdevfd,
@@ -3068,6 +3076,66 @@ void module_imgbase_client_destroy(imgbase_client_t *p_client)
 }
 
 /**
+  * Function: module_imgbase_client_aec_stat
+  *
+  * Description: This function is to send exposure value (upstream) to sensor
+  * Arguments:
+  *   @p_appdata: imgbase client
+  *   @exp_val: exposure value
+  * Return values:
+  *     none
+  *
+  * Notes: none
+  **/
+
+void module_imgbase_client_aec_stat(void *p_appdata, void* stats_info)
+{
+  mct_event_t event;
+  int stream_idx;
+  imgbase_stream_t *p_stream = NULL;
+  bool rc = TRUE;
+
+
+  img_shdr_stats_info_t *p_stats_info = (img_shdr_stats_info_t*)stats_info;
+
+  imgbase_client_t *p_client = (void *)p_appdata;
+  module_imgbase_t *p_mod = (module_imgbase_t *)p_client->p_mod;
+  if (!p_client || !p_mod) {
+    IDBG_ERROR("Error input");
+    return;
+  }
+  stream_idx = module_imgbase_find_stream_by_identity(p_client,
+    p_client->divert_identity);
+    if (stream_idx < 0) {
+      IDBG_ERROR("%s_%s %d] Cannot find stream mapped to idx %x", __func__,
+      p_mod->name, __LINE__, p_client->divert_identity);
+    return;
+  }
+
+  p_stream = &p_client->stream[stream_idx];
+  if (!p_stream) {
+    IDBG_ERROR("Error input");
+    return;
+  }
+
+  event.identity  = p_stream->identity;
+  event.type      = MCT_EVENT_MODULE_EVENT;
+  event.direction = MCT_EVENT_UPSTREAM;
+  event.timestamp = 0;
+  event.u.module_event.type = MCT_EVENT_MODULE_BAYER_DATA;
+  event.u.module_event.module_event_data = (void *)p_stats_info;
+  event.u.module_event.current_frame_id = p_stream->cur_frame_id;
+  event.u.module_event.size = sizeof(img_shdr_stats_info_t);
+
+  rc =  mct_port_send_event_to_peer(p_stream->p_sinkport, &event);
+  if (rc == FALSE) {
+   IDBG_ERROR("%s_%s:%d] Fowarding event %d from src port failed",
+    __func__, p_mod->name, __LINE__, event.type);
+   return;
+  }
+}
+
+/**
  * Function: module_imgbase_client_init
  *
  * Description: This function is used to initialize the imgbase
@@ -3097,6 +3165,7 @@ int32_t module_imgbase_client_init(void *p_appdata)
     .set_meta = img_set_meta,
     .image_copy = img_image_copy,
     .image_scale = img_sw_downscale_2by2,
+    .get_aec_stat = module_imgbase_client_aec_stat
   };
 
   IDBG_MED("%s:%d] rc %d E", __func__, __LINE__, rc);

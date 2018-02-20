@@ -25,6 +25,8 @@ dQIDAQAB\n\
 ==============================================================================*/
 OMXImageEncoder::OMXImageEncoder()
 {
+  m_NumThumbnails = 0;
+  m_NumThumbnailsEncoded = 0;
   m_inputBufferCount = 0;
   m_outputBufferCount = 0;
   m_composer = 0;
@@ -32,16 +34,12 @@ OMXImageEncoder::OMXImageEncoder()
   m_thumbEncoding = 0;
   m_mainImageEncoding = 0;
   m_mainEncoder = NULL;
-  m_thumbEncoder = NULL;
   m_inputMainImage = NULL;
   m_outputMainImage = NULL;
   m_IONBuffer.vaddr = NULL;
   m_IONBuffer.fd = -1;
   m_IONBuffer.length = 0;
-  m_inThumbImage = NULL;
-  m_outThumbImage = NULL;
   m_qualityfactor.nQFactor = DEFAULT_Q_FACTOR;
-  mThumbBuffer = NULL;
   mExifObjInitialized = OMX_FALSE;
   m_releaseFlag = OMX_FALSE;
   m_inTmbPort = NULL;
@@ -59,6 +57,13 @@ OMXImageEncoder::OMXImageEncoder()
   memset(&m_exifInfoObj, 0x00, sizeof(m_exifInfoObj));
   memset(&m_Metadata , 0x00, sizeof(m_Metadata));
   memset(&m_memOps, 0x00, sizeof(m_memOps));
+  memset(&m_thumbnailInfo, 0, sizeof(QOMX_THUMBNAIL_INFO));
+  for (OMX_U32 i = 0; i < MAX_NUM_THUMBNAILS; i++) {
+    mThumbBuffer[i] = NULL;
+    m_inThumbImage[i] = NULL;
+    m_thumbEncoder[i] = NULL;
+    m_outThumbImage[i] = NULL;
+  }
 
   pthread_mutex_init(&m_etbTmbQLock, NULL);
   QI_MUTEX_INIT(&mEncodeDoneLock);
@@ -373,7 +378,7 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_get_parameter(
   case QOMX_IMAGE_EXT_THUMBNAIL: {
     QOMX_THUMBNAIL_INFO *lthumbnailInfo =
       reinterpret_cast <QOMX_THUMBNAIL_INFO *> (paramData);
-    memcpy(lthumbnailInfo, &m_thumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
+    memcpy(lthumbnailInfo, &m_thumbnailInfo[0], sizeof(QOMX_THUMBNAIL_INFO));
     break;
   }
   case QOMX_IMAGE_EXT_ENCODING_MODE: {
@@ -409,6 +414,15 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_get_parameter(
     memcpy(lmulti_image, &m_MultiJpegSequence, sizeof(QOMX_JPEG_MULTI_IMAGE_INFO));
     break;
   }
+  case QOMX_IMAGE_EXT_SECOND_THUMBNAIL: {
+    QOMX_THUMBNAIL_INFO *lthumbnailInfo =
+      reinterpret_cast <QOMX_THUMBNAIL_INFO *> (paramData);
+    if (OMX_ARRAY_SIZE(m_thumbnailInfo) > 1) {
+      memcpy(lthumbnailInfo, &m_thumbnailInfo[1], sizeof(QOMX_THUMBNAIL_INFO));
+    }
+    break;
+  }
+
   default: {
     QIDBG_ERROR("%s:%d] Unknown Parameter %d", __func__, __LINE__, paramIndex);
     lret = OMX_ErrorBadParameter;
@@ -575,7 +589,7 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_set_parameter(
   case QOMX_IMAGE_EXT_THUMBNAIL: {
     QOMX_THUMBNAIL_INFO *lthumbnailInfo =
       reinterpret_cast <QOMX_THUMBNAIL_INFO *> (paramData);
-    memcpy(&m_thumbnailInfo, lthumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
+    memcpy(&m_thumbnailInfo[0], lthumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
     break;
     }
   case QOMX_IMAGE_EXT_ENCODING_MODE: {
@@ -617,6 +631,15 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_set_parameter(
     memcpy(&m_MultiJpegSequence, lmulti_image, sizeof(m_MultiJpegSequence));
     break;
   }
+  case QOMX_IMAGE_EXT_SECOND_THUMBNAIL: {
+    QOMX_THUMBNAIL_INFO *lthumbnailInfo =
+      reinterpret_cast <QOMX_THUMBNAIL_INFO *> (paramData);
+    if (OMX_ARRAY_SIZE(m_thumbnailInfo) > 1) {
+      memcpy(&m_thumbnailInfo[1], lthumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
+    }
+    break;
+  }
+
   default: {
     QIDBG_ERROR("%s: Unknown Parameter %d", __func__, paramIndex);
     lret = OMX_ErrorBadParameter;
@@ -715,7 +738,7 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_get_config(
   case QOMX_IMAGE_EXT_THUMBNAIL: {
     QOMX_THUMBNAIL_INFO *lthumbnailInfo =
       reinterpret_cast <QOMX_THUMBNAIL_INFO *> (configData);
-    memcpy(lthumbnailInfo, &m_thumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
+    memcpy(lthumbnailInfo, &m_thumbnailInfo[0], sizeof(QOMX_THUMBNAIL_INFO));
     break;
   }
   case QOMX_IMAGE_EXT_MOBICAT: {
@@ -738,6 +761,14 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_get_config(
     QOMX_JPEG_MULTI_IMAGE_INFO *lmulti_image =
       reinterpret_cast<QOMX_JPEG_MULTI_IMAGE_INFO *> (configData);
     memcpy(lmulti_image, &m_MultiJpegSequence, sizeof(QOMX_JPEG_MULTI_IMAGE_INFO));
+    break;
+  }
+  case QOMX_IMAGE_EXT_SECOND_THUMBNAIL: {
+    QOMX_THUMBNAIL_INFO *lthumbnailInfo =
+      reinterpret_cast <QOMX_THUMBNAIL_INFO *> (configData);
+    if (OMX_ARRAY_SIZE(m_thumbnailInfo) > 1) {
+      memcpy(lthumbnailInfo, &m_thumbnailInfo[1], sizeof(QOMX_THUMBNAIL_INFO));
+    }
     break;
   }
 
@@ -848,7 +879,7 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_set_config(
   case QOMX_IMAGE_EXT_THUMBNAIL: {
     QOMX_THUMBNAIL_INFO *lthumbnailInfo =
       reinterpret_cast <QOMX_THUMBNAIL_INFO *> (configData);
-    memcpy(&m_thumbnailInfo, lthumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
+    memcpy(&m_thumbnailInfo[0], lthumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
     break;
   }
   case QOMX_IMAGE_EXT_MOBICAT: {
@@ -873,6 +904,15 @@ OMX_ERRORTYPE OMXImageEncoder::omx_component_set_config(
     memcpy(&m_MultiJpegSequence, lmulti_image, sizeof(m_MultiJpegSequence));
     break;
   }
+  case QOMX_IMAGE_EXT_SECOND_THUMBNAIL: {
+    QOMX_THUMBNAIL_INFO *lthumbnailInfo =
+      reinterpret_cast <QOMX_THUMBNAIL_INFO *> (configData);
+    if (OMX_ARRAY_SIZE(m_thumbnailInfo) > 1) {
+      memcpy(&m_thumbnailInfo[1], lthumbnailInfo, sizeof(QOMX_THUMBNAIL_INFO));
+    }
+    break;
+  }
+
   default: {
     QIDBG_ERROR("%s: Error bad config index %d", __func__,
       (int)configIndex);
@@ -1381,8 +1421,10 @@ OMX_ERRORTYPE OMXImageEncoder::processMessage(QIMessage *a_Message)
     QIDBG_MED("%s:%d] OMX_MESSAGE_START_MAIN_ENCODE", __func__, __LINE__);
     //Delete the thumbnail encoder before starting the main image encoding
     pthread_mutex_lock(&m_abortlock);
-    if (m_thumbEncoder) {
-       m_thumbEncoder->Stop();
+    for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_thumbEncoder); i++) {
+      if (m_thumbEncoder[i]) {
+        m_thumbEncoder[i]->Stop();
+      }
     }
     if (!m_abort_flag) {
       lret = startEncode();
@@ -1894,10 +1936,11 @@ OMX_ERRORTYPE OMXImageEncoder::abortExecution()
   int lrc = 0;
   //If Thumbnail Encoding is in Progress stop the encoder
 
-  if (m_thumbEncoding && m_thumbEncoder) {
-    lrc = m_thumbEncoder->Stop();
-    if (!lrc) {
-     //ToDo
+  if (m_thumbEncoding) {
+    for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_thumbEncoder); i++) {
+      if (m_thumbEncoder[i]) {
+        m_thumbEncoder[i]->Stop();
+      }
     }
     m_thumbEncoding = OMX_FALSE;
   }

@@ -359,6 +359,8 @@ struct Layer {
 
   Lut3d lut_3d = {};                               //!< o/p - Populated by SDM when tone mapping is
                                                    //!< needed on this layer.
+  void *userdata;                                  //!< Client can use it to pass custom object
+  void *userdata2;                                  //!< Client can use it to pass custom object
 };
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and

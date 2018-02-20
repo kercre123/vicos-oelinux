@@ -114,14 +114,14 @@ static void is_process_run_gyro_dependent_is(is_info_t *is_info,
   unsigned int i;
 
   memset(&frame_times, 0, sizeof(frame_times_t));
-#ifdef FEATURE_GYRO
+/* #ifdef FEATURE_GYRO
   if (!is_info->sns_lib_offset_set) {
     set_sns_apps_offset(gyro_data->sample[0].timestamp);
     is_info->sns_lib_offset_set = 1;
   }
 
   CDBG("%s: num_samples %d", __func__, gyro_data->sample_len);
-  /* Update the gyro buffer */
+  // Update the gyro buffer
   for (i = 0; i < gyro_data->sample_len; i++) {
     CDBG("Poking in gyro sample, %llu, %d, %d, %d",
       gyro_data->sample[i].timestamp, gyro_data->sample[i].value[0],
@@ -131,7 +131,7 @@ static void is_process_run_gyro_dependent_is(is_info_t *is_info,
       gyro_data->sample[i].value[1],
       gyro_data->sample[i].value[2]);
   }
-#endif
+#endif */
   frame_times.sof = gyro_data->sof;
   frame_times.exposure_time = gyro_data->exposure_time;
   frame_times.frame_time = gyro_data->frame_time;

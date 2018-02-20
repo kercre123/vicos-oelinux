@@ -223,6 +223,8 @@ struct scm_evt_data {
  * @drv_loaded: driver modules load status
  * @if_bitmap: Active interfaces of this driver
  * @band_restrict: Current active operating band
+ * @ssr_drv_restart: restart driver or not when ssr happens. Curretly, only be
+ * 		     used for TUF driver restart check when ROME ssr happens.
  */
 struct wlan_radio_data {
         char *drv_name;
@@ -233,6 +235,7 @@ struct wlan_radio_data {
 	uint8_t drv_loaded;
 	uint32_t if_bitmap;
 	enum WLAN_BAND band_restrict;
+	bool ssr_drv_restart;
 };
 
 /**

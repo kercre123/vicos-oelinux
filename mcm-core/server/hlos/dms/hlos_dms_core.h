@@ -5,8 +5,9 @@
     @brief
     Supports functions for handling HLOS DMS requests.
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #ifndef HLOS_DMS_CORE_H
@@ -14,6 +15,8 @@
 
 #include "cri_core.h"
 #include "utils_common.h"
+#include "mcm_dm_v01.h"
+#include "cri_dms_core.h"
 
 /***************************************************************************************************
     @function
@@ -130,6 +133,38 @@ void hlos_dms_unsol_ind_handler(unsigned long message_id,
                                 void *ind_data,
                                 int ind_data_len);
 
+/***************************************************************************************************
+    @function
+    hlos_dms_core_initiate_radio_power_process
+
+    @brief
+    Notify radio state to client.
+
+    @param[in]
+
+    @param[out]
+        none
+
+    @retval
+    none
+***************************************************************************************************/
+void hlos_dms_core_initiate_radio_power_process(mcm_dm_radio_mode_t_v01 mcm_dms_radio_state);
+
+/***************************************************************************************************
+    @function
+    hlos_dms_core_query_radio_state_notify_to_client
+
+    @brief
+    Notify radio state to client.
+
+    @param[in]
+
+    @param[out]
+        none
+
+    @retval
+    none
+***************************************************************************************************/
+void hlos_dms_core_query_radio_state_notify_to_client(void);
 
 #endif
-

@@ -117,6 +117,8 @@ enum sigma_program sigma_program_to_enum(const char *prog)
 		return PROGRAM_MBO;
 	if (strcasecmp(prog, "IoTLP") == 0)
 		return PROGRAM_IOTLP;
+	if (strcasecmp(prog, "DPP") == 0)
+		return PROGRAM_DPP;
 
 	return PROGRAM_UNKNOWN;
 }
@@ -145,6 +147,27 @@ static int hex_byte(const char *str)
 	if (res2 < 0)
 		return -1;
 	return (res1 << 4) | res2;
+}
+
+
+int parse_hexstr(const char *hex, unsigned char *buf, size_t buflen)
+{
+	size_t i;
+	const char *pos = hex;
+
+	for (i = 0; i < buflen; i++) {
+		int val;
+
+		if (*pos == '\0')
+			break;
+		val = hex_byte(pos);
+		if (val < 0)
+			return -1;
+		buf[i] = val;
+		pos += 2;
+	}
+
+	return i;
 }
 
 

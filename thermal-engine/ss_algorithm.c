@@ -266,8 +266,11 @@ static int handle_sampling_adjust(struct ss_algo_t *ss_info, uint32_t algo_idx, 
 	}
 	if(s_idx >= sampling_group_count) {
 
-		if (sampling_group_count == MAX_INSTANCES_SUPPORTED)
+		if (sampling_group_count >= MAX_INSTANCES_SUPPORTED) {
+			msg("%s: Sampling group count max is reached:%d\n",
+				__func__, sampling_group_count);
 			return -1;
+		}
 
 		s_idx = sampling_group_count;
 		sampling_group_count++;
@@ -1259,8 +1262,14 @@ error_handler:
 				}
 			}
 
-			if (i < MAX_INSTANCES_SUPPORTED &&
-			    sampling_groups[i].sampling == 0) {
+			if (i >= MAX_INSTANCES_SUPPORTED ||
+				(sampling_groups[i].sampling == 0 &&
+				sampling_group_count >= MAX_INSTANCES_SUPPORTED)) {
+				msg("%s: Sampling group count max is reached:%d idx:%d\n",
+					__func__, sampling_group_count, i);
+				err = -1;
+				goto error_handler;
+			} else if (sampling_groups[i].sampling == 0) {
 				sampling_groups[i].sampling =
 					cfg->data.ss.sampling_period_ms;
 				algo_clnt[clnt_cnt].sampling_group_id = i;

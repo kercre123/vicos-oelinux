@@ -61,8 +61,6 @@ extern char *ap_inet_addr;
 extern char *ap_inet_mask;
 extern char *sigma_radio_ifname[];
 
-static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd);
 static int ath_ap_start_hostapd(struct sigma_dut *dut);
 static void ath_ap_set_params(struct sigma_dut *dut);
 static int kill_process(struct sigma_dut *dut, char *proc_name,
@@ -100,7 +98,7 @@ static void kill_hostapd_process_pid(struct sigma_dut *dut)
 }
 
 
-static int get_hwaddr(const char *ifname, unsigned char *hwaddr)
+int get_hwaddr(const char *ifname, unsigned char *hwaddr)
 {
 #ifndef __QNXNTO__
 	struct ifreq ifr;
@@ -1393,6 +1391,9 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 			   strcasecmp(val, "WPA2-Ent") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_EAP;
 			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "SuiteB") == 0) {
+			dut->ap_key_mgmt = AP_SUITEB;
+			dut->ap_cipher = AP_GCMP_256;
 		} else if (strcasecmp(val, "WPA-PSK") == 0) {
 			dut->ap_key_mgmt = AP_WPA_PSK;
 			dut->ap_cipher = AP_TKIP;
@@ -1406,6 +1407,15 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		} else if (strcasecmp(val, "WPA2-PSK-Mixed") == 0) {
 			dut->ap_key_mgmt = AP_WPA2_PSK_MIXED;
 			dut->ap_cipher = AP_CCMP_TKIP;
+		} else if (strcasecmp(val, "WPA2-SAE") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_SAE;
+			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "WPA2-PSK-SAE") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_PSK_SAE;
+			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "OWE") == 0) {
+			dut->ap_key_mgmt = AP_WPA2_OWE;
+			dut->ap_cipher = AP_CCMP;
 		} else if (strcasecmp(val, "NONE") == 0) {
 			dut->ap_key_mgmt = AP_OPEN;
 			dut->ap_cipher = AP_PLAIN;
@@ -1414,6 +1424,26 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Unsupported KEYMGNT");
 			return 0;
 		}
+	}
+
+	val = get_param(cmd, "ECGroupID");
+	if (val) {
+		free(dut->ap_sae_groups);
+		dut->ap_sae_groups = strdup(val);
+	}
+
+	val = get_param(cmd, "AntiCloggingThreshold");
+	if (val)
+		dut->sae_anti_clogging_threshold = atoi(val);
+
+	val = get_param(cmd, "Reflection");
+	if (val)
+		dut->sae_reflection = strcasecmp(val, "SAE") == 0;
+
+	val = get_param(cmd, "InvalidSAEElement");
+	if (val) {
+		free(dut->sae_commit_override);
+		dut->sae_commit_override = strdup(val);
 	}
 
 	val = get_param(cmd, "ENCRYPT");
@@ -1425,9 +1455,45 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 		} else if (strcasecmp(val, "AES") == 0 ||
 			   strcasecmp(val, "AES-CCMP") == 0) {
 			dut->ap_cipher = AP_CCMP;
+		} else if (strcasecmp(val, "AES-GCMP") == 0) {
+			dut->ap_cipher = AP_GCMP_128;
 		} else {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Unsupported ENCRYPT");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "PairwiseCipher");
+	if (val) {
+		if (strcasecmp(val, "AES-GCMP-256") == 0) {
+			dut->ap_cipher = AP_GCMP_256;
+		} else if (strcasecmp(val, "AES-CCMP-256") == 0) {
+			dut->ap_cipher = AP_CCMP_256;
+		} else if (strcasecmp(val, "AES-GCMP-128") == 0) {
+			dut->ap_cipher = AP_GCMP_128;
+		} else if (strcasecmp(val, "AES-CCMP-128") == 0) {
+			dut->ap_cipher = AP_CCMP;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported PairwiseCipher");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "GroupMgntCipher");
+	if (val) {
+		if (strcasecmp(val, "BIP-GMAC-256") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_GMAC_256;
+		} else if (strcasecmp(val, "BIP-CMAC-256") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_CMAC_256;
+		} else if (strcasecmp(val, "BIP-GMAC-128") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_GMAC_128;
+		} else if (strcasecmp(val, "BIP-CMAC-128") == 0) {
+			dut->ap_group_mgmt_cipher = AP_BIP_CMAC_128;
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported GroupMgntCipher");
 			return 0;
 		}
 	}
@@ -1452,6 +1518,8 @@ static int cmd_ap_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	val = get_param(cmd, "PSK");
 	if (val) {
+		if (dut->ap_key_mgmt != AP_WPA2_SAE && strlen(val) > 64)
+			return -1;
 		if (strlen(val) > sizeof(dut->ap_passphrase) - 1)
 			return -1;
 		snprintf(dut->ap_passphrase, sizeof(dut->ap_passphrase),
@@ -2182,11 +2250,13 @@ static void set_anqp_elem_value(struct sigma_dut *dut, const char *ifname,
 static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 			size_t str_size, int wlan_tag)
 {
-	char *ifname;
+	const char *ifname;
 	enum driver_type drv;
 
 	drv = get_driver_type();
-	if (drv == DRIVER_ATHEROS) {
+	if (dut->hostapd_ifname && if_nametoindex(dut->hostapd_ifname) > 0) {
+		ifname = dut->hostapd_ifname;
+	} else if (drv == DRIVER_ATHEROS) {
 		if ((dut->ap_mode == AP_11a || dut->ap_mode == AP_11na ||
 		     dut->ap_mode == AP_11ac) &&
 		    if_nametoindex("ath1") > 0)
@@ -2214,6 +2284,8 @@ static void get_if_name(struct sigma_dut *dut, char *ifname_str,
 	if (drv == DRIVER_OPENWRT && wlan_tag > 1) {
 		/* Handle tagged-ifname only on OPENWRT for now */
 		snprintf(ifname_str, str_size, "%s%d", ifname, wlan_tag - 1);
+	} else if (drv == DRIVER_MAC80211 && wlan_tag == 2) {
+		snprintf(ifname_str, str_size, "%s_1", ifname);
 	} else {
 		snprintf(ifname_str, str_size, "%s", ifname);
 	}
@@ -2324,6 +2396,9 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		case AP_WPA2_PSK:
 		case AP_WPA2_PSK_MIXED:
 		case AP_WPA_PSK:
+		case AP_WPA2_SAE:
+		case AP_WPA2_PSK_SAE:
+			/* TODO: SAE configuration */
 			if (dut->ap_key_mgmt == AP_WPA2_PSK) {
 				snprintf(buf, sizeof(buf), "psk2");
 			} else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED) {
@@ -2370,6 +2445,16 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 			snprintf(buf, sizeof(buf), "%s",
 				 dut->ap_radius_password);
 			owrt_ap_set_vap(dut, vap_count, "auth_secret", buf);
+			break;
+		case AP_SUITEB:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"SuiteB not supported");
+			break;
+		case AP_WPA2_OWE:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"OWE not supported");
 			break;
 		}
 
@@ -2562,17 +2647,12 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 	if (dut->ap_disable_protection == 1)
 		owrt_ap_set_vap(dut, vap_id, "enablertscts", "0");
 
-	if (dut->ap_txBF == 1) {
+	if (dut->ap_txBF) {
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfee", "1");
 		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "1");
-		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "0");
-	} else if (dut->ap_txBF == 2) {
-		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "0");
-		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "0");
 	}
 
 	if (dut->ap_mu_txBF)
-		owrt_ap_set_vap(dut, vap_id, "vhtsubfer", "1");
 		owrt_ap_set_vap(dut, vap_id, "vhtmubfer", "1");
 
 	if (dut->ap_tx_stbc) {
@@ -3095,8 +3175,9 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 
 #ifdef ANDROID
 	/* Unload/Load driver to cleanup the state of the driver */
-	wifi_unload_driver();
-	wifi_load_driver();
+	system("rmmod -f wlan");
+	usleep(500000);
+	system("insmod /system/lib/modules/wlan.ko");
 #else /* ANDROID */
 	run_ndc(dut, "ndc softap qccmd set enable_softap=0");
 	run_ndc(dut, "ndc softap qccmd set enable_softap=1");
@@ -3176,9 +3257,13 @@ static int cmd_wcn_ap_config_commit(struct sigma_dut *dut,
 			run_ndc(dut, "ndc softap qccmd set wpa_pairwise="
 				"CCMP &");
 		break;
+	case AP_WPA2_SAE:
+	case AP_WPA2_PSK_SAE:
 	case AP_WPA2_EAP:
 	case AP_WPA2_EAP_MIXED:
 	case AP_WPA_EAP:
+	case AP_SUITEB:
+	case AP_WPA2_OWE:
 		/* Not supported */
 		break;
 	}
@@ -4324,10 +4409,9 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 	}
 
 	if (dut->ap_amsdu == VALUE_ENABLED) {
-		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 3", ifname);
+		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 2", ifname);
 		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv amsdu 3 failed");
+			sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv amsdu 2 failed");
 		}
 	} else if (dut->ap_amsdu == VALUE_DISABLED) {
 		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 1", ifname);
@@ -4348,29 +4432,6 @@ static void ath_ap_set_params(struct sigma_dut *dut)
 		}
 	}
 
-	if (dut->ap_rx_stbc == 1) {
-		snprintf(buf, sizeof(buf), "iwpriv %s rx_stbc 1", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv rx_stbc 1 failed");
-		}
-	}
-
-	if (dut->ap_opmode_notify == 1) {
-		snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 0", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv opmode_notify 0 failed");
-		}
-	}
-
-	if (dut->ap_sgi80 == 1) {
-		snprintf(buf, sizeof(buf), "iwpriv %s shortgi 1", ifname);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv shortgi 1 failed");
-		}
-	}
 	/* Command sequence to generate single VHT AMSDU and MPDU */
 	if (dut->ap_addba_reject != VALUE_NOT_SET &&
 	    dut->ap_ampdu == VALUE_DISABLED &&
@@ -4833,12 +4894,17 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 	case AP_WPA2_PSK:
 	case AP_WPA2_PSK_MIXED:
 	case AP_WPA_PSK:
-		if (dut->ap_key_mgmt == AP_WPA2_PSK)
+		case AP_WPA2_SAE:
+		case AP_WPA2_PSK_SAE:
+		if (dut->ap_key_mgmt == AP_WPA2_PSK ||
+		    dut->ap_key_mgmt == AP_WPA2_SAE ||
+		    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
 			run_system(dut, "cfg -a AP_WPA=2");
 		else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED)
 			run_system(dut, "cfg -a AP_WPA=3");
 		else
 			run_system(dut, "cfg -a AP_WPA=1");
+		/* TODO: SAE configuration */
 		run_system(dut, "cfg -a AP_SECMODE=WPA");
 		run_system(dut, "cfg -a AP_SECFILE=PSK");
 		snprintf(buf, sizeof(buf), "cfg -a 'PSK_KEY=%s'",
@@ -4878,6 +4944,14 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			 dut->ap_radius_password);
 		run_system(dut, buf);
 		break;
+	case AP_SUITEB:
+		/* TODO */
+		sigma_dut_print(dut, DUT_MSG_ERROR, "SuiteB not supported");
+		break;
+	case AP_WPA2_OWE:
+		/* TODO */
+		sigma_dut_print(dut, DUT_MSG_ERROR, "OWE not supported");
+		break;
 	}
 
 	if (dut->ap_is_dual) {
@@ -4909,13 +4983,18 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 		case AP_WPA2_PSK:
 		case AP_WPA2_PSK_MIXED:
 		case AP_WPA_PSK:
-			if (dut->ap_key_mgmt == AP_WPA2_PSK)
+		case AP_WPA2_SAE:
+		case AP_WPA2_PSK_SAE:
+			if (dut->ap_key_mgmt == AP_WPA2_PSK ||
+			    dut->ap_key_mgmt == AP_WPA2_SAE ||
+			    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
 				run_system(dut, "cfg -a AP_WPA_2=2");
 			else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED)
 				run_system(dut, "cfg -a AP_WPA_2=3");
 			else
 				run_system(dut, "cfg -a AP_WPA_2=1");
 			// run_system(dut, "cfg -a AP_WPA_2=2");
+			/* TODO: SAE configuration */
 			run_system(dut, "cfg -a AP_SECMODE_2=WPA");
 			run_system(dut, "cfg -a AP_SECFILE_2=PSK");
 			snprintf(buf, sizeof(buf), "cfg -a 'PSK_KEY_2=%s'",
@@ -4955,6 +5034,16 @@ static int cmd_ath_ap_config_commit(struct sigma_dut *dut,
 			snprintf(buf, sizeof(buf), "cfg -a AP_AUTH_SECRET_2=%s",
 				 dut->ap_radius_password);
 			run_system(dut, buf);
+			break;
+		case AP_SUITEB:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"SuiteB not supported");
+			break;
+		case AP_WPA2_OWE:
+			/* TODO */
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"OWE not supported");
 			break;
 		}
 
@@ -5306,8 +5395,47 @@ static int get_5g_channel_freq(int chan)
 }
 
 
-static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
-				struct sigma_cmd *cmd)
+static const char * hostapd_cipher_name(enum ap_cipher cipher)
+{
+	switch (cipher) {
+	case AP_CCMP:
+		return "CCMP";
+	case AP_TKIP:
+		return "TKIP";
+	case AP_CCMP_TKIP:
+		return "CCMP TKIP";
+	case AP_GCMP_256:
+		return "GCMP-256";
+	case AP_GCMP_128:
+		return "GCMP";
+	case AP_CCMP_256:
+		return "CCMP-256";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+
+static const char *
+hostapd_group_mgmt_cipher_name(enum ap_group_mgmt_cipher cipher)
+{
+	switch (cipher) {
+	case AP_BIP_GMAC_256:
+		return "BIP-GMAC-256";
+	case AP_BIP_CMAC_256:
+		return "BIP-CMAC-256";
+	case AP_BIP_GMAC_128:
+		return "BIP-GMAC-128";
+	case AP_BIP_CMAC_128:
+		return "AES-128-CMAC";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+
+int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
+			 struct sigma_cmd *cmd)
 {
 	/* const char *name = get_param(cmd, "NAME"); */
 	FILE *f;
@@ -5315,6 +5443,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	char buf[500];
 	char path[100];
 	enum driver_type drv;
+	const char *key_mgmt;
 
 	drv = get_driver_type();
 
@@ -5483,24 +5612,39 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 	case AP_WPA2_PSK:
 	case AP_WPA2_PSK_MIXED:
 	case AP_WPA_PSK:
-		if (dut->ap_key_mgmt == AP_WPA2_PSK)
+	case AP_WPA2_SAE:
+	case AP_WPA2_PSK_SAE:
+		if (dut->ap_key_mgmt == AP_WPA2_PSK ||
+		    dut->ap_key_mgmt == AP_WPA2_SAE ||
+		    dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
 			fprintf(f, "wpa=2\n");
 		else if (dut->ap_key_mgmt == AP_WPA2_PSK_MIXED)
 			fprintf(f, "wpa=3\n");
 		else
 			fprintf(f, "wpa=1\n");
-		fprintf(f, "wpa_key_mgmt=WPA-PSK\n");
+		if (dut->ap_key_mgmt == AP_WPA2_SAE)
+			key_mgmt = "SAE";
+		else if (dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+			key_mgmt = "WPA-PSK SAE";
+		else
+			key_mgmt = "WPA-PSK";
 		switch (dut->ap_pmf) {
 		case AP_PMF_DISABLED:
-			fprintf(f, "wpa_key_mgmt=WPA-PSK%s\n",
+			fprintf(f, "wpa_key_mgmt=%s%s\n", key_mgmt,
 				dut->ap_add_sha256 ? " WPA-PSK-SHA256" : "");
 			break;
 		case AP_PMF_OPTIONAL:
-			fprintf(f, "wpa_key_mgmt=WPA-PSK%s\n",
+			fprintf(f, "wpa_key_mgmt=%s%s\n", key_mgmt,
 				dut->ap_add_sha256 ? " WPA-PSK-SHA256" : "");
 			break;
 		case AP_PMF_REQUIRED:
-			fprintf(f, "wpa_key_mgmt=WPA-PSK-SHA256\n");
+			if (dut->ap_key_mgmt == AP_WPA2_SAE)
+				key_mgmt = "SAE";
+			else if (dut->ap_key_mgmt == AP_WPA2_PSK_SAE)
+				key_mgmt = "WPA-PSK-SHA256 SAE";
+			else
+				key_mgmt = "WPA-PSK-SHA256";
+			fprintf(f, "wpa_key_mgmt=%s\n", key_mgmt);
 			break;
 		}
 		if (dut->ap_cipher == AP_CCMP_TKIP)
@@ -5509,7 +5653,10 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 			fprintf(f, "wpa_pairwise=TKIP\n");
 		else
 			fprintf(f, "wpa_pairwise=CCMP\n");
-		fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
+		if (dut->ap_key_mgmt == AP_WPA2_SAE)
+			fprintf(f, "sae_password=%s\n", dut->ap_passphrase);
+		else
+			fprintf(f, "wpa_passphrase=%s\n", dut->ap_passphrase);
 		break;
 	case AP_WPA2_EAP:
 	case AP_WPA2_EAP_MIXED:
@@ -5547,6 +5694,31 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		fprintf(f, "auth_server_shared_secret=%s\n",
 			dut->ap_radius_password);
 		break;
+	case AP_SUITEB:
+		fprintf(f, "ieee8021x=1\n");
+		fprintf(f, "wpa=2\n");
+		fprintf(f, "wpa_key_mgmt=WPA-EAP-SUITE-B-192\n");
+		fprintf(f, "wpa_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_group_mgmt_cipher != AP_NO_GROUP_MGMT_CIPHER_SET)
+			fprintf(f, "group_mgmt_cipher=%s\n",
+				hostapd_group_mgmt_cipher_name(
+					dut->ap_group_mgmt_cipher));
+		fprintf(f, "auth_server_addr=%s\n", dut->ap_radius_ipaddr);
+		if (dut->ap_radius_port)
+			fprintf(f, "auth_server_port=%d\n",
+				dut->ap_radius_port);
+		fprintf(f, "auth_server_shared_secret=%s\n",
+			dut->ap_radius_password);
+		break;
+	case AP_WPA2_OWE:
+		fprintf(f, "wpa=2\n");
+		fprintf(f, "wpa_key_mgmt=OWE\n");
+		fprintf(f, "rsn_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		if (dut->ap_sae_groups)
+			fprintf(f, "owe_groups=%s\n", dut->ap_sae_groups);
+		break;
 	}
 
 	if (dut->ap_rsn_preauth)
@@ -5565,6 +5737,19 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (dut->rsne_override)
 		fprintf(f, "own_ie_override=%s\n", dut->rsne_override);
+
+	if (dut->sae_commit_override)
+		fprintf(f, "sae_commit_override=%s\n",
+			dut->sae_commit_override);
+
+	if (dut->ap_sae_groups)
+		fprintf(f, "sae_groups=%s\n", dut->ap_sae_groups);
+
+	if (dut->sae_anti_clogging_threshold >= 0)
+		fprintf(f, "sae_anti_clogging_threshold=%d\n",
+			dut->sae_anti_clogging_threshold);
+	if (dut->sae_reflection)
+		fprintf(f, "sae_reflection_attack=1\n");
 
 	if (dut->ap_p2p_mgmt)
 		fprintf(f, "manage_p2p=1\n");
@@ -5767,6 +5952,47 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	if (dut->ap_key_mgmt == AP_WPA2_OWE && dut->ap_tag_ssid[0][0] &&
+	    dut->ap_tag_key_mgmt[0] == AP2_OPEN) {
+		/* OWE transition mode */
+		unsigned char bssid[6];
+		char ifname2[50];
+		unsigned long val;
+		FILE *f2;
+
+		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
+
+		fprintf(f, "owe_transition_ifname=%s\n", ifname2);
+		val = 0x12345678; /* default to something */
+		f2 = fopen("/dev/urandom", "r");
+		if (f2) {
+			if (fread(&val, 1, sizeof(val), f2) != sizeof(val)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Could not read /dev/urandom");
+			}
+			fclose(f2);
+		}
+		fprintf(f, "ssid=owe-%lx\n", val);
+
+		if (get_hwaddr(ifname, bssid)) {
+			fclose(f);
+			return -2;
+		}
+		if (bssid[0] & 0x02)
+			bssid[5] ^= 0x01;
+		else
+			bssid[0] |= 0x02;
+
+		fprintf(f, "bss=%s\n", ifname2);
+		fprintf(f, "ssid=%s\n", dut->ap_ssid);
+		if (dut->bridge)
+			fprintf(f, "bridge=%s\n", dut->bridge);
+		fprintf(f, "bssid=%02x:%02x:%02x:%02x:%02x:%02x\n",
+			bssid[0], bssid[1], bssid[2], bssid[3],
+			bssid[4], bssid[5]);
+		fprintf(f, "owe_transition_ifname=%s\n", ifname);
+	}
+
 	fclose(f);
 	if (dut->use_hostapd_pid_file)
 		kill_hostapd_process_pid(dut);
@@ -5792,6 +6018,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 #endif /* __QNXNTO__ */
 		}
 	}
+	dut->hostapd_running = 0;
 
 #ifdef ANDROID
 	/* Set proper conf file permissions so that hostapd process
@@ -5942,6 +6169,7 @@ static int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
 		return 0;
 	}
 
+	dut->hostapd_running = 1;
 	return 1;
 }
 
@@ -6307,16 +6535,11 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ap_channel = 36;
 		dut->ap_ampdu = VALUE_NOT_SET;
 		dut->ap_ndpa_frame = 1;
-		dut->ap_txBF = 1;
 		if (dut->device_type == AP_testbed) {
 			dut->ap_amsdu = VALUE_DISABLED;
 			dut->ap_ldpc = VALUE_DISABLED;
 			dut->ap_rx_amsdu = VALUE_DISABLED;
 			dut->ap_sgi80 = 0;
-			dut->ap_txBF = 2;
-			dut->ap_rx_stbc = 1;
-			dut->ap_opmode_notify = 1;
-			dut->ap_txBF = 1;
 		} else {
 			dut->ap_amsdu = VALUE_ENABLED;
 			/*
@@ -6401,6 +6624,21 @@ static int cmd_ap_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
 
+	free(dut->sae_commit_override);
+	dut->sae_commit_override = NULL;
+
+	free(dut->ap_sae_groups);
+	dut->ap_sae_groups = NULL;
+
+	dut->sae_anti_clogging_threshold = -1;
+	dut->sae_reflection = 0;
+
+	dut->ap_cipher = AP_CCMP;
+	dut->ap_group_mgmt_cipher = AP_NO_GROUP_MGMT_CIPHER_SET;
+
+	dut->dpp_conf_id = -1;
+
+	dut->hostapd_running = 0;
 	if (dut->use_hostapd_pid_file) {
 		kill_hostapd_process_pid(dut);
 	} else if (kill_process(dut, "(hostapd)", 1, SIGTERM) == 0 ||
@@ -6883,7 +7121,7 @@ static int ath_ap_send_frame_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	/* Send the opmode notification */
-	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 0", ifname);
+	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 1", ifname);
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"iwpriv opmode_notify failed!");
@@ -7398,7 +7636,7 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 #if defined( __linux__)
 	/* const char *name = get_param(cmd, "NAME"); */
 	/* const char *ifname = get_param(cmd, "INTERFACE"); */
-	char resp[50];
+	char resp[100];
 	unsigned char addr[6];
 	char ifname[50];
 	struct ifreq ifr;
@@ -7413,7 +7651,7 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 			 * The only valid WLAN Tags as of now as per the latest
 			 * WFA scripts are 1, 2, and 3.
 			 */
-			send_resp(dut, conn, SIGMA_INVALID,
+			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported WLAN_TAG");
 			return 0;
 		}
@@ -7429,7 +7667,10 @@ static int cmd_ap_get_mac_address(struct sigma_dut *dut,
 	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
 		perror("ioctl");
 		close(s);
-		return -1;
+		snprintf(resp, sizeof(resp),
+			 "errorCode,Could not find interface %s", ifname);
+		send_resp(dut, conn, SIGMA_ERROR, resp);
+		return 0;
 	}
 	close(s);
 	memcpy(addr, ifr.ifr_hwaddr.sa_data, 6);
@@ -8148,7 +8389,7 @@ static int ath_vht_op_mode_notif(struct sigma_dut *dut, const char *ifname,
 	}
 
 	/* Send the opmode notification */
-	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 0", ifname);
+	snprintf(buf, sizeof(buf), "iwpriv %s opmode_notify 1", ifname);
 	if (system(buf) != 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"iwpriv opmode_notify failed!");

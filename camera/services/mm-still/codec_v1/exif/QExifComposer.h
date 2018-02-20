@@ -62,8 +62,9 @@ public:
   int addBuffer(QIBuffer *aBuffer);
 
   /** Start
-   *  @aThumbnail: thumbnail image object, if the thumbnail is not
+   *  @aThumbnails: thumbnail image objects, if the thumbnail is not
    *             encoded, pass NULL
+   *  @aNumThumbnails: number of thumbnails
    *  @aType: jpeg header type
    *  @aSync: composer mode (synchronous or asynchronous)
    *
@@ -71,8 +72,8 @@ public:
    *
    *  Currently only synchronous mode is supported
    **/
-  int Start(QImage *aThumbnail = NULL, JpegHeaderType aType = EXIF,
-    int aSync = true);
+  int Start(QImage *aThumbnails[] = NULL, uint32_t aNumThumbnails = 0,
+    JpegHeaderType aType = EXIF, int aSync = true);
 
   /** SetParams
    *  @aParams: exif composer parameters
@@ -149,10 +150,11 @@ private:
   void EmitApp1();
 
   /** EmitThumbnailIfd
+   *  @aThumbnailIdx - thumbnail index
    *
    *  emit thubnail Ifd marker into the buffer
    **/
-  void EmitThumbnailIfd();
+  void EmitThumbnailIfd(uint32_t aThumbnailIdx);
 
   /** EmitGpsIfd
    *
@@ -290,10 +292,17 @@ private:
   int FlushFileHeader();
 
   /** FlushThumbnail
+   *  @aThumbnailIdx: thumbnail index
    *
    *  flush thumbnail into the buffer
    **/
-  int FlushThumbnail();
+  int FlushThumbnail(uint32_t aThumbnailIdx);
+
+  /** FlushExtraThumbnails
+   *
+   *  flush extra thumbnails into the buffer
+   **/
+  int FlushExtraThumbnails();
 
   /** EmitApp2
    *
@@ -345,11 +354,11 @@ private:
    **/
   QIHeapBuffer *mAheadBuffer;
 
-  /** mThumbnail
+  /** mThumbnails
    *
-   *  thumbnail image passed by the user
+   *  thumbnail images passed by the user
    **/
-  QImage *mThumbnail;
+  QImage *mThumbnails[MAX_NUM_THUMBNAILS];
 
   /** mObserver
    *
@@ -480,6 +489,12 @@ private:
    *  Exif app marker incrementor
    **/
   uint8_t mExitAppMarkerInc;
+
+  /** mNumThumbnails
+   *
+   *  Number of thumbnails
+   **/
+  uint32_t mNumThumbnails;
 
 };
 

@@ -98,6 +98,11 @@ fi
 if [ -f "${B}/synergy-bootstrap/output/host/bin/bt_test" ]; then
     install ${B}/synergy-bootstrap/output/host/bin/bt_test ${D}${bindir}
 fi
+
+# Install btdiag application for QCA chip.
+if [ -f "${B}/synergy-bootstrap/output/host/bin/btdiag" ]; then
+    install ${B}/synergy-bootstrap/output/host/bin/btdiag ${D}${bindir}
+fi
 }
 
 # Install synergy-middleware

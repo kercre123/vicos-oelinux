@@ -267,7 +267,11 @@ nv_param_err_code NvParamMgrImpl::openDB()
     if (0 != ret_val)
     {
       int en = errno;
-      newFile = (ENOENT == en);
+      if (ENOENT == en) {
+        newFile = true;
+        umask(0007);
+      }
+
       log_debug (TAG, "openDB, stat for %s failed with error: %s, new file: %d\n",
                  m_filename, strerror(en), newFile);
     }
@@ -293,10 +297,17 @@ nv_param_err_code NvParamMgrImpl::openDB()
 
     if (newFile)
     {
-      ret_val = chmod (m_filename, 0660);
-      if (ret_val)
+      stat(m_filename, &buf);
+      if (((buf.st_mode & S_IRUSR) != S_IRUSR) ||
+          ((buf.st_mode & S_IWUSR) != S_IWUSR) ||
+          ((buf.st_mode & S_IRGRP) != S_IRGRP) ||
+          ((buf.st_mode & S_IWGRP) != S_IWGRP))
       {
-        log_error(TAG, "openDB, chmod err %s\n", strerror(errno));
+        ret_val = chmod(m_filename, 0660);
+        if (ret_val)
+        {
+          log_error(TAG, "openDB, chmod err %s\n", strerror(errno));
+        }
       }
 
       struct group * gps_group = getgrnam("gps");

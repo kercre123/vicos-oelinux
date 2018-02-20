@@ -4107,7 +4107,7 @@ static boolean aec_port_proc_get_aec_data(mct_port_t *port,
         out->flash_sensitivity.high = from_core->flash_sensitivity.high;
 
         /*Copy shdr params*/
-        out->shdr_exposure_ratio = from_core->shdr_exposure_ratio;
+        out->shdr_exposure_ratio = from_core->shdr_exposure_ratio_real[0];
         out->shdr_gtm_gamma = from_core->shdr_gtm_gamma;
 
 #if defined(CHROMATIX_VERSION) && (CHROMATIX_VERSION >= 0x0310)
@@ -4284,6 +4284,75 @@ static boolean aec_port_is_handle_stats_required(aec_port_private_t *private,
   }
 
   return TRUE;
+}
+
+
+/** aec_port_handle_svhdr_stats_data
+ *    @port: MCT port data
+ *    @event: MCT event data
+ *
+ * Return: TRUE if no error
+ **/
+static boolean aec_port_handle_svhdr_stats_data(mct_port_t *port, mct_event_t *event)
+{
+  boolean rc = FALSE;
+
+  aec_port_private_t *private = (aec_port_private_t *)(port->port_private);
+  mct_event_module_t *mod_evt = &(event->u.module_event);
+  stats_shdr_stats_t* stats_info;
+
+
+  stats_info = (stats_shdr_stats_t*)(mod_evt->module_event_data);
+
+  if (!stats_info) {
+    return rc;
+  }
+
+  if (is_aec_stats_skip_required(private, stats_info->frame_id)) {
+    AEC_LOW("skip stats: %d", stats_info->frame_id);
+    return TRUE; /* Non error case */
+  }
+
+  q3a_thread_aecawb_msg_t *aec_msg =
+    aec_port_create_msg(AEC_UNDEF, AEC_UNDEF, private);
+  if (aec_msg == NULL) {
+    return rc;
+  }
+
+  stats_t *aec_stats = (stats_t *)calloc(1, sizeof(stats_t));
+  if (aec_stats == NULL) {
+    free(aec_msg);
+    return rc;
+  }
+
+
+  aec_msg->u.stats = aec_stats;
+  aec_stats->camera_id = private->camera_id;
+  aec_msg->u.stats->stats_type_mask |= STATS_SHDR;
+  aec_stats->frame_id = stats_info->frame_id;
+  aec_stats->stats_type_mask |= STATS_SHDR;
+
+  aec_msg->u.stats->shdr_stats.num_grid_h = stats_info->num_grid_h;
+  aec_msg->u.stats->shdr_stats.num_grid_w = stats_info->num_grid_w;
+
+  Q3A_MEMCPY(aec_msg->u.stats->shdr_stats.y_avg, stats_info->y_avg, sizeof(float)*MAX_SHDR_BG_STATS_SIZE);
+  Q3A_MEMCPY(aec_msg->u.stats->shdr_stats.bin, stats_info->bin, sizeof(float)*MAX_SHDR_BHIST_STATS_SIZE);
+
+  aec_msg->camera_id = private->camera_id;
+  aec_msg->type = MSG_AEC_STATS_SVHDR;
+
+  uint32_t cur_stats_id = 0;
+  uint32_t cur_sof_id = 0;
+
+  MCT_OBJECT_LOCK(port);
+  cur_stats_id = private->cur_stats_id = stats_info->frame_id;
+  cur_sof_id = private->cur_sof_id;
+  AEC_LOW("AEC_UPDATE_DBG: IN STATS_DATA: Curr: SOF_ID:%d Stats_ID:%d",
+    private->cur_sof_id, private->cur_stats_id);
+  MCT_OBJECT_UNLOCK(port);
+
+  rc = q3a_aecawb_thread_en_q_msg(private->thread_data, aec_msg);
+ return rc;
 }
 
 /** aec_port_handle_stats_data
@@ -4512,6 +4581,8 @@ static boolean aec_port_parse_sensor_info(aec_port_private_t *private,
     aec_msg->u.aec_set_parm.u.init_param.sensor_info.preview_fps = fps;
     aec_msg->u.aec_set_parm.u.init_param.sensor_info.prev_max_line_cnt =
       sensor_info->max_linecount;
+    aec_msg->u.aec_set_parm.u.init_param.sensor_info.max_snapshot_fps = max_fps;
+    aec_msg->u.aec_set_parm.u.init_param.sensor_info.snapshot_fps = fps;
   }
     break;
 
@@ -4524,6 +4595,8 @@ static boolean aec_port_parse_sensor_info(aec_port_private_t *private,
     aec_msg->u.aec_set_parm.u.init_param.sensor_info.preview_fps = fps;
     aec_msg->u.aec_set_parm.u.init_param.sensor_info.prev_max_line_cnt =
       sensor_info->max_linecount;
+    aec_msg->u.aec_set_parm.u.init_param.sensor_info.max_snapshot_fps = max_fps;
+    aec_msg->u.aec_set_parm.u.init_param.sensor_info.snapshot_fps = fps;
   }
     break;
 
@@ -4534,6 +4607,7 @@ static boolean aec_port_parse_sensor_info(aec_port_private_t *private,
       sensor_info->fl_lines;
     aec_msg->u.aec_set_parm.u.init_param.sensor_info.snap_max_line_cnt =
       sensor_info->max_linecount;
+    aec_msg->u.aec_set_parm.u.init_param.sensor_info.max_snapshot_fps = max_fps;
     aec_msg->u.aec_set_parm.u.init_param.sensor_info.snapshot_fps = fps;
   }
     break;
@@ -4648,6 +4722,11 @@ static boolean aec_port_proc_downstream_event(mct_port_t *port,
 
   case MCT_EVENT_MODULE_STATS_EXT_DATA: {
     rc = aec_port_handle_stats_data(port, event);
+  }
+    break;
+
+  case MCT_EVENT_MODULE_BAYER_DATA: {
+    rc = aec_port_handle_svhdr_stats_data(port, event);
   }
     break;
 

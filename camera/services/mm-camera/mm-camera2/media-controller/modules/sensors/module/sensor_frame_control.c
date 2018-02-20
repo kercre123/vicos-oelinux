@@ -835,7 +835,9 @@ boolean sensor_fc_report_meta(mct_module_t* module,
   uint32_t                  apply_frame_id_dumpmetadata;
   uint32_t                  report_delay;
   int8_t                    decode_format;
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   char                      prop[PROPERTY_VALUE_MAX];
+#endif
   sensor_bet_metadata_t     bet_meta;
   /* meta data to report */
   int64_t                   frame_duration = -1;
@@ -983,10 +985,14 @@ boolean sensor_fc_report_meta(mct_module_t* module,
      }
    }
 
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   /* BET */
   memset(prop, 0, sizeof(prop));
   property_get("persist.camera.dumpmetadata", prop, "0");
   enabled = atoi(prop);
+#else
+  enabled = 0;
+#endif
   if (enabled > 0) {
     memset(&bet_meta, 0, sizeof(bet_meta));
 

@@ -632,6 +632,9 @@ OMX_ERRORTYPE QOMXImageCodec::omx_component_get_extension_index(
   } else if (strncmp(QOMX_IMAGE_EXT_MULTI_IMAGE_NAME, paramName,
     strlen(paramName)) == 0) {
     *indexType = (OMX_INDEXTYPE) QOMX_IMAGE_EXT_MULTI_IMAGE;
+  } else if (strncmp(QOMX_IMAGE_EXT_SECOND_THUMBNAIL_NAME, paramName,
+    strlen(paramName)) == 0) {
+    *indexType = (OMX_INDEXTYPE) QOMX_IMAGE_EXT_SECOND_THUMBNAIL;
   } else {
     QIDBG_ERROR("%s:%d] Unsupported extention type", __func__, __LINE__);
     pthread_mutex_unlock(&m_compLock);

@@ -11,7 +11,8 @@ EXTRA_OEMAKE = "DEFAULT_INCLUDES= CPPFLAGS="-I. -I${STAGING_KERNEL_BUILDDIR}/usr
 SRC_DIR = "${WORKSPACE}/audio/mm-audio/qap_wrapper/"
 S = "${WORKDIR}/audio/mm-audio/qap_wrapper/"
 
-EXTRA_OECONF = "--with-glib"
+QAPBINSUFFIX = "${@base_contains('TUNE_ARCH', 'aarch64', '_64bit', '', d)}"
+EXTRA_OECONF = "--with-glib --program-suffix=${QAPBINSUFFIX}"
 EXTRA_OECONF += "--with-sanitized-headers=${STAGING_KERNEL_BUILDDIR}/usr/include"
 
 FILES_SOLIBSDEV = ""

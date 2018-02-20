@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,11 +30,12 @@
 #ifndef QMMF_TIME_LAPSE_H_
 #define QMMF_TIME_LAPSE_H_
 
-#include <utils/Condition.h>
 #include <qmmf-sdk/qmmf_recorder.h>
 #include <qmmf-sdk/qmmf_recorder_params.h>
 #include <qmmf-sdk/qmmf_display.h>
 #include <qmmf-sdk/qmmf_display_params.h>
+
+#include "common/utils/qmmf_condition.h"
 
 namespace qmmf {
 namespace timelapse {
@@ -93,6 +94,7 @@ class TimeLapse {
                   uint32_t image_sequence_count,
                   BufferDescriptor buffer, MetaData meta_data);
 
+#ifndef DISABLE_DISPLAY
   void DisplayCallbackHandler(DisplayEventType event_type,
                               void *event_data, size_t event_data_size);
 
@@ -104,6 +106,7 @@ class TimeLapse {
 
   status_t PushFrameToDisplay(BufferDescriptor& buffer,
                               CameraBufferMetaData& meta_data);
+#endif
 
   Recorder              recorder_;
   CameraMetadata        static_info_;
@@ -111,19 +114,21 @@ class TimeLapse {
   uint32_t              session_id_;
   uint64_t              last_capture_ts_;
   uint64_t              snapshot_count_;
-  Condition             lapse_cond_;
-  Mutex                 lapse_lock_;
-  Condition             snapshot_cond_;
-  Mutex                 snapshot_lock_;
+  QCondition            lapse_cond_;
+  std::mutex            lapse_lock_;
+  QCondition            snapshot_cond_;
+  std::mutex            snapshot_lock_;
 
 
   static const uint32_t kPreviewTrackId;
 
+#ifndef DISABLE_DISPLAY
   Display*   display_;
   uint32_t   surface_id_;
   SurfaceParam surface_param_;
   SurfaceBuffer surface_buffer_;
   bool display_started_;
+#endif
 };
 
 } //namespace timelapse ends here

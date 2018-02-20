@@ -1,3 +1,3 @@
 # BT proprietary Packages
 IMAGE_INSTALL += "bt-services"
-IMAGE_INSTALL += "lib32-hci-qcomm-init"
+IMAGE_INSTALL += "hci-qcomm-init"

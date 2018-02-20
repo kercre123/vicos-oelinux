@@ -59,6 +59,48 @@ struct input_method;
 struct weston_pointer;
 struct linux_dmabuf_buffer;
 
+#ifndef SDE_DRM_CONNECTOR_HDCP_VERSION_ENUM
+#define SDE_DRM_CONNECTOR_HDCP_VERSION_ENUM
+
+enum sde_drm_connector_hdcp_version {
+	SDE_DRM_CONNECTOR_HDCP_UNKNOWN			= 0x0,
+	SDE_DRM_CONNECTOR_HDCP_1_4			= 0x14,
+	SDE_DRM_CONNECTOR_HDCP_2_2			= 0x22,
+};
+
+#endif /* SDE_DRM_CONNECTOR_HDCP_VERSION_ENUM */
+
+#ifndef SDE_DRM_CONNECTOR_TYPE_ENUM
+#define SDE_DRM_CONNECTOR_TYPE_ENUM
+
+enum sde_drm_connector_type {
+	SDE_DRM_CONNECTOR_UNKNOWN		= 0,
+	SDE_DRM_CONNECTOR_VGA			= 1,
+	SDE_DRM_CONNECTOR_DVII			= 2,
+	SDE_DRM_CONNECTOR_DVID			= 3,
+	SDE_DRM_CONNECTOR_DVIA			= 4,
+	SDE_DRM_CONNECTOR_COMPOSITE		= 5,
+	SDE_DRM_CONNECTOR_SVIDEO		= 6,
+	SDE_DRM_CONNECTOR_LVDS			= 7,
+	SDE_DRM_CONNECTOR_COMPONENT		= 8,
+	SDE_DRM_CONNECTOR_9PINDIN		= 9,
+	SDE_DRM_CONNECTOR_DISPLAYPORT		= 10,
+	SDE_DRM_CONNECTOR_HDMIA			= 11,
+	SDE_DRM_CONNECTOR_HDMIB			= 12,
+	SDE_DRM_CONNECTOR_TV			= 13,
+	SDE_DRM_CONNECTOR_EDP			= 14,
+	SDE_DRM_CONNECTOR_VIRTUAL		= 15,
+	SDE_DRM_CONNECTOR_DSI			= 16,
+};
+
+#endif /* SDE_DRM_CONNECTOR_TYPE_ENUM */
+
+inline uint32_t sde_wl_hdcp_version_adapter(uint32_t hdcp_version);
+
+inline uint32_t sde_wl_hdcp_interface_adapter(uint32_t interface_type);
+
+inline uint32_t sde_wl_hdcp_hdr_info_adapter(bool hdr_supported);
+
 enum weston_keyboard_modifier {
 	MODIFIER_CTRL = (1 << 0),
 	MODIFIER_ALT = (1 << 1),
@@ -188,6 +230,15 @@ struct weston_output {
 	struct wl_list animation_list;
 	int32_t x, y, width, height;
 	int32_t mm_width, mm_height;
+
+	struct {
+		uint32_t version;
+		uint32_t interface_type;
+	} hdcp_protocol;
+
+	struct {
+		uint32_t hdr_supported;
+	} hdr_info;
 
 	/** Output area in global coordinates, simple rect */
 	pixman_region32_t region;

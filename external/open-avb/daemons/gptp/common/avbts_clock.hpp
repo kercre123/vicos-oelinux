@@ -246,12 +246,7 @@ public:
    * @param  id New id
    * @return void
    */
-  void setGrandmasterClockIdentity(ClockIdentity id) {
-	  if (id != grandmaster_clock_identity) {
-		  fprintf(stderr, "New Grandmaster \"%s\" (previous \"%s\")\n", id.getIdentityString().c_str(), grandmaster_clock_identity.getIdentityString().c_str());
-		  grandmaster_clock_identity = id;
-	  }
-  }
+  void setGrandmasterClockIdentity(ClockIdentity id, uint16_t portNumber);
 
   /**
    * @brief  Gets grandmaster clock quality object

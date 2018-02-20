@@ -29,7 +29,9 @@
 
 #pragma once
 
-#include "qmmf-sdk/qmmf_codec.h"
+#include <vector>
+
+#include <qmmf-sdk/qmmf_codec.h>
 
 namespace qmmf {
 
@@ -41,6 +43,8 @@ class JpegEncoder {
 
   void FillImgData(const CameraBufferMetaData& source_info);
 
+  void UpdateThumbnailData(const CameraBufferMetaData& source_info);
+
   void *cfg_;
   void *job_result_ptr_;
   size_t job_result_size_;
@@ -51,10 +55,23 @@ class JpegEncoder {
 
  public:
 
+  struct jpeg_thumbnail {
+    // thumbnail dimension
+    uint32_t width;
+    uint32_t height;
+    // jpeg thumbnail quality: range 0~100
+    uint32_t thumb_quality;
+
+    jpeg_thumbnail(uint32_t width, uint32_t height, uint32_t thumb_quality) :
+        width(width), height(height), thumb_quality(thumb_quality) {}
+  };
+
   struct snapshot_info {
     uint8_t *img_data[3];
     uint8_t *out_data[3];
     CameraBufferMetaData source_info;
+    uint32_t image_quality;
+    std::vector<jpeg_thumbnail> thumbnail_data;
   };
 
   JpegEncoder();
@@ -73,6 +90,11 @@ class JpegEncoder {
 
   void *libjpeg_interface_;
 
+  static const uint32_t kDefaultMainThumbWidth;
+  static const uint32_t kDefaultMainThumbHeight;
+
+  static const uint32_t kDefaultSecondThumbWidth;
+  static const uint32_t kDefaultSecondThumbHeight;
 };
 
 }; //namespace reprocjpegencoder ends here

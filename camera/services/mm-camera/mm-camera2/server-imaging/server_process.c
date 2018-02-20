@@ -370,7 +370,9 @@ serv_proc_ret_t server_process_hal_event(struct v4l2_event *event)
   cam_status_t mct_ret_type;
   int32_t enabled_savemem = 0;
   char savemem[92];
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   char prop[PROPERTY_VALUE_MAX];
+#endif
   int enable_fdleak = 0;
 
   memset(&ret, 0, sizeof(serv_proc_ret_t));
@@ -405,7 +407,7 @@ serv_proc_ret_t server_process_hal_event(struct v4l2_event *event)
     cam_debug_open();
 #endif
 
-#ifdef FDLEAK_FLAG
+#if (defined(_ANDROID_) && defined(FDLEAK_FLAG) && !defined(_DRONE_))
   property_get("persist.camera.fdleak.enable", prop, "0");
   enable_fdleak = atoi(prop);
   if (enable_fdleak) {

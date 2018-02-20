@@ -56,7 +56,6 @@ struct process_buf_queue {
 struct st_hw_session_pcm {
     st_hw_session_t common;
 
-    struct listnode handle_node;
     void *handle; /* handle to ffv library object */
 
     pthread_t callback_thread;
@@ -130,6 +129,8 @@ struct st_hw_session_pcm {
     struct process_buf_queue *process_buf_free;
     struct process_buf_queue *process_buf;
     struct process_buf_queue process_buf_nodes[NUM_PROCESS_BUFS];
+
+    char *ec_ref_dev_name;
 };
 
 typedef struct st_hw_session_pcm st_hw_session_pcm_t;

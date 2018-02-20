@@ -1,0 +1,41 @@
+# configure.ac -- Autoconf script for powermanager-daemon
+#
+# Process this file with autoconf to produce a configure script
+
+# Requires autoconf tool later than 2.61
+AC_PREREQ(2.61)
+# Initialize the libcwtest package version 1.0.0
+AC_INIT([power_manager_daemon],1.0.0)
+# Does not strictly follow GNU Coding standards
+AM_INIT_AUTOMAKE([foreign])
+# Disables auto rebuilding of configure, Makefile.ins
+AM_MAINTAINER_MODE
+# Verifies the --srcdir is correct by checking for the path
+AC_CONFIG_SRCDIR([Makefile.am])
+# defines some macros variable to be included by source
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
+
+AC_PROG_LIBTOOL
+AC_PROG_CXX
+
+if (test "x${with_glib}" = "xyes"); then
+        PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.16, dummy=yes,
+                                AC_MSG_ERROR(GThread >= 2.16 is required))
+        PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.16, dummy=yes,
+                                AC_MSG_ERROR(GLib >= 2.16 is required))
+        GLIB_CFLAGS="$GLIB_CFLAGS $GTHREAD_CFLAGS"
+        GLIB_LIBS="$GLIB_LIBS $GTHREAD_LIBS"
+
+        AC_SUBST(GLIB_CFLAGS)
+        AC_SUBST(GLIB_LIBS)
+fi
+
+AM_CONDITIONAL(USE_GLIB, test "x${with_glib}" = "xyes")
+
+AC_CONFIG_FILES([ \
+        Makefile \
+        power_manager_daemon.pc \
+        ])
+
+AC_OUTPUT

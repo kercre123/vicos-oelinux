@@ -106,7 +106,7 @@ boolean cpp_module_util_decide_proc_frame_per_stream(mct_module_t *module,
   }
 
   if (stream_params->is_stream_on == TRUE)  {
-    cpp_module_get_and_update_buf_index(session_params,
+    cpp_module_get_and_update_buf_index(module, session_params,
       stream_params, frame_id);
     is_sw_skip =
       cpp_module_check_frame_skip(stream_params, session_params, frame_id);
@@ -1287,11 +1287,40 @@ int32_t cpp_module_util_pop_buffer(cpp_module_ctrl_t* ctrl,
   int32_t                   rc = 0;
   cpp_hardware_cmd_t        cmd;
   cpp_hardware_event_data_t hw_event_data;
+  cpp_module_stream_params_t  *stream_params1 = NULL;
+  cpp_module_session_params_t *session_params = NULL;
+  uint32_t buf_idx = 0xFFFFFFFF;
+  uint32_t stream_id = PPROC_GET_STREAM_ID(stream_params->identity);
+  cam_stream_type_t stream_type = stream_params->stream_type;
+  uint32_t i;
 
   if(!ctrl) {
     CPP_BUF_ERR("invalid cpp control, failed\n");
     return -EINVAL;
   }
+  /* get stream parameters based on the event identity */
+  cpp_module_get_params_for_identity(ctrl,
+    stream_params->identity, &session_params, &stream_params1);
+  if(!session_params || !stream_params1) {
+    CPP_BUF_ERR("failed session_params %p, stream_params %p\n",
+      session_params, stream_params);
+    return -EFAULT;
+  }
+  /* get the buffer index from per frame queue */
+  uint32_t q_idx = frame_id % FRAME_CTRL_SIZE;
+  if (stream_type != CAM_STREAM_TYPE_OFFLINE_PROC) {
+    for (i = 0; i < session_params->valid_stream_ids[q_idx].num_streams; i++) {
+      if (session_params->valid_stream_ids[q_idx].stream_request[i].streamID ==
+        stream_id) {
+        buf_idx = session_params->valid_stream_ids[q_idx].stream_request[i].buf_index;
+        break;
+      }
+    }
+  }
+
+  if (session_params->hal_version != CAM_HAL_V3)
+    buf_idx = 0xFFFFFFFF;
+
   CPP_BUF_ERR("Sending IOCTL to pop \n");
   /* Send the IOCTL to kernel to pop the buffer */
   memset(&hw_event_data, 0, sizeof(hw_event_data));
@@ -1299,6 +1328,7 @@ int32_t cpp_module_util_pop_buffer(cpp_module_ctrl_t* ctrl,
   cmd.u.event_data = &hw_event_data;
   hw_event_data.frame_id = frame_id;
   hw_event_data.identity = stream_params->identity;
+  hw_event_data.buf_idx = buf_idx;
   rc = cpp_hardware_process_command(ctrl->cpphw, cmd);
   if (rc < 0) {
     CPP_BUF_ERR("failed stream buffer pop, iden:0x%x frmid:%d\n",

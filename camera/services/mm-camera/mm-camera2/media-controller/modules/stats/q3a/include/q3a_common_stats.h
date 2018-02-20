@@ -143,6 +143,7 @@ typedef enum {
   Q3A_CORE_STATS_BHIST,
   Q3A_CORE_STATS_IHIST,
   Q3A_CORE_STATS_HDR_VID,
+  Q3A_CORE_STATS_SHDR,
   Q3A_CORE_STATS_BE,
 } q3a_core_stats_type;
 
@@ -268,6 +269,20 @@ typedef struct
   uint32                                  array_length;
 } q3a_core_be_stats_type;
 
+
+//For SHDR Stats
+
+#define MAX_SHDR_BG_STATS_SIZE 1024
+#define MAX_SHDR_BHIST_STATS_SIZE 256
+
+typedef struct
+{
+  int num_grid_w;
+  int num_grid_h;
+  float y_avg[MAX_SHDR_BG_STATS_SIZE];
+  float bin[MAX_SHDR_BHIST_STATS_SIZE];
+} q3a_shdr_stats_info_t;
+
 /**
 *  Defines the format of the Row Sum (RS) stats from the ISP
 *
@@ -299,6 +314,7 @@ typedef struct
 {
   q3a_core_stats_type        stats_type_mask;
   uint32                     frame_id;
+  q3a_shdr_stats_info_t      shdr_stats;
   q3a_core_yuv_stats_type    yuv_stats;
   q3a_core_bg_stats_type     bg_stats;
   q3a_core_bhist_stats_type  bhist;

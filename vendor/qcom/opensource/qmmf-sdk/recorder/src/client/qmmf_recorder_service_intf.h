@@ -93,6 +93,9 @@ enum QMMF_RECORDER_SERVICE_CMDS {
   RECORDER_REMOVE_OVERLAYOBJECT,
   RECORDER_CREATE_MULTICAMERA,
   RECORDER_CONFIGURE_MULTICAMERA,
+#ifdef USE_VENDOR_TAG_DESC
+  RECORDER_GET_VENDOR_TAG_DESCRIPTOR,
+#endif
 };
 
 struct BnBuffer {
@@ -303,6 +306,10 @@ class IRecorderService : public IInterface {
                                         const MultiCameraConfigType type,
                                         const void *param,
                                         const uint32_t param_size) = 0;
+
+#ifdef USE_VENDOR_TAG_DESC
+  virtual status_t GetVendorTagDescriptor(sp<VendorTagDescriptor> &desc) = 0;
+#endif
 };
 
 enum RECORDER_SERVICE_CB_CMDS{

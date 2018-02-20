@@ -121,6 +121,8 @@ IPACM_Wan::IPACM_Wan(int iface_index,
 	}
 	m_is_sta_mode = is_sta_mode;
 
+	/* Used to store the Public IP info in IP passthrough mode. */
+	public_wan_v4_addr_set = false;
 	wan_v4_addr_set = false;
 	wan_v4_addr_gw_set = false;
 	wan_v6_addr_gw_set = false;
@@ -512,11 +514,24 @@ int IPACM_Wan::handle_addr_evt(ipacm_event_data_addr *data)
 			}
 		}
 
+		/* Store the public ip address when in passthrough mode which will be used when wan is down. */
+		if ((m_is_sta_mode == Q6_WAN) && (is_default_gateway == true) &&
+			data->ipv4_addr == inet_network(IPACM_IPPASSTHROUGH_WAN_IP))
+		{
+			curr_wan_ip = data->ipv4_addr;
+			public_wan_v4_addr = wan_v4_addr;
+			public_wan_v4_addr_set = true;
+			IPACMDBG_H("In Passthrough mode, Storing previous wan ipv4-addr:0x%x\n",public_wan_v4_addr);
+		}
+		else
+		{
+			IPACMDBG_H("Not in passthrough mode, reset previous wan ipv4-addr:0x%x\n",public_wan_v4_addr);
+			public_wan_v4_addr = 0;
+			public_wan_v4_addr_set = false;
+		}
+
 		wan_v4_addr = data->ipv4_addr;
 		wan_v4_addr_set = true;
-
-		if (m_is_sta_mode == Q6_WAN)
-			curr_wan_ip = data->ipv4_addr;
 
 		IPACMDBG_H("Receved wan ipv4-addr:0x%x\n",wan_v4_addr);
 	}
@@ -1832,7 +1847,13 @@ int IPACM_Wan::handle_sta_header_add_evt()
 		}
 	}
 
-	/* checking if the ipv4 same as default route */
+	/* see if default routes are setup before constructing full header */
+	if(header_partial_default_wan_v4 == true)
+	{
+	   handle_route_add_evt(IPA_IP_v4);
+	}
+
+	/* checking if the ipv6 same as default route */
 	if(wan_v6_addr_gw_set)
 	{
 		index = get_wan_client_index_ipv6(wan_v6_addr_gw);
@@ -1881,10 +1902,6 @@ int IPACM_Wan::handle_sta_header_add_evt()
 	}
 
 	/* see if default routes are setup before constructing full header */
-	if(header_partial_default_wan_v4 == true)
-	{
-	   handle_route_add_evt(IPA_IP_v4);
-	}
 
 	if(header_partial_default_wan_v6 == true)
 	{
@@ -4239,7 +4256,10 @@ int IPACM_Wan::handle_route_del_evt_ex(ipa_ip_type iptype)
 
 		if (iptype == IPA_IP_v4)
 		{
-			wandown_data->ipv4_addr = wan_v4_addr;
+			if (public_wan_v4_addr_set)
+				wandown_data->ipv4_addr = public_wan_v4_addr;
+			else
+				wandown_data->ipv4_addr = wan_v4_addr;
 			if (m_is_sta_mode!=Q6_WAN)
 			{
 				wandown_data->is_sta = true;

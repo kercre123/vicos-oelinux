@@ -25,6 +25,12 @@ $Header$
 
 when      who  what, where, why
 --------  ---  ---------------------------------------------------------------
+04/10/17  vk   Added fix for SUPL
+10/09/17  nk   Fixed KW p1 issues and warnings
+09/08/17  vk   Added logic to set APSS created profiles (temp and LTE attach)
+               to default profile when data calls is brought up using APSS profile.
+               The original default profile is restored post data call teardown
+               and the temp profile is deleted. LTE profiles will remain intact.
 08/18/17  vk   Add Support For Single PDP
 07/26/17  mm   Added indication for slot2
 06/28/17  rv   Add initialization for operator config
@@ -79,6 +85,7 @@ when      who  what, where, why
 #include "qbi_svc_bc_mbim.h"
 #include "qbi_svc_bc_nas.h"
 #include "qbi_svc_bc_sim.h"
+#include "qbi_svc_bc_ext.h"
 #include "qbi_svc_bc_spdp.h"
 
 #include "qbi_common.h"
@@ -264,6 +271,22 @@ typedef struct {
 
   /*! Flag indicating the loopback state of current connection */
   boolean is_loopback;
+
+  /*! Flag and index for restoring 3GPP default profile */
+  uint8 restore_default_profile_3gpp;
+  uint8 default_profile_index_3gpp;
+
+  /*! Flag and index for restoring 3GPP2 default profile */
+  uint8 restore_default_profile_3gpp2;
+  uint8 default_profile_index_3gpp2;
+  
+  /*! Flag and index for temp 3GPP profile */
+  uint8 is_temp_profile_3gpp;
+  uint8 temp_profile_index_3gpp;
+
+  /*! Flag and index for temp 3GPP2 profile */
+  uint8 is_temp_profile_3gpp2;
+  uint8 temp_profile_index_3gpp2;
 } qbi_svc_bc_connect_session_type_s;
 
 /*! @brief Device service local cache struct
@@ -337,10 +360,12 @@ typedef struct {
   /*! Store 3gpp profile scan status and matching profile index */
   uint8 profile_found_3gpp;
   uint8 profile_index_3gpp;
+  uint8 is_profile_3gpp_set_to_default;
 
   /*! Store 3gpp2 profile scan status and matching profile index */
   uint8 profile_found_3gpp2;
   uint8 profile_index_3gpp2;
+  uint8 is_profile_3gpp2_set_to_default;
 
   /*! Store number of profiles from profile list */
   uint8 num_of_profile_epc;
@@ -351,6 +376,9 @@ typedef struct {
       profiles for multiple profile types, EPC profile will be stored first
       followed by 3GPP then 3GPP2 profiles. */
   qbi_svc_bc_profile_list_s profile_list;
+
+  /*! Store network error code from SNI response */
+  uint32 nw_error;
 } qbi_svc_bc_connect_profiles_info_s;
 
 /*! Collection of 3gpp settings used for finding matching 3gpp2 profile */
@@ -1005,6 +1033,12 @@ static void qbi_svc_bc_connect_s_deactivate_completion_cb
   const qbi_txn_s *txn
 );
 
+static qbi_svc_action_e qbi_svc_bc_connect_s_deactivate_build_wds4a_req
+(
+  qbi_txn_s *txn,
+  uint32 session_id
+);
+
 static qbi_svc_action_e qbi_svc_bc_connect_s_deactivate_wds22_ind_cb
 (
   const qbi_svc_qmi_ind_data_s *ind
@@ -1039,6 +1073,18 @@ static boolean qbi_svc_bc_connect_s_sanity_check_req
 static qbi_svc_action_e qbi_svc_bc_connect_s_scan_profile_then_activate
 (
   qbi_txn_s *txn
+);
+
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_build_wds49_req
+(
+  qbi_txn_s *txn,
+  wds_profile_type_enum_v01 profile_type
+);
+
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_build_wds2b_req
+(
+  qbi_txn_s *txn,
+  wds_profile_type_enum_v01 profile_type
 );
 
 static boolean qbi_svc_bc_connect_s_wds20_rsp_process
@@ -4363,6 +4409,15 @@ static qbi_svc_action_e qbi_svc_bc_connect_e_wds22_ind_cb
         action = qbi_svc_bc_connect_eqs_build_rsp_from_cache(
           ind->txn, session_id);
       }
+
+      /* Restore default profile */
+      if (QBI_SVC_BC_ACTIVATION_STATE_DEACTIVATED == 
+        qbi_svc_bc_connect_session_activation_state(ind->txn->ctx, session_id))
+      {
+        QBI_LOG_I_0("Modem ended the call. Restore default profiles");
+        action = qbi_svc_bc_connect_s_deactivate_build_wds4a_req(
+          ind->txn, session_id);
+      }
     }
   }
 
@@ -4388,6 +4443,7 @@ static uint32 qbi_svc_bc_connect_es_get_nw_error
   qbi_txn_s *txn
 )
 {
+  qbi_svc_bc_connect_profiles_info_s *info = NULL;
   uint32 nw_error = 0;
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_ZERO(txn);
@@ -4396,7 +4452,8 @@ static uint32 qbi_svc_bc_connect_es_get_nw_error
       (txn->cmd_type == QBI_MSG_CMD_TYPE_SET ||
        txn->cmd_type == QBI_TXN_CMD_TYPE_EVENT))
   {
-    nw_error = *((uint32 *) txn->info);
+    info = (qbi_svc_bc_connect_profiles_info_s *)txn->info;
+    nw_error = info->nw_error;
   }
 
   return nw_error;
@@ -4426,30 +4483,26 @@ static void qbi_svc_bc_connect_es_save_nw_error
   wds_verbose_call_end_reason_type_v01 vcer
 )
 {
-  uint32 *nw_error;
+  qbi_svc_bc_connect_profiles_info_s *info = NULL;
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET(txn);
+  QBI_CHECK_NULL_PTR_RET(txn->info);
 
   if (vcer_valid &&
       vcer.call_end_reason_type == WDS_VCER_TYPE_3GPP_SPEC_DEFINED_V01)
   {
-    if (txn->info != NULL && QBI_SVC_BC_WDS_SVC_ID_IS_IPV6(qmi_svc_id))
+    info = (qbi_svc_bc_connect_profiles_info_s *)txn->info;
+
+    if (QBI_SVC_BC_WDS_SVC_ID_IS_IPV6(qmi_svc_id))
     {
-      nw_error = (uint32 *) txn->info;
       QBI_LOG_I_2("Received 3GPP-defined call end reason %d on IPv6 instance, "
                   "but using existing IPv4 error %d",
-                  vcer.call_end_reason, *nw_error);
+                  vcer.call_end_reason, info->nw_error);
     }
     else
     {
-      if (txn->info == NULL)
-      {
-        txn->info = QBI_MEM_MALLOC_CLEAR(sizeof(uint32));
-        QBI_CHECK_NULL_PTR_RET(txn->info);
-      }
-      nw_error = (uint32 *) txn->info;
-      *nw_error = vcer.call_end_reason;
-      QBI_LOG_I_1("Using 3GPP-defined call end reason %d", *nw_error);
+      info->nw_error = vcer.call_end_reason;
+      QBI_LOG_I_1("Using 3GPP-defined call end reason %d", info->nw_error);
     }
   }
 } /* qbi_svc_bc_connect_es_save_nw_error() */
@@ -6024,13 +6077,6 @@ static qbi_svc_action_e qbi_svc_bc_connect_s_activate
        the host's API that would like to be kept up to date. */
     qbi_svc_bc_connect_s_force_event(txn->ctx, req->session_id);
 
-    /* Free previously allocated info buffer used for profile handling */
-    if (txn->info != NULL)
-    {
-      QBI_MEM_FREE(txn->info);
-      txn->info = NULL;
-    }
-
     action = QBI_SVC_ACTION_SEND_QMI_REQ;
   }
 
@@ -7280,6 +7326,297 @@ static void qbi_svc_bc_connect_s_deactivate_completion_cb
 } /* qbi_svc_bc_connect_s_deactivate_completion_cb() */
 
 /*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_deactivate_wds29_rsp_cb
+===========================================================================*/
+/*!
+    @brief Handles a QMI_WDS_DELETE_PROFILE_RESP for MBIM_CID_CONNECT 
+           set request
+
+    @details
+
+    @param qmi_txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_deactivate_wds29_rsp_cb
+(
+  qbi_qmi_txn_s *qmi_txn
+)
+{
+
+  wds_delete_profile_req_msg_v01 *qmi_req = NULL;
+  wds_delete_profile_resp_msg_v01 *qmi_rsp = NULL;
+  qbi_svc_bc_cache_s *cache = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+  uint32 session_id = 0;
+  /*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->req.data);
+
+  qmi_req = (wds_delete_profile_req_msg_v01 *)qmi_txn->req.data;
+  qmi_rsp = (wds_delete_profile_resp_msg_v01 *)qmi_txn->rsp.data;
+
+  if (qmi_rsp->resp.result != QMI_RESULT_SUCCESS_V01)
+  {
+    QBI_LOG_E_3("Temporary profile deletion failed with error: %d "
+      "for profile type: %d, index: %d", qmi_rsp->resp.error, 
+      qmi_req->profile.profile_type, qmi_req->profile.profile_index);
+  }
+
+  /* Irrespective of error proceed to delete next temp profile */
+  cache = qbi_svc_bc_cache_get(qmi_txn->parent->ctx);
+  QBI_CHECK_NULL_PTR_RET_ABORT(cache);
+
+  session_id = QBI_SVC_BC_WDS_SVC_ID_TO_SESSION_ID(qmi_txn->svc_id);
+
+  QBI_LOG_D_2("Deleting temp profile %d of profile type %d completed.",
+    qmi_req->profile.profile_index, qmi_req->profile.profile_type);
+
+  /* EPC profile configuration has been deprecated. Check only 3GPP and 3GPP2 */
+  if (WDS_PROFILE_TYPE_3GPP_V01 == qmi_req->profile.profile_type)
+  {
+    cache->connect.sessions[session_id].is_temp_profile_3gpp = FALSE;
+    action = qbi_svc_bc_connect_s_deactivate_build_wds4a_req(
+      qmi_txn->parent, session_id);
+  }
+  else if (WDS_PROFILE_TYPE_3GPP2_V01 == qmi_req->profile.profile_type)
+  {
+    cache->connect.sessions[session_id].is_temp_profile_3gpp2 = FALSE;
+
+    QBI_LOG_D_0("Deletion of all temp profiles completed. Send connect "
+      "deactivation command response.");
+
+    /* Clear any failure status as  disconnect has already succeeded and
+       modem shall error handle if default profile is not available. */
+    qmi_txn->parent->status = QBI_MBIM_STATUS_SUCCESS;
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_deactivate_wds29_rsp_cb() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_deactivate_build_wds29_req
+===========================================================================*/
+/*!
+    @brief Builds QMI_WDS_DELETE_PROFILE_REQ for MBIM_CID_CONNECT set request.
+
+    @details
+
+    @param txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_deactivate_build_wds29_req
+(
+  qbi_txn_s *txn,
+  uint32 session_id
+)
+{
+  wds_delete_profile_req_msg_v01 *qmi_req;
+  qbi_svc_bc_cache_s *cache = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_QMI_REQ;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
+
+  qmi_req = (wds_delete_profile_req_msg_v01 *)
+    qbi_qmi_txn_alloc_ret_req_buf(txn, QBI_QMI_SVC_WDS, 
+      QMI_WDS_DELETE_PROFILE_REQ_V01,
+      qbi_svc_bc_connect_s_deactivate_wds29_rsp_cb);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+
+  cache = qbi_svc_bc_cache_get(txn->ctx);
+  QBI_CHECK_NULL_PTR_RET_ABORT(cache);
+
+  if (cache->connect.sessions[session_id].is_temp_profile_3gpp)
+  {
+    qmi_req->profile.profile_type = WDS_PROFILE_TYPE_3GPP_V01;
+    qmi_req->profile.profile_index =
+      cache->connect.sessions[session_id].temp_profile_index_3gpp;
+  }
+  else if (cache->connect.sessions[session_id].is_temp_profile_3gpp2)
+  {
+    qmi_req->profile.profile_type = WDS_PROFILE_TYPE_3GPP2_V01;
+    qmi_req->profile.profile_index =
+      cache->connect.sessions[session_id].temp_profile_index_3gpp2;
+  }
+  else
+  {
+    action = QBI_SVC_ACTION_SEND_RSP;
+  }
+
+  if (QBI_SVC_ACTION_SEND_QMI_REQ == action)
+  {
+    QBI_LOG_D_2("Deleting profile index %d for profile type: %d.",
+      qmi_req->profile.profile_index, qmi_req->profile.profile_type);
+  }
+  else
+  {
+    QBI_LOG_D_0("No more temp profiles to be deleted.");
+
+    /* Clear any failure status as  disconnect has already succeeded and 
+       modem shall error handle if default profile is not available. */
+    txn->status = QBI_MBIM_STATUS_SUCCESS;
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_deactivate_build_wds29_req() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_deactivate_wds4a_rsp_cb
+===========================================================================*/
+/*!
+    @brief Handles a QMI_WDS_SET_DEFAULT_PROFILE_NUM_RESP for
+    MBIM_CID_CONNECT set request
+
+    @details
+
+    @param qmi_txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_deactivate_wds4a_rsp_cb
+(
+  qbi_qmi_txn_s *qmi_txn
+)
+{
+
+  wds_set_default_profile_num_req_msg_v01 *qmi_req = NULL;
+  wds_set_default_profile_num_resp_msg_v01 *qmi_rsp = NULL;
+  qbi_svc_bc_cache_s *cache = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+  boolean is_temp_profile = FALSE;
+  uint32 session_id = 0;
+  /*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->req.data);
+
+  qmi_req = (wds_set_default_profile_num_req_msg_v01 *)qmi_txn->req.data;
+  qmi_rsp = (wds_set_default_profile_num_resp_msg_v01 *)qmi_txn->rsp.data;
+
+  if (qmi_rsp->resp.result != QMI_RESULT_SUCCESS_V01)
+  {
+    QBI_LOG_E_1("Received error code %d from QMI", qmi_rsp->resp.error);
+  }
+
+  /* Irrespective of error proceed to restore default profile */
+  cache = qbi_svc_bc_cache_get(qmi_txn->parent->ctx);
+  QBI_CHECK_NULL_PTR_RET_ABORT(cache);
+
+  session_id = QBI_SVC_BC_WDS_SVC_ID_TO_SESSION_ID(qmi_txn->svc_id);
+
+  /* EPC profile configuration has been deprecated. Check only 3GPP and 3GPP2 */
+  if (WDS_PROFILE_TYPE_3GPP_V01 ==
+    qmi_req->profile_identifier.profile_type)
+  {
+    cache->connect.sessions[session_id].restore_default_profile_3gpp = FALSE;
+    is_temp_profile = cache->connect.sessions[session_id].is_temp_profile_3gpp;
+  }
+  else if (WDS_PROFILE_TYPE_3GPP2_V01 ==
+    qmi_req->profile_identifier.profile_type)
+  {
+    cache->connect.sessions[session_id].restore_default_profile_3gpp2 = FALSE;
+    is_temp_profile = cache->connect.sessions[session_id].is_temp_profile_3gpp2;
+  }
+
+  QBI_LOG_D_1("Setting default profile for profile type: %d completed.",
+    qmi_req->profile_identifier.profile_type);
+
+  if (is_temp_profile)
+  {
+    action = qbi_svc_bc_connect_s_deactivate_build_wds29_req(
+      qmi_txn->parent, session_id);
+  }
+  else
+  {
+    QBI_LOG_D_0("Setting default profile for all profile types completed. "
+      " Send response for connect deactivation command.");
+
+    /* Clear any failure status as  disconnect has already succeeded and
+       modem shall error handle if default profile is not available. */
+    qmi_txn->parent->status = QBI_MBIM_STATUS_SUCCESS;
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_deactivate_wds4a_rsp_cb() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_deactivate_build_wds4a_req
+===========================================================================*/
+/*!
+    @brief Builds QMI_WDS_SET_DEFAULT_PROFILE_NUM_REQ for
+    MBIM_CID_CONNECT set request.
+
+    @details
+
+    @param txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_deactivate_build_wds4a_req
+(
+  qbi_txn_s *txn,
+  uint32 session_id
+)
+{
+  wds_set_default_profile_num_req_msg_v01 *qmi_req;
+  qbi_svc_bc_cache_s *cache = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_QMI_REQ;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
+
+  qmi_req = (wds_set_default_profile_num_req_msg_v01 *)
+    qbi_qmi_txn_alloc_ret_req_buf(txn, QBI_QMI_SVC_WDS, 
+      QMI_WDS_SET_DEFAULT_PROFILE_NUM_REQ_V01,
+      qbi_svc_bc_connect_s_deactivate_wds4a_rsp_cb);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+
+  cache = qbi_svc_bc_cache_get(txn->ctx);
+  QBI_CHECK_NULL_PTR_RET_ABORT(cache);
+
+  if (cache->connect.sessions[session_id].restore_default_profile_3gpp)
+  {
+    qmi_req->profile_identifier.profile_type = WDS_PROFILE_TYPE_3GPP_V01;
+    qmi_req->profile_identifier.profile_index = 
+      cache->connect.sessions[session_id].default_profile_index_3gpp;
+  }
+  else if (cache->connect.sessions[session_id].restore_default_profile_3gpp2)
+  {
+    qmi_req->profile_identifier.profile_type = WDS_PROFILE_TYPE_3GPP2_V01;
+    qmi_req->profile_identifier.profile_index =
+      cache->connect.sessions[session_id].default_profile_index_3gpp2;
+  }
+  else
+  {
+    action = QBI_SVC_ACTION_SEND_RSP;
+  }
+
+  if (QBI_SVC_ACTION_SEND_QMI_REQ == action)
+  {
+    QBI_LOG_D_2("Restore profile index %d as default for profile type: %d.",
+      qmi_req->profile_identifier.profile_index,
+      qmi_req->profile_identifier.profile_type);
+  }
+  else
+  {
+    QBI_LOG_D_0("No default profile restore required for any profile type.");
+
+    /* Clear any failure status as  disconnect has already succeeded and 
+       modem shall error handle if default profile is not available. */
+    txn->status = QBI_MBIM_STATUS_SUCCESS;
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_deactivate_build_wds4a_req() */
+
+/*===========================================================================
   FUNCTION: qbi_svc_bc_connect_s_deactivate_wds22_ind_cb
 ===========================================================================*/
 /*!
@@ -7314,6 +7651,12 @@ static qbi_svc_action_e qbi_svc_bc_connect_s_deactivate_wds22_ind_cb
     QBI_LOG_I_0("Connection deactivated - proceeding with response");
     action = qbi_svc_bc_connect_eqs_build_rsp_from_cache(
       ind->txn, session_id);
+
+    if (action == QBI_SVC_ACTION_SEND_RSP)
+    {
+      action = qbi_svc_bc_connect_s_deactivate_build_wds4a_req(
+        ind->txn, session_id);
+    }
   }
   else
   {
@@ -7768,6 +8111,591 @@ static qbi_svc_action_e qbi_svc_bc_connect_s_scan_profile_then_activate
 } /* qbi_svc_bc_connect_s_scan_profile_then_activate() */
 
 /*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_wds4a_rsp_cb
+===========================================================================*/
+/*!
+    @brief Handles a QMI_WDS_SET_DEFAULT_PROFILE_NUM_RESP for
+    MBIM_CID_CONNECT set request
+
+    @details
+
+    @param qmi_txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp
+(
+  qbi_txn_s *txn
+)
+{
+  /*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
+
+  /* Clear any failure status as setting connect profile
+     to default is not a mandatory requirement. */
+  txn->status = QBI_MBIM_STATUS_SUCCESS;
+
+  /* Free previously allocated info buffer used for profile handling.
+  Moved freeing of info buffer from SNI request to SNI response as
+  the information in info buffer is used for setting the profile
+  for connect to default */
+  if (txn->info != NULL)
+  {
+    QBI_MEM_FREE(txn->info);
+    txn->info = NULL;
+  }
+
+  return QBI_SVC_ACTION_SEND_RSP;
+} /* qbi_svc_bc_connect_s_activate_wds4a_rsp_cb() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_wds4a_rsp_cb
+===========================================================================*/
+/*!
+    @brief Handles a QMI_WDS_SET_DEFAULT_PROFILE_NUM_RESP for
+    MBIM_CID_CONNECT set request
+
+    @details
+
+    @param qmi_txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_wds4a_rsp_cb
+(
+  qbi_qmi_txn_s *qmi_txn
+)
+{
+
+  wds_set_default_profile_num_req_msg_v01 *qmi_req = NULL;
+  wds_set_default_profile_num_resp_msg_v01 *qmi_rsp = NULL;
+  qbi_svc_bc_connect_profiles_info_s *info = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent->info);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->req.data);
+
+  qmi_req = (wds_set_default_profile_num_req_msg_v01 *)qmi_txn->req.data;
+  qmi_rsp = (wds_set_default_profile_num_resp_msg_v01 *)qmi_txn->rsp.data;
+
+  /* Modem may reject EPC profile type depending on modem configuration,
+     proceed wihtout failing the set. */
+  if (qmi_rsp->resp.result != QMI_RESULT_SUCCESS_V01)
+  {
+    QBI_LOG_E_1("Received error code %d from QMI", qmi_rsp->resp.error);
+    action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(qmi_txn->parent);
+  }
+  else
+  {
+    QBI_LOG_D_1("Setting default profile for profile type: %d completed.",
+      qmi_req->profile_identifier.profile_type);
+    info = (qbi_svc_bc_connect_profiles_info_s *)qmi_txn->parent->info;
+
+    /* EPC profile configuration has been deprecated. Check only 3GPP and 3GPP2 */
+    if (WDS_PROFILE_TYPE_3GPP_V01 == qmi_req->profile_identifier.profile_type)
+    {
+      info->is_profile_3gpp_set_to_default = TRUE;
+      action = qbi_svc_bc_connect_s_activate_build_wds2b_req(
+        qmi_txn->parent, WDS_PROFILE_TYPE_3GPP2_V01);
+    }
+    else if (WDS_PROFILE_TYPE_3GPP2_V01 == qmi_req->profile_identifier.profile_type)
+    {
+      info->is_profile_3gpp2_set_to_default = TRUE;
+
+      QBI_LOG_D_0("Setting default profile for all profile types completed. "
+        "Send reponse to connect activation command.");
+
+      action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(qmi_txn->parent);
+    }
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_activate_wds4a_rsp_cb() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_build_wds4a_req
+===========================================================================*/
+/*!
+    @brief Builds QMI_WDS_SET_DEFAULT_PROFILE_NUM_REQ for
+    MBIM_CID_CONNECT set request.
+
+    @details
+
+    @param txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_build_wds4a_req
+(
+  qbi_txn_s *txn,
+  wds_profile_type_enum_v01 profile_type,
+  uint32 session_id
+)
+{
+  wds_set_default_profile_num_req_msg_v01 *qmi_req = NULL;
+  qbi_svc_bc_connect_profiles_info_s *info = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_QMI_REQ;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn->info);
+
+  info = (qbi_svc_bc_connect_profiles_info_s *) txn->info;
+
+  qmi_req = (wds_set_default_profile_num_req_msg_v01 *)
+    qbi_qmi_txn_alloc_ret_req_buf(txn, QBI_QMI_SVC_WDS, 
+      QMI_WDS_SET_DEFAULT_PROFILE_NUM_REQ_V01,
+      qbi_svc_bc_connect_s_activate_wds4a_rsp_cb);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+
+  qmi_req->profile_identifier.profile_type = profile_type;
+
+  if (profile_type == WDS_PROFILE_TYPE_3GPP_V01)
+  {
+    qmi_req->profile_identifier.profile_index = info->profile_index_3gpp;
+  }
+  else if (profile_type == WDS_PROFILE_TYPE_3GPP2_V01)
+  {
+    qmi_req->profile_identifier.profile_index = info->profile_index_3gpp2;
+  }
+  else
+  {
+    action = QBI_SVC_ACTION_SEND_RSP;
+  }
+
+  if (QBI_SVC_ACTION_SEND_QMI_REQ == action)
+  {
+    QBI_LOG_D_3("Setting profile Index: %d as default for session: %d, "
+      "profile type: %d.", qmi_req->profile_identifier.profile_index, 
+      session_id, qmi_req->profile_identifier.profile_type);
+  }
+  else
+  {
+    QBI_LOG_D_0("Setting default profile for all profile types complete. "
+      "Send response for connect activation command.");
+
+    action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(txn);
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_activate_build_wds4a_req() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_wds49_rsp_cb
+===========================================================================*/
+/*!
+    @brief Handles a QMI_WDS_GET_DEFAULT_PROFILE_NUM_RESP for
+    MBIM_CID_CONNECT set request
+
+    @details
+
+    @param qmi_txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_wds49_rsp_cb
+(
+  qbi_qmi_txn_s *qmi_txn
+)
+{
+
+  wds_get_default_profile_num_req_msg_v01 *qmi_req = NULL;
+  wds_get_default_profile_num_resp_msg_v01 *qmi_rsp = NULL;
+  qbi_svc_bc_connect_profiles_info_s *info = NULL;
+  qbi_svc_bc_cache_s *cache = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+  uint32 session_id = 0;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent->info);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->req.data);
+
+  qmi_req = (wds_get_default_profile_num_req_msg_v01 *) qmi_txn->req.data;
+  qmi_rsp = (wds_get_default_profile_num_resp_msg_v01 *) qmi_txn->rsp.data;
+  info = (qbi_svc_bc_connect_profiles_info_s *)qmi_txn->parent->info;
+
+  if (qmi_rsp->resp.result != QMI_RESULT_SUCCESS_V01)
+  {
+    QBI_LOG_E_1("Received error code %d from QMI", qmi_rsp->resp.error);
+    
+    /* If operation fails, continue with next profile type */
+    if (qmi_req->profile.profile_type == WDS_PROFILE_TYPE_3GPP_V01)
+    {
+      info->is_profile_3gpp_set_to_default = TRUE;
+      action = qbi_svc_bc_connect_s_activate_build_wds2b_req(
+        qmi_txn->parent, WDS_PROFILE_TYPE_3GPP2_V01);
+    }
+    else if (qmi_req->profile.profile_type == WDS_PROFILE_TYPE_3GPP2_V01)
+    {
+      info->is_profile_3gpp2_set_to_default = TRUE;
+    }
+
+    action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(qmi_txn->parent);
+  }
+  else
+  {
+    cache = qbi_svc_bc_cache_get(qmi_txn->parent->ctx);
+    QBI_CHECK_NULL_PTR_RET_FALSE(cache);
+
+    session_id = QBI_SVC_BC_WDS_SVC_ID_TO_SESSION_ID(qmi_txn->svc_id);
+
+    /* EPC profile configuration has been deprecated. Check only 3GPP and 3GPP2 */
+    if (WDS_PROFILE_TYPE_3GPP_V01 == qmi_req->profile.profile_type)
+    {
+      if (qmi_rsp->profile_index != info->profile_index_3gpp)
+      {
+        cache->connect.sessions[session_id].restore_default_profile_3gpp = TRUE;
+        cache->connect.sessions[session_id].default_profile_index_3gpp =
+          qmi_rsp->profile_index;
+
+        QBI_LOG_D_1("Cached 3GPP default profile Index: %d.",
+          cache->connect.sessions[session_id].default_profile_index_3gpp);
+      }
+      else
+      {
+        QBI_LOG_D_0("3GPP Profile is already default profile.");
+        cache->connect.sessions[session_id].restore_default_profile_3gpp = FALSE;
+      }
+    }
+    else if (WDS_PROFILE_TYPE_3GPP2_V01 == qmi_req->profile.profile_type)
+    {
+      if (qmi_rsp->profile_index != info->profile_index_3gpp2)
+      {
+        cache->connect.sessions[session_id].restore_default_profile_3gpp2 = TRUE;
+        cache->connect.sessions[session_id].default_profile_index_3gpp2 =
+          qmi_rsp->profile_index;
+
+        QBI_LOG_D_1("Cached 3GPP2 default profile Index: %d.",
+          cache->connect.sessions[session_id].default_profile_index_3gpp2);
+      }
+      else
+      {
+        QBI_LOG_D_0("3GPP2 Profile is already default profile.");
+        cache->connect.sessions[session_id].restore_default_profile_3gpp2 = FALSE;
+      }
+    }
+
+    action = qbi_svc_bc_connect_s_activate_build_wds4a_req(
+      qmi_txn->parent, qmi_req->profile.profile_type, session_id);
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_activate_wds49_rsp_cb() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_build_wds49_req
+===========================================================================*/
+/*!
+    @brief Builds QMI_WDS_GET_DEFAULT_PROFILE_NUM_REQ for
+    MBIM_CID_CONNECT set request.
+
+    @details
+
+    @param txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_build_wds49_req
+(
+  qbi_txn_s *txn,
+  wds_profile_type_enum_v01 profile_type
+)
+{
+  wds_get_default_profile_num_req_msg_v01 *qmi_req;
+  qbi_svc_bc_connect_profiles_info_s *info;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn->info);
+
+  info = (qbi_svc_bc_connect_profiles_info_s *)txn->info;
+
+  if ((WDS_PROFILE_TYPE_3GPP_V01 == profile_type && 
+    !info->is_profile_3gpp_set_to_default) ||
+    (WDS_PROFILE_TYPE_3GPP2_V01 == profile_type &&
+      !info->is_profile_3gpp2_set_to_default))
+  {
+    qmi_req = (wds_get_default_profile_num_req_msg_v01 *)
+      qbi_qmi_txn_alloc_ret_req_buf(txn, QBI_QMI_SVC_WDS,
+        QMI_WDS_GET_DEFAULT_PROFILE_NUM_REQ_V01,
+        qbi_svc_bc_connect_s_activate_wds49_rsp_cb);
+    QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+
+    qmi_req->profile.profile_family = WDS_PROFILE_FAMILY_EMBEDDED_V01;
+    qmi_req->profile.profile_type = profile_type;
+
+    QBI_LOG_D_1("Getting default profile for profile type: %d.",
+      qmi_req->profile.profile_type);
+    action = QBI_SVC_ACTION_SEND_QMI_REQ;
+  }
+  else
+  {
+    QBI_LOG_D_0("No more profiles to be set to default.");
+    action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(txn);
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_activate_build_wds49_req() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_wds2b_rsp_cb
+===========================================================================*/
+/*!
+    @brief Handles a QMI_WDS_GET_PROFILE_SETTINGS_RESP for
+    MBIM_CID_CONNECT set request
+
+    @details
+
+    @param qmi_txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_wds2b_rsp_cb
+(
+  qbi_qmi_txn_s *qmi_txn
+)
+{
+
+  wds_get_profile_settings_req_msg_v01 *qmi_req = NULL;
+  wds_get_profile_settings_resp_msg_v01 *qmi_rsp = NULL;
+  qbi_svc_bc_cache_s *cache = NULL;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+  uint32 session_id = 0;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent->info);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->req.data);
+
+  qmi_req = (wds_get_profile_settings_req_msg_v01 *) qmi_txn->req.data;
+  qmi_rsp = (wds_get_profile_settings_resp_msg_v01 *) qmi_txn->rsp.data;
+
+  if (QMI_RESULT_SUCCESS_V01 != qmi_rsp->resp.result ||
+    !(WDS_PROFILE_TYPE_3GPP_V01 == qmi_req->profile.profile_type ||
+      WDS_PROFILE_TYPE_3GPP2_V01 == qmi_req->profile.profile_type))
+  {
+    QBI_LOG_E_2("E: Invalid profile type %d or Received error code %d from QMI. "
+      "Send Connect response anyway.", qmi_req->profile.profile_type,
+      qmi_rsp->resp.error);
+    action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(
+      qmi_txn->parent);
+  }
+  else
+  {
+    cache = qbi_svc_bc_cache_get(qmi_txn->parent->ctx);
+    QBI_CHECK_NULL_PTR_RET_FALSE(cache);
+
+    session_id = QBI_SVC_BC_WDS_SVC_ID_TO_SESSION_ID(qmi_txn->svc_id);
+
+    QBI_LOG_D_3("Profile type: %d, persistant valid: %d, value: %d.",
+      qmi_req->profile.profile_type, qmi_rsp->persistent_valid, qmi_rsp->persistent);
+
+    if (qmi_rsp->persistent_valid && !qmi_rsp->persistent)
+    {
+      /* EPC profile configuration has been deprecated. Check only 3GPP and 3GPP2 */
+      if (WDS_PROFILE_TYPE_3GPP_V01 == qmi_req->profile.profile_type)
+      {
+        cache->connect.sessions[session_id].is_temp_profile_3gpp = TRUE;
+        cache->connect.sessions[session_id].temp_profile_index_3gpp =
+          qmi_req->profile.profile_index;
+      }
+      else if (WDS_PROFILE_TYPE_3GPP_V01 == qmi_req->profile.profile_type)
+      {
+        cache->connect.sessions[session_id].is_temp_profile_3gpp2 = TRUE;
+        cache->connect.sessions[session_id].temp_profile_index_3gpp2 =
+          qmi_req->profile.profile_index;
+      }
+
+      QBI_LOG_D_2("Cached temp profile Index: %d for profile type: %d "
+        "Set profile to default.", qmi_req->profile.profile_index, 
+        qmi_req->profile.profile_type);
+      
+      action = qbi_svc_bc_connect_s_activate_build_wds49_req(
+        qmi_txn->parent, qmi_req->profile.profile_type);
+    }
+    else
+    {
+      QBI_LOG_D_1("Profile at Index: %d of profile type %d is not temp profile.",
+        cache->connect.sessions[session_id].temp_profile_index_3gpp2);
+      action = WDS_PROFILE_TYPE_3GPP_V01 == qmi_req->profile.profile_type ?
+        qbi_svc_bc_connect_s_activate_build_wds2b_req (
+          qmi_txn->parent, WDS_PROFILE_TYPE_3GPP2_V01) :
+        qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(qmi_txn->parent);
+    }
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_activate_wds2b_rsp_cb() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_build_wds2b_req
+===========================================================================*/
+/*!
+    @brief Builds QMI_WDS_GET_PROFILE_SETTINGS_REQ for
+    MBIM_CID_CONNECT set request.
+
+    @details
+
+    @param txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_build_wds2b_req
+(
+  qbi_txn_s *txn,
+  wds_profile_type_enum_v01 profile_type
+)
+{
+  wds_get_profile_settings_req_msg_v01 *qmi_req;
+  qbi_svc_bc_connect_profiles_info_s *info;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn->info);
+
+  info = (qbi_svc_bc_connect_profiles_info_s *) txn->info;
+
+  qmi_req = (wds_get_profile_settings_req_msg_v01 *)
+    qbi_qmi_txn_alloc_ret_req_buf(txn, QBI_QMI_SVC_WDS, 
+      QMI_WDS_GET_PROFILE_SETTINGS_REQ_V01,
+      qbi_svc_bc_connect_s_activate_wds2b_rsp_cb);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+
+  qmi_req->profile.profile_type = profile_type;
+  action = QBI_SVC_ACTION_SEND_QMI_REQ;
+
+  switch (profile_type)
+  {
+  case WDS_PROFILE_TYPE_3GPP_V01:
+    qmi_req->profile.profile_index = info->profile_index_3gpp;
+    break;
+  case WDS_PROFILE_TYPE_3GPP2_V01:
+    qmi_req->profile.profile_index = info->profile_index_3gpp2;
+    break;
+  default:
+    QBI_LOG_D_0("E: No connect 3GPP / 32GPP2 profile found.");
+    action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(txn);  
+    break;
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_activate_build_wds2b_req() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_activate_configure_default_profile
+===========================================================================*/
+/*!
+    @brief Configures connect profile to default if the profile is either an
+           LTE attach or a temp profile.
+
+    @details
+
+    @param txn
+
+    @return qbi_svc_action_e
+*/
+/*=========================================================================*/
+static qbi_svc_action_e qbi_svc_bc_connect_s_activate_configure_default_profile
+(
+  qbi_txn_s *txn
+)
+{
+  qbi_svc_bc_connect_profiles_info_s *info = NULL;
+  qbi_svc_bc_ext_cache_s *cache = NULL;
+  wds_profile_type_enum_v01 profile_type = WDS_PROFILE_TYPE_ENUM_MIN_ENUM_VAL_V01;
+  qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(txn->info);
+
+  info = (qbi_svc_bc_connect_profiles_info_s *) txn->info;
+
+  if (info->profile_found_3gpp)
+  {
+    cache = qbi_svc_bc_ext_cache_get(txn->ctx, info->profile_index_3gpp);
+    profile_type = WDS_PROFILE_TYPE_3GPP_V01;
+  }
+  else if(info->profile_found_3gpp2)
+  {
+    cache = qbi_svc_bc_ext_cache_get(txn->ctx, info->profile_index_3gpp2);
+    profile_type = WDS_PROFILE_TYPE_3GPP2_V01;
+  }
+
+  if (cache)
+  {
+    action = cache->lte_active &&
+      QBI_SVC_BC_EXT_CONTEXT_FLAG_USER_DEFINED == cache->context_flag ?
+      qbi_svc_bc_connect_s_activate_build_wds49_req(txn, profile_type) :
+      qbi_svc_bc_connect_s_activate_build_wds2b_req(txn, profile_type);
+  }
+  else
+  {
+    QBI_LOG_D_0("No more profiles to be configured as default");
+    action = qbi_svc_bc_connect_s_activate_cleanup_and_send_rsp(txn);
+  }
+
+  return action;
+} /* qbi_svc_bc_connect_s_activate_configure_default_profile() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_connect_s_set_connect_profile_to_default_precheck
+===========================================================================*/
+/*!
+    @brief Performs checks if any of the activated contexts have been set to 
+           default.
+
+    @details
+
+    @param txn
+
+    @return TRUE if profile has to be set to default
+*/
+/*=========================================================================*/
+static boolean qbi_svc_bc_connect_s_set_connect_profile_to_default_precheck
+(
+  qbi_txn_s *txn
+)
+{
+  qbi_svc_bc_cache_s *cache = NULL;
+  uint32 session_id = 0;
+/*-------------------------------------------------------------------------*/
+  QBI_CHECK_NULL_PTR_RET_FALSE(txn);
+  QBI_CHECK_NULL_PTR_RET_FALSE(txn->info);
+
+  cache = qbi_svc_bc_cache_get(txn->ctx);
+  QBI_CHECK_NULL_PTR_RET_FALSE(cache);
+
+  for (session_id = 0; session_id < QBI_SVC_BC_MAX_SESSIONS; session_id++)
+  {
+    if (QBI_SVC_BC_ACTIVATION_STATE_ACTIVATED ==
+      cache->connect.sessions[session_id].ipv4.activation_state ||
+      QBI_SVC_BC_ACTIVATION_STATE_ACTIVATED ==
+      cache->connect.sessions[session_id].ipv6.activation_state)
+    {     
+      if (cache->connect.sessions[session_id].restore_default_profile_3gpp ||
+        cache->connect.sessions[session_id].restore_default_profile_3gpp2)
+      {
+        return FALSE;
+      }
+    }
+  }
+
+  return TRUE;
+} /* qbi_svc_bc_connect_s_set_connect_profile_to_default_precheck() */
+
+/*===========================================================================
   FUNCTION: qbi_svc_bc_connect_s_wds20_rsp_process
 ===========================================================================*/
 /*!
@@ -7881,6 +8809,28 @@ static qbi_svc_action_e qbi_svc_bc_connect_s_wds20_rsp_cb
     qmi_txn->parent->status = QBI_MBIM_STATUS_SUCCESS;
     action = qbi_svc_bc_connect_eqs_build_rsp_from_cache(
       qmi_txn->parent, session_id);
+
+    /* Set profile to default */
+    if (QBI_SVC_ACTION_SEND_RSP == action)
+    {
+      if (qbi_svc_bc_connect_s_set_connect_profile_to_default_precheck(qmi_txn->parent))
+      {
+        QBI_LOG_I_0("Connect successful on temp profile, set profile to default.");
+        action = qbi_svc_bc_connect_s_activate_configure_default_profile(qmi_txn->parent);
+      }
+    }
+  }
+
+  /* Free previously allocated info buffer used for profile handling.
+     Moved freeing of info buffer from SNI request to SNI response as
+     the information in info buffer is used for setting the profile
+     for connect to default */
+  if (QBI_SVC_ACTION_WAIT_ASYNC_RSP != action && 
+    QBI_SVC_ACTION_SEND_QMI_REQ != action &&
+    qmi_txn->parent->info != NULL)
+  {
+    QBI_MEM_FREE(qmi_txn->parent->info);
+    qmi_txn->parent->info = NULL;
   }
 
   return action;
@@ -7932,6 +8882,12 @@ static qbi_svc_action_e qbi_svc_bc_connect_s_wds21_rsp_cb
       action = qbi_svc_bc_connect_eqs_build_rsp_from_cache(
         qmi_txn->parent,
         QBI_SVC_BC_WDS_SVC_ID_TO_SESSION_ID(qmi_txn->svc_id));
+
+      if (action == QBI_SVC_ACTION_SEND_RSP)
+      {
+        action = qbi_svc_bc_connect_s_deactivate_build_wds4a_req(
+          qmi_txn->parent, QBI_SVC_BC_WDS_SVC_ID_TO_SESSION_ID(qmi_txn->svc_id));
+      }
     }
   }
 
@@ -8019,7 +8975,8 @@ static qbi_svc_action_e qbi_svc_bc_connect_wait_for_teardown_wds22_ind_cb
        explicitly reset the indication handler */
     QBI_LOG_I_0("No longer connected - proceeding with MBIM_OPEN");
     qbi_svc_ind_dereg_txn(ind->txn);
-    action = QBI_SVC_ACTION_SEND_RSP;
+    action = qbi_svc_bc_connect_s_deactivate_build_wds4a_req(ind->txn,
+        QBI_SVC_BC_WDS_SVC_ID_TO_SESSION_ID(ind->qmi_svc_id));
   }
   else
   {
@@ -11534,35 +12491,35 @@ static qbi_svc_action_e qbi_svc_bc_packet_statistics_q_build_rsp_from_cache
   for (session_id = 0; session_id < qbi_svc_bc_max_sessions_get(txn->ctx);
        session_id++)
   {
-    rsp->in_discards  =
+    rsp->in_discards  +=
       cache->packet_statistics.cur_ipv4[session_id].in_discards +
       cache->packet_statistics.cur_ipv6[session_id].in_discards +
       cache->packet_statistics.total[session_id].in_discards;
-    rsp->in_errors    =
+    rsp->in_errors    +=
       cache->packet_statistics.cur_ipv4[session_id].in_errors +
       cache->packet_statistics.cur_ipv6[session_id].in_errors +
       cache->packet_statistics.total[session_id].in_errors;
-    rsp->in_octets    =
+    rsp->in_octets    +=
       cache->packet_statistics.cur_ipv4[session_id].in_octets +
       cache->packet_statistics.cur_ipv6[session_id].in_octets +
       cache->packet_statistics.total[session_id].in_octets;
-    rsp->in_packets   =
+    rsp->in_packets   +=
       cache->packet_statistics.cur_ipv4[session_id].in_packets +
       cache->packet_statistics.cur_ipv6[session_id].in_packets +
       cache->packet_statistics.total[session_id].in_packets;
-    rsp->out_octets   =
+    rsp->out_octets   +=
       cache->packet_statistics.cur_ipv4[session_id].out_octets +
       cache->packet_statistics.cur_ipv6[session_id].out_octets +
       cache->packet_statistics.total[session_id].out_octets;
-    rsp->out_packets  =
+    rsp->out_packets  +=
       cache->packet_statistics.cur_ipv4[session_id].out_packets +
       cache->packet_statistics.cur_ipv6[session_id].out_packets +
       cache->packet_statistics.total[session_id].out_packets;
-    rsp->out_errors   =
+    rsp->out_errors   +=
       cache->packet_statistics.cur_ipv4[session_id].out_errors +
       cache->packet_statistics.cur_ipv6[session_id].out_errors +
       cache->packet_statistics.total[session_id].out_errors;
-    rsp->out_discards =
+    rsp->out_discards +=
       cache->packet_statistics.cur_ipv4[session_id].out_discards +
       cache->packet_statistics.cur_ipv6[session_id].out_discards +
       cache->packet_statistics.total[session_id].out_discards;

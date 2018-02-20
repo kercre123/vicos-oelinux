@@ -475,6 +475,60 @@ struct qmmf_db_result_t qmmf_database_command(qmmf_handle *handle,
     return handle->qmmf_mod.database_command(&handle->qmmf_mod,
                                              params);
 }
+
+int32_t qmmf_audio_player_connect(qmmf_handle *handle) {
+    if (NULL == handle) {
+        printf("%s: Invalid handle!\n", __func__);
+        return -EINVAL;
+    }
+
+    return handle->qmmf_mod.audio_player_connect(&handle->qmmf_mod);
+}
+
+int32_t qmmf_audio_player_prepare(qmmf_handle *handle) {
+    if (NULL == handle) {
+        printf("%s: Invalid handle!\n", __func__);
+        return -EINVAL;
+    }
+
+    return handle->qmmf_mod.audio_player_prepare(&handle->qmmf_mod);
+}
+
+int32_t qmmf_audio_player_start(qmmf_handle *handle) {
+    if (NULL == handle) {
+        printf("%s: Invalid handle!\n", __func__);
+        return -EINVAL;
+    }
+
+    return handle->qmmf_mod.audio_player_start(&handle->qmmf_mod);
+}
+
+int32_t qmmf_audio_player_stop(qmmf_handle *handle) {
+    if (NULL == handle) {
+        printf("%s: Invalid handle!\n", __func__);
+        return -EINVAL;
+    }
+
+    return handle->qmmf_mod.audio_player_stop(&handle->qmmf_mod);
+}
+
+int32_t qmmf_audio_player_delete(qmmf_handle *handle) {
+    if (NULL == handle) {
+        printf("%s: Invalid handle!\n", __func__);
+        return -EINVAL;
+    }
+
+    return handle->qmmf_mod.audio_player_delete(&handle->qmmf_mod);
+}
+
+int32_t qmmf_audio_player_disconnect(qmmf_handle *handle) {
+    if (NULL == handle) {
+        printf("%s: Invalid handle!\n", __func__);
+        return -EINVAL;
+    }
+
+    return handle->qmmf_mod.audio_player_disconnect(&handle->qmmf_mod);
+}
 */
 import "C"
 import "log"
@@ -2589,6 +2643,101 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
     base_kpi_end(cFunctionName)
 }
 
+func PostAudioPlayerConnect(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set(HTTPHeader.ContentType, HTTPHeader.ContentValue)
+    var res = Result{StatusUnknown, ErrorTrue}
+    var err = C.qmmf_audio_player_connect(qmmf_handle)
+    if (0 == err) {
+        res = Result{StatusSuccess, ErrorNone}
+    } else {
+        var status = fmt.Sprintf("Audio Player Connect failed: %d", err)
+        res = Result{status, ErrorTrue}
+    }
+
+    j, _ := json.Marshal(res)
+
+    w.Write(j)
+}
+
+func PostAudioPlayerPrepare(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set(HTTPHeader.ContentType, HTTPHeader.ContentValue)
+    var res = Result{StatusUnknown, ErrorTrue}
+    var err = C.qmmf_audio_player_prepare(qmmf_handle)
+    if (0 == err) {
+        res = Result{StatusSuccess, ErrorNone}
+    } else {
+        var status = fmt.Sprintf("Audio Player Preapare failed: %d", err)
+        res = Result{status, ErrorTrue}
+    }
+
+    j, _ := json.Marshal(res)
+
+    w.Write(j)
+}
+
+func PostAudioPlayerStart(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set(HTTPHeader.ContentType, HTTPHeader.ContentValue)
+    var res = Result{StatusUnknown, ErrorTrue}
+    var err = C.qmmf_audio_player_start(qmmf_handle)
+    if (0 == err) {
+        res = Result{StatusSuccess, ErrorNone}
+    } else {
+        var status = fmt.Sprintf("Audio Player Start failed: %d", err)
+        res = Result{status, ErrorTrue}
+    }
+    j, _ := json.Marshal(res)
+
+    w.Write(j)
+}
+
+func PostAudioPlayerStop(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set(HTTPHeader.ContentType, HTTPHeader.ContentValue)
+    var res = Result{StatusUnknown, ErrorTrue}
+    var err = C.qmmf_audio_player_stop(qmmf_handle)
+    if (0 == err) {
+        res = Result{StatusSuccess, ErrorNone}
+    } else {
+        var status = fmt.Sprintf("Audio Player Stop failed: %d", err)
+        res = Result{status, ErrorTrue}
+    }
+
+    j, _ := json.Marshal(res)
+
+    w.Write(j)
+}
+
+func PostAudioPlayerDelete(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set(HTTPHeader.ContentType, HTTPHeader.ContentValue)
+    var res = Result{StatusUnknown, ErrorTrue}
+    var err = C.qmmf_audio_player_delete(qmmf_handle)
+    if (0 == err) {
+        res = Result{StatusSuccess, ErrorNone}
+    } else {
+        var status = fmt.Sprintf("Audio Player Delete failed: %d", err)
+        res = Result{status, ErrorTrue}
+    }
+
+    j, _ := json.Marshal(res)
+
+    w.Write(j)
+}
+
+func PostAudioPlayerDisconnect(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set(HTTPHeader.ContentType, HTTPHeader.ContentValue)
+    var res = Result{StatusUnknown, ErrorTrue}
+    var err = C.qmmf_audio_player_disconnect(qmmf_handle)
+    if (0 == err) {
+        res = Result{StatusSuccess, ErrorNone}
+    } else {
+        var status = fmt.Sprintf("Audio Player Disconnect failed: %d", err)
+        res = Result{status, ErrorTrue}
+    }
+
+    j, _ := json.Marshal(res)
+
+    w.Write(j)
+}
+
 func main() {
     fmt.Println("Starting webserver!")
     r := mux.NewRouter()
@@ -2646,6 +2795,13 @@ func main() {
     r.HandleFunc("/configuremulticamera", PostConfigureMultiCameraHandler).Methods("POST")
     r.HandleFunc("/dbcommand", PostDBCommandHandler).Methods("POST")
     r.HandleFunc("/dbcommand", GetUnsupportedHandler).Methods("GET")
+
+    r.HandleFunc("/audioplayerconnect", PostAudioPlayerConnect).Methods("POST")
+    r.HandleFunc("/audioplayerprepare", PostAudioPlayerPrepare).Methods("POST")
+    r.HandleFunc("/audioplayerstart", PostAudioPlayerStart).Methods("POST")
+    r.HandleFunc("/audioplayerstop", PostAudioPlayerStop).Methods("POST")
+    r.HandleFunc("/audioplayerdelete", PostAudioPlayerDelete).Methods("POST")
+    r.HandleFunc("/audioplayerdisconnect", PostAudioPlayerDisconnect).Methods("POST")
 
     err := http.ListenAndServe(":4000", r)
     if err != nil {

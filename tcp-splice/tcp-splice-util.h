@@ -71,19 +71,6 @@ int qti_tcp_fast_parse_options(struct tcphdr* tcp_hdr, unsigned int** timestamp,
 
 /***************************************************************************
 *
-* Function: qti_tcp_v6_check
-*
-* Description: calculates the tcp checksum based on IPv6
-*
-* Parameters: struct sk_buff* skb; //skb to calculate the tcp checksum
-*
-* Return: tcp checksum based on IPv6
-*
-***************************************************************************/
-__sum16 qti_tcp_v6_check(struct sk_buff* skb);
-
-/***************************************************************************
-*
 * Function: dnat_tcp_splice
 *
 * Description: change dst IP addr and dst port for another tcp session
@@ -96,6 +83,7 @@ __sum16 qti_tcp_v6_check(struct sk_buff* skb);
 * Return: none
 *
 * Precondition: it is expected iphdr, tcp_hdr, and hash_entry are not NULL ptrs
+*               it is expected this function is called within rcu_read_lock() rcu_read_unlock()
 *
 ***************************************************************************/
 void dnat_tcp_splice(void* iphdr, struct tcphdr* tcp_hdr, struct tcp_splice_hash_entry* hash_entry,
@@ -114,6 +102,7 @@ void dnat_tcp_splice(void* iphdr, struct tcphdr* tcp_hdr, struct tcp_splice_hash
 * Return: none
 *
 * Precondition: it is expected tcp_hdr and hash_entry are not NULL ptrs
+*               it is expected this function is called within rcu_read_lock() rcu_read_unlock()
 *
 ***************************************************************************/
 void mangle_tcp_splice(struct tcphdr* tcp_hdr, struct tcp_splice_hash_entry* hash_entry,
@@ -133,6 +122,7 @@ void mangle_tcp_splice(struct tcphdr* tcp_hdr, struct tcp_splice_hash_entry* has
 * Return: none
 *
 * Precondition: it is expected iphdr, tcp_hdr, and hash_entry are not NULL ptrs
+*               it is expected this function is called within rcu_read_lock() rcu_read_unlock()
 *
 ***************************************************************************/
 void snat_tcp_splice(void* iphdr, struct tcphdr* tcp_hdr, struct tcp_splice_hash_entry* hash_entry,
@@ -151,6 +141,7 @@ void snat_tcp_splice(void* iphdr, struct tcphdr* tcp_hdr, struct tcp_splice_hash
 * Return: none
 *
 * Precondition: it is expected skb and hash_entry are not NULL ptrs
+*               it is expected this function is called within rcu_read_lock() rcu_read_unlock()
 *
 ***************************************************************************/
 void set_dst_route(struct sk_buff* skb, struct tcp_splice_hash_entry* hash_entry, int direction);

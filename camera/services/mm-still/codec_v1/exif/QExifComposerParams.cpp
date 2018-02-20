@@ -24,7 +24,9 @@ QExifComposerParams::QExifComposerParams()
   mApp2Len = 0;
   mExifObjInfo = NULL;
   mMainEncodeParams = NULL;
-  mThumbEncodeParams = NULL;
+  for (uint32_t i = 0; i < MAX_NUM_THUMBNAILS; i++) {
+    mThumbEncodeParams[i] = NULL;
+  }
   mMainSS = QI_H2V2;
   mThumbSS = QI_H2V2;
   mMobicatStr = 0;
@@ -45,16 +47,18 @@ QExifComposerParams::QExifComposerParams()
  * Input parameters:
  *   aParams - reference to encode params object
  *   aThumb - thumbnail indicator
+ *   aThumbIdx - thumbnail index
  *
  * Return values:
  *   none
  *
  * Notes: none
  *==========================================================================*/
-void QExifComposerParams::SetEncodeParams(QIEncodeParams &aParams, bool aThumb)
+void QExifComposerParams::SetEncodeParams(QIEncodeParams &aParams, bool aThumb,
+    uint32_t aThumbIdx)
 {
   if (aThumb)
-    mThumbEncodeParams = &aParams;
+    mThumbEncodeParams[aThumbIdx] = &aParams;
   else
     mMainEncodeParams = &aParams;
 }

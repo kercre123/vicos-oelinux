@@ -473,9 +473,39 @@ public:
     uint16_t mGpsWeek;
 
     /**
-      * Amount of time iinto the current GPS week (Milliseconds)
+      * Amount of time into the current GPS week (Milliseconds)
       */
     uint32_t mGpsTimeOfWeekMs;
+
+    /**
+      * Boolean flag to indicate presence of Dilution of precision
+      */
+    bool mHasExtDOP;
+
+    /**
+      * Position dilution of precision.
+      */
+    float mExtPdop;
+
+    /**
+      * Horizontal dilution of precision.
+      */
+    float mExtHdop;
+
+    /**
+      * Vertical dilution of precision.
+      */
+    float mExtVdop;
+
+    /**
+      * geometric  dilution of precision.
+      */
+    float mExtGdop;
+
+    /**
+      * time dilution of precision.
+      */
+    float mExtTdop;
 
 private:
     /**
@@ -575,6 +605,12 @@ private:
         mGpsWeek = rhs.mGpsWeek;
         mGpsTimeOfWeekMs = rhs.mGpsTimeOfWeekMs;
 
+        mHasExtDOP = rhs.mHasExtDOP;
+        mExtPdop = rhs.mExtPdop;
+        mExtHdop = rhs.mExtHdop;
+        mExtVdop = rhs.mExtVdop;
+        mExtGdop = rhs.mExtGdop;
+        mExtTdop = rhs.mExtTdop;
 
     }
 };

@@ -63,7 +63,11 @@ tA2D_STATUS A2D_BldMp3Info(UINT8 media_type, tA2D_MP3_CIE *p_ie, UINT8 *p_result
     if( p_ie == NULL || p_result == NULL ||
         (p_ie->layer & ~A2D_MP3_IE_LAYER_MSK) ||
         (p_ie->samp_freq & ~A2D_MP3_IE_SAMP_FREQ_MSK) ||
-        (p_ie->channels & ~A2D_MP3_IE_CHANNELS_MSK))
+        (p_ie->channels & ~A2D_MP3_IE_CHANNELS_MSK) ||
+        (p_ie->crc & ~A2D_MP3_IE_CRC_MSK) ||
+        (p_ie->mpf & ~A2D_MP3_IE_MPF_MSK) ||
+        (p_ie->vbr & ~A2D_MP3_IE_VBR_MSK) ||
+        (p_ie->bit_rate & ~A2D_MP3_IE_BIT_RATE_MSK))
     {
         /* return invalid params if invalid bit is set */
         status = A2D_INVALID_PARAMS;
@@ -76,10 +80,10 @@ tA2D_STATUS A2D_BldMp3Info(UINT8 media_type, tA2D_MP3_CIE *p_ie, UINT8 *p_result
         *p_result++ = A2D_MEDIA_CT_M12;
 
         /* Codec information */
-        *p_result++ = p_ie->layer|p_ie->crc|p_ie->channels;                 // First Octet
+        *p_result++ = p_ie->layer | p_ie->crc | p_ie->channels;                 // First Octet
         *p_result++ = (p_ie->mpf << 6) | p_ie->samp_freq;                   // Second Octet
-        *p_result++ = (p_ie->vbr << 7) | ((p_ie->bit_rate >> 8) & 0x007F);  // Third Octet
-        *p_result++ = (UINT8)(p_ie->samp_freq & 0x00FF);                    // Fourth Octet
+        *p_result++ = p_ie->vbr | (UINT8)((p_ie->bit_rate >> 8) & 0x007F);  // Third Octet
+        *p_result++ = (UINT8)(p_ie->bit_rate & 0x00FF);                    // Fourth Octet
     }
     return status;
 }

@@ -1,5 +1,7 @@
 # sources and intermediate files are separated
 
+external_bt_path := $(top_srcdir)/../../vendor/qcom/opensource/bluetooth
+
 AM_CFLAGS = -Wall \
         -Wundef \
         -Wstrict-prototypes \
@@ -39,7 +41,7 @@ AM_CPPFLAGS = \
         -I../utils/include \
         -I${WORKSPACE}/external/tinyxml2 \
         -I${WORKSPACE}/external/zlib \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/vhal/include \
+        -I${external_bt_path}/vhal/include \
         -I$(WORKSPACE)/frameworks/av/include \
         -I$(WORKSPACE)/system/media/audio/include \
         -I$(WORKSPACE)/system/media/audio_utils/include \

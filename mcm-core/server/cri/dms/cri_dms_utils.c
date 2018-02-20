@@ -1,8 +1,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
   ---------------------------------------------------------------------------
 ******************************************************************************/
 
@@ -85,5 +86,23 @@ uint32_t cri_dms_utils_is_valid_operating_mode(void)
     return modem_operating_mode.is_valid;
 }
 
+/***************************************************************************************************
+    @function
+    cri_dms_utils_clear_operating_mode
 
+    @brief
+    clear DMS cache
 
+    @param[in]
+        none
+
+    @param[out]
+        none
+
+    @retval
+    void -
+***************************************************************************************************/
+void cri_dms_utils_clear_operating_mode(void)
+{
+    modem_operating_mode.is_valid = FALSE;
+}

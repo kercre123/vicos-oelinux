@@ -448,7 +448,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < concurrent_cnt; i++)
     {
         OS_THREAD_FUNC_RET_T ret;
-        os_thread_create_jpg(&thread_ctrl_blks[i].thread, &ret);
+        os_thread_create_jpg(&thread_ctrl_blks[i].thread, &ret, &thread_ctrl_blks[i]);
         if (ret)
         {
             fprintf(stderr, "encoder_test: thread %d failed\n", i);

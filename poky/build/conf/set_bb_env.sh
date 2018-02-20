@@ -325,9 +325,20 @@ function build-8053-perf-image() {
   cdbitbake machine-image
 }
 
+function build-8053-user-image() {
+  unset_bb_env
+  export MACHINE=apq8053
+  export DISTRO=msm-user
+  export VARIANT=user
+  export PRODUCT=base
+  cdbitbake machine-image
+}
+
 build-all-8053-images() {
   build-8053-image
   build-8053-perf-image
+  buildclean-retaindeploy
+  build-8053-user-image
 }
 
 # 8053-32 commands
@@ -343,6 +354,14 @@ function build-8053-32-perf-image() {
   export MACHINE=apq8053-32
   export DISTRO=msm-perf
   export VARIANT=perf
+  cdbitbake machine-image
+}
+
+function build-8053-32-user-image() {
+  unset_bb_env
+  export MACHINE=apq8053-32
+  export DISTRO=msm-user
+  export VARIANT=user
   cdbitbake machine-image
 }
 
@@ -362,11 +381,22 @@ function build-8053-32-perf-minimal-image() {
   cdbitbake machine-minimal-image
 }
 
+function build-8053-32-user-minimal-image() {
+  unset_bb_env
+  export MACHINE=apq8053-32
+  export DISTRO=msm-user
+  export VARIANT=user-minimal
+  cdbitbake machine-minimal-image
+}
+
+
 build-all-8053-32-images() {
   build-8053-32-minimal-image
   build-8053-32-image
   build-8053-32-perf-minimal-image
   build-8053-32-perf-image
+  build-8053-32-user-minimal-image
+  build-8053-32-user-image
 }
 
 # 8096 commands
@@ -453,6 +483,21 @@ build-all-8098-images() {
 }
 
 # Utility commands
+buildclean-retaindeploy() {
+  set -x
+  cd ${WS}/poky/build
+
+  tmp_dir_list=$(ls tmp-glibc/)
+  tmp_dir_rm_list=$(sed 's/\ deploy//' <<< $tmp_dir_list)
+
+  rm -rf bitbake.lock pseudodone sstate-cache cache tmp-glibc/deploy/ipk/ tmp-glibc/deploy/licenses/
+  for e in $tmp_dir_rm_list; do
+    rm -rf tmp-glibc/$e
+  done
+
+  set +x
+}
+
 buildclean() {
   set -x
   cd ${WS}/poky/build

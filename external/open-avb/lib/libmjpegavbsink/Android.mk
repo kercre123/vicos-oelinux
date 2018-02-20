@@ -1,11 +1,15 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
+LOCAL_C_INCLUDES := $(LOCAL_PATH)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_C_INCLUDES)
+
 LOCAL_SRC_FILES:= \
     AvbMjpegSink.cpp \
     GlSink.cpp \
     main.cpp \
     MjpegFrame.cpp
+
 
 LOCAL_CFLAGS += -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
 

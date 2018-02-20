@@ -20,7 +20,7 @@ clean:
 build/Makefile:
 	mkdir -p build && \
 	cd build && \
-	cmake -DCMAKE_TOOLCHAIN_FILE=../platform/Linux/x86_i210_linux.cmake \
+	cmake -DCMAKE_TOOLCHAIN_FILE=../platform/Linux/arm_ntn_linux.cmake \
 	      -DAVB_FEATURE_ENDPOINT=$(AVB_FEATURE_ENDPOINT) \
 	      -DAVB_FEATURE_GSTREAMER=$(AVB_FEATURE_GSTREAMER) \
 	      -DGSTREAMER_1_0=$(GSTREAMER_1_0) \

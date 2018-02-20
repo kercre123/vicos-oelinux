@@ -124,6 +124,7 @@ class MuxInterface {
   MUX_stream_create_params_type streams_[MAX_STREAMS];
   MUX_handle_type mux_file_handle_;
   int64_t video_start_time_;
+  int64_t audio_first_frame_;
   int64_t first_timestamp_;
   int64_t video_previous_time_;
   uint32_t video_track_id_;

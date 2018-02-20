@@ -14,6 +14,7 @@ extern "C" {
 #include "QEncodeParams.h"
 #include "QICommon.h"
 
+#define MAX_NUM_THUMBNAILS 2
 #define SW_3A_VER_SIZE 8
 #define FMT_3A_VER_SIZE 4
 
@@ -71,12 +72,14 @@ public:
   /** EncodeParams
    *  @aThumb: flag to indicate the encode parameters belong to
    *         thumbnail or main image
+   *  @aThumbIdx: thumbnail index
    *
    *  returns encode parameters
    **/
-  inline QIEncodeParams& EncodeParams(bool aThumb = false)
+  inline QIEncodeParams& EncodeParams(bool aThumb = false,
+      uint32_t aThumbIdx = 0)
   {
-    return (aThumb) ? *mThumbEncodeParams : *mMainEncodeParams;
+    return (aThumb) ? *mThumbEncodeParams[aThumbIdx] : *mMainEncodeParams;
   }
 
   /** Subsampling
@@ -114,10 +117,12 @@ public:
    *  @aParams: encode parameters
    *  @aThumb: flag to indicate the subsampling belong to
    *         thumbnail or main image
+   *  @aThumbIdx: thumbnail index
    *
    *  sets encode parameters
    **/
-  void SetEncodeParams(QIEncodeParams &aParams, bool aThumb = false);
+  void SetEncodeParams(QIEncodeParams &aParams, bool aThumb = false,
+      uint32_t aThumbIdx = 0);
 
   /** SetSubSampling
    *  @aSS: image subsampling
@@ -326,7 +331,7 @@ private:
    *
    *  thumbnail encode parameters
    **/
-  QIEncodeParams *mThumbEncodeParams;
+  QIEncodeParams *mThumbEncodeParams[MAX_NUM_THUMBNAILS];
 
   /** mMainSS
    *

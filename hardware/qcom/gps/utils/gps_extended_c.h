@@ -112,7 +112,8 @@ enum loc_registration_mask_status {
 
 typedef enum {
     LOC_SUPPORTED_FEATURE_ODCPI_2_V02 = 0, /**<  Support ODCPI version 2 feature  */
-    LOC_SUPPORTED_FEATURE_WIFI_AP_DATA_INJECT_2_V02 /**<  Support Wifi AP data inject version 2 feature  */
+    LOC_SUPPORTED_FEATURE_WIFI_AP_DATA_INJECT_2_V02, /**<  Support Wifi AP data inject version 2 feature  */
+    LOC_SUPPORTED_FEATURE_DEBUG_NMEA_V02 /**< Support debug NMEA feature */
 } loc_supported_feature_enum;
 
 typedef struct {
@@ -294,6 +295,8 @@ typedef uint32_t GpsLocationExtendedFlags;
 #define GPS_LOCATION_EXTENDED_HAS_POS_DYNAMICS_DATA   0x10000
 /** GpsLocationExtended has GPS Time */
 #define GPS_LOCATION_EXTENDED_HAS_GPS_TIME   0x20000
+/** GpsLocationExtended has Extended Dilution of Precision */
+#define GPS_LOCATION_EXTENDED_HAS_EXT_DOP   0x40000
 
 typedef uint32_t LocNavSolutionMask;
 /* Bitmask to specify whether SBAS ionospheric correction is used  */
@@ -368,6 +371,29 @@ typedef struct {
    float           pitch;
 }LocPositionDynamics;
 
+typedef struct {
+
+  /**  Position dilution of precision.
+       Range: 1 (highest accuracy) to 50 (lowest accuracy) */
+  float PDOP;
+
+  /**  Horizontal dilution of precision.
+       Range: 1 (highest accuracy) to 50 (lowest accuracy) */
+  float HDOP;
+
+  /**  Vertical dilution of precision.
+       Range: 1 (highest accuracy) to 50 (lowest accuracy) */
+  float VDOP;
+
+  /**  geometric  dilution of precision.
+       Range: 1 (highest accuracy) to 50 (lowest accuracy) */
+  float GDOP;
+
+  /**  time dilution of precision.
+       Range: 1 (highest accuracy) to 50 (lowest accuracy) */
+  float TDOP;
+}LocExtDOP;
+
 /* GPS Time structure */
 typedef struct {
 
@@ -426,6 +452,8 @@ typedef struct {
     LocPositionDynamics bodyFrameData;
     /** GPS Time */
     GPSTimeStruct gpsTime;
+    /** Dilution of precision associated with this position*/
+    LocExtDOP extDOP;
 } GpsLocationExtended;
 
 enum loc_sess_status {
@@ -455,15 +483,13 @@ typedef uint32_t NmeaSentenceTypesMask;
 #define LOC_NMEA_MASK_PQGSV_V02 ((NmeaSentenceTypesMask)0x00010000) /**<  Enable PQGSV type  */
 #define LOC_NMEA_MASK_DEBUG_V02 ((NmeaSentenceTypesMask)0x00020000) /**<  Enable DEBUG type  */
 
-#define LOC_NMEA_ALL_SUPPORTED_MASK  (LOC_NMEA_MASK_GGA_V02 | LOC_NMEA_MASK_RMC_V02 | \
+// all bitmasks of general supported NMEA sentenses - debug is not part of this
+#define LOC_NMEA_ALL_GENERAL_SUPPORTED_MASK  (LOC_NMEA_MASK_GGA_V02 | LOC_NMEA_MASK_RMC_V02 | \
               LOC_NMEA_MASK_GSV_V02 | LOC_NMEA_MASK_GSA_V02 | LOC_NMEA_MASK_VTG_V02 | \
         LOC_NMEA_MASK_PQXFI_V02 | LOC_NMEA_MASK_PSTIS_V02 | LOC_NMEA_MASK_GLGSV_V02 | \
         LOC_NMEA_MASK_GNGSA_V02 | LOC_NMEA_MASK_GNGNS_V02 | LOC_NMEA_MASK_GARMC_V02 | \
         LOC_NMEA_MASK_GAGSV_V02 | LOC_NMEA_MASK_GAGSA_V02 | LOC_NMEA_MASK_GAVTG_V02 | \
-        LOC_NMEA_MASK_GAGGA_V02 | LOC_NMEA_MASK_PQGSA_V02 | LOC_NMEA_MASK_PQGSV_V02 | \
-        LOC_NMEA_MASK_DEBUG_V02 )
-
-
+        LOC_NMEA_MASK_GAGGA_V02 | LOC_NMEA_MASK_PQGSA_V02 | LOC_NMEA_MASK_PQGSV_V02)
 
 typedef enum {
   LOC_ENG_IF_REQUEST_SENDER_ID_QUIPC = 0,

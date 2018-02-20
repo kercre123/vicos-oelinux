@@ -1,8 +1,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #include "hlos_core.h"
@@ -15,6 +16,7 @@
 #include "hlos_voice_core.h"
 #include "hlos_sms_core.h"
 #include "mcm_uim_indication.h"
+#include "mcm_ssr_util.h"
 
 /***************************************************************************************************
     @function
@@ -205,6 +207,7 @@ uint32_t hlos_core_ril_client_init()
 
     UTIL_LOG_MSG("hlos_core_ril_client_init EXIT rc = %d", rc);
 
+    hlos_core_register_for_service_down(hlos_cb_srv_down_complete);
 }
 
 
@@ -401,15 +404,19 @@ uint32_t hlos_map_qmi_ril_error_to_mcm_error(int qmi_ril_error)
     case CRI_ERR_NO_NETWORK_FOUND_V01:
         ret = MCM_ERROR_NO_NETWORK_FOUND_V01;
       break;
-      case CRI_ERR_GENERAL_V01:
+    case CRI_ERR_GENERAL_V01:
         ret = MCM_ERROR_GENERIC_V01;
       break;
-      case CRI_ERR_NETWORK_NOT_READY_V01:
+    case CRI_ERR_NETWORK_NOT_READY_V01:
         ret = MCM_ERROR_CALL_FAILED_V01;
       break;
     case CRI_ERR_INJECT_TIMEOUT_V01:
         ret = MCM_ERROR_INJECT_TIMEOUT_V01;
-        break;
+      break;
+    case CRI_ERR_RADIO_RESET_V01:
+        ret = MCM_ERROR_RADIO_RESET_V01;
+      break;
+
     default:
           ret = MCM_SUCCESS_V01;
       break;
@@ -418,4 +425,51 @@ uint32_t hlos_map_qmi_ril_error_to_mcm_error(int qmi_ril_error)
    return ret;
 }
 
+void hlos_core_mcm_ssr_init(void)
+{
+    uint8_t status = FALSE;
 
+    status = mcm_ssr_server_init(hlos_core_mcm_ssr_resume);
+    UTIL_LOG_MSG("hlos_core_mcm_ssr_init, status %d", status);
+}
+
+void hlos_core_mcm_ssr_resume(void)
+{
+    uint8_t status = FALSE;
+
+    status = cri_core_mcm_ssr_resume();
+    UTIL_LOG_MSG("hlos_core_mcm_ssr_resume, status %d", status);
+
+    if(TRUE == status)
+    {
+        hlos_dms_core_query_radio_state_notify_to_client();
+    }
+}
+
+void hlos_core_register_for_service_down(ssr_srv_down_cb hlos_cb_srv_down_complete)
+{
+    cri_core_register_for_service_down(hlos_cb_srv_down_complete);
+}
+
+void hlos_cb_srv_down_complete(void)
+{
+    mcm_ssr_reset_client_reported_status();
+    hlos_dms_core_initiate_radio_power_process(MCM_DM_RADIO_MODE_UNAVAILABLE_V01);
+    hlos_core_register_for_service_up_event(hlos_cb_srv_up_complete);
+}
+
+void hlos_core_register_for_service_up_event(ssr_srv_up_cb hlos_cb_srv_up_complete)
+{
+    cri_core_register_for_service_up(hlos_cb_srv_up_complete);
+}
+
+void hlos_cb_srv_up_complete(void)
+{
+    hlos_core_ril_client_init();
+    UTIL_LOG_MSG( "RESUMING" );
+    cri_core_set_operational_status( CRI_CORE_GEN_OPERATIONAL_STATUS_RESUMED );
+    if(mcm_ssr_is_client_reported_status())
+    {
+        hlos_dms_core_query_radio_state_notify_to_client();
+    }
+}

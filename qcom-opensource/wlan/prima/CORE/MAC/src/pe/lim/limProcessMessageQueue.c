@@ -826,6 +826,11 @@ limHandle80211Frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, tANI_U8 *pDeferMsg)
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
     if (WDA_GET_ROAMCANDIDATEIND(pRxPacketInfo))
     {
+        if (vos_check_monitor_state())
+        {
+            limLog( pMac, LOGW, FL("Ignore raom candidate when roam started"));
+            goto end;
+        }
         limLog( pMac, LOGW, FL("Notify SME with candidate ind"));
 
         if (WDA_IF_PER_ROAMCANDIDATEIND(pRxPacketInfo) &&
@@ -1721,6 +1726,8 @@ limProcessMessages(tpAniSirGlobal pMac, tpSirMsgQ  limMsg)
 #endif /* FEATURE_WLAN_ESE && FEATURE_WLAN_ESE_UPLOAD */
         case eWNI_SME_MAC_SPOOF_ADDR_IND:
         case eWNI_SME_REGISTER_MGMT_FRAME_CB:
+        case eWNI_SME_SET_CHAN_SW_IE_REQ:
+        case eWNI_SME_ECSA_CHAN_CHANGE_REQ:
             // These messages are from HDD
             limProcessNormalHddMsg(pMac, limMsg, false);   //no need to response to hdd
             break;
@@ -2008,6 +2015,7 @@ limProcessMessages(tpAniSirGlobal pMac, tpSirMsgQ  limMsg)
         case SIR_LIM_DEAUTH_ACK_TIMEOUT:
         case SIR_LIM_CONVERT_ACTIVE_CHANNEL_TO_PASSIVE:
         case SIR_LIM_AUTH_RETRY_TIMEOUT:
+        case SIR_LIM_SAP_ECSA_TIMEOUT:
 #ifdef WLAN_FEATURE_LFR_MBB
         case SIR_LIM_PREAUTH_MBB_RSP_TIMEOUT:
         case SIR_LIM_REASSOC_MBB_RSP_TIMEOUT:

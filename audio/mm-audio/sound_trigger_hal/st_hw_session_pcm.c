@@ -44,6 +44,7 @@ typedef struct {
 typedef union {
     ffv_history_buffer_length_param_t buffer_length_params;
     ffv_src_tracking_param_t src_tracking_params;
+    ffv_target_channel_index_param_t ch_index_params;
 } st_get_param_payload_t;
 
 static int reg_sm(st_hw_session_t* p_ses, void *sm_data,
@@ -76,7 +77,7 @@ static int allocate_buffers(st_hw_session_pcm_t* p_ses);
 static int deallocate_buffers(st_hw_session_pcm_t* p_ses);
 static int get_param_data(st_hw_session_t* p_ses, const char *param,
     void *payload, size_t payload_size, size_t *param_data_size);
-static void st_event_callback(void *handle, FfvEventType event_type,
+static void st_event_callback(void *cb_data, void *handle, FfvEventType event_type,
                               void *event_payload, size_t event_payload_size);
 
 static FfvStatusType (*ffv_init_fn)(void** handle, int num_tx_in_ch,
@@ -93,7 +94,7 @@ static FfvStatusType (*ffv_get_param_fn)(void *handle, char *params_buffer_ptr,
 static FfvStatusType (*ffv_set_param_fn)(void *handle, char *params_buffer_ptr,
     int param_id, int param_size);
 static FfvStatusType (*ffv_register_event_callback_fn)(void *handle,
-    ffv_event_callback_fn_t *fun_ptr);
+    ffv_event_callback_fn_t fun_ptr, void *cb_data);
 
 static struct pcm_config stdev_arm_pcm_config = {
     .channels = SOUND_TRIGGER_CHANNEL_MODE_MONO,
@@ -126,8 +127,6 @@ struct st_hw_pcm_data {
 
 static struct st_hw_pcm_data pcm_data = {.ffv_lib_handle = NULL};
 
-static struct listnode pcm_ses_list;
-
 static int pcm_ioctl(struct pcm *pcm, int request, ...)
 {
     va_list ap;
@@ -139,20 +138,6 @@ static int pcm_ioctl(struct pcm *pcm, int request, ...)
     va_end(ap);
 
     return ioctl(pcm_fd, request, arg);
-}
-
-static st_hw_session_pcm_t* get_st_pcm_session(void *handle)
-{
-    struct listnode *p_ses_node;
-    st_hw_session_pcm_t *p_ses;
-
-    list_for_each(p_ses_node, &pcm_ses_list) {
-        p_ses = node_to_item(p_ses_node, st_hw_session_pcm_t, handle_node);
-        if (p_ses->handle == handle)
-            return p_ses;
-    }
-
-    return NULL;
 }
 
 static size_t get_ffv_read_buffer_len(st_hw_session_pcm_t *p_ses)
@@ -190,34 +175,44 @@ static int check_and_set_ec_ref_device(st_hw_session_t *p_ses, bool enable)
 {
     char st_device_name[DEVICE_NAME_MAX_SIZE];
     struct st_vendor_info* v_info = p_ses->vendor_uuid_info;
+    st_hw_session_pcm_t *p_pcm_ses = (st_hw_session_pcm_t *)p_ses;
 
     if (v_info->split_ec_ref_data) {
         ALOGV("%s: Ignore ec ref set device %p", __func__, p_ses);
         return 0;
     }
 
-    if (v_info->ec_ref_channel_cnt == SOUND_TRIGGER_CHANNEL_MODE_MONO) {
-        strlcpy(st_device_name, ST_EC_REF_LOOPBACK_DEVICE_MONO,
-                DEVICE_NAME_MAX_SIZE);
-    } else if (v_info->ec_ref_channel_cnt == SOUND_TRIGGER_CHANNEL_MODE_STEREO) {
-        strlcpy(st_device_name, ST_EC_REF_LOOPBACK_DEVICE_STEREO,
-                DEVICE_NAME_MAX_SIZE);
-    } else {
-        ALOGE("%s: Invalid ec ref channel count %d",
-               __func__, v_info->ec_ref_channel_cnt);
-        return -EINVAL;
-    }
-
     if (enable) {
+        if (v_info->ec_ref_channel_cnt == SOUND_TRIGGER_CHANNEL_MODE_MONO) {
+            strlcpy(st_device_name, ST_EC_REF_LOOPBACK_DEVICE_MONO,
+                    DEVICE_NAME_MAX_SIZE);
+        } else if (v_info->ec_ref_channel_cnt == SOUND_TRIGGER_CHANNEL_MODE_STEREO) {
+                strlcpy(st_device_name, ST_EC_REF_LOOPBACK_DEVICE_STEREO,
+                    DEVICE_NAME_MAX_SIZE);
+        } else {
+            ALOGE("%s: Invalid ec ref channel count %d",
+                   __func__, v_info->ec_ref_channel_cnt);
+            return -EINVAL;
+        }
+
+        if (p_ses->stdev->ec_ref_dev == AUDIO_DEVICE_OUT_LINE)
+            strlcat(st_device_name, " lineout",  DEVICE_NAME_MAX_SIZE);
+
         ALOGD("%s: enable device = %s", __func__,
                 st_device_name);
         audio_route_apply_and_update_path(p_ses->stdev->audio_route,
                                           st_device_name);
+        p_pcm_ses->ec_ref_dev_name = strdup(st_device_name);
     } else {
+        if (!p_pcm_ses->ec_ref_dev_name) {
+            ALOGE("%s: Invalid ec ref device name", __func__);
+            return -EINVAL;
+        }
         ALOGD("%s: disable device  = %s", __func__,
-                st_device_name);
+               p_pcm_ses->ec_ref_dev_name);
         audio_route_reset_and_update_path(p_ses->stdev->audio_route,
-                                          p_ses->st_device_name);
+                                          p_pcm_ses->ec_ref_dev_name);
+        free(p_pcm_ses->ec_ref_dev_name);
     }
 
     return 0;
@@ -230,7 +225,7 @@ static int check_and_start_ec_ref_ses(st_hw_session_t *p_ses, bool start)
     int retry_num = 0;
 
     if (p_ses->vendor_uuid_info->split_ec_ref_data) {
-        ALOGV("%s: Ignore ec ref start %d", __func__, p_pcm_ses->common.sm_handle);
+        ALOGV("%s:[%d] Ignore ec ref start", __func__, p_pcm_ses->common.sm_handle);
         return status;
     }
 
@@ -246,11 +241,11 @@ static int check_and_start_ec_ref_ses(st_hw_session_t *p_ses, bool start)
                retry_num++;
                ALOGI("%s: pcm_start retrying..status %d errno %d, retry cnt %d",
                       __func__, status, errno, retry_num);
-               status = pcm_start(p_pcm_ses->pcm);
+               status = pcm_start(p_pcm_ses->ec_ref_pcm);
         }
         if (status) {
-            ALOGE("%s: ERROR. pcm_start failed, returned status %d",
-                   __func__, status);
+            ALOGE("%s: ERROR. pcm_start failed, returned status %d, err=%s",
+                   __func__, status, pcm_get_error(p_pcm_ses->ec_ref_pcm));
         }
         ALOGD("%s: ec ref session started", __func__);
     } else {
@@ -268,7 +263,7 @@ static int check_and_enable_ec_ref_use_case(bool enable, st_hw_session_t *p_ses)
     int status = 0;
 
     if (p_ses->vendor_uuid_info->split_ec_ref_data) {
-        ALOGV("%s: Ignore ec ref enable usecase %d", __func__, p_pcm_ses->common.sm_handle);
+        ALOGV("%s:[%d] Ignore ec ref enable usecase", __func__, p_pcm_ses->common.sm_handle);
         return status;
     }
 
@@ -423,7 +418,7 @@ static void *st_ffv_process_thread_loop(void *context)
     ST_DBG_FILE_OPEN_WR(fptr_out, ST_DEBUG_DUMP_LOCATION,
                         "ffv_out_data", "pcm", file_cnt_3++);
 
-    setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_DEFAULT);
+    setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_AUDIO);
     prctl(PR_SET_NAME, (unsigned long)"sound trigger process", 0, 0, 0);
 
     ALOGD("%s:[%d] Enter", __func__, p_pcm_ses->common.sm_handle);
@@ -518,7 +513,7 @@ static void *capture_thread_loop(void *context)
     int i, j, ch;
     int total_in_ch, in_ch, ec_ref_ch;
     unsigned int in_buf_size;
-    static write_1 = true;
+    static bool write_1 = true;
 
     if (p_pcm_ses == NULL) {
         ALOGE("%s: ERROR: invalid context", __func__);
@@ -541,13 +536,12 @@ static void *capture_thread_loop(void *context)
     ST_DBG_FILE_OPEN_WR(fptr_out, ST_DEBUG_DUMP_LOCATION,
                         "st_out_data", "pcm", file_cnt_4++);
 
-    setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_DEFAULT);
+    setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_AUDIO);
     prctl(PR_SET_NAME, (unsigned long)"sound trigger capture", 0, 0, 0);
     ALOGD("%s:[%d] Enter", __func__, p_pcm_ses->common.sm_handle);
     ALOGV("%s:[%d] split ec ref %s", __func__, p_pcm_ses->common.sm_handle,
            p_pcm_ses->common.vendor_uuid_info->split_ec_ref_data ? "set" : "not set");
     pthread_mutex_lock(&p_pcm_ses->capture_thread_lock);
-    allocate_buffers(p_pcm_ses);
     while (!p_pcm_ses->exit_capture_thread) {
         pthread_mutex_unlock(&p_pcm_ses->capture_thread_lock);
         ALOGVV("%s: pcm_read reading bytes=%d", __func__, p_pcm_ses->in_buf_size);
@@ -637,7 +631,6 @@ static void *capture_thread_loop(void *context)
 exit:
     ALOGD("%s: Exit status=%d", __func__, status);
     write_1 = true;
-    deallocate_buffers(p_pcm_ses);
     ST_DBG_FILE_CLOSE(fptr_cap);
     ST_DBG_FILE_CLOSE(fptr_ec);
     ST_DBG_FILE_CLOSE(fptr_split);
@@ -645,25 +638,23 @@ exit:
     return NULL;
 }
 
-static void st_event_callback(void *handle, FfvEventType event_type,
+static void st_event_callback(void *cb_data, void *handle, FfvEventType event_type,
                               void *event_payload, size_t event_payload_size)
 {
-    st_hw_session_pcm_t *p_pcm_ses;
+    st_hw_session_pcm_t *p_pcm_ses = (st_hw_session_pcm_t *)cb_data;
     callback_event_t *ev = NULL;
 
     ALOGD("%s: handle %p", __func__, handle);
     if (!handle || !event_payload) {
-        ALOGE("%s: NULL params", __func__);
+        ALOGE("%s: ERROR. NULL params", __func__);
         return;
     }
-
-    p_pcm_ses = get_st_pcm_session(handle);
     if (!p_pcm_ses) {
-        ALOGE("%s: Invalid handle", __func__);
+        ALOGE("%s: ERROR. NULL session", __func__);
         return;
     }
-    ALOGD("%s: sm handle [%d]", __func__, p_pcm_ses->common.sm_handle);
 
+    ALOGD("%s: sm handle [%d]", __func__, p_pcm_ses->common.sm_handle);
     ev= (callback_event_t *)calloc(1, sizeof(callback_event_t));
     if (!ev) {
         ALOGE("%s: failed to allocate mem for event", __func__);
@@ -696,6 +687,7 @@ static void *callback_thread_loop(void *context)
     callback_event_t *ev = NULL;
     uint64_t timestamp;
     ffv_keyword_detection_status_t *ev_payload;
+    bool send_event;
 
     if (p_pcm_ses == NULL) {
         ALOGE("%s: ERROR. null context.. exiting", __func__);
@@ -716,53 +708,56 @@ static void *callback_thread_loop(void *context)
         if (p_pcm_ses->exit_callback_thread)
             break;
 
+        send_event = false;
         item = list_head(&p_pcm_ses->ev_list);
         ev = node_to_item(item, callback_event_t, node);
         list_remove(item);
-        ALOGD("%s: processing event type %d", __func__, ev->event_type);
 
+        ALOGD("%s: processing event type %d", __func__, ev->event_type);
         switch (ev->event_type) {
         case EVENT_KEYWORD_DETECTION:
             ev_payload = (ffv_keyword_detection_status_t *)ev->ev_payload;
+            timestamp = ((uint64_t)ev_payload->timestamp_msw << 32) |
+                         ev_payload->timestamp_lsw;
+            payload_size = ev_payload->payload_size;
+            payload = (char *)ev_payload + sizeof(ffv_keyword_detection_status_t);
+            ALOGD("%s: detection status %d", __func__, ev_payload->detection_status);
             switch(ev_payload->detection_status) {
             case KWD_STATUS_DETECTED:
-                ALOGD("%s: KWD_STATUS_DETECTED", __func__);
-                event_status = RECOGNITION_STATUS_SUCCESS;
-                timestamp = ((uint64_t)ev_payload->timestamp_msw << 32) |
-                             ev_payload->timestamp_lsw;
-                payload_size = ev_payload->payload_size;
-                memcpy(payload, (char *)ev_payload + sizeof(ffv_keyword_detection_status_t),
-                       payload_size);
-                break;
-            case KWD_STATUS_NONE:
+            case KWD_STATUS_IN_DISCOVERY:
             case KWD_STATUS_IN_PROCESS:
+                event_status = RECOGNITION_STATUS_SUCCESS;
+                send_event = true;
+                break;
             case KWD_STATUS_END_SPEECH:
             case KWD_STATUS_REJECTED:
-            case KWD_STATUS_IN_DISCOVERY:
+                event_status = RECOGNITION_STATUS_FAILURE;
+                send_event = true;
+                break;
+            case KWD_STATUS_NONE:
             default:
                 break;
             }
-            free(ev);
             break;
         default:
-            free(ev);
-            continue;
+            break;
         }
-        ALOGI("%s:[%d] Received status=%d",
-              __func__, p_pcm_ses->common.sm_handle, status);
+        free(ev);
+        if (!send_event)
+            continue;
 
-        ALOGD("%s: status %d", __func__, status);
+        ALOGI("%s:[%d] Recognition event %d",
+              __func__, p_pcm_ses->common.sm_handle, event_status);
         /* inform st_session of the event */
         hw_sess_event.event_id = ST_HW_SESS_EVENT_DETECTED;
         hw_sess_event.payload.detected.timestamp = timestamp;
         hw_sess_event.payload.detected.detect_status = event_status;
-        hw_sess_event.payload.detected.detect_payload = (void*)payload;
+        hw_sess_event.payload.detected.detect_payload = payload;
         hw_sess_event.payload.detected.payload_size = payload_size;
         p_pcm_ses->common.callback_to_st_session(&hw_sess_event,
                 p_pcm_ses->common.cookie);
     }
 
-exit:
     while (!list_empty(&p_pcm_ses->ev_list)) {
         item = list_head(&p_pcm_ses->ev_list);
         list_remove(item);
@@ -840,6 +835,7 @@ error_exit:
     deallocate_lab_buffers(p_ses);
     return status;
 }
+
 static int deallocate_buffers(st_hw_session_pcm_t* p_ses)
 {
     ALOGVV("%s:[%d] Enter", __func__, p_ses->common.sm_handle);
@@ -885,8 +881,25 @@ static int allocate_buffers(st_hw_session_pcm_t* p_ses)
     ALOGD("%s: Allocated in buffer size bytes =%d",
           __func__, p_ses->in_buf_size);
 
+    if (!p_ses->common.vendor_uuid_info->split_ec_ref_data) {
+        p_ses->ec_ref_buf_size = pcm_frames_to_bytes(p_ses->ec_ref_pcm, p_ses->ec_ref_config.period_size);
+    } else {
+        p_ses->ec_ref_buf_size = p_ses->ec_ref_config.period_size * p_ses->ec_ref_config.channels *
+                                  (pcm_format_to_bits(p_ses->ec_ref_config.format) >> 3);
+        /* split_in_buf - split buffer when ec ref and mic data is packed */
+        p_ses->split_in_buf_size = p_ses->in_buf_size - p_ses->ec_ref_buf_size;
+        p_ses->split_in_buf = (unsigned char *)calloc(1, p_ses->split_in_buf_size);
+        if (!p_ses->split_in_buf) {
+            ALOGE("%s: ERROR. Can not allocate split in buffer size %d",
+                   __func__, p_ses->split_in_buf_size);
+            status = -ENOMEM;
+            goto error_exit;
+        }
+        ALOGD("%s: Allocated split in buffer size bytes =%d",
+              __func__, p_ses->split_in_buf_size);
+    }
+
     /* ec_buf - buffer read from ec ref capture session */
-    p_ses->ec_ref_buf_size = pcm_frames_to_bytes(p_ses->ec_ref_pcm, p_ses->ec_ref_config.period_size);
     p_ses->ec_ref_buf = (unsigned char *)calloc(1, p_ses->ec_ref_buf_size);
     if (!p_ses->ec_ref_buf) {
         ALOGE("%s: ERROR. Can not allocate ec ref buffer size %d",
@@ -896,20 +909,6 @@ static int allocate_buffers(st_hw_session_pcm_t* p_ses)
     }
     ALOGD("%s: Allocated ec ref buffer size bytes =%d",
           __func__, p_ses->ec_ref_buf_size);
-
-    /* split_in_buf - split buffer when ec ref and mic data is packed */
-    if (p_ses->common.vendor_uuid_info->split_ec_ref_data) {
-        p_ses->split_in_buf_size = p_ses->in_buf_size - p_ses->ec_ref_buf_size;
-        p_ses->split_in_buf = (unsigned char *)calloc(1, p_ses->split_in_buf_size);
-        if (!p_ses->split_in_buf) {
-            ALOGE("%s: ERROR. Can not allocate process in buffer size %d",
-                   __func__, p_ses->split_in_buf_size);
-            status = -ENOMEM;
-            goto error_exit;
-        }
-    }
-    ALOGD("%s: Allocated split in buffer size bytes =%d",
-          __func__, p_ses->split_in_buf_size);
 
     /* out_buf - output buffer from FFV + SVA library */
     p_ses->out_buf_size = p_ses->out_config.period_size * p_ses->out_config.channels *
@@ -963,6 +962,9 @@ static int sound_trigger_set_device
         pthread_mutex_unlock(&p_ses->stdev->ref_cnt_lock);
 
         if (1 == ref_cnt) {
+            app_type = platform_stdev_get_device_app_type(p_ses->stdev->platform,
+                                                          profile_type);
+
             status = platform_stdev_send_calibration(p_ses->stdev->platform,
                 capture_device,
                 p_ses->exec_mode,
@@ -1073,13 +1075,6 @@ static int reg_sm(st_hw_session_t *p_ses, void *sm_data,
     }
 
     /* Set up EC ref session for the corresponding pcm session */
-    p_pcm_ses->ec_ref_pcm_id =
-        platform_arm_get_pcm_device_id(p_ses->stdev->platform,
-                                       &p_pcm_ses->ec_ref_use_case_idx,
-                                       true);
-    if (p_pcm_ses->ec_ref_pcm_id < 0)
-        return -ENODEV;
-
     p_pcm_ses->ec_ref_config = p_pcm_ses->common.config;
     platform_stdev_check_and_update_ec_ref_config(p_ses->stdev->platform,
                                       v_info, &p_pcm_ses->ec_ref_config);
@@ -1088,25 +1083,35 @@ static int reg_sm(st_hw_session_t *p_ses, void *sm_data,
                CALCULATE_PERIOD_SIZE(SOUND_TRIGGER_PCM_BUFFER_DURATION_MS,
                                      p_pcm_ses->ec_ref_config.rate,
                                      SOUND_TRIGGER_PCM_PERIOD_COUNT, 32);
-
-    ALOGD("%s: opening pcm device=%d ", __func__, p_pcm_ses->ec_ref_pcm_id);
     ALOGV("%s: config: channels=%d rate=%d, period_size=%d, period_cnt=%d, format=%d",
           __func__, p_pcm_ses->ec_ref_config.channels, p_pcm_ses->ec_ref_config.rate,
           p_pcm_ses->ec_ref_config.period_size, p_pcm_ses->ec_ref_config.period_count,
           p_pcm_ses->ec_ref_config.format);
 
-    p_pcm_ses->ec_ref_pcm = pcm_open(SOUND_CARD, p_pcm_ses->ec_ref_pcm_id,
-                          PCM_IN, &p_pcm_ses->ec_ref_config);
-    if (!p_pcm_ses->ec_ref_pcm) {
-        ALOGE("%s: ERROR. EC ref pcm_open failed", __func__);
-        status = -ENODEV;
-        goto sm_error;
-    }
-    if (!pcm_is_ready(p_pcm_ses->ec_ref_pcm)) {
-        ALOGE("%s: ERROR. EC ref pcm_is_ready failed err=%s", __func__,
-              pcm_get_error(p_pcm_ses->ec_ref_pcm));
-        status = -ENODEV;
-        goto sm_error;
+    if (!p_ses->vendor_uuid_info->split_ec_ref_data) {
+        p_pcm_ses->ec_ref_pcm_id =
+            platform_arm_get_pcm_device_id(p_ses->stdev->platform,
+                                           &p_pcm_ses->ec_ref_use_case_idx,
+                                           true);
+        if (p_pcm_ses->ec_ref_pcm_id < 0) {
+            status = -ENODEV;
+            goto sm_error_1;
+        }
+
+        ALOGD("%s: opening pcm device=%d ", __func__, p_pcm_ses->ec_ref_pcm_id);
+        p_pcm_ses->ec_ref_pcm = pcm_open(SOUND_CARD, p_pcm_ses->ec_ref_pcm_id,
+                              PCM_IN, &p_pcm_ses->ec_ref_config);
+        if (!p_pcm_ses->ec_ref_pcm) {
+            ALOGE("%s: ERROR. EC ref pcm_open failed", __func__);
+            status = -ENODEV;
+            goto sm_error;
+        }
+        if (!pcm_is_ready(p_pcm_ses->ec_ref_pcm)) {
+            ALOGE("%s: ERROR. EC ref pcm_is_ready failed err=%s", __func__,
+                  pcm_get_error(p_pcm_ses->ec_ref_pcm));
+            status = -ENODEV;
+            goto sm_error;
+        }
     }
 
     num_ec_ref_ch = p_pcm_ses->ec_ref_config.channels;
@@ -1130,7 +1135,8 @@ static int reg_sm(st_hw_session_t *p_ses, void *sm_data,
     ALOGD("%s: ffv_init success %p", __func__, p_pcm_ses->handle);
 
     status_type = ffv_register_event_callback_fn(p_pcm_ses->handle,
-                                                 st_event_callback);
+                                                 st_event_callback,
+                                                 p_pcm_ses);
     if (status_type) {
         ALOGE("%s: ERROR. ffv_reg_event_callback returned %d", __func__, status_type);
         status = -EINVAL;
@@ -1147,17 +1153,18 @@ static int reg_sm(st_hw_session_t *p_ses, void *sm_data,
     ALOGD("%s:[%d] Exit, status=%d", __func__, p_pcm_ses->common.sm_handle,
         status);
 
-    list_add_tail(&pcm_ses_list, &p_pcm_ses->handle_node);
     return 0;
 
 sm_error:
-    if (p_pcm_ses->ec_ref_pcm) {
-        pcm_close(p_pcm_ses->ec_ref_pcm);
-        p_pcm_ses->ec_ref_pcm = NULL;
+    if (!p_ses->vendor_uuid_info->split_ec_ref_data) {
+        if (p_pcm_ses->ec_ref_pcm) {
+            pcm_close(p_pcm_ses->ec_ref_pcm);
+            p_pcm_ses->ec_ref_pcm = NULL;
+        }
+        platform_arm_free_pcm_device_id(p_ses->stdev->platform,
+                                        p_pcm_ses->ec_ref_pcm_id,
+                                        true);
     }
-    platform_arm_free_pcm_device_id(p_ses->stdev->platform,
-                                    p_pcm_ses->ec_ref_pcm_id,
-                                    true);
 
 sm_error_1:
     if (p_pcm_ses->pcm) {
@@ -1196,49 +1203,63 @@ static int dereg_sm(st_hw_session_t *p_ses, bool capture_requested)
 
     ffv_deinit_fn(p_pcm_ses->handle);
 
-    if (p_pcm_ses->ec_ref_pcm) {
-        pcm_close(p_pcm_ses->ec_ref_pcm);
-        p_pcm_ses->ec_ref_pcm = NULL;
+    if (!p_ses->vendor_uuid_info->split_ec_ref_data) {
+        if (p_pcm_ses->ec_ref_pcm) {
+            pcm_close(p_pcm_ses->ec_ref_pcm);
+            p_pcm_ses->ec_ref_pcm = NULL;
+        }
+        platform_arm_free_pcm_device_id(p_ses->stdev->platform,
+                                        p_pcm_ses->ec_ref_pcm_id,
+                                        true);
     }
-    platform_arm_free_pcm_device_id(p_ses->stdev->platform,
-                                    p_pcm_ses->ec_ref_pcm_id,
-                                    true);
 
-    pcm_close(p_pcm_ses->pcm);
-    p_pcm_ses->pcm = NULL;
+    if (p_pcm_ses->pcm) {
+        pcm_close(p_pcm_ses->pcm);
+        p_pcm_ses->pcm = NULL;
+    }
     platform_arm_free_pcm_device_id(p_ses->stdev->platform,
                                     p_pcm_ses->pcm_id,
                                     false);
+
+    /* Deallocate buffers allocated during start_recognition */
     if (capture_requested) {
         if (p_pcm_ses->lab_buffers_allocated) {
-           /* Deallocate lab buffes allocated during start_recognition */
             deallocate_lab_buffers(p_pcm_ses);
         }
     }
-
-    list_remove(&p_pcm_ses->handle_node);
+    if (p_pcm_ses->buffers_allocated)
+        deallocate_buffers(p_pcm_ses);
 
     ALOGD("%s:[%d] Exit, status=%d", __func__, p_pcm_ses->common.sm_handle,
         status);
     return status;
 }
 
-static int reg_sm_params(st_hw_session_t* p_ses, unsigned int recognition_mode,
-    bool capture_requested, unsigned int num_conf_levels,
-    unsigned char *conf_levels,
-    struct sound_trigger_recognition_config *rc_config,
+static int reg_sm_params(st_hw_session_t* p_ses, unsigned int recognition_mode __unused,
+    bool capture_requested, unsigned int num_conf_levels __unused,
+    unsigned char *conf_levels __unused,
+    struct sound_trigger_recognition_config *rc_config __unused,
     sound_trigger_sound_model_type_t sm_type __unused)
 {
-    int status = 0, buf_en = 0, idx = 0;
+    int status = 0;
     st_hw_session_pcm_t *p_pcm_ses =
         (st_hw_session_pcm_t*)p_ses;
 
     ALOGD("%s:[%d] Enter", __func__, p_pcm_ses->common.sm_handle);
+    if (!p_pcm_ses->buffers_allocated) {
+        status = allocate_buffers(p_pcm_ses);
+        if (status) {
+            ALOGE("%s: buffer allocation failed %d", __func__, status);
+            goto error;
+        }
+    }
+
     if (capture_requested) {
         if (!p_pcm_ses->lab_buffers_allocated)
             status = allocate_lab_buffers(p_pcm_ses);
     }
 
+error:
     ALOGD("%s:[%d] Exit, status=%d", __func__,
         p_pcm_ses->common.sm_handle, status);
     return status;
@@ -1301,8 +1322,8 @@ static int start(st_hw_session_t* p_ses)
         status = pcm_start(p_pcm_ses->pcm);
     }
     if (status) {
-        ALOGE("%s: ERROR. pcm_start failed, returned status %d",
-              __func__, status);
+        ALOGE("%s: ERROR. pcm_start failed, returned status %d, err=%s",
+              __func__, status, pcm_get_error(p_pcm_ses->pcm));
         return status;
     }
     ALOGD("%s: capture session started", __func__);
@@ -1439,16 +1460,37 @@ static int stop_buffering(st_hw_session_t* p_ses, bool capture_requested)
     return status;
 }
 
-static int restart(st_hw_session_t* p_ses __unused, unsigned int recognition_mode __unused,
+static int restart(st_hw_session_t* p_ses, unsigned int recognition_mode __unused,
    bool capture_requested __unused, unsigned int num_conf_levels __unused,
    unsigned char *conf_levels __unused,
    struct sound_trigger_recognition_config *rc_config __unused,
    sound_trigger_sound_model_type_t sm_type __unused)
 {
-    /*
-     * this is a noop, in the case of PCM if session is already
-     * started there is no need to stop/start even after detection
-     */
+    st_hw_session_pcm_t *p_pcm_ses =
+       (st_hw_session_pcm_t *)p_ses;
+    char *params_buffer_ptr = NULL;
+    int param_id;
+    int param_size = 0;
+    FfvStatusType status_type;
+
+    /* notify library on voice recognition stop to restart detections*/
+    param_id = FFV_STOP_VOICE_RECOGNITION_PARAM;
+    status_type = ffv_set_param_fn(p_pcm_ses->handle, params_buffer_ptr, param_id,
+                                   param_size);
+    if (status_type) {
+        ALOGE("%s: ERROR. ffv_set_param_fn ret %d", __func__, status_type);
+        return -EINVAL;
+    }
+
+    /* notify library to reset AEC */
+    param_id = FFV_RESET_AEC_PARAM;
+    status_type = ffv_set_param_fn(p_pcm_ses->handle, params_buffer_ptr, param_id,
+                                   param_size);
+    if (status_type) {
+        ALOGE("%s: ERROR. ffv_set_param_fn ret %d", __func__, status_type);
+        return -EINVAL;
+    }
+
     return 0;
 }
 
@@ -1589,7 +1631,7 @@ static void process_lab_capture(st_hw_session_t *p_ses)
                                     p_pcm_ses->lab_cap_buf_size);
         ALOGVV("%s: ffv_read done", __func__);
         if (!bytes || (bytes == -1)) {
-            ALOGE("%s: ERROR. pcm read returned %d", __func__, bytes);
+            ALOGE("%s: ERROR. ffv_read returned %d", __func__, bytes);
             p_pcm_ses->exit_lab_processing = true;
             p_pcm_ses->common.fptrs->stop_buffering(&p_pcm_ses->common, true);
             break;
@@ -1616,6 +1658,7 @@ static int read_pcm(st_hw_session_t *p_ses,
     pthread_mutex_lock(&p_pcm_ses->lab_out_buf_lock);
     if (p_pcm_ses->exit_lab_processing) {
         ALOGE("%s: No active buffering", __func__);
+        pthread_mutex_unlock(&p_pcm_ses->lab_out_buf_lock);
         return -EIO;
     }
     pthread_mutex_unlock(&p_pcm_ses->lab_out_buf_lock);
@@ -1668,10 +1711,11 @@ static int get_param_data(st_hw_session_t *p_ses, const char *param,
     ALOGD("%s:[%d] Enter param %s", __func__, p_pcm_ses->common.sm_handle, param);
     if (!strncmp(param, QSTHW_PARAMETER_DIRECTION_OF_ARRIVAL, sizeof(param))) {
         param_id = FFV_SRC_TRACKING_PARAM;
-        ffv_get_param_fn(p_pcm_ses->handle, (char *)params_buffer_ptr, param_id,
-                         buffer_size, &param_size);
+        status_type = ffv_get_param_fn(p_pcm_ses->handle, (char *)params_buffer_ptr,
+                          param_id, buffer_size, &param_size);
         if (status_type) {
             ALOGE("%s: ERROR. ffv_get_param_fn ret %d", __func__, status_type);
+            ret = -EINVAL;
             goto exit;
         }
         if (param_size != sizeof(ffv_src_tracking_param_t)) {
@@ -1684,10 +1728,33 @@ static int get_param_data(st_hw_session_t *p_ses, const char *param,
             ret = -EINVAL;
             goto exit;
         }
-        memcpy(payload, params_buffer_ptr, param_size);
-        *param_data_size = param_size;
+    } else if (!strncmp(param, QSTHW_PARAMETER_CHANNEL_INDEX, sizeof(param))) {
+        param_id = FFV_TARGET_CHANNEL_INDEX_PARAM;
+        status_type = ffv_get_param_fn(p_pcm_ses->handle, (char *)params_buffer_ptr,
+                          param_id, buffer_size, &param_size);
+        if (status_type) {
+            ALOGE("%s: ERROR. ffv_get_param_fn ret %d", __func__, status_type);
+            goto exit;
+        }
+        if (param_size != sizeof(ffv_target_channel_index_param_t)) {
+            ALOGE("%s: ERROR. Invalid param size returned %d", __func__, param_size);
+            ret = -EINVAL;
+            goto exit;
+        }
+        if (payload_size < param_size) {
+            ALOGE("%s: ERROR. Invalid payload size %d", __func__, payload_size);
+            ret = -EINVAL;
+            goto exit;
+        }
+    } else {
+        ALOGE("%s: ERROR. Unsupported param %s", param);
+        ret = -EINVAL;
+        goto exit;
     }
 
+    /* copy params retrieved to payload */
+    memcpy(payload, params_buffer_ptr, param_size);
+    *param_data_size = param_size;
 exit:
     return ret;
 }
@@ -1709,7 +1776,6 @@ int st_hw_sess_pcm_init(st_hw_session_t *const p_ses,
     p_ses->sm_handle = sm_handle;
     p_ses->stdev = stdev;
 
-    list_init(&pcm_ses_list);
     list_init(&p_pcm_ses->ev_list);
     pthread_cond_init(&p_pcm_ses->ev_cond, (const pthread_condattr_t *) NULL);
     pthread_cond_init(&p_pcm_ses->st_ffv_process_cond, (const pthread_condattr_t *) NULL);
@@ -1728,6 +1794,8 @@ void st_hw_sess_pcm_deinit(st_hw_session_t *const p_ses __unused)
     st_hw_session_pcm_t *p_pcm_ses = (st_hw_session_pcm_t *)p_ses;
 
     pthread_cond_destroy(&p_pcm_ses->ev_cond);
+    pthread_cond_destroy(&p_pcm_ses->st_ffv_process_cond);
+    pthread_cond_destroy(&p_pcm_ses->st_ffv_capture_cond);
     pthread_mutex_destroy(&p_pcm_ses->callback_thread_lock);
     pthread_mutex_destroy(&p_pcm_ses->capture_thread_lock);
     pthread_mutex_destroy(&p_pcm_ses->st_ffv_process_lock);

@@ -11,22 +11,28 @@ si::sysinit:/etc/init.d/rcS
 # What to do in single-user mode.
 ~~:S:wait:/sbin/sulogin
 
-sns:2345:respawn:/usr/bin/sensors.qcom
+sns:2345:respawn:start-stop-daemon -c sensors -S -b -a /usr/bin/sensors.qcom
 
 # NOTE: These entries should be above the rc
 #       run level entries with wait below.
 dvsk:2345:wait:mkdir -p -m 777 /dev/socket
-lprp:2345:respawn:/sbin/leprop-service
+lprp:2345:respawn:start-stop-daemon -c leprop -S -b -a /sbin/leprop-service
+
+log1:2345:wait:echo 600 > /proc/sys/net/unix/max_dgram_qlen
+logd:2345:respawn:/sbin/logd
 
 node:2345:wait:mknod -m 660 /dev/media0 c 251 0
+chug:2345:wait:chown camera:system /dev/media0
+sys1:2345:wait:chmod 0222 /sys/kernel/debug/tracing/trace_marker
 
-qcam:2345:respawn:/system/bin/mm-qcamera-daemon
-srvm:2345:respawn:/usr/bin/servicemanager
-qmfs:2345:respawn:/usr/bin/qmmf-server
-qmfw:2345:respawn:/usr/bin/qmmf-webserver
+qcam:2345:respawn:start-stop-daemon -c camera -S -b -a /system/bin/mm-qcamera-daemon
+srvm:2345:respawn:start-stop-daemon -c system -S -b -a /usr/bin/servicemanager
+qmfs:2345:respawn:start-stop-daemon -c camera:system -S -b -a /usr/bin/qmmf-server
+qmfw:2345:respawn:start-stop-daemon -c qmmfwebsvr:system -S -b -a /usr/bin/qmmf-webserver
 
 #Set the storage daemons to respawn
-rmts:2345:respawn:/sbin/rmt_storage
+rmlk:2345:wait:chown -R -c nobody:system /sys/power/wake_lock /sys/power/wake_unlock
+rmts:2345:respawn:start-stop-daemon -c nobody:system -S -b -a /sbin/rmt_storage
 
 # /etc/init.d executes the S and K scripts upon change
 # of runlevel.
@@ -50,5 +56,6 @@ z6:6:respawn:/sbin/sulogin
 #runs reboot daemon
 #rb:5:respawn:/sbin/reboot-daemon
 
-m1:5:respawn:/usr/bin/diagrebootapp
+m1:5:respawn:start-stop-daemon -c diag -S -b -a /usr/bin/diagrebootapp
 
+ipcw:2345:respawn:start-stop-daemon -c qmmfwebsvr:system -S -b -a /usr/bin/ipc-webserver

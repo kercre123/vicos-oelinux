@@ -11,6 +11,7 @@
 #include "img_meta.h"
 #include <cutils/properties.h>
 #include <stdlib.h>
+#include "limits.h"
 
 #define Q12 4096
 #define MN_DIVISION_Q_BITS 10

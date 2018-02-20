@@ -369,6 +369,81 @@
 }
 
 #define RES1_REG_ARRAY \
+{ \
+  {0x0300, 0x0005, 0x00}, \
+  {0x0302, 0x0001, 0x00}, \
+  {0x0304, 0x0202, 0x00}, \
+  {0x0306, 0x3C3C, 0x00}, \
+  {0x0308, 0x000A, 0x00}, \
+  {0x030A, 0x0001, 0x00}, \
+  {0x0112, 0x0A0A, 0x00}, \
+  {0x3016, 0x0101, 0x00}, \
+  /*[Hidden: mipi_timing_1104Mbps]*/ \
+  {0x31B0, 0x0064, 0x00}, \
+  {0x31B2, 0x002D, 0x00}, \
+  {0x31B4, 0x5392, 0x00}, \
+  {0x31B6, 0x53CA, 0x00}, \
+  {0x31B8, 0x2423, 0x00}, \
+  {0x31BA, 0x1C70, 0x00}, \
+  {0x31BC, 0x868B, 0x00}, \
+  /*Mode setting 4160x3120@4fps*/ \
+  {0x0344, 0x0028, 0x00}, \
+  {0x0348, 0x1067, 0x00}, \
+  {0x0346, 0x0010, 0x00}, \
+  {0x034A, 0x0C3F, 0x00}, \
+  {0x034C, 0x1040, 0x00}, \
+  {0x034E, 0x0C30, 0x00}, \
+  {0x3040, 0x0041, 0x00}, \
+  {0x3172, 0x0206, 0x00}, \
+  {0x317A, 0x416E, 0x00}, \
+  {0x3F3C, 0x0003, 0x00}, \
+  {0x0400, 0x0000, 0x00}, \
+  {0x0404, 0x0010, 0x00}, \
+  {0x0342, 0x120C, 0x00}, \
+  {0x0340, 0x5CEE, 0x00}, \
+  {0x0202, 0x5CED, 0x00}, \
+  {0x306E, 0x9090, 0x00}, \
+}
+
+#define RES2_REG_ARRAY \
+{ \
+  /*PLL_Preview_329Mbps_36.6MHz*/ \
+  {0x0300, 0x0005, 0x00}, \
+  {0x0302, 0x0001, 0x00}, \
+  {0x0304, 0x0404, 0x00}, \
+  {0x0306, 0x243C, 0x00}, \
+  {0x0308, 0x000A, 0x00}, \
+  {0x030A, 0x0001, 0x00}, \
+  {0x0112, 0x0A0A, 0x00}, \
+  {0x3016, 0x0101, 0x00}, \
+  /*[Hidden: mipi_timing_320Mbps]*/ \
+  {0x31B0, 0x0025, 0x00}, \
+  {0x31B2, 0x000F, 0x00}, \
+  {0x31B4, 0x1106, 0x00}, \
+  {0x31B6, 0x1124, 0x00}, \
+  {0x31B8, 0x0C32, 0x00}, \
+  {0x31BA, 0x0C20, 0x00}, \
+  {0x31BC, 0x8204, 0x00}, \
+  /*Mode setting 1040x780@30fps*/ \
+  {0x0344, 0x0028, 0x00}, \
+  {0x0348, 0x1067, 0x00}, \
+  {0x0346, 0x0010, 0x00}, \
+  {0x034A, 0x0C41, 0x00}, \
+  {0x034C, 0x0410, 0x00}, \
+  {0x034E, 0x030C, 0x00}, \
+  {0x3040, 0x0047, 0x00}, \
+  {0x3172, 0x0206, 0x00}, \
+  {0x317A, 0x416E, 0x00}, \
+  {0x3F3C, 0x000B, 0x00}, \
+  {0x0400, 0x0001, 0x00}, \
+  {0x0404, 0x0040, 0x00}, \
+  {0x0342, 0x120C, 0x00}, \
+  {0x0340, 0x0632, 0x00}, \
+  {0x0202, 0x0319, 0x00}, \
+  {0x306E, 0x9080, 0x00}, \
+}
+
+#define RES3_REG_ARRAY \
 {\
   /*PLL_30fps_60fps_1098Mbps_36.6MHz*/ \
   {0x0300, 0x0005, 0x00}, \
@@ -406,7 +481,7 @@
   {0x306E, 0x9090, 0x00}, \
 }
 
-#define RES2_REG_ARRAY \
+#define RES4_REG_ARRAY \
 {\
   /*PLL_60fps_1152Mbps_36.6MHz*/ \
   {0x0300, 0x0005, 0x00}, \
@@ -444,7 +519,7 @@
   {0x306E, 0x9090, 0x00}, \
 }
 
-#define RES3_REG_ARRAY \
+#define RES5_REG_ARRAY \
 {\
   /*PLL_30fps_50fps_1098Mbps_36.6MHz*/ \
   {0x0300, 0x0005, 0x00}, \
@@ -814,8 +889,22 @@ static sensor_lib_t sensor_lib_ptr =
       .data_type = CAMERA_I2C_WORD_DATA,
       .delay = 10,
     },
+    /* Res 4 */
+    {
+      .reg_setting_a = RES4_REG_ARRAY,
+      .addr_type = CAMERA_I2C_WORD_ADDR,
+      .data_type = CAMERA_I2C_WORD_DATA,
+      .delay = 10,
+    },
+    /* Res 5 */
+    {
+      .reg_setting_a = RES5_REG_ARRAY,
+      .addr_type = CAMERA_I2C_WORD_ADDR,
+      .data_type = CAMERA_I2C_WORD_DATA,
+      .delay = 10,
+    },
    },
-  .size = 4,
+  .size = 6,
   },
 
   .out_info_array =
@@ -837,8 +926,43 @@ static sensor_lib_t sensor_lib_ptr =
       .offset_x = 0,
       .offset_y = 0,
       .scale_factor = 0,
+      .focal_length = 4.73,
     },
     /* Res 1 */
+    {
+      .x_output = 4160,
+      .y_output = 3120,
+      .line_length_pclk = 4620,
+      .frame_length_lines = 23790,
+      .vt_pixel_clk = 439639200,
+      .op_pixel_clk = 460000000,
+      .binning_factor = 1,
+      .min_fps = 4.0,
+      .max_fps = 4.0,
+      .mode = SENSOR_DEFAULT_MODE,
+      .offset_x = 0,
+      .offset_y = 0,
+      .scale_factor = 0,
+      .focal_length = 4.83,
+    },
+    /* Res 2 */
+    {
+      .x_output = 1040,
+      .y_output = 780,
+      .line_length_pclk = 4620,
+      .frame_length_lines = 1586,
+      .vt_pixel_clk = 219819600,
+      .op_pixel_clk = 460000000,
+      .binning_factor = 4,
+      .min_fps = 7.0,
+      .max_fps = 30.0,
+      .mode = SENSOR_DEFAULT_MODE,
+      .offset_x = 0,
+      .offset_y = 0,
+      .scale_factor = 0,
+      .focal_length = 4.93,
+    },
+    /* Res 3 */
     {
       .x_output = 4000,
       .y_output = 1124,
@@ -853,8 +977,9 @@ static sensor_lib_t sensor_lib_ptr =
       .offset_x = 0,
       .offset_y = 0,
       .scale_factor = 0,
+      .focal_length = 5,
     },
-    /* Res 2 */
+    /* Res 4 */
     {
       .x_output = 2208,
       .y_output = 1560,
@@ -869,8 +994,9 @@ static sensor_lib_t sensor_lib_ptr =
       .offset_x = 0,
       .offset_y = 0,
       .scale_factor = 0,
+      .focal_length = 5.03,
     },
-    /* Res 3 */
+    /* Res 5 */
     {
       .x_output = 4160,
       .y_output = 1560,
@@ -885,9 +1011,10 @@ static sensor_lib_t sensor_lib_ptr =
       .offset_x = 0,
       .offset_y = 0,
       .scale_factor = 0,
+      .focal_length = 5.13,
     },
   },
-  .size = 4,
+  .size = 6,
   },
   .csi_params =
   {
@@ -946,8 +1073,32 @@ static sensor_lib_t sensor_lib_ptr =
              },
            },
        },
+       /* Res 4 */
+       {
+         .num_cid = 1,
+          .vc_cfg_a =
+           {
+             {
+               .cid = 0,
+               .dt = CSI_RAW10,
+               .decode_format = CSI_DECODE_10BIT
+             },
+           },
+       },
+       /* Res 5 */
+       {
+         .num_cid = 1,
+          .vc_cfg_a =
+           {
+             {
+               .cid = 0,
+               .dt = CSI_RAW10,
+               .decode_format = CSI_DECODE_10BIT
+             },
+           },
+       },
     },
-    .size = 4,
+    .size = 6,
   },
 
   .crop_params_array =
@@ -982,8 +1133,22 @@ static sensor_lib_t sensor_lib_ptr =
       .left_crop = 0,
       .right_crop = 0,
     },
+    /* Res 4 */
+    {
+      .top_crop = 0,
+      .bottom_crop = 0,
+      .left_crop = 0,
+      .right_crop = 0,
+    },
+    /* Res 5 */
+    {
+      .top_crop = 0,
+      .bottom_crop = 0,
+      .left_crop = 0,
+      .right_crop = 0,
+    },
   },
-  .size = 4,
+  .size = 6,
   },
   .exposure_func_table =
   {
@@ -1014,5 +1179,6 @@ static sensor_lib_t sensor_lib_ptr =
   .gradient_O = 4.499952e-07,
   .offset_O = -2.968624e-04,
   },
+  .sensor_feature_focal_length = 1,
 };
 #endif

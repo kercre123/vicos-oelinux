@@ -1,6 +1,7 @@
 /*************************************************************************************
- Copyright (c) 2013-2014 Qualcomm Technologies, Inc.  All Rights Reserved.
- Qualcomm Technologies Proprietary and Confidential.
+ Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+ All Rights Reserved.
+ Confidential and Proprietary - Qualcomm Technologies, Inc.
 **************************************************************************************/
 #include "mcm_client.h"
 #include "mcm_client_internal.h"
@@ -17,12 +18,14 @@
         pthread_mutex_consistent(&client_mutex);                   \
     }                                                              \
 }
+#define MCM_MOBILEAP_SERVICE_INDEX    6
 
 
 pthread_mutex_t client_mutex;
 pthread_mutexattr_t client_mutexattr;
 
 int mcm_global_client_handle = 0;
+uint8_t mcm_ssr_status = FALSE;
 
 typedef struct mcm_async_token_type_t
 {
@@ -676,4 +679,27 @@ uint32 mcm_client_internal_get_qmi_handles_for_mcm_handle
         ret_val = MCM_ERROR_GENERIC_V01;
     }
     return ret_val;
+}
+
+void mcm_update_ssr_status(uint8_t ssr_status)
+{
+    mcm_ssr_status = ssr_status;
+}
+
+uint8_t mcm_is_device_in_ssr(void)
+{
+    return mcm_ssr_status;
+}
+
+uint8_t mcm_is_msg_for_mobileap_service(int msg_id)
+{
+    uint8_t status = FALSE;
+
+    if ((msg_id >= mcm_msg_srv_id_map_tbl[MCM_MOBILEAP_SERVICE_INDEX].mcm_msg_id_min) &&
+        (msg_id <= mcm_msg_srv_id_map_tbl[MCM_MOBILEAP_SERVICE_INDEX].mcm_msg_id_max))
+    {
+        status = TRUE;
+    }
+
+    return status;
 }

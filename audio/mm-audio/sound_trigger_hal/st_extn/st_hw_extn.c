@@ -2,7 +2,7 @@
  * This file contains extended functionality of
  * sound_trigger_hw.
  *
- * Copyright (c) 2016 Qualcomm Technologies, Inc.
+ * Copyright (c) 2016-2017 Qualcomm Technologies, Inc.
  * All Rights Reserved.
  * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
@@ -24,6 +24,11 @@
 
 #include "st_session.h"
 #include "st_hw_defs.h"
+
+bool sthw_extn_check_process_det_ev_support()
+{
+    return true;
+}
 
 /* recognition event with timestamp */
 int sthw_extn_process_detection_event_keyphrase(

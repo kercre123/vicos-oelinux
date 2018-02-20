@@ -65,7 +65,7 @@
 #ifdef FIXED_ATR
 #define INIT0_REG_ARRAY \
 { \
-  {0x0101, 0x03, 0x00}, \
+  {0x0101, 0x00, 0x00}, \
   {0x0105, 0x01, 0x00}, \
   {0x0106, 0x01, 0x00}, \
   {0x0136, 0x18, 0x00}, \
@@ -150,7 +150,7 @@
 #else
 #define INIT0_REG_ARRAY \
 { \
-  {0x0101, 0x03, 0x00}, \
+  {0x0101, 0x00, 0x00}, \
   {0x0105, 0x01, 0x00}, \
   {0x0106, 0x01, 0x00}, \
   {0x0136, 0x18, 0x00}, \
@@ -1056,7 +1056,7 @@ static sensor_lib_t sensor_lib_ptr =
     .output_format = SENSOR_BAYER,
     .connection_mode = SENSOR_MIPI_CSI,
     .raw_output = SENSOR_10_BIT_DIRECT,
-    .filter_arrangement = SENSOR_BGGR,
+    .filter_arrangement = SENSOR_RGGB,
   },
   .output_reg_addr =
   {

@@ -700,7 +700,7 @@ int32_t flash_rer_set_chromatix(
  * Failure - SENSOR_FAILURE
  **/
 
-inline int32_t input_check(int32_t value, int32_t min, int32_t max)
+static inline int32_t input_check(int32_t value, int32_t min, int32_t max)
 {
   if(value < min)
     return SENSOR_FAILURE;

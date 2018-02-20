@@ -1,8 +1,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
   ---------------------------------------------------------------------------
 ******************************************************************************/
 
@@ -234,4 +235,9 @@ cri_core_error_type cri_voice_request_cancel_ussd(cri_core_context_type         
 cri_core_error_type cri_voice_request_set_clir(cri_voice_clir_type clir_type)
 {
     return cri_voice_set_clir_req_handler(clir_type);
+}
+
+void cri_voice_release_client(int qmi_service_client_id)
+{
+    cri_voice_reset();
 }

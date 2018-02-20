@@ -37,7 +37,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 #include "openavb_srp.h"
 #include "openavb_maap.h"
 #include "mrp_client.h"
-#include "openavb_ether_hal.h"
 #include "openavb_list.h"
 
 #ifdef USE_GLIB
@@ -111,12 +110,7 @@ bool startEndpoint(int mode, int ifindex, const char* ifname, unsigned mtu,
 	x_cfg.ifindex = ifindex;
 	if (ifname)
 		strlcpy(x_cfg.ifname, ifname, sizeof(x_cfg.ifname));
-
 	AVB_LOGF_DEBUG("startEndpoint: I Option Interface=%s",x_cfg.ifname);
-
-
-	igbGetMacAddr(x_cfg.ifmac);
-
 	x_cfg.mtu = mtu;
 	x_cfg.link_kbit = link_kbit;
 	x_cfg.nsr_kbit = nsr_kbit;

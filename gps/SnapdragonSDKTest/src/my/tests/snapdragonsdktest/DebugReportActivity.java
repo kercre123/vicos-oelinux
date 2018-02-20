@@ -684,6 +684,12 @@ public class DebugReportActivity extends Activity {
                           rfStateReport.getJammerMetricGlonass());
             s.append(" Jammer Metric BDS:" + rfStateReport.getJammerMetricBds());
             s.append(" Jammer Metric Gal:" + rfStateReport.getJammerMetricGal());
+            s.append(" GLO BP AmpI:" + rfStateReport.getGLOBPAmpI());
+            s.append(" GLO BP AmpQ:" + rfStateReport.getGLOBPAmpQ());
+            s.append(" BDS BP AmpI:" + rfStateReport.getBDSBPAmpI());
+            s.append(" BDS BP AmpQ:" + rfStateReport.getBDSBPAmpQ());
+            s.append(" GAL BP AmpI:" + rfStateReport.getGALBPAmpI());
+            s.append(" GAL BP AmpQ:" + rfStateReport.getGALBPAmpQ());
 
             if (fileWriter != null) {
                 fileWriter.println(s);

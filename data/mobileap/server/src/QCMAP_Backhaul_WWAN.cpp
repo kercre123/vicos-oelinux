@@ -2943,6 +2943,76 @@ boolean QCMAP_Backhaul_WWAN::GetV6SIPServerInfo
 }
 
 /*===========================================================================
+
+FUNCTION SendDeleteDelegatedPrefix()
+
+DESCRIPTION
+ - Removes a single prefix if prefix_valid is set, otherwise removes all
+ delegated prefix's
+
+@parameters
+  prefix_valid - Boolean to flush single or all
+  ipv6_addr    - prefix to delete
+  qmi_err_num  - error no.
+
+@return
+  0  - Success
+  -1 - Failure
+
+DEPENDENCIES
+  None.
+
+SIDE EFFECTS
+
+===========================================================================*/
+int QCMAP_Backhaul_WWAN::SendDeleteDelegatedPrefix
+(
+  boolean             prefix_valid,/*Boolean to flush single or all*/
+  uint8_t             *ipv6_addr,  /*Prefix to delete*/
+  qmi_error_type_v01  *qmi_err_num /*QMI error number*/
+)
+{
+  dsi_delegated_ipv6_prefix_type ipv6_prefix;
+  int dsi_err,ret_val;
+  QCMAP_Backhaul_WWAN* QcMapBackhaulWWANMgr=GET_DEFAULT_BACKHAUL_WWAN_OBJECT();
+  *qmi_err_num = QMI_ERR_NONE_V01;
+
+  LOG_MSG_INFO1("Entered SendDeleteDelegatedPrefix", 0, 0, 0);
+
+
+  if (QcMapBackhaulWWANMgr == NULL)
+  {
+    LOG_MSG_ERROR("No Backhaul object", 0, 0, 0);
+    *qmi_err_num = QMI_ERR_INTERNAL_V01;
+    return  QCMAP_CM_ERROR;
+  }
+
+  memset(&ipv6_prefix, 0, sizeof(ipv6_prefix));
+
+  if(prefix_valid)
+  {
+    memcpy(ipv6_prefix.ipv6_addr, ipv6_addr, QMI_WDS_IPV6_ADDR_LEN_V01);
+    ipv6_prefix.prefix_len = IPV6_MIN_PREFIX_LENGTH;
+  }
+
+  ret_val = dsi_iface_ioctl(QcMapBackhaulWWANMgr->ipv6_dsi_net_hndl.handle,
+                                 DSI_IFACE_IOCTL_REMOVE_DELEGATED_IPV6_PREFIX,
+                                 &ipv6_prefix,
+                                 &dsi_err);
+  if(ret_val == DSI_SUCCESS)
+  {
+    LOG_MSG_INFO1("Successfully deleted delegated ipv6 prefix", 0, 0, 0);
+  }
+  else
+  {
+    LOG_MSG_ERROR("Failure in deleting delegated ipv6 prefix: %d", dsi_err, 0, 0);
+    *qmi_err_num = QMI_ERR_INTERNAL_V01;
+    return  QCMAP_CM_ERROR;
+  }
+  return QCMAP_CM_SUCCESS;
+}
+
+/*===========================================================================
   FUNCTION DeleteDelegatedPrefix
 ==========================================================================*/
 /*!
@@ -2986,16 +3056,21 @@ boolean QCMAP_Backhaul_WWAN::DeleteDelegatedPrefix(void *mac_addr, qmi_error_typ
     if(QcMapMgr->GetConnectedDevicesInfo(connected_devices,
                                           &num_entries, qmi_err_num))
     {
-      for (i =0; i < num_entries; i++)
+      for (i = 0; i < num_entries; i++)
       {
         if (memcmp(connected_devices[i].client_mac_addr, mac_addr, sizeof(mac_addr)) == 0)
           break;
       }
+      if(i == num_entries)
+      {
+        LOG_MSG_ERROR("DeleteClientAddrInfo - Couldn't find device with mac addr", 0,0,0);
+        return false;
+      }
       /*deleting only delegated prefix here.This can be done on first ipv6 address.
         This is how we did before merging packet stats feature*/
-      if (!qcmap_cm_delete_ipv6_delegated_prefix(true,
+      if (QCMAP_Backhaul_WWAN::SendDeleteDelegatedPrefix(true,
                                                  connected_devices[i].ipv6[0].addr,
-                                                 qmi_err_num))
+                                                 qmi_err_num) == QCMAP_CM_ERROR)
       {
         LOG_MSG_ERROR("Error: Unable flush prefix's %d", *qmi_err_num, 0, 0);
       }
@@ -4465,6 +4540,7 @@ boolean QCMAP_Backhaul_WWAN::Update_resolv_file
   char command[MAX_COMMAND_STR_LEN] ;
   uint8_t  empty_ip[IPV6_ADDR_SIZE_IN_BYTES] = {0};       /* empty IPV6 IP*/
   QCMAP_Backhaul_WWAN* QcMapBackhaulWWANMgr=GET_DEFAULT_BACKHAUL_WWAN_OBJECT();
+  QCMAP_LAN* QCMAPLANMgr=GET_DEFAULT_LAN_OBJECT();
 
   memcpy(pd6.sin6_addr.s6_addr, pri_dns_addr,
       QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
@@ -4475,49 +4551,65 @@ boolean QCMAP_Backhaul_WWAN::Update_resolv_file
   inet_ntop(AF_INET6, &sd6.sin6_addr, addrs, sizeof addrs);
   LOG_MSG_INFO1(" dns addrs===%s,%s mode=%d=====",addrp,addrs,mod);
 
-  if (mod == ADD_V6DNS_SERVER)
+  switch(mod)
   {
-    if (strncmp (addrp,"::",sizeof("::")))
+    case(ADD_V6DNS_SERVER):
     {
-      snprintf(command, MAX_COMMAND_STR_LEN,
-               "echo 'nameserver %s' >> %s", addrp, DNSMASQ_RESOLV_FILE);
-      ds_system_call(command, strlen(command));
-      memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.pri_dns_addr, pri_dns_addr,
-             QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
-    }
-    if (strncmp (addrs,"::",sizeof("::")))
-    {
-      snprintf(command, MAX_COMMAND_STR_LEN,
-               "echo 'nameserver %s' >> %s", addrs, DNSMASQ_RESOLV_FILE);
-      ds_system_call(command, strlen(command));
-      memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.sec_dns_addr, sec_dns_addr,
-             QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
-    }
+      if (strncmp (addrp,"::",sizeof("::")))
+      {
+        memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.pri_dns_addr, pri_dns_addr,
+               QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
+      }
 
-  }
-  if (mod == REMOVE_V6DNS_SERVER)
-  {
-    if (strncmp (addrp,"::",sizeof("::")))
-    {
-      snprintf(command, MAX_COMMAND_STR_LEN,
-               "sed -i '/nameserver %s/d' %s", addrp, DNSMASQ_RESOLV_FILE);
-      ds_system_call(command, strlen(command));
+      if (strncmp (addrs,"::",sizeof("::")))
+      {
+        memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.sec_dns_addr, sec_dns_addr,
+               QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
+      }
 
-      //clear DNS
-      memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.pri_dns_addr, empty_ip,
-             QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
-    }
-    if (strncmp (addrs,"::",sizeof("::")))
-    {
-      snprintf(command, MAX_COMMAND_STR_LEN,
-               "sed -i '/nameserver %s/d' %s", addrs, DNSMASQ_RESOLV_FILE);
-      ds_system_call(command, strlen(command));
+      if(QCMAPLANMgr)
+      {
+        QCMAPLANMgr->AddDNSNameServers(addrp, addrs);
+      } else {
+        LOG_MSG_INFO1("LANMGR object NULL!", 0, 0, 0);
+        return false;
+      }
 
-      //clear DNS
-      memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.sec_dns_addr, empty_ip,
-             QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
+      break;
     }
 
+    case(REMOVE_V6DNS_SERVER):
+    {
+      if (strncmp (addrp,"::",sizeof("::")))
+      {
+        //clear DNS
+        memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.pri_dns_addr, empty_ip,
+               QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
+      }
+
+      if (strncmp (addrs,"::",sizeof("::")))
+      {
+        //clear DNS
+        memcpy(QcMapBackhaulWWANMgr->dhcpv6_dns_conf.sec_dns_addr, empty_ip,
+               QCMAP_MSGR_IPV6_ADDR_LEN_V01*sizeof(uint8));
+      }
+
+      if(QCMAPLANMgr)
+      {
+        QCMAPLANMgr->DeleteDNSNameServers(addrp, addrs);
+      } else {
+        LOG_MSG_INFO1("LANMGR object NULL!", 0, 0, 0);
+        return false;
+      }
+
+      break;
+    }
+
+    default:
+    {
+      LOG_MSG_INFO1("invalid mod: %d", mod, 0, 0);
+      break;
+    }
   }
 
   return true;
@@ -7728,10 +7820,10 @@ boolean QCMAP_Backhaul_WWAN::IsDuplicateProfile
   /* 1. Check if 3GPP profile_index are 0,
          if yes, then return failure.
    */
-  if (wwan_policy.v4_profile_id_3gpp == 0 &&
+  if (wwan_policy.v4_profile_id_3gpp == 0 ||
       wwan_policy.v6_profile_id_3gpp == 0)
   {
-    LOG_MSG_ERROR("Invalid profile, all policy index are 0", 0,0,0);
+    LOG_MSG_ERROR("Invalid profile, policy index are 0", 0,0,0);
     ret_val = true;
     return ret_val;
   }

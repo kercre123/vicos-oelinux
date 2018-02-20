@@ -1,5 +1,5 @@
 /**********************************************************************
-*  Copyright (c) 2013-2016 Qualcomm Technologies, Inc.
+*  Copyright (c) 2013-2017 Qualcomm Technologies, Inc.
 *  All Rights Reserved.
 *  Confidential and Proprietary - Qualcomm Technologies, Inc.
 **********************************************************************/
@@ -185,17 +185,15 @@ int img_get_subsampling_factor(img_subsampling_t ss_type, float *p_w_factor,
 int img_wait_for_completion(pthread_cond_t *p_cond, pthread_mutex_t *p_mutex,
   int32_t ms)
 {
+  int rc = IMG_SUCCESS;
   struct timespec ts;
-  int rc = clock_gettime(CLOCK_REALTIME, &ts);
-  if (rc < 0)
-    return IMG_ERR_GENERAL;
+  int64_t wait_time_ns = ((int64_t)(ms) * SEC_TO_NS_FACTOR);
+  int64_t new_nsec = 0;
 
-  if (ms >= 1000) {
-    ts.tv_sec += (ms / 1000);
-    ts.tv_nsec += ((ms % 1000) * 1000000);
-  } else {
-    ts.tv_nsec += (ms * 1000000);
-  }
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  new_nsec = (int64_t)ts.tv_nsec + wait_time_ns;
+  ts.tv_sec += new_nsec / SEC_TO_NS_FACTOR;
+  ts.tv_nsec = new_nsec % SEC_TO_NS_FACTOR;
 
   rc = pthread_cond_timedwait(p_cond, p_mutex, &ts);
   if (rc == ETIMEDOUT) {

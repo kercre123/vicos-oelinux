@@ -5,83 +5,79 @@
  */
 
 #include <dlfcn.h>
-#include <iostream>
 #include <vaapi.h>
 #include <VAManager.h>
 #include <VAMUtilities.h>
+#include <iostream>
+#include <string>
 
 static VAManager VAMInstance;
-extern "C" int32_t vaapi_init(const vaapi_source_info *info, const char *dyn_lib_path)
-{
+extern "C" int32_t vaapi_init(const vaapi_source_info *info,
+                              const char *dyn_lib_path) {
     return VAMInstance.init(info, dyn_lib_path);
 }
 
-extern "C" int32_t vaapi_deinit()
-{
+extern "C" int32_t vaapi_deinit() {
     return VAMInstance.destroy();
 }
 
-int32_t vaapi_set_config(vaapi_configuration *va_config)
-{
+extern "C" int32_t vaapi_set_config(vaapi_configuration *va_config) {
     return VAMInstance.setConfig(va_config);
 }
 
-int32_t vaapi_del_config(vaapi_configuration *va_config)
-{
+extern "C" int32_t vaapi_del_config(vaapi_configuration *va_config) {
     return VAMInstance.delConfig(va_config);
 }
 
-int32_t vaapi_enroll_obj(vaapi_event_type type, vaapi_enrollment_info *enroll_info)
-{
+extern "C" int32_t vaapi_enroll_obj(vaapi_event_type type,
+                         vaapi_enrollment_info *enroll_info) {
     return VAMInstance.enrollObj(type, enroll_info);
 }
 
-int32_t vaapi_disenroll_obj(vaapi_event_type type, const char *id)
-{
+extern "C" int32_t vaapi_disenroll_obj(vaapi_event_type type,
+                                       const char *id) {
     return VAMInstance.disenrollObj(type, id);
 }
 
-int32_t vaapi_run()
-{
+extern "C" int32_t vaapi_run() {
     return VAMInstance.run();
 }
 
-int32_t vaapi_stop()
-{
+extern "C" int32_t vaapi_stop() {
     return VAMInstance.stop();
 }
 
-int32_t vaapi_process(vaapi_frame_info *frame_info)
-{
+extern "C" int32_t vaapi_process(vaapi_frame_info *frame_info) {
     return VAMInstance.putFrame(frame_info);
 }
 
-int32_t vaapi_register_event_cb(vaapi_event_cb_func func, void *usrData)
-{
+extern "C" int32_t vaapi_register_event_cb(vaapi_event_cb_func func,
+                                           void *usrData) {
     VAMInstance.registerEventCB(func, usrData);
     return VAM_OK;
 }
 
-int32_t vaapi_register_metadata_cb(vaapi_metadata_cb_func func, void *usrData)
-{
+extern "C" int32_t vaapi_register_metadata_cb(vaapi_metadata_cb_func func,
+                                              void *usrData) {
     VAMInstance.registerMetadataFrameCB(func, usrData);
     return VAM_OK;
 }
 
-int32_t vaapi_register_snapshot_cb(vaapi_snapshot_cb_func func, void *usrData)
-{
+extern "C" int32_t vaapi_register_snapshot_cb(vaapi_snapshot_cb_func func,
+                                              void *usrData) {
     VAMInstance.registerSnapshotCB(func, usrData);
     return VAM_OK;
 }
 
-int32_t vaapi_register_frame_processed_cb(vaapi_frame_processed_cb_func func, void *usrData)
-{
+extern "C" int32_t vaapi_register_frame_processed_cb(
+                                          vaapi_frame_processed_cb_func func,
+                                          void *usrData) {
     VAMInstance.registerFrameProcessedCB(func, usrData);
     return VAM_OK;
 }
 
-int32_t vaapi_is_event_type_supported(vaapi_event_type type, uint8_t *is_supported)
-{
+extern "C" int32_t vaapi_is_event_type_supported(vaapi_event_type type,
+                                                 uint8_t *is_supported) {
     if (is_supported == nullptr) {
         return VAM_NULLPTR;
     }
@@ -91,8 +87,10 @@ int32_t vaapi_is_event_type_supported(vaapi_event_type type, uint8_t *is_support
     return VAM_OK;
 }
 
-int32_t vaapi_convert_metadata_to_json(const struct vaapi_metadata_frame *frame, char *json_str, uint32_t json_str_size)
-{
+extern "C" int32_t vaapi_convert_metadata_to_json(
+                                       const struct vaapi_metadata_frame *frame,
+                                       char *json_str,
+                                       uint32_t json_str_size) {
     std::string jsonStr;
     int ret = VAMInstance.convertMetadataToJSON(frame, &jsonStr);
 
@@ -108,8 +106,9 @@ int32_t vaapi_convert_metadata_to_json(const struct vaapi_metadata_frame *frame,
     return VAM_OK;
 }
 
-int32_t vaapi_convert_event_to_json(const struct vaapi_event *event, char *json_str, uint32_t json_str_size)
-{
+extern "C" int32_t vaapi_convert_event_to_json(const struct vaapi_event *event,
+                                               char *json_str,
+                                               uint32_t json_str_size) {
     std::string jsonStr;
     int ret = VAMInstance.convertEventToJSON(event, &jsonStr);
     if (ret != VAM_OK) {

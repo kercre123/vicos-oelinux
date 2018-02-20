@@ -55,6 +55,7 @@ library_include_HEADERS = $(h_sources)
 
 c_sources  = qmi_service.c \
         qmi.c \
+        qmi_errors.c \
         qmi_wds_srvc.c \
         qmi_qos_srvc.c \
         qmi_nas_srvc.c \

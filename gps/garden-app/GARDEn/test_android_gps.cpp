@@ -2646,7 +2646,7 @@ void run_tracking_session(void)
       }
 /*Create power event handler object for LE variants */
 #ifdef USE_GLIB
-      PowerEvtHandler powerEvtObj;
+      PowerEvtHandler::getPwrEvtHandler();
 #endif
       gEventObserver = new EventObserver(rxSystemEvent);
 

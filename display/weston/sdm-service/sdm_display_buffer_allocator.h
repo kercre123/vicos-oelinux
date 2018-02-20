@@ -55,8 +55,11 @@ class SdmDisplayBufferAllocator : public BufferAllocator {
   DisplayError GetBufferLayout(const AllocatedBufferInfo &buf_info,
                                uint32_t stride[4], uint32_t offset[4],
                                uint32_t *num_planes);
+  void GetGbmDeviceHandle(void **userdata);
  private:
   bool IsFormatVideo(uint32_t fmt);
+  bool IsVideoFormatLinear(uint32_t fmt, uint32_t ubwc_status);
+  bool IsVideoFormatUBWC(uint32_t fmt, uint32_t ubwc_status);
   struct gbm_device *gbm_ = NULL;
 };
 

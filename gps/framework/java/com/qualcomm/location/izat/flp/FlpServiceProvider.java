@@ -6,8 +6,6 @@
 
 package com.qualcomm.location.izat.flp;
 
-import android.app.Service;
-import android.content.Intent;
 import android.content.Context;
 import android.location.Location;
 import android.os.IBinder;
@@ -22,13 +20,13 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import com.qti.flp.*;
+import com.qualcomm.location.izat.LocationSettingsHelper;
 
-public class FlpServiceProvider {
+public class FlpServiceProvider implements LocationSettingsHelper.ILocationSettingsCallback {
     private static final String TAG = "FlpServiceProvider";
-    private static final boolean VERBOSE_DBG = Log.isLoggable(TAG, Log.VERBOSE);
+    private static final boolean VERBOSE = Log.isLoggable(TAG, Log.VERBOSE);
     private static final int FLP_RESULT_SUCCESS = 0;
     private static final int FLP_RESULT_ERROR = -1;
     private static final int LOCATION_REPORT_ON_FULL_INDICATION = 1;
@@ -36,10 +34,11 @@ public class FlpServiceProvider {
     private static final int LOCATION_REPORT_ON_QUERY = 4;
     private static final int LOCATION_REPORT_ON_INDICATIONS = 8; // for legacy
     private static final int FLP_PASSIVE_LISTENER_HW_ID = -1;
-    private static final int FEATURE_BIT_DISTANCE_BASED_BATCHING_IS_SUPPORTED = 8;
     private static final Object sCallBacksLock = new Object();
     private static final Object sStatusCallbacksLock = new Object();
+    private static final Object sLocationSettingsLock = new Object();
     private final Context mContext;
+    private final LocationSettingsHelper mLocationSettingsHelper;
 
     private static final int FLP_SESSION_BACKGROUND = 1;
     private static final int FLP_SESSION_FOREGROUND = 2;
@@ -63,7 +62,27 @@ public class FlpServiceProvider {
             mBgNotificationType = FLP_BG_NOTIFICATION_ROUTINE;
             mSessionStartTime = 0;
         }
-   }
+    }
+
+    private class FlpSessionData {
+        private int mId;
+        private int mFlags;
+        private long mPeriodMs;
+        private int mDistanceIntervalMps;
+        private long mTripDistanceM;
+
+        FlpSessionData(int id,
+                       int flags,
+                       long period_ms,
+                       int distance_interval_mps,
+                       long trip_distance_m) {
+            mId = id;
+            mFlags = flags;
+            mPeriodMs = period_ms;
+            mDistanceIntervalMps = distance_interval_mps;
+            mTripDistanceM = trip_distance_m;
+        }
+    }
 
     private Queue<Pair<ILocationCallback,Long>> mQueryCbQueue
             = new LinkedList<Pair<ILocationCallback,Long>>();
@@ -78,6 +97,7 @@ public class FlpServiceProvider {
     private RemoteCallbackList<ISessionStatusCallback> mCallbacksForStatus
             = new RemoteCallbackList<ISessionStatusCallback>();
     private Map<Integer, BgSessionData> mBgSessionMap;
+    private Map<Integer, FlpSessionData> mFlpSessionMap;
 
     public static FlpServiceProvider sInstance = null;
     public static FlpServiceProvider getInstance(Context ctx) {
@@ -87,15 +107,56 @@ public class FlpServiceProvider {
         return sInstance;
     }
     private int mFlpFeaturMasks = -1;
+    private boolean mIsLocationSettingsOn;
 
     public FlpServiceProvider(Context ctx) {
-        if (VERBOSE_DBG) {
+        if (VERBOSE) {
             Log.d(TAG, "FlpServiceProvider construction");
         }
         mContext = ctx;
         mBgSessionMap = new HashMap<Integer, BgSessionData>();
         if (native_flp_init() != FLP_RESULT_SUCCESS) {
             Log.e(TAG, "native flp init failed");
+        }
+        mLocationSettingsHelper = LocationSettingsHelper.getInstance(ctx);
+        mLocationSettingsHelper.registerForLocationSettingsCallback(this);
+        mIsLocationSettingsOn = mLocationSettingsHelper.mIsLocationSettingsOn;
+        mFlpSessionMap = new HashMap<Integer, FlpSessionData>();
+    }
+
+    public void onLocationSettingsChange(boolean locationSettingsIsOn) {
+        synchronized (sLocationSettingsLock) {
+            mIsLocationSettingsOn = locationSettingsIsOn;
+            if (mIsLocationSettingsOn) {
+                startFlpSessions();
+            } else {
+                stopFlpSessions();
+            }
+        }
+    }
+
+    private void startFlpSessions() {
+        for (Map.Entry<Integer, FlpSessionData> flpSessionMapEntry : mFlpSessionMap.entrySet()) {
+            FlpSessionData flpSessionData = flpSessionMapEntry.getValue();
+
+            native_flp_start_session(flpSessionData.mId,
+                    flpSessionData.mFlags,
+                    flpSessionData.mPeriodMs,
+                    flpSessionData.mDistanceIntervalMps);
+            if (VERBOSE) {
+                Log.d(TAG, "Starting flp session id: " + flpSessionData.mId);
+            }
+        }
+    }
+
+    private void stopFlpSessions() {
+        for (Map.Entry<Integer, FlpSessionData> flpSessionMapEntry : mFlpSessionMap.entrySet()) {
+            FlpSessionData flpSessionData = flpSessionMapEntry.getValue();
+
+            native_flp_stop_session(flpSessionData.mId);
+            if (VERBOSE) {
+                Log.d(TAG, "Stoping flp session id: " + flpSessionData.mId);
+            }
         }
     }
 
@@ -105,7 +166,7 @@ public class FlpServiceProvider {
                                      final int id,
                                      final ILocationCallback cb,
                                      final long sessionStartTime) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): registerCallback()," +
                            " sessionType is " + sessionType + "; id is " + id +
                            "; sessionStartTime is " + sessionStartTime +
@@ -197,7 +258,7 @@ public class FlpServiceProvider {
 
         public void unregisterCallback(final int sessionType,
                                        final ILocationCallback cb) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): unregisterCallback(): cb:" + cb);
             }
             if (cb != null) {
@@ -229,7 +290,7 @@ public class FlpServiceProvider {
         }
 
         public void registerForSessionStatus(final int id, final ISessionStatusCallback cb) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): registerForSessionStatus() cb:" + cb);
             }
             if (cb != null) {
@@ -256,7 +317,7 @@ public class FlpServiceProvider {
         }
 
         public void unregisterForSessionStatus(final ISessionStatusCallback cb) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in FlpService.Stub unregisterForSessionStatus() cb = : " + cb);
             }
             if (cb != null) {
@@ -271,7 +332,7 @@ public class FlpServiceProvider {
         }
 
         public int getAllSupportedFeatures() {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): getAllSupportedFeatures()");
             }
             if (mFlpFeaturMasks == -1) {
@@ -285,7 +346,7 @@ public class FlpServiceProvider {
                                    long period_ms,
                                    int distance_interval_mps,
                                    long trip_distance_m) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): startFlpSession()" +
                            "; id is " + id +
                            "; period_ms is " + period_ms +
@@ -310,10 +371,29 @@ public class FlpServiceProvider {
 
             long period_ns =
                 (period_ms > (Long.MAX_VALUE/1000000)) ? Long.MAX_VALUE : period_ms*1000000;
-            return native_flp_start_session(id,
-                                            flags,
-                                            period_ns,
-                                            distance_interval_mps);
+
+            FlpSessionData flpSessionData = new FlpSessionData(id,
+                                                               flags,
+                                                               period_ns,
+                                                               distance_interval_mps,
+                                                               trip_distance_m);
+            int result;
+            synchronized (sLocationSettingsLock) {
+                mFlpSessionMap.put(id, flpSessionData);
+                if (!mIsLocationSettingsOn) {
+                    if (VERBOSE) {
+                        Log.d(TAG, "Location setting is OFF, storing FLP session data");
+                    }
+                    result = FLP_RESULT_SUCCESS;
+                } else {
+                    result = native_flp_start_session(id,
+                                                      flags,
+                                                      period_ns,
+                                                      distance_interval_mps);
+                }
+            }
+
+            return result;
         }
 
         public int updateFlpSession(int id,
@@ -321,7 +401,7 @@ public class FlpServiceProvider {
                                     long period_ms,
                                     int distance_interval_mps,
                                     long trip_distance_m) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): updateFlpSession()" +
                            "; id is " + id +
                            "; period_ms is " + period_ms +
@@ -350,14 +430,36 @@ public class FlpServiceProvider {
 
             long period_ns =
                 (period_ms > (Long.MAX_VALUE/1000000)) ? Long.MAX_VALUE : period_ms*1000000;
-            return native_flp_update_session(id,
-                                             flags,
-                                             period_ns,
-                                             distance_interval_mps);
+
+            if (!mFlpSessionMap.containsKey(id)) {
+                Log.e(TAG, "Invalid FlpSession id: " + id);
+                return FLP_RESULT_ERROR;
+            }
+
+            int result;
+            FlpSessionData flpSessionData = (FlpSessionData) mFlpSessionMap.get(id);
+            synchronized (sLocationSettingsLock) {
+                flpSessionData.mId = id;
+                flpSessionData.mFlags = flags;
+                flpSessionData.mPeriodMs = period_ns;
+                flpSessionData.mDistanceIntervalMps = distance_interval_mps;
+                flpSessionData.mTripDistanceM = trip_distance_m;
+
+                if (!mIsLocationSettingsOn) {
+                    result =  FLP_RESULT_SUCCESS;
+                } else {
+                    result =  native_flp_update_session(id,
+                                                        flags,
+                                                        period_ns,
+                                                        distance_interval_mps);
+                }
+            }
+
+            return result;
         }
 
         public int stopFlpSession(int id) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): stopFlpSession(); id is " + id);
             }
 
@@ -365,13 +467,29 @@ public class FlpServiceProvider {
                 mBgSessionMap.remove(id);
             }
 
-            return native_flp_stop_session(id);
+            if (!mFlpSessionMap.containsKey(id)) {
+                Log.e(TAG, "Invalid FlpSession id: " + id);
+                return FLP_RESULT_ERROR;
+            }
+
+            int result;
+            synchronized (sLocationSettingsLock) {
+                if (!mIsLocationSettingsOn) {
+                    result = FLP_RESULT_SUCCESS;
+                } else {
+                    result = native_flp_stop_session(id);
+                }
+
+                mFlpSessionMap.remove(id);
+            }
+
+            return result;
         }
 
         public int pullLocations(final ILocationCallback cb,
                                  final long sessionStartTime,
                                  final int id) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): pullLocations(), sessionStartTime is "
                            + sessionStartTime);
             }
@@ -379,25 +497,40 @@ public class FlpServiceProvider {
                 Log.e(TAG, "in IFlpService.Stub(): cb is null.");
                 return FLP_RESULT_ERROR;
             }
-            synchronized (sCallBacksLock) {
-                // save the cb
-                mQueryCbQueue.add(new Pair<ILocationCallback,Long>(cb, sessionStartTime));
+
+            if (!mFlpSessionMap.containsKey(id)) {
+                Log.e(TAG, "Invalid FlpSession id: " + id);
+                return FLP_RESULT_ERROR;
             }
-            return native_flp_get_all_locations();
+
+            int result;
+            synchronized (sLocationSettingsLock) {
+                if (!mIsLocationSettingsOn) {
+                    result = FLP_RESULT_SUCCESS;
+                } else {
+                    synchronized (sCallBacksLock) {
+                        // save the cb
+                        mQueryCbQueue.add(new Pair<ILocationCallback,Long>(cb, sessionStartTime));
+                    }
+                    result = native_flp_get_all_locations();
+                }
+            }
+
+            return result;
         }
     };
 
     /* Remote binder */
     private final ITestService.Stub mTestingBinder = new ITestService.Stub() {
         public void deleteAidingData(long flags) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): deleteAidingData(). Flags: " + flags);
             }
             native_flp_delete_aiding_data(flags);
         }
 
         public void registerMaxPowerChangeCallback(final IMaxPowerAllocatedCallback cb) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): registerMaxPowerChangeCallback()");
             }
             if (cb != null) {
@@ -423,7 +556,7 @@ public class FlpServiceProvider {
         }
 
         public void unregisterMaxPowerChangeCallback(IMaxPowerAllocatedCallback cb) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IFlpService.Stub(): unregisterMaxPowerChangeCallback()");
             }
             if (cb != null) {
@@ -439,8 +572,8 @@ public class FlpServiceProvider {
     };
 
     private void onLocationReport(Location[] locations, int reportTrigger, int batchingMode) {
-        if (VERBOSE_DBG) {
-            Log.d(TAG, "entering onLocationReport() reportTrigger is " + reportTrigger +
+        if (VERBOSE) {
+            Log.v(TAG, "entering onLocationReport() reportTrigger is " + reportTrigger +
                        "; Batching Mode is " + batchingMode +
                        "; and the first timestamp is " + locations[0].getTime());
         }
@@ -458,8 +591,8 @@ public class FlpServiceProvider {
                         }
                         long sessionStartTime = (long) bgSessData.mSessionStartTime;
 
-                        if (VERBOSE_DBG) {
-                            Log.d(TAG, "in the mCallbacksForBg loop : " + i +
+                        if (VERBOSE) {
+                            Log.v(TAG, "in the mCallbacksForBg loop : " + i +
                                 "; timestamp is " + sessionStartTime +
                                 "; notification Type is " + bgSessData.mBgNotificationType);
                         }
@@ -469,13 +602,13 @@ public class FlpServiceProvider {
                             (batchingMode == BATCHING_MODE_OUTDOOR_TRIP)) {
                             if (sessionStartTime<=locations[0].getTime()) {
                                 // return the whole batch
-                                if (VERBOSE_DBG) {
-                                    Log.d(TAG, "return whole batch");
+                                if (VERBOSE) {
+                                    Log.v(TAG, "return whole batch");
                                 }
                                 mCallbacksForBg.getBroadcastItem(i).onLocationAvailable(locations);
                             } else if (sessionStartTime>locations[locations.length-1].getTime()) {
-                                if (VERBOSE_DBG) {
-                                    Log.d(TAG, "no need to return");
+                                if (VERBOSE) {
+                                    Log.v(TAG, "no need to return");
                                 }
                             } else {
                                 // find the offset
@@ -503,19 +636,19 @@ public class FlpServiceProvider {
                 for (int i = 0; i < index; i++) {
                     try {
                         long sessionStartTime = (long) mCallbacksForFg.getBroadcastCookie(i);
-                        if (VERBOSE_DBG) {
-                            Log.d(TAG, "in the mCallbacksForFg loop : " + i
+                        if (VERBOSE) {
+                            Log.v(TAG, "in the mCallbacksForFg loop : " + i
                                        + "; cd timestamp is" + sessionStartTime);
                         }
                         if (sessionStartTime<=locations[0].getTime()) {
                             // return the whole batch
-                            if (VERBOSE_DBG) {
-                                Log.d(TAG, "return whole batch");
+                            if (VERBOSE) {
+                                Log.v(TAG, "return whole batch");
                             }
                             mCallbacksForFg.getBroadcastItem(i).onLocationAvailable(locations);
                         } else if (sessionStartTime>locations[locations.length-1].getTime()) {
-                            if (VERBOSE_DBG) {
-                                Log.d(TAG, "no need to return");
+                            if (VERBOSE) {
+                                Log.v(TAG, "no need to return");
                             }
                         } else {
                             // find the offset
@@ -544,20 +677,20 @@ public class FlpServiceProvider {
                             // check the timestamp, find the offset
                             ILocationCallback callback = cbPair.first;
                             long sessionStartTime = cbPair.second;
-                            if (VERBOSE_DBG) {
-                                Log.d(TAG, "calling callback for" +
+                            if (VERBOSE) {
+                                Log.v(TAG, "calling callback for" +
                                            " pulling, sessionStartTime is " +
                                             sessionStartTime);
                             }
                             if (sessionStartTime<=locations[0].getTime()) {
                                 // return the whole batch
-                                if (VERBOSE_DBG) {
-                                    Log.d(TAG, "return whole batch");
+                                if (VERBOSE) {
+                                    Log.v(TAG, "return whole batch");
                                 }
                                 callback.onLocationAvailable(locations);
                             } else if (sessionStartTime>locations[locations.length-1].getTime()) {
-                                if (VERBOSE_DBG) {
-                                    Log.d(TAG, "no need to return");
+                                if (VERBOSE) {
+                                    Log.v(TAG, "no need to return");
                                 }
                             } else {
                                 int offset = getOffset(sessionStartTime, locations);
@@ -605,19 +738,19 @@ public class FlpServiceProvider {
                 for (int i = 0; i < index; i++) {
                     try {
                         long sessionStartTime = (long) mCallbacksForPassive.getBroadcastCookie(i);
-                        if (VERBOSE_DBG) {
-                            Log.d(TAG, "in the mCallbacksForPassive loop : " + i
+                        if (VERBOSE) {
+                            Log.v(TAG, "in the mCallbacksForPassive loop : " + i
                                        + "; cd timestamp is" + sessionStartTime);
                         }
                         if (sessionStartTime<=locations[0].getTime()) {
                             // return the whole batch
-                            if (VERBOSE_DBG) {
-                                Log.d(TAG, "return whole batch");
+                            if (VERBOSE) {
+                                Log.v(TAG, "return whole batch");
                             }
                             mCallbacksForPassive.getBroadcastItem(i).onLocationAvailable(locations);
                         } else if (sessionStartTime>locations[locations.length-1].getTime()) {
-                            if (VERBOSE_DBG) {
-                                Log.d(TAG, "no need to return");
+                            if (VERBOSE) {
+                                Log.v(TAG, "no need to return");
                             }
                         } else {
                             // find the offset
@@ -641,7 +774,7 @@ public class FlpServiceProvider {
     }
 
     private void onBatchingStatusCb(int batchingStatus, int[] completedTripClientIds) {
-        if (VERBOSE_DBG) {
+        if (VERBOSE) {
             Log.d(TAG, "entering onBatchingStatusCb batchingStatus :" + batchingStatus);
         }
         synchronized(sStatusCallbacksLock) {
@@ -678,20 +811,20 @@ public class FlpServiceProvider {
         }
     }
 
-    private void onMaxPowerAllocatedChanged(double power_mW) {
-        if (VERBOSE_DBG) {
+    private void onMaxPowerAllocatedChanged(int power_mW) {
+        if (VERBOSE) {
             Log.d(TAG, "entering onMaxPowerAllocatedChanged() power: " + power_mW);
         }
         // Broadcast to all clients the new value.
         int index = mMaxPowerCallbacks.beginBroadcast();
         for (int i = 0; i < index; i++) {
-            if (VERBOSE_DBG) {
-                Log.d(TAG, "in the mMaxPowerCallbacks loop : " + i);
+            if (VERBOSE) {
+                Log.v(TAG, "in the mMaxPowerCallbacks loop : " + i);
             }
             try {
                 IMaxPowerAllocatedCallback cb =
                     mMaxPowerCallbacks.getBroadcastItem(i);
-                cb.onMaxPowerAllocatedChanged(power_mW);
+                cb.onMaxPowerAllocatedChanged((double)power_mW);
             } catch (RemoteException e) {
                 // The RemoteCallbackList will take care of removing
                 // the dead object.
@@ -723,8 +856,8 @@ public class FlpServiceProvider {
             offset = left;
         }
 
-        if (VERBOSE_DBG) {
-           Log.d(TAG, "offset : " + offset);
+        if (VERBOSE) {
+           Log.v(TAG, "offset : " + offset);
         }
         return offset;
     }

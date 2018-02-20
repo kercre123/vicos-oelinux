@@ -1,4 +1,4 @@
-inherit qcommon qlicense
+inherit qcommon qlicense qprebuilt
 
 DESCRIPTION = "IPA firmwares"
 PR = "r3"
@@ -19,6 +19,8 @@ EXTRA_OECONF += "${@base_conditional('BASEMACHINE', 'sdx20', '--enable-target-sd
 do_install() {
    install -d ${IPA_ELF_FIRMWARE_PATH}
    install -m 0755 ${S}/ipa_fws.elf -D ${IPA_ELF_FIRMWARE_PATH}
+   install -d ${DEPLOY_DIR_IMAGE}/ipa-fws
+   install -m 0755 ${S}/ipa_fws.elf -D ${DEPLOY_DIR_IMAGE}/ipa-fws
 
    if [ -f ${S}/ipa_fws.mdt ]; then
       install -d ${IPA_SPLIT_FIRMWARE_PATH}

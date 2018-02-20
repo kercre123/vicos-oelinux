@@ -63,7 +63,7 @@ static int parse_config_line(char *buf)
     const char *s = NULL;
     const char *e = NULL;
     size_t cpy_len;
-    int unused_idx;
+    int unused_idx = 0;
     int sensor_type;
     int i;
 

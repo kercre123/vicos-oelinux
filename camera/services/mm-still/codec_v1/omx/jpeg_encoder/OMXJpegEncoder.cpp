@@ -309,7 +309,7 @@ OMX_ERRORTYPE OMXJpegEncoder::configureTmbBuffer(
 * Return Value : OMX_ERRORTYPE
 * Description: Add the exif data and encoded thumbnail to the o/p buffer
 ==============================================================================*/
-OMX_ERRORTYPE OMXJpegEncoder::writeExifData(QImage *aThumbnail,
+OMX_ERRORTYPE OMXJpegEncoder::writeExifData(QImage *aThumbnail[],
   QIBuffer *aOutputBuffer)
 {
   OMX_ERRORTYPE lret = OMX_ErrorNone;
@@ -434,8 +434,11 @@ OMX_ERRORTYPE OMXJpegEncoder::writeExifData(QImage *aThumbnail,
   m_exifParams.SetMultiImageInfo(mp_info);
 
 
-  if (aThumbnail) {
-    m_exifParams.SetEncodeParams(m_thumbEncodeParams, true);
+  if (m_NumThumbnails > 0) {
+    // Set parameters for primary thumbnail
+    for (OMX_U32 i = 0; i < m_NumThumbnails; i++) {
+      m_exifParams.SetEncodeParams(m_thumbEncodeParams[i], true, i);
+    }
     m_exifParams.SetSubSampling(m_thumbSubsampling, true);
   }
   m_exifParams.SetEncodeParams(m_mainEncodeParams);
@@ -448,7 +451,7 @@ OMX_ERRORTYPE OMXJpegEncoder::writeExifData(QImage *aThumbnail,
     return OMX_ErrorUndefined;
   }
 
-  lrc = m_composer->Start(aThumbnail);
+  lrc = m_composer->Start(aThumbnail, m_NumThumbnails);
   if (lrc) {
     QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
     return OMX_ErrorUndefined;
@@ -612,6 +615,7 @@ int OMXJpegEncoder::CompleteMainImage()
       QI_UNLOCK(&m_abortlock);
       return QI_ERR_NO_MEMORY;
     }
+
     if (NULL != m_memOps.get_memory) {
       omx_jpeg_ouput_buf_t *jpeg_out =
         (omx_jpeg_ouput_buf_t *)m_outputQIBuffer->Addr();
@@ -629,8 +633,7 @@ int OMXJpegEncoder::CompleteMainImage()
             m_outputMainImage->FilledLen(),
             m_outputMainImage->Length() - m_outputMainImage->FilledLen());
 
-        if ((m_thumbnailInfo.input_height != 0) &&
-            (m_thumbnailInfo.input_width != 0)) {
+        if (m_NumThumbnails != 0) {
           lret = writeExifData(m_outThumbImage, &lApp1Buf);
         } else {
           lret = writeExifData(NULL, &lApp1Buf);
@@ -670,8 +673,7 @@ int OMXJpegEncoder::CompleteMainImage()
         }
         QIBuffer lApp1Buf = QIBuffer((uint8_t*)exif_buf, getEstimatedExifSize());
 
-        if ((m_thumbnailInfo.input_height != 0) &&
-            (m_thumbnailInfo.input_width != 0)) {
+        if (m_NumThumbnails != 0) {
           lret = writeExifData(m_outThumbImage, &lApp1Buf);
         } else {
           lret = writeExifData(NULL, &lApp1Buf);
@@ -779,8 +781,18 @@ int OMXJpegEncoder::EncodeComplete(QImage *aOutputImage)
   QIMessage *lmessage = NULL;
   int ret = QI_ERR_GENERAL;
   QI_LOCK(&mEncodeDoneLock);
-  if ((m_thumbEncoding == OMX_TRUE) && (m_outThumbImage != NULL) &&
-    m_outThumbImage->BaseAddr() == aOutputImage->BaseAddr()) {
+  if (OMX_TRUE == m_thumbEncoding) {
+    for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_outThumbImage); i++) {
+      if ((m_outThumbImage[i] != NULL) &&
+          m_outThumbImage[i]->BaseAddr() == aOutputImage->BaseAddr()) {
+        m_NumThumbnailsEncoded++;
+        break;
+      }
+    }
+  }
+
+  if ((OMX_TRUE == m_thumbEncoding) &&
+      (m_NumThumbnailsEncoded == m_NumThumbnails)) {
     ATRACE_INT("Camera:thumbnail", 0);
     QIDBG_HIGH("%s:%d] Thumbnail Encoding complete.",
       __func__, __LINE__);
@@ -788,7 +800,7 @@ int OMXJpegEncoder::EncodeComplete(QImage *aOutputImage)
     m_thumbEncodingComplete = OMX_TRUE;
 
     if (NULL == m_memOps.get_memory) {
-      lret = writeExifData(aOutputImage, m_outputQIBuffer);
+      lret = writeExifData(m_outThumbImage, m_outputQIBuffer);
       QIDBG_ERROR("%s:%d] Exif length: %d", __func__,  __LINE__,
         m_outputQIBuffer->FilledLen());
       if (QI_ERROR(lret)) {
@@ -852,8 +864,7 @@ int OMXJpegEncoder::EncodeComplete(QImage *aOutputImage)
       /* thumbnail does not exist OR has already been encoded.
          Write MainImage to EXIF*/
       if (!m_inTmbPort->bEnabled ||
-        (m_outThumbImage != NULL && m_outThumbImage->FilledLen()
-        && (OMX_TRUE == m_thumbEncodingComplete))) {
+          (OMX_TRUE == m_thumbEncodingComplete)) {
         ret = CompleteMainImage();
         if (ret != QI_SUCCESS) {
           goto error;
@@ -975,69 +986,73 @@ OMX_ERRORTYPE OMXJpegEncoder::configureThumbnailData()
   QICrop l_crop;
   uint32_t l_imageSize;
 
-  //Start configuration only if the abort flag is not set
-  m_inputTmbSize.setHeight((int)m_inTmbPort->format.image.nFrameHeight);
-  m_inputTmbSize.setWidth((int)m_inTmbPort->format.image.nFrameWidth);
-  m_inputTmbPadSize.setHeight((int)m_inTmbPort->format.image.nSliceHeight);
-  m_inputTmbPadSize.setWidth((int)m_inTmbPort->format.image.nStride);
+  for (OMX_U32 i = 0; i < m_NumThumbnails; i++) {
+    //Start configuration only if the abort flag is not set
+    m_inputTmbSize.setHeight((int)m_inTmbPort->format.image.nFrameHeight);
+    m_inputTmbSize.setWidth((int)m_inTmbPort->format.image.nFrameWidth);
+    m_inputTmbPadSize.setHeight((int)m_inTmbPort->format.image.nSliceHeight);
+    m_inputTmbPadSize.setWidth((int)m_inTmbPort->format.image.nStride);
 
-  QIDBG_HIGH("%s:%d] size %dx%d pad %dx%d subsampling %d",
-    __func__, __LINE__,
-    m_inputTmbSize.Width(), m_inputTmbSize.Height(),
-    m_inputTmbPadSize.Width(), m_inputTmbPadSize.Height(),
-    m_subsampling);
+    QIDBG_HIGH("%s:%d] size %dx%d pad %dx%d subsampling %d",
+      __func__, __LINE__,
+      m_inputTmbSize.Width(), m_inputTmbSize.Height(),
+      m_inputTmbPadSize.Width(), m_inputTmbPadSize.Height(),
+      m_subsampling);
 
-  m_thumbEncodeParams.setNumOfComponents(m_numOfComponents);
+    m_thumbEncodeParams[i].setNumOfComponents(m_numOfComponents);
 
-  //Set Crop Info if cropping is enabled
-  if ((m_thumbnailInfo.crop_info.nWidth) != 0 &&
-    (m_thumbnailInfo.crop_info.nHeight != 0) ) {
-    l_crop.setCrop((int)m_thumbnailInfo.crop_info.nLeft,
-      (int)m_thumbnailInfo.crop_info.nTop,
-      (int)(m_thumbnailInfo.crop_info.nLeft + m_thumbnailInfo.crop_info.nWidth),
-      (int)(m_thumbnailInfo.crop_info.nTop +
-      m_thumbnailInfo.crop_info.nHeight));
-      m_thumbEncodeParams.setCrop(l_crop);
+    //Set Crop Info if cropping is enabled
+    if ((m_thumbnailInfo[i].crop_info.nWidth != 0) &&
+        (m_thumbnailInfo[i].crop_info.nHeight != 0) ) {
+      l_crop.setCrop((int)m_thumbnailInfo[i].crop_info.nLeft,
+        (int)m_thumbnailInfo[i].crop_info.nTop,
+        (int)(m_thumbnailInfo[i].crop_info.nLeft +
+            m_thumbnailInfo[i].crop_info.nWidth),
+        (int)(m_thumbnailInfo[i].crop_info.nTop +
+            m_thumbnailInfo[i].crop_info.nHeight));
+        m_thumbEncodeParams[i].setCrop(l_crop);
+    }
+
+    //Translate from OMX format to QIformat
+    lret = translateFormat(m_inTmbPort->format.image.eColorFormat,
+      &m_thumbFormat, &m_thumbSubsampling);
+    if (lret != OMX_ErrorNone) {
+      return lret;
+    }
+
+     /*Set output size if scale is enabled set the output
+    size to be size after scaling*/
+    if ((m_thumbnailInfo[i].output_width != 0) &&
+        (m_thumbnailInfo[i].output_height != 0)) {
+      m_outputSize[1].setWidth((int)m_thumbnailInfo[i].output_width);
+      m_outputSize[1].setHeight((int)m_thumbnailInfo[i].output_height);
+      QIDBG_HIGH("%s:%d] Thumbnail Scaling enabled o/p width: %d o/p height:%d",
+        __func__, __LINE__, m_outputSize[1].Width(), m_outputSize[1].Height());
+    } else {
+      m_outputSize[1].setWidth((int)m_inTmbPort->format.image.nFrameWidth);
+      m_outputSize[1].setHeight((int)m_inTmbPort->format.image.nFrameHeight);
+      QIDBG_HIGH("%s:%d] Thumbnail Scaling not enabled width: %d height:%d",
+        __func__, __LINE__, m_outputSize[1].Width(), m_outputSize[1].Height());
+    }
+
+    if ((0 < m_thumbnailInfo[i].quality) &&
+      (OMX_MAX_THUMB_Q_FACTOR >= m_thumbnailInfo[i].quality)) {
+      m_thumbEncodeParams[i].setQuality(m_thumbnailInfo[i].quality);
+    } else {
+      QIDBG_HIGH("%s:%d] Thumbnail quality factor invalid %u using default",
+        __func__, __LINE__, m_thumbnailInfo[i].quality);
+      m_thumbEncodeParams[i].setQuality(DEFAULT_THUMB_Q_FACTOR);
+    }
+
+    m_thumbEncodeParams[i].setOutputSize(m_outputSize[1]);
+    m_thumbEncodeParams[i].setInputSize(m_inputTmbSize);
+    m_thumbEncodeParams[i].setRestartInterval(0);
+    m_thumbEncodeParams[i].setRotation((uint32_t)m_rotation.nRotation);
+    m_thumbEncodeParams[i].setDefaultTables(m_thumbEncodeParams[i].Quality());
+    m_thumbEncodeParams[i].setHiSpeed(m_JpegSpeedMode.speedMode ==
+      QOMX_JPEG_SPEED_MODE_HIGH);
   }
 
-  //Translate from OMX format to QIformat
-  lret = translateFormat(m_inTmbPort->format.image.eColorFormat, &m_thumbFormat,
-    &m_thumbSubsampling);
-  if (lret != OMX_ErrorNone) {
-    return lret;
-  }
-
-   /*Set output size if scale is enabled set the output
-  size to be size after scaling*/
-  if ((m_thumbnailInfo.output_width != 0) &&
-    (m_thumbnailInfo.output_height != 0)) {
-     m_outputSize[1].setWidth((int)m_thumbnailInfo.output_width);
-     m_outputSize[1].setHeight((int)m_thumbnailInfo.output_height);
-     QIDBG_HIGH("%s:%d] Thumbnail Scaling enabled o/p width: %d o/p height:%d",
-       __func__, __LINE__, m_outputSize[1].Width(), m_outputSize[1].Height());
-  } else {
-    m_outputSize[1].setWidth((int)m_inTmbPort->format.image.nFrameWidth);
-    m_outputSize[1].setHeight((int)m_inTmbPort->format.image.nFrameHeight);
-    QIDBG_HIGH("%s:%d] Thumbnail Scaling not enabled width: %d height:%d",
-      __func__, __LINE__, m_outputSize[1].Width(), m_outputSize[1].Height());
-  }
-
-  if ((0 < m_thumbnailInfo.quality) &&
-    (OMX_MAX_THUMB_Q_FACTOR >= m_thumbnailInfo.quality)) {
-    m_thumbEncodeParams.setQuality(m_thumbnailInfo.quality);
-  } else {
-    QIDBG_HIGH("%s:%d] Thumbnail quality factor invalid %u using default",
-      __func__, __LINE__, m_thumbnailInfo.quality);
-    m_thumbEncodeParams.setQuality(DEFAULT_THUMB_Q_FACTOR);
-  }
-
-  m_thumbEncodeParams.setOutputSize(m_outputSize[1]);
-  m_thumbEncodeParams.setInputSize(m_inputTmbSize);
-  m_thumbEncodeParams.setRestartInterval(0);
-  m_thumbEncodeParams.setRotation((uint32_t)m_rotation.nRotation);
-  m_thumbEncodeParams.setDefaultTables(m_thumbEncodeParams.Quality());
-  m_thumbEncodeParams.setHiSpeed(m_JpegSpeedMode.speedMode ==
-    QOMX_JPEG_SPEED_MODE_HIGH);
   return lret;
 }
 
@@ -1052,109 +1067,115 @@ OMX_ERRORTYPE OMXJpegEncoder::startThumbnailEncode()
   OMX_ERRORTYPE lret = OMX_ErrorNone;
   int lrc = 0;
 
-  QOMX_YUV_FRAME_INFO *lbufferOffset = &m_thumbnailInfo.tmbOffset;
-  if (!m_inTmbPort->bEnabled) {
-    lbufferOffset = &m_imageBufferOffset;
-    QIDBG_ERROR("%s:%d] TMB PORT IS NOT ENABLED", __func__, __LINE__);
-  }
-
-  //Set the offset for each plane
-  uint32_t lOffset[OMX_MAX_NUM_PLANES] = {(uint32_t)lbufferOffset->yOffset,
-    (uint32_t)lbufferOffset->cbcrOffset[0],
-    (uint32_t)lbufferOffset->cbcrOffset[1]};
-
-  //Set the physical offset for each plane
-  uint32_t lPhyOffset[QI_MAX_PLANES] = {0,
-    (uint32_t)lbufferOffset->cbcrStartOffset[0],
-    (uint32_t)lbufferOffset->cbcrStartOffset[1]};
-
-  if (NULL == m_thumbEncoder) {
-    if (m_thumbFormat == QI_MONOCHROME) {
-      QIDBG_MED("%s:%d] Monochrome thumbnail format, switching to HW encoder",
-        __func__, __LINE__);
-      m_thumbEncoder = m_factory.CreateEncoder(QImageCodecFactory::HW_CODEC_ONLY,
-        m_thumbEncodeParams);
-    } else {
-      m_thumbEncoder = m_factory.CreateEncoder(QImageCodecFactory::SW_CODEC_ONLY,
-      m_thumbEncodeParams);
+  for (OMX_U32 i = 0; i < m_NumThumbnails; i ++) {
+    QOMX_YUV_FRAME_INFO *lbufferOffset = &m_thumbnailInfo[i].tmbOffset;
+    if (!m_inTmbPort->bEnabled) {
+      lbufferOffset = &m_imageBufferOffset;
+      QIDBG_ERROR("%s:%d] TMB PORT IS NOT ENABLED", __func__, __LINE__);
     }
-    if (m_thumbEncoder == NULL) {
+
+    //Set the offset for each plane
+    uint32_t lOffset[OMX_MAX_NUM_PLANES] = {(uint32_t)lbufferOffset->yOffset,
+      (uint32_t)lbufferOffset->cbcrOffset[0],
+      (uint32_t)lbufferOffset->cbcrOffset[1]};
+
+    //Set the physical offset for each plane
+    uint32_t lPhyOffset[QI_MAX_PLANES] = {0,
+      (uint32_t)lbufferOffset->cbcrStartOffset[0],
+      (uint32_t)lbufferOffset->cbcrStartOffset[1]};
+
+    if (NULL == m_thumbEncoder[i]) {
+      if (m_thumbFormat == QI_MONOCHROME) {
+        QIDBG_MED("%s:%d] Monochrome thumbnail format, switching to HW encoder",
+          __func__, __LINE__);
+        m_thumbEncoder[i] = m_factory.CreateEncoder(
+          QImageCodecFactory::HW_CODEC_ONLY, m_thumbEncodeParams[i]);
+      } else {
+        m_thumbEncoder[i] = m_factory.CreateEncoder(
+          QImageCodecFactory::SW_CODEC_ONLY, m_thumbEncodeParams[i]);
+      }
+      if (m_thumbEncoder[i] == NULL) {
+        QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+        return OMX_ErrorInsufficientResources;
+      }
+    }
+
+    m_inThumbImage[i] = new QImage(m_inputTmbPadSize, m_thumbSubsampling,
+      m_thumbFormat, m_inputTmbSize);
+    if (m_inThumbImage[i] == NULL) {
       QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
       return OMX_ErrorInsufficientResources;
     }
-  }
 
-  m_inThumbImage = new QImage(m_inputTmbPadSize, m_thumbSubsampling, m_thumbFormat,
-    m_inputTmbSize);
-  if (m_inThumbImage == NULL) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorInsufficientResources;
-  }
+    lrc = m_inThumbImage[i]->setDefaultPlanes(m_numOfPlanes,
+      m_inputQTmbBuffer->Addr(), m_inputQTmbBuffer->Fd(), lOffset, lPhyOffset);
+    if (lrc) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorUndefined;
+    }
 
-  lrc = m_inThumbImage->setDefaultPlanes(m_numOfPlanes, m_inputQTmbBuffer->Addr(),
-    m_inputQTmbBuffer->Fd(), lOffset, lPhyOffset);
-  if (lrc) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorUndefined;
-  }
+    /* Allocate thumbnail buffer */
+    uint32_t lThumbSize = QImage::getImageSize(
+      m_thumbEncodeParams[i].OutputSize(), m_thumbSubsampling, m_thumbFormat);
+    QIDBG_MED("%s:%d] lThumbSize %d", __func__, __LINE__, lThumbSize);
+    mThumbBuffer[i] = QIHeapBuffer::New(lThumbSize);
+    if (mThumbBuffer[i] == NULL) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorInsufficientResources;
+    }
 
-  /* Allocate thumbnail buffer */
-  uint32_t lThumbSize = QImage::getImageSize(m_thumbEncodeParams.OutputSize(),
-    m_thumbSubsampling, m_thumbFormat);
-  QIDBG_MED("%s:%d] lThumbSize %d", __func__, __LINE__, lThumbSize);
-  mThumbBuffer = QIHeapBuffer::New(lThumbSize);
-  if (mThumbBuffer == NULL) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorInsufficientResources;
-  }
+    m_outThumbImage[i] = new QImage(mThumbBuffer[i]->Addr(),
+      mThumbBuffer[i]->Length(), QI_BITSTREAM);
+    if (m_outThumbImage[i] == NULL) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorInsufficientResources;
+    }
 
-  m_outThumbImage = new QImage(mThumbBuffer->Addr(),
-    mThumbBuffer->Length(), QI_BITSTREAM);
-  if (m_outThumbImage == NULL) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorInsufficientResources;
-  }
+    m_outThumbImage[i]->SetFilledLen(0);
 
-  m_outThumbImage->SetFilledLen(0);
+    lrc = m_thumbEncoder[i]->SetOutputMode(
+      QImageEncoderInterface::ENORMAL_OUTPUT);
+    if (lrc) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorUndefined;
+    }
 
-  lrc = m_thumbEncoder->SetOutputMode(QImageEncoderInterface::ENORMAL_OUTPUT);
-  if (lrc) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorUndefined;
-  }
+    lrc = m_thumbEncoder[i]->setEncodeParams(m_thumbEncodeParams[i]);
+    if (lrc) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorUndefined;
+    }
 
-  lrc = m_thumbEncoder->setEncodeParams(m_thumbEncodeParams);
-  if (lrc) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorUndefined;
-  }
+    lrc = m_thumbEncoder[i]->addInputImage(*m_inThumbImage[i]);
+    if (lrc) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorUndefined;
+    }
 
-  lrc = m_thumbEncoder->addInputImage(*m_inThumbImage);
-  if (lrc) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorUndefined;
-  }
+    lrc = m_thumbEncoder[i]->addOutputImage(*m_outThumbImage[i]);
+    if (lrc) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorUndefined;
+    }
 
-  lrc = m_thumbEncoder->addOutputImage(*m_outThumbImage);
-  if (lrc) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorUndefined;
-  }
-
-  lrc = m_thumbEncoder->addObserver(*this);
-  if (lrc) {
-    QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-    return OMX_ErrorUndefined;
+    lrc = m_thumbEncoder[i]->addObserver(*this);
+    if (lrc) {
+      QIDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+      return OMX_ErrorUndefined;
+    }
   }
 
   m_thumbEncoding = OMX_TRUE;
   QIDBG_HIGH("%s:%d] startThumbnailEncode()", __func__, __LINE__);
-  lrc = m_thumbEncoder->Start(m_pEncoderThread);
-  if (lrc ) {
-    m_thumbEncoding = OMX_FALSE;
-    QIDBG_ERROR("%s:%d] Thumbnail encoding failed to start",
-      __func__, __LINE__);
-    return OMX_ErrorUndefined;
+
+  for (OMX_U32 i = 0; i < m_NumThumbnails; i ++) {
+    lrc = m_thumbEncoder[i]->Start(m_pEncoderThread);
+    if (lrc ) {
+      m_thumbEncoding = OMX_FALSE;
+      QIDBG_ERROR("%s:%d] Thumbnail encoding failed to start",
+        __func__, __LINE__);
+      return OMX_ErrorUndefined;
+    }
   }
   ATRACE_INT("Camera:thumbnail", 1);
   QIDBG_HIGH("%s:%d] Started Thumbnail encoding", __func__, __LINE__);
@@ -1235,8 +1256,18 @@ OMX_ERRORTYPE OMXJpegEncoder::encodeImage(
       QIDBG_ERROR("%s:%d] Error in Encode buffer configuration", __func__, __LINE__);
       goto error;
     }
-    if ((m_thumbnailInfo.input_height != 0) &&
-      (m_thumbnailInfo.input_width != 0)) {
+
+    m_NumThumbnails = 0;
+    for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_thumbnailInfo); i++) {
+      if ((m_thumbnailInfo[i].output_height != 0) &&
+          (m_thumbnailInfo[i].output_width != 0)) {
+        m_NumThumbnails++;
+      }
+    }
+
+    m_NumThumbnailsEncoded = 0;
+
+    if (m_NumThumbnails != 0) {
       // Configure thumbnail buffer
       m_thumbEncodingComplete = OMX_FALSE;
       lret = configureTmbBuffer(a_inTmbBuffer);
@@ -1437,9 +1468,12 @@ OMX_ERRORTYPE OMXJpegEncoder::releaseCodecLibs()
     delete(m_mainEncoder);
     m_mainEncoder = NULL;
   }
-  if (m_thumbEncoder) {
-    delete(m_thumbEncoder);
-    m_thumbEncoder = NULL;
+
+  for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_thumbEncoder); i++) {
+    if (m_thumbEncoder[i]) {
+      delete(m_thumbEncoder[i]);
+      m_thumbEncoder[i] = NULL;
+    }
   }
 
   QIDBG_HIGH("%s:%d] X", __func__, __LINE__);
@@ -1470,18 +1504,23 @@ OMX_ERRORTYPE OMXJpegEncoder::releaseCurrentSession()
     m_mainEncoder->ReleaseSession();
   }
 
-  if (m_thumbEncoder) {
-    delete(m_thumbEncoder);
-    m_thumbEncoder = NULL;
+  for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_thumbEncoder); i++) {
+    if (m_thumbEncoder[i]) {
+      delete(m_thumbEncoder[i]);
+      m_thumbEncoder[i] = NULL;
+    }
   }
-
-  if (m_inThumbImage) {
-    delete(m_inThumbImage);
-    m_inThumbImage = NULL;
+  for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_inThumbImage); i++) {
+    if (m_inThumbImage[i]) {
+      delete(m_inThumbImage[i]);
+      m_inThumbImage[i] = NULL;
+    }
   }
-  if (m_outThumbImage) {
-    delete(m_outThumbImage);
-    m_outThumbImage = NULL;
+  for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(m_outThumbImage); i++) {
+    if (m_outThumbImage[i]) {
+      delete(m_outThumbImage[i]);
+      m_outThumbImage[i] = NULL;
+    }
   }
   if (m_inputQIBuffer) {
     delete(m_inputQIBuffer);
@@ -1509,9 +1548,11 @@ OMX_ERRORTYPE OMXJpegEncoder::releaseCurrentSession()
     m_exifInfo.exif_data = NULL;
     m_exifInfo.numOfEntries = 0;
   }*/
-  if (mThumbBuffer) {
-    delete mThumbBuffer;
-    mThumbBuffer = NULL;
+  for (OMX_U32 i = 0; i < OMX_ARRAY_SIZE(mThumbBuffer); i++) {
+    if (mThumbBuffer[i]) {
+      delete mThumbBuffer[i];
+      mThumbBuffer[i] = NULL;
+    }
   }
   if (OMX_TRUE == mExifObjInitialized) {
     exif_destroy(&m_exifInfoObj);

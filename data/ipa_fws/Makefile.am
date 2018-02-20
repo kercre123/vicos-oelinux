@@ -30,6 +30,7 @@ $(info FW operations are $(FW_OPERATIONS))
 SECIMAGE_BASE_PATH := android_compat/common/scripts/SecImage
 SECIMAGE_PATH := $(WORKSPACE)/$(SECIMAGE_BASE_PATH)
 SECIMAGE_CONFIG_FILE := config/integration/secimage.xml
+HASH_SEG_ALGO := sha384
 
 # split image tool
 SPLIT_BASE_PATH := android_compat/common/scripts/
@@ -63,13 +64,13 @@ sign_and_split: create_elf $(SECIMAGE_PATH)/sectools_builder.py $(SPLIT_PATH)/pi
 		echo No signing config file $(SECIMAGE_PATH)/$(SECIMAGE_CONFIG_FILE) ;\
 		exit -1; \
 	fi;
-	cp $(CURRENT_DIR)/ipa_fws.elf $(CURRENT_DIR)/ipa_fws-signed.elf
 	SECIMAGE_LOCAL_DIR=$(SECIMAGE_PATH) USES_SEC_POLICY_DEFAULT_SIGN_UPDATE_UNSIGN=1 \
 	python $(SECIMAGE_PATH)/sectools_builder.py \
-	-i $(CURRENT_DIR)/ipa_fws-signed.elf \
+	-i $(CURRENT_DIR)/ipa_fws.elf \
 	-g ipa_fw \
 	-t $(CURRENT_DIR) \
 	--install_base_dir=$(CURRENT_DIR) \
+	--hash_table_algo=$(HASH_SEG_ALGO) \
 	--config $(SECIMAGE_PATH)/$(SECIMAGE_CONFIG_FILE) \
 	>$(CURRENT_DIR)/secimage.log 2>&1
 	@echo Split with $SPLIT_BASE_PATH/pil-splitter.py
@@ -78,7 +79,7 @@ sign_and_split: create_elf $(SECIMAGE_PATH)/sectools_builder.py $(SPLIT_PATH)/pi
 		exit -1; \
 	fi;
 	python $(SPLIT_PATH)/pil-splitter.py \
-	$(CURRENT_DIR)/ipa_fws-signed.elf \
+	$(CURRENT_DIR)/ipa_fws.elf \
 	$(CURRENT_DIR)/ipa_fws
 
 all: $(FW_OPERATIONS)

@@ -12,13 +12,19 @@
 #include <VAMUtilities.h>
 #include "VAMEngineBase.h"
 
-class VAManager
-{
-public:
+#include <string>
+#include <map>
+#include <deque>
+#include <list>
+#include <vector>
+
+class VAManager {
+ public:
     VAManager();
     ~VAManager();
 
-    int init(const struct vaapi_source_info *pSourceInfo, const char *dyn_lib_path);
+    int init(const struct vaapi_source_info *pSourceInfo,
+             const char *dyn_lib_path);
     int destroy();
 
     int setConfig(vaapi_configuration *config);
@@ -33,28 +39,33 @@ public:
 
     bool isEventSupported(vaapi_event_type type);
 
-    int convertMetadataToJSON(const struct vaapi_metadata_frame *frame, std::string *pJSONStr);
-    int convertEventToJSON(const struct vaapi_event *pEvent, std::string *pJSONStr);
+    int convertMetadataToJSON(const struct vaapi_metadata_frame *frame,
+                              std::string *pJSONStr);
+    int convertEventToJSON(const struct vaapi_event *pEvent,
+                           std::string *pJSONStr);
 
     inline void registerEventCB(vaapi_event_cb_func func, void *pUsrData) {
         _pEventCBFunc = func;
         _pEventCBUsrData = pUsrData;
     }
-    inline void registerMetadataFrameCB(vaapi_metadata_cb_func func, void *pUsrData) {
+    inline void registerMetadataFrameCB(vaapi_metadata_cb_func func,
+                                        void *pUsrData) {
         _pMetadataCBFunc = func;
         _pMetadataCBUsrData = pUsrData;
     }
-    inline void registerSnapshotCB(vaapi_snapshot_cb_func func, void *pUsrData) {
+    inline void registerSnapshotCB(vaapi_snapshot_cb_func func,
+                                   void *pUsrData) {
         _pSnapshotCBFunc = func;
         _pSnapshotCBUsrData = pUsrData;
     }
 
-    inline void registerFrameProcessedCB(vaapi_frame_processed_cb_func func, void *pUsrData) {
+    inline void registerFrameProcessedCB(vaapi_frame_processed_cb_func func,
+                                         void *pUsrData) {
         _pFrameProcessedCBFunc = func;
         _pFrameProcessedCBUsrData = pUsrData;
     }
 
-private:
+ private:
     static int _eventCB(const VAMEngineBase *pEngine,
                         vaapi_event *pEventInfo,
                         vaapi_frame_info *pFrameInfo,
@@ -63,7 +74,7 @@ private:
                            uint64_t pts,
                            bool isUpdated,
                            void *pVAManager,
-                           std::vector<vaapi_object> &objList);
+                           std::vector<vaapi_object> *objList);
     static int _frameCB(const VAMEngineBase *pEngine,
                         vaapi_frame_info *frameInfo,
                         void *pVAManager);
@@ -109,18 +120,17 @@ private:
     bool _areEnginedRunning;
     struct vaapi_source_info _sourceInfo;
 
-    struct VAMObjIDInfo
-    {
+    struct VAMObjIDInfo {
         std::string uniqueObjID;
         int lastSeen;
         uint32_t VAMAssignedID;
 
         std::deque<vaapi_position> trail;
 
-        // TODO: <Temp> for generating trail image
+        // TODO(future): <Temp> for generating trail image
         vaapi_frame_info frameInfo;
 
-        // TODO make it a vector?
+        // TODO(future): make it a vector?
         std::string eventID;
 
         VAMObjIDInfo();
@@ -151,9 +161,11 @@ private:
     VAMEngineBase *_getEngineByEventType(vaapi_event_type type);
     int _initEngineLibs();
 
-    std::string _getUniqueObjID(const VAMEngineBase *pEngine, const vaapi_object &objInfo);
+    std::string _getUniqueObjID(const VAMEngineBase *pEngine,
+                                const vaapi_object &objInfo);
     int _resetObjIDList();
-    uint32_t _pushObjAndGetID(std::string uniqueObjID, const vaapi_object &objInfo);
+    uint32_t _pushObjAndGetID(std::string uniqueObjID,
+                              const vaapi_object &objInfo);
     int _trimObjIDList(bool clearAll = false);
 };
 

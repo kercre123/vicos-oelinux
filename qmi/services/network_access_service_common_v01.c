@@ -5,7 +5,7 @@
 GENERAL DESCRIPTION
   This is the file which defines the network_access_service_common service Data structures.
 
-  Copyright (c) 2013-2016 Qualcomm Technologies, Inc.
+  Copyright (c) 2013-2017 Qualcomm Technologies, Inc.
   All rights reserved.
   Confidential and Proprietary - Qualcomm Technologies, Inc.
 
@@ -16,8 +16,8 @@ GENERAL DESCRIPTION
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Tue Mar  1 2016 (Spin 0)
+/* This file was generated with Tool version 6.14.7 
+   It was generated on: Thu Nov  2 2017 (Spin 0)
    From IDL File: network_access_service_common_v01.idl */
 
 #include "stdint.h"

@@ -125,6 +125,7 @@ struct sound_trigger_device {
     g722_dec_process_t adpcm_dec_process;
 
     struct listnode adm_cfg_list;
+    audio_devices_t ec_ref_dev;
 };
 
 typedef struct sound_trigger_device sound_trigger_device_t;

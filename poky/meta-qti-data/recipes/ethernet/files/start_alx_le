@@ -25,6 +25,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # ALX Ethernet Driver   init.d script to load ethernet driver
+# Loads ALX Ethernet Driver with IPA disabled in driver.
 
 export MODULE_BASE=/lib/modules/`uname -r`/
 set -e
@@ -33,7 +34,14 @@ case "$1" in
   start)
         echo -n "Starting/Loading Ethernet Driver: "
         echo "ALX:start/load" > /dev/kmsg
-        insmod $MODULE_BASE/extra/alx.ko
+        soc_id=$(cat /sys/devices/soc0/soc_id)
+	# 333 is SOC_ID associated with sdx20, any newer device is going to have
+	# higher soc_id
+        if [ "$soc_id" -ge "333" ]; then
+            insmod $MODULE_BASE/extra/alx.ko module_ipa_enable=0
+        else
+            insmod $MODULE_BASE/extra/alx.ko module_ipa_enable=1
+        fi
         echo "done loading ethernet driver"
         ;;
   stop)

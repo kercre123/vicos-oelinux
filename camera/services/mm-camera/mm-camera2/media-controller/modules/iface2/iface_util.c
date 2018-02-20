@@ -5604,6 +5604,37 @@ int iface_util_in_queue_put(iface_session_t *session,
   return 0;
 }
 
+/** int iface_util_in_queue_put:
+ *
+ *  @session : session data
+ *  @fe_in_buf: fe input buffer description
+ *
+ *  Queue input frame
+ *
+ *  Return 0 on success and -1 on failure
+ **/
+int iface_util_queue_frame_req(iface_session_t *session,
+  iface_param_frame_request_t *frame_req)
+{
+  iface_param_frame_request_t *temp;
+
+  if (session->fe.req_num>= IFACE_UTIL_FRAME_REQ_Q_SIZE) {
+    CDBG_HIGH("%s:frame queue is full %d\n", __func__, session->fe.num);
+    return -1;
+  }
+
+  temp = &session->fe.req_q_data[session->fe.next_free_frame_entry];
+  session->fe.next_free_frame_entry =
+    (session->fe.next_free_frame_entry + 1) % IFACE_UTIL_FRAME_REQ_Q_SIZE;
+
+  memcpy(temp, frame_req, sizeof(*temp));
+
+  mct_queue_push_tail(session->fe.req_frame_q, (void *)temp);
+  session->fe.req_num++;
+
+  return 0;
+}
+
 /** iface_process_internal_fetch_engine:
  *
  *    @iface: iface
@@ -5717,6 +5748,33 @@ int iface_util_in_queue_get(iface_session_t *session,
   return 0;
 }
 
+/** int iface_util_in_queue_get:
+ *
+ *  @session : session data
+ *  @fe_in_buf: fe input buffer description
+ *
+ *  Dequeue input frame
+ *
+ *  Return 0 on success and -1 on failure
+ **/
+ iface_param_frame_request_t *iface_util_dequeue_frame_req(iface_session_t *session)
+{
+  iface_param_frame_request_t * input_frame = NULL;
+  if (!session->fe.req_num) {
+    CDBG_HIGH("%s:frame queue is empty\n", __func__);
+    return NULL;
+  }
+
+  input_frame = (iface_param_frame_request_t *)mct_queue_pop_head(session->fe.req_frame_q);
+  if (input_frame == NULL) {
+    CDBG_HIGH("%s:error null ptr\n", __func__);
+    return NULL;
+  }
+  session->fe.req_num--;
+
+  return input_frame;
+}
+
 /** iface_util_schedule_fe
  *    @iface: mct module handle
  *    @session: session data
@@ -5771,6 +5829,7 @@ int iface_util_handle_buffer_divert(iface_t *iface, mct_event_t *event)
   struct msm_isp_event_data  buf_divert;
   iface_util_fe_input_buf_t fe_in_buf;
   iface_hw_stream_t  *hw_stream = NULL;
+  iface_param_frame_request_t  *frame_request = NULL;
   mct_event_module_t *mod_event = &event->u.module_event;
   iface_session_t *session = iface_util_get_session_by_id(iface,
         UNPACK_SESSION_ID(event->identity));
@@ -5829,15 +5888,27 @@ int iface_util_handle_buffer_divert(iface_t *iface, mct_event_t *event)
       mct_bus_msg_isp_sof_t sof_event;
       sof_event.frame_id = buf_divert_event->buffer.sequence;
       /* send request frame if any */
-      if (session->frame_request.hw_stream_id) {
+      frame_request = iface_util_dequeue_frame_req(session);
+      if (frame_request) {
         #ifdef VIDIOC_MSM_ISP_UPDATE_FE_FRAME_ID
         struct msm_vfe_update_fe_frame_id session_frameid;
         int isp_id;
         /* Update FE frame id in kernel before start fetch
          * engine for first frame only. First frame id is
          * equal to initial_frame_skip + iface_delay. */
-        if (session->frame_request.frame_id - IFACE_APPLY_DELAY
-            - session->initial_frame_skip == 1 ){
+        if ((frame_request->frame_id - IFACE_APPLY_DELAY
+            - session->initial_frame_skip == 0) && !session->frame_id_initialized){
+            session_frameid.frame_id = fe_in_buf.frame_id -1;
+            for (isp_id = 0; isp_id < VFE_MAX; isp_id++) {
+                if (fe_in_buf.interface_mask & (1 << (16 * isp_id +
+                    IFACE_INTF_PIX))) {
+                rc = ioctl(iface->isp_axi_data.axi_data[isp_id].fd,
+                 VIDIOC_MSM_ISP_UPDATE_FE_FRAME_ID, &session_frameid);
+                }
+            }
+            session->frame_id_initialized = 1;
+        } else if ((frame_request->frame_id - IFACE_APPLY_DELAY
+            - session->initial_frame_skip == 1)&& !session->frame_id_initialized ){
             session_frameid.frame_id = fe_in_buf.frame_id;
             for (isp_id = 0; isp_id < VFE_MAX; isp_id++) {
                 if (fe_in_buf.interface_mask & (1 << (16 * isp_id +
@@ -5846,6 +5917,7 @@ int iface_util_handle_buffer_divert(iface_t *iface, mct_event_t *event)
                  VIDIOC_MSM_ISP_UPDATE_FE_FRAME_ID, &session_frameid);
                 }
             }
+            session->frame_id_initialized = 1;
         }
         else {
         /* As FE frame id is updated at first frame,
@@ -5854,11 +5926,14 @@ int iface_util_handle_buffer_divert(iface_t *iface, mct_event_t *event)
          session->frame_request.frame_id = fe_in_buf.frame_id;
         }
         #endif
-        rc = iface_util_request_frame(session, iface, &session->frame_request);
-         if (rc) {
-            CDBG_ERROR("%s: failed: iface_util_request_frame\n", __func__);
-         }
-         session->frame_request.hw_stream_id = 0;
+        if (frame_request) {
+          frame_request->frame_id = fe_in_buf.frame_id;
+          rc = iface_util_request_frame(session, iface, frame_request);
+        }
+        if (rc) {
+           CDBG_ERROR("%s: failed: iface_util_request_frame\n", __func__);
+        }
+        session->frame_request.hw_stream_id = 0;
       }
       /*send fe sof */
       iface_util_broadcast_fe_sof_msg_to_modules(iface,
@@ -6850,6 +6925,9 @@ int iface_util_request_frame_by_stream_ids(iface_t *iface,
     frame_request.buf_index = buf_index;
     if (session->bayer_processing) {
         /*copy the frame_request, to be used at fetch engine SOF*/
+        pthread_mutex_lock(&session->fe.mutex);
+        iface_util_queue_frame_req(session, &frame_request);
+        pthread_mutex_unlock(&session->fe.mutex);
         session->frame_request = frame_request;
     }
     else {
@@ -8026,7 +8104,8 @@ int iface_util_buf_divert_notify(iface_t *iface,
   }
 
   if (hw_stream->stream_info.cam_stream_type == CAM_STREAM_TYPE_OFFLINE_PROC &&
-     (--hw_stream->remaining_pass >= 1)) {
+      hw_stream->remaining_pass > 1) {
+    hw_stream->remaining_pass--;
     rc = iface_util_offline_process_multi_pass(iface, session,
       buf_divert, hw_stream);
     return rc;
@@ -10481,9 +10560,10 @@ int iface_util_set_hw_stream_cfg(iface_t *iface,
 
     user_stream = &sink_port->streams[i];
 
-   /*if EIS 2.0  enabled, then we dont enable CDS*/
+   /*if EIS or Digital Gimbal enabled, then we dont enable CDS*/
    if (user_stream->stream_info.is_type == IS_TYPE_EIS_2_0 ||
-       user_stream->stream_info.is_type == IS_TYPE_EIS_3_0) {
+       user_stream->stream_info.is_type == IS_TYPE_EIS_3_0 ||
+       user_stream->stream_info.is_type == IS_TYPE_DIG_GIMB) {
      session->cds_feature_enable = FALSE;
    }
 

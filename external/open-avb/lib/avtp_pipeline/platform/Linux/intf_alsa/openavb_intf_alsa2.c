@@ -111,6 +111,8 @@ typedef struct {
 
 	U32 frameSizeBytes;
 
+	bool blockingInIntf;
+
 	// This is used by the listener.
 	// 1 if the clock tick is to be generated when the audio is consumed.
 	// 0 otherwise.
@@ -350,6 +352,13 @@ void openavbIntfAlsa2CfgCB(media_q_t *pMediaQ, const char *name, const char *val
 			tmp = strtol(value, &pEnd, 10);
 			if (*pEnd == '\0' && tmp == 1) {
 				pPvtData->ignoreTimestamp = (tmp == 1);
+			}
+		}
+
+		if (strcmp(name, "intf_nv_blocking") == 0) {
+			tmp = strtol(value, &pEnd, 10);
+			if (*pEnd == '\0' && tmp == 1) {
+				pPvtData->blockingInIntf = (tmp == 1);
 			}
 		}
 
@@ -1231,8 +1240,13 @@ void openavbIntfAlsa2GenEndCB(media_q_t *pMediaQ)
 bool openavbIntfAlsa2TxBlockingInIntfCB(media_q_t *pMediaQ)
 {
 	AVB_TRACE_ENTRY(AVB_TRACE_INTF);
+	bool blocking = FALSE;
+	pvt_data_t *pPvtData = pMediaQ->pPvtIntfInfo;
+	if (pPvtData) {
+		blocking = pPvtData->blockingInIntf;
+	}
 	AVB_TRACE_EXIT(AVB_TRACE_INTF);
-	return TRUE;
+	return blocking;
 }
 
 // Main initialization entry point into the interface module
@@ -1533,6 +1547,7 @@ extern DLL_EXPORT bool openavbIntfAlsa2DualInitialize(media_q_t *pMediaQ, openav
 			openavbIntfAlsa2TxBlockingInIntfCB;
 
 		pPvtData->ignoreTimestamp = FALSE;
+		pPvtData->blockingInIntf = FALSE;
 		pPvtData->pDeviceName = strdup(PCM_DEVICE_NAME_DEFAULT);
 		pPvtData->allowResampling = TRUE;
 		pPvtData->intervalCounter = 0;

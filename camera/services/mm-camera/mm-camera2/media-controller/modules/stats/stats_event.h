@@ -1,8 +1,8 @@
-/* stats_event.h
- *
- * Copyright (c) 2013 - 2015 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
- */
+/*
+Copyright (c) 2013-2015,2017 Qualcomm Technologies, Inc.
+All Rights Reserved.
+Confidential and Proprietary - Qualcomm Technologies, Inc.
+*/
 
 #ifndef __STATS_EVENT_H__
 #define __STATS_EVENT_H__
@@ -99,4 +99,19 @@ typedef struct {
   uint32_t rs_interval_offset;
   uint32_t s3d_interval_offset;
 } mct_event_sns_config_request_t;
+
+typedef struct {
+  uint64_t timestamp;
+  float rotation_matrix[9];
+} mct_event_imu_sample_t;
+
+typedef struct {
+  uint32_t frame_id;
+  uint32_t sample_len;
+  mct_event_imu_sample_t sample[STATS_GYRO_MAX_SAMPLE_BUFFER_SIZE];
+  uint64_t sof;
+  uint64_t frame_time;
+  float    exposure_time;
+} mct_event_imu_stats_t;
+
 #endif /* __STATS_EVENT_H__ */

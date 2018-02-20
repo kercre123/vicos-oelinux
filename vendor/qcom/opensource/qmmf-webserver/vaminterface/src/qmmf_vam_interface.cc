@@ -36,6 +36,7 @@
 #include <utils/Mutex.h>
 #include <utils/Condition.h>
 #include <cutils/properties.h>
+#include <dlfcn.h>
 
 #include <VAM/vaapi.h>
 #include <VAM/VAMUtilities.h>
@@ -45,6 +46,7 @@
 
 #define DEFAULT_VAM_VIDEO_LOG_DURATION 5000
 #define VAM_VIDEO_LOG_DURATION_PROP "vam.video_log.duration"
+#define VAM_EVENT_LOG_PROP "persist.qmmf.vam.eventlog"
 
 namespace qmmf {
 
@@ -52,6 +54,113 @@ namespace vaminterface {
 
 using namespace jpegencoder;
 using namespace database;
+typedef int32_t (*vaapi_init_t)(const vaapi_source_info *, const char *);
+typedef int32_t (*vaapi_deinit_t)();
+typedef int32_t (*vaapi_set_config_t)(struct vaapi_configuration *);
+typedef int32_t (*vaapi_del_config_t)(struct vaapi_configuration *);
+typedef int32_t (*vaapi_enroll_obj_t)(vaapi_event_type,
+                                      vaapi_enrollment_info *);
+typedef int32_t (*vaapi_run_t)();
+typedef int32_t (*vaapi_stop_t)();
+typedef int32_t (*vaapi_process_t)(struct vaapi_frame_info *);
+typedef int32_t (*vaapi_register_event_cb_t)(vaapi_event_cb_func, void *);
+typedef int32_t (*vaapi_register_metadata_cb_t)(vaapi_metadata_cb_func, void *);
+typedef int32_t (*vaapi_register_snapshot_cb_t)(vaapi_snapshot_cb_func, void *);
+typedef int32_t (*vaapi_register_frame_processed_cb_t)(
+                            vaapi_frame_processed_cb_func, void *);
+typedef int32_t (*vaapi_is_event_type_supported_t)(vaapi_event_type, uint8_t *);
+typedef int32_t (*vaapi_convert_metadata_to_json_t)(
+                                    const struct vaapi_metadata_frame *,
+                                    char *,
+                                    uint32_t);
+typedef int32_t (*vaapi_convert_event_to_json_t)(const struct vaapi_event *,
+                                                 char *,
+                                                 uint32_t);
+typedef int32_t (*vaapi_convert_metadata_to_json_t)(
+                                    const struct vaapi_metadata_frame *,
+                                    char *,
+                                    uint32_t);
+typedef int32_t (*vaapi_convert_event_to_json_t)(
+                                    const struct vaapi_event *,
+                                    char *,
+                                    uint32_t);
+
+vaapi_init_t                        vaapi_init = nullptr;
+vaapi_deinit_t                      vaapi_deinit = nullptr;
+vaapi_set_config_t                  vaapi_set_config = nullptr;
+vaapi_del_config_t                  vaapi_del_config = nullptr;
+vaapi_enroll_obj_t                  vaapi_enroll_obj = nullptr;
+vaapi_run_t                         vaapi_run = nullptr;
+vaapi_stop_t                        vaapi_stop = nullptr;
+vaapi_process_t                     vaapi_process = nullptr;
+vaapi_register_event_cb_t           vaapi_register_event_cb = nullptr;
+vaapi_register_metadata_cb_t        vaapi_register_metadata_cb = nullptr;
+vaapi_register_snapshot_cb_t        vaapi_register_snapshot_cb = nullptr;
+vaapi_register_frame_processed_cb_t vaapi_register_frame_processed_cb = nullptr;
+vaapi_is_event_type_supported_t     vaapi_is_event_type_supported = nullptr;
+vaapi_convert_metadata_to_json_t    vaapi_convert_metadata_to_json = nullptr;
+vaapi_convert_event_to_json_t       vaapi_convert_event_to_json = nullptr;
+void *vaapi_lib_handle = nullptr;
+
+void initVaapiLib() {
+  if (vaapi_lib_handle) {
+    return;
+  }
+
+#ifdef ANDROID
+  void *lptr = dlopen("libVAManager.so", RTLD_NOW);
+#else
+  void *lptr = dlopen("libVAManager.so.0", RTLD_NOW);
+#endif
+  if (!lptr) {
+    ALOGE("%s: can't load libVAManager library", __func__);
+    return;
+  }
+
+  vaapi_init = (vaapi_init_t)dlsym(lptr, "vaapi_init");
+  vaapi_deinit = (vaapi_deinit_t)dlsym(lptr, "vaapi_deinit");
+  vaapi_set_config = (vaapi_set_config_t)dlsym(lptr, "vaapi_set_config");
+  vaapi_del_config = (vaapi_del_config_t)dlsym(lptr, "vaapi_del_config");
+  vaapi_enroll_obj = (vaapi_enroll_obj_t)dlsym(lptr, "vaapi_enroll_obj");
+  vaapi_run = (vaapi_run_t)dlsym(lptr, "vaapi_run");
+  vaapi_stop = (vaapi_stop_t)dlsym(lptr, "vaapi_stop");
+  vaapi_process = (vaapi_process_t)dlsym(lptr, "vaapi_process");
+  vaapi_register_event_cb = (vaapi_register_event_cb_t)dlsym(lptr,
+                                              "vaapi_register_event_cb");
+  vaapi_register_metadata_cb = (vaapi_register_metadata_cb_t)dlsym(lptr,
+                                              "vaapi_register_metadata_cb");
+  vaapi_register_snapshot_cb = (vaapi_register_snapshot_cb_t)dlsym(lptr,
+                                              "vaapi_register_snapshot_cb");
+  vaapi_register_frame_processed_cb =
+          (vaapi_register_frame_processed_cb_t)dlsym(lptr,
+                                          "vaapi_register_frame_processed_cb");
+  vaapi_is_event_type_supported = (vaapi_is_event_type_supported_t)dlsym(lptr,
+                                          "vaapi_is_event_type_supported");
+  vaapi_convert_metadata_to_json = (vaapi_convert_metadata_to_json_t)dlsym(lptr,
+                                          "vaapi_convert_metadata_to_json");
+  vaapi_convert_event_to_json = (vaapi_convert_event_to_json_t)dlsym(lptr,
+                                          "vaapi_convert_event_to_json");
+
+  if (vaapi_init                        &&
+      vaapi_deinit                      &&
+      vaapi_set_config                  &&
+      vaapi_del_config                  &&
+      vaapi_enroll_obj                  &&
+      vaapi_run                         &&
+      vaapi_stop                        &&
+      vaapi_process                     &&
+      vaapi_register_event_cb           &&
+      vaapi_register_metadata_cb        &&
+      vaapi_register_snapshot_cb        &&
+      vaapi_register_frame_processed_cb &&
+      vaapi_is_event_type_supported     &&
+      vaapi_convert_event_to_json       &&
+      vaapi_convert_metadata_to_json) {
+    vaapi_lib_handle = lptr;
+  } else {
+    dlclose(lptr);
+  }
+}
 
 typedef struct VAMContext_t {
   VAMContext_t() = delete;
@@ -130,6 +239,7 @@ private:
 
   uint32_t vam_width_;
   uint32_t vam_height_;
+  JpegEncoderFormat vam_format_;
 
   VAMContext vam_context_;
   KeyedVector<uint64_t, VAMPendingBuffer> vam_pending_buffers_;
@@ -140,6 +250,7 @@ private:
   AVQueue *vam_video_que_;
   Mutex vam_video_queue_lock_;
   uint32_t vam_video_log_duration_;
+  uint32_t vam_event_log_;
   int32_t vam_video_log_size_;
   EnrolledFacesDB vam_enroll_db_;
 };
@@ -149,7 +260,11 @@ VAMInterface *VAMInterfaceFactory::NewInstance(VAMCb *vam_cb) {
   return static_cast<VAMInterface *>(new_instance);
 }
 
+#ifdef ANDROID
+const char VAMInstance::kVAMDynamicPath[] = "/system/vendor/lib/vam_engines";
+#else
 const char VAMInstance::kVAMDynamicPath[] = "/usr/lib/vam_engines";
+#endif
 const char VAMInstance::kVAMDataPath[] = "/data/misc/camera";
 const nsecs_t VAMInstance::kWaitDuration = 1000000000; // 1 sec.
 
@@ -161,6 +276,7 @@ VAMInstance::VAMInstance(VAMCb *vam_cb) :
     vam_video_log_duration_(DEFAULT_VAM_VIDEO_LOG_DURATION),
     vam_video_log_size_(0){
   memset(&vam_config_, 0, sizeof(vam_config_));
+  initVaapiLib();
 }
 
 VAMInstance::~VAMInstance() {
@@ -222,6 +338,17 @@ int32_t VAMInstance::VAMEnroll(VAMEnrollmentInfo &enroll_info) {
       break;
     case vaapi_format_nv12:
     case vaapi_format_nv21:
+      eInfo.img_width[0] = enroll_info.image_width;
+      eInfo.img_height[0] = enroll_info.image_height;
+      eInfo.img_pitch[0] = enroll_info.image_width;
+      eInfo.img_data[0] = enroll_info.data;
+
+      eInfo.img_width[1] = enroll_info.image_width;
+      eInfo.img_height[1] = enroll_info.image_height / 2;
+      eInfo.img_pitch[1] = enroll_info.image_width;
+      eInfo.img_data[1] = enroll_info.data + enroll_info.image_width *
+                                             enroll_info.image_height;
+      break;
     case vaapi_format_yv12:
       //TODO: Add support for additional pixelformats
     default:
@@ -233,23 +360,42 @@ int32_t VAMInstance::VAMEnroll(VAMEnrollmentInfo &enroll_info) {
   if (VAM_OK != ret) {
     ALOGE("%s: Failed to entroll data to VAM: %d\n", __func__, ret);
   }
-
   if (ret == VAM_OK && vam_enroll_db_.OpenDB() == SQLITE_OK) {
-#ifdef USE_JPEG_ENCODER
     JpegEncoderConfiguration jcfg;
-    jcfg.width[0] = enroll_info.image_width;
-    jcfg.height[0] = enroll_info.image_height;
-    jcfg.stride[0] = enroll_info.image_width;
-    jcfg.scanline[0] = (enroll_info.image_height + 7) & (~7);
-    jcfg.num_planes = 1;
-    jcfg.format = JpegEncoderFormat::NV12;
+    for (uint32_t i = 0; i < 3; i++) {
+      jcfg.width[i] = eInfo.img_width[i];
+      jcfg.height[i] = eInfo.img_height[i];
+      jcfg.stride[i] = eInfo.img_pitch[i];
+      jcfg.scanline[i] = eInfo.img_height[i];
+    }
+    jcfg.num_planes = 2;
+    jcfg.quality = 95;
+
     JpegEncoder encoder(&jcfg);
 
-    struct JpegFrameInfo encInfo = { 0 };
-    size_t lumaSize = jcfg.stride[0] * jcfg.scanline[0];
-    encInfo.plane_addr[0] = new uint8_t[3 * lumaSize / 2];
-    memcpy(encInfo.plane_addr[0], enroll_info.data, jcfg.width[0] * jcfg.height[0]);
-    memset(&encInfo.plane_addr[0][lumaSize], 0x7F, lumaSize / 2);
+    struct JpegFrameInfo encInfo;
+    encInfo.plane_addr[0] = eInfo.img_data[0];
+
+    switch(eInfo.img_format) {
+      case vaapi_format_nv12:
+        encInfo.format = JpegEncoderFormat::NV12;
+        break;
+      case vaapi_format_nv21:
+        encInfo.format = JpegEncoderFormat::NV21;
+        break;
+      default:
+        ALOGE("%s: Image format not supported by JPEG encoder %d",
+              __func__, eInfo.img_format);
+        return BAD_VALUE;
+    }
+
+    if (eInfo.img_data[1]) {
+      encInfo.plane_addr[1] = eInfo.img_data[1];
+    } else {
+      size_t chromaSize = jcfg.stride[0] * jcfg.scanline[0] / 2;
+      encInfo.plane_addr[1] = new uint8_t[chromaSize];
+      memset(encInfo.plane_addr[1], 0x7F, chromaSize);
+    }
 
     size_t eJpegSize;
     vaapi_enrollment_info e = eInfo;
@@ -257,16 +403,17 @@ int32_t VAMInstance::VAMEnroll(VAMEnrollmentInfo &enroll_info) {
     e.img_width[0] = e.img_pitch[0] = eJpegSize;
     e.img_height[0] = 1;
 
-    delete [] encInfo.plane_addr[0];
+    if (!eInfo.img_data[1]) {
+      delete [] encInfo.plane_addr[1];
+    }
 
     if (vam_enroll_db_.Insert(&e) != SQLITE_OK) {
-#else
-    if (vam_enroll_db_.Insert(&eInfo) != SQLITE_OK) {
-#endif
       ALOGE("%s: could not save enroll info in global database", __func__);
     } else {
       ALOGE("%s: saved enroll info in global database", __func__);
     }
+
+    delete [] e.img_data[0];
 
     vam_enroll_db_.CloseDB();
   } else {
@@ -310,12 +457,13 @@ int32_t VAMInstance::VAMConfig(const char *json_config) {
 
     ret = parser.ParseConfig(json_config, vam_config_);
     if (NO_ERROR == ret) {
-        for (uint32_t i = 0; i < vam_config_.rule_size; i++) {
-          vam_event_db_.InsertRule(&vam_config_.rules[i]);
-        }
         ret = vaapi_set_config(&vam_config_);
         if (VAM_OK != ret) {
           ALOGE("%s: Failed to configure VAM: %d\n", __func__, ret);
+        } else {
+          for (uint32_t i = 0; i < vam_config_.rule_size; i++) {
+            vam_event_db_.InsertRule(&vam_config_.rules[i]);
+          }
         }
         ret = RcConvert(ret);
         memset(&vam_config_, 0, sizeof(vam_config_));
@@ -352,6 +500,10 @@ int32_t VAMInstance::VAMRemoveConfig(const char *json_config) {
         ret = vaapi_del_config(&vam_config_);
         if (VAM_OK != ret) {
           ALOGE("%s: Failed to remove VAM config: %d\n", __func__, ret);
+        } else {
+          for (uint32_t i = 0; i < vam_config_.rule_size; i++) {
+            vam_event_db_.RemoveRule(vam_config_.rules[i].id);
+          }
         }
         ret = RcConvert(ret);
         memset(&vam_config_, 0, sizeof(vam_config_));
@@ -368,8 +520,14 @@ int32_t VAMInstance::VAMRemoveConfig(const char *json_config) {
 
 int32_t VAMInstance::InitVAM(const uint32_t session_id,
                              const uint32_t track_id) {
+  char property[PROPERTY_VALUE_MAX];
   int32_t ret = NO_ERROR;
   Mutex::Autolock l(vam_config_context_lock_);
+  if (!vaapi_lib_handle) {
+    ALOGE("%s: Failed to load libVAManager", __func__);
+    return NAME_NOT_FOUND;
+  }
+
   if (!vam_context_.present) {
     vam_context_.present = true;
     vam_context_.session_id = session_id;
@@ -379,6 +537,11 @@ int32_t VAMInstance::InitVAM(const uint32_t session_id,
     ALOGE("%s: VAM enabled track with id: %d already present!\n",
           __func__, vam_context_.track_id);
     ret = INVALID_OPERATION;
+  }
+  if (property_get(VAM_EVENT_LOG_PROP, property, NULL) > 0) {
+    vam_event_log_ = atoi(property);
+  } else {
+    vam_event_log_ = 0;
   }
 
   return ret;
@@ -480,19 +643,7 @@ int32_t VAMInstance::StartVAM(CameraBufferMetaData &meta_data) {
     jpeg_cfg.scanline[i] = meta_data.plane_info[i].scanline;
   }
   jpeg_cfg.num_planes = meta_data.num_planes;
-  switch (meta_data.format) {
-  case BufferFormat::kNV12:
-    jpeg_cfg.format = JpegEncoderFormat::NV12;
-    break;
-  case BufferFormat::kNV21:
-    jpeg_cfg.format = JpegEncoderFormat::NV21;
-    break;
-  default:
-    jpeg_cfg.format = JpegEncoderFormat::UNKNOWN;
-    ALOGE("%s: unknown buffer format (%d) passed to JPEG encoder.",
-            __func__, (int)meta_data.format);
-    break;
-  }
+  jpeg_cfg.quality = 95;
 
   jpeg_encoder_ = new JpegEncoder(&jpeg_cfg);
   if (!jpeg_encoder_) {
@@ -507,6 +658,7 @@ int32_t VAMInstance::StartVAM(CameraBufferMetaData &meta_data) {
     ret = VAM_FAIL;
     goto exit;
   }
+
 
   {
     Mutex::Autolock l(vam_config_context_lock_);
@@ -553,11 +705,18 @@ int32_t VAMInstance::QueueVAMBuffers(uint32_t track_id,
 
       switch (camera_meta.format) {
         case BufferFormat::kNV12:
+          buffer_info.frame_l_data[0] = (uint8_t *) iter.data;
+          buffer_info.frame_l_data[1] = ((uint8_t *) iter.data) +
+              (camera_meta.plane_info[0].stride *
+                  camera_meta.plane_info[0].scanline);
+          vam_format_ = JpegEncoderFormat::NV12;
+          break;
         case BufferFormat::kNV21:
           buffer_info.frame_l_data[0] = (uint8_t *) iter.data;
           buffer_info.frame_l_data[1] = ((uint8_t *) iter.data) +
               (camera_meta.plane_info[0].stride *
                   camera_meta.plane_info[0].scanline);
+          vam_format_ = JpegEncoderFormat::NV21;
           break;
         case BufferFormat::kBLOB:// These don't seem supported
         case BufferFormat::kRAW10:// by VAM currently!
@@ -635,9 +794,20 @@ int32_t VAMInstance::VAMEvent(struct vaapi_event *event) {
     return VAM_NULLPTR;
   }
 
-  std::string eventString = getStrFromEvent(event);
+  int32_t ret;
+  uint32_t eventStringSize = 0;
+  char *eventString = nullptr;
+
+  do {
+    if (eventString) delete [] eventString;
+    eventStringSize += 100;
+    eventString = new char[eventStringSize];
+    ret = vaapi_convert_event_to_json(event, eventString, eventStringSize);
+  } while (ret == VAM_STR_OVERSIZE);
+
   vam_cb_->SendVAMMeta(vam_context_.session_id, vam_context_.track_id,
-                        eventString.c_str(), eventString.size(), event->pts);
+                       eventString, strlen(eventString), event->pts);
+  delete [] eventString;
 
   return VAM_OK;
 }
@@ -660,11 +830,26 @@ int32_t VAMInstance::VAMMetadata(struct vaapi_metadata_frame *frame) {
     return VAM_NULLPTR;
   }
 
-  vam_event_db_.InsertMeta(frame);
+  if (vam_event_log_ != 0) {
+     vam_event_db_.InsertMeta(frame);
+  }
 
   std::string metaString = getStrFromMetadataFrame(frame);
+
+  int32_t ret;
+  uint32_t frameStringSize = 0;
+  char *frameString = nullptr;
+
+  do {
+    if (frameString) delete [] frameString;
+    frameStringSize += 100;
+    frameString = new char[frameStringSize];
+    ret = vaapi_convert_metadata_to_json(frame, frameString, frameStringSize);
+  } while (ret == VAM_STR_OVERSIZE);
+
   vam_cb_->SendVAMMeta(vam_context_.session_id, vam_context_.track_id,
-                       metaString.c_str(), metaString.size(), frame->pts);
+                       frameString, strlen(frameString), frame->pts);
+  delete [] frameString;
 
   return VAM_OK;
 }
@@ -687,39 +872,40 @@ int32_t VAMInstance::VAMSnapshot(struct vaapi_snapshot_info *snapshot_info) {
     if (NULL == snapshot_info || NULL == jpeg_encoder_) {
       return VAM_NULLPTR;
     }
+    if (vam_event_log_ == 0) {
+      return VAM_OK;
+    }
 
     Mutex::Autolock l(vam_video_queue_lock_);
-    if (vam_video_log_size_ <= 0) {
-      ALOGE("%s: video log file size <= 0", __func__);
-      return VAM_FAIL;
-    }
-
-    ssize_t q_size = AVQueueSize(vam_video_que_);
-    if (q_size <= 0) {
-      ALOGE("%s: video log buffer count <= 0", __func__);
-      return VAM_FAIL;
-    }
-
-    uint8_t *video_data = new uint8_t[vam_video_log_size_];
-    if (!video_data) {
-      ALOGE("%s: Could not allocate buffer of size %d", __func__, vam_video_log_size_);
-      return VAM_FAIL;
-    }
-
+    uint8_t *video_data = nullptr;
     uint32_t video_size = 0;
-    std::vector<AVPacket *> packets;
-    for (ssize_t i = 0; i < q_size; i++) {
-      AVPacket *p = (AVPacket *)AVQueuePopTail(vam_video_que_);
-      memcpy(&video_data[video_size], p->data, p->size);
-      video_size += p->size;
-      packets.push_back(p);
-    }
-    for (ssize_t i = 0; i < q_size; i++) {
-      AVQueuePushHead(vam_video_que_, packets[i]);
+    if (vam_video_log_size_ > 0) {
+      ssize_t q_size = AVQueueSize(vam_video_que_);
+      if (q_size <= 0) {
+        ALOGE("%s: video log buffer count <= 0", __func__);
+        return VAM_FAIL;
+      }
+
+      video_data = new uint8_t[vam_video_log_size_];
+      if (!video_data) {
+        ALOGE("%s: Could not allocate buffer of size %d", __func__, vam_video_log_size_);
+        return VAM_FAIL;
+      }
+
+      std::vector<AVPacket *> packets;
+      for (ssize_t i = 0; i < q_size; i++) {
+        AVPacket *p = (AVPacket *)AVQueuePopTail(vam_video_que_);
+        memcpy(&video_data[video_size], p->data, p->size);
+        video_size += p->size;
+        packets.push_back(p);
+      }
+      for (ssize_t i = 0; i < q_size; i++) {
+        AVQueuePushHead(vam_video_que_, packets[i]);
+      }
     }
 
-#ifdef USE_JPEG_ENCODER
     JpegFrameInfo jpeg_frame;
+    jpeg_frame.format = vam_format_;
     for (uint32_t i = 0; i < JPEG_MAX_BUFFER_PLANES; i++) {
       jpeg_frame.plane_addr[i] = snapshot_info->img_data[i];
     }
@@ -728,22 +914,10 @@ int32_t VAMInstance::VAMSnapshot(struct vaapi_snapshot_info *snapshot_info) {
     float scale = (float)vam_width_ / 640.0f;
 
     size_t thumb_size;
-    uint8_t *thumb_data_temp = (uint8_t *)jpeg_encoder_->Encode(&jpeg_frame, &thumb_size, scale);
-    uint8_t *thumb_data = nullptr;
-    if (thumb_data_temp) {
-        thumb_data = new uint8_t[thumb_size];
-        memcpy(thumb_data, thumb_data_temp, thumb_size);
-    }
-
+    uint8_t *thumb_data = (uint8_t *)jpeg_encoder_->Encode(&jpeg_frame, &thumb_size, scale);
 
     size_t image_size;
     uint8_t *image_data = (uint8_t *)jpeg_encoder_->Encode(&jpeg_frame, &image_size, 0.0f);
-#else
-    size_t thumb_size = vam_width_ * vam_height_;
-    uint8_t *thumb_data = snapshot_info->img_data[0];
-    size_t image_size = vam_width_ * vam_height_;
-    uint8_t *image_data = snapshot_info->img_data[0];
-#endif
     if (image_data) {
         struct vaapi_snapshot_info info;
         memcpy(&info, snapshot_info, sizeof(info));
@@ -761,10 +935,9 @@ int32_t VAMInstance::VAMSnapshot(struct vaapi_snapshot_info *snapshot_info) {
       ALOGE("%s: could not create jpeg file.", __func__);
     }
 
-#ifdef USE_JPEG_ENCODER
     delete [] thumb_data;
-#endif
-    delete [] video_data;
+    delete [] image_data;
+    if (video_data) delete [] video_data;
   return VAM_OK;
 }
 
@@ -1277,9 +1450,40 @@ int32_t VAMInstance::DatabaseCommand(const VAMDatabaseCmdParams *params,
       case VAMDatabaseCommand::FRDB_GET_ENROLL_IMAGE_DATA:
         ret = vam_enroll_db_.GetEnrollInfo(params->id, &eInfo, true);
         break;
-      case VAMDatabaseCommand::FRDB_REMOVE_ENROLLED_IMAGE:
-        ret = vam_enroll_db_.Remove(params->id);
+      case VAMDatabaseCommand::FRDB_REMOVE_ENROLLED_IMAGE: {
+        std::vector<std::string> image_ids;
+
+        if (vam_enroll_db_.IsFeatureId(params->id)) {
+          vam_enroll_db_.GetImageIdsFromFeatureId(params->id, &image_ids);
+        } else {
+            image_ids.push_back(params->id);
+        }
+
+        for (size_t i = 0; i < image_ids.size(); i++) {
+          ret = vam_enroll_db_.GetEnrollInfo(image_ids[i].c_str(),
+                                             &eInfo,
+                                             true);
+          if (!ret) {
+            int32_t ret1 = vam_enroll_db_.Remove(image_ids[i].c_str());
+            int32_t ret2 = vaapi_disenroll_obj(vaapi_event_face_recognized,
+                                               image_ids[i].c_str());
+
+            if (ret1) {
+              ret = vaapi_enroll_obj(vaapi_event_face_recognized, &eInfo);
+              ALOGE("%s: putting back enroll info to local FR DB due to error: %d",
+                    __func__, ret1);
+            }
+            if (ret2) {
+              ret = vam_enroll_db_.Insert(&eInfo);
+              ALOGE("%s: putting back enroll info to global DB due to error: %d",
+                    __func__, ret2);
+            }
+
+            delete [] eInfo.img_data[0];
+          }
+        }
         break;
+      }
       default:
         ALOGE("%s: unsupported database operation: %d", __func__, params->command);
         ret = SQLITE_ERROR;

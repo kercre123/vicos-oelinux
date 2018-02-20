@@ -8,7 +8,6 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 FILESPATH =+ "${WORKSPACE}:"
 SRC_URI   = "file://system/core/"
-
 SRC_URI += "file://init_post_boot.diff"
 
 S = "${WORKDIR}/system/core"
@@ -19,6 +18,8 @@ DEPENDS = "virtual/kernel openssl glib-2.0 libselinux safe-iop ext4-utils libunw
 EXTRA_OECONF = " --with-host-os=${HOST_OS} --with-glib"
 EXTRA_OECONF_append = " --with-sanitized-headers=${STAGING_KERNEL_BUILDDIR}/usr/include"
 EXTRA_OECONF_append = " --with-logd-logging"
+EXTRA_OECONF_append = "${@base_conditional('USER_BUILD','1',' --disable-debuggerd','',d)}"
+EXTRA_OECONF_append_apq8053 = " --enable-logd-privs"
 
 # Disable adb root privileges in USER builds for msm targets
 EXTRA_OECONF_append_msm = "${@base_conditional('USER_BUILD','1',' --disable-adb-root','',d)}"
@@ -30,6 +31,9 @@ CPPFLAGS += "-I${STAGING_INCDIR}/libunwind"
 CPPFLAGS_append_apq8053 += " -DTARGET_IS_64_BIT"
 CPPFLAGS_append_apq8017 += " -DTARGET_IS_64_BIT"
 CPPFLAGS_append_apq8096 += " -DTARGET_IS_64_BIT"
+CPPFLAGS_append_apq8098 += " -DTARGET_IS_64_BIT"
+CPPFLAGS_remove_apq8053-32 = " -DTARGET_IS_64_BIT"
+
 COMPOSITION         = "9025"
 COMPOSITION_apq8009 = "9091"
 COMPOSITION_apq8053 = "901D"
@@ -51,6 +55,8 @@ do_install_append() {
    install -m 0755 ${S}/usb/debuger/debugFiles -D ${D}${base_sbindir}/usb/debuger/
    install -m 0755 ${S}/usb/debuger/help -D ${D}${base_sbindir}/usb/debuger/
    install -m 0755 ${S}/usb/debuger/usb_debug -D ${D}${base_sbindir}/
+   install -d ${D}${userfsdatadir}/persist
+   install -b -m 0666 /dev/null -D ${D}${userfsdatadir}/persist/build.prop
    ln -s  /sbin/usb/compositions/${COMPOSITION} ${D}${userfsdatadir}/usb/boot_hsusb_composition
    ln -s  /sbin/usb/compositions/empty ${D}${userfsdatadir}/usb/boot_hsic_composition
    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
@@ -110,13 +116,20 @@ do_install_append_apq8009() {
     install -m 0755 ${S}/debuggerd/start_debuggerd -D ${D}${sysconfdir}/initscripts/init_debuggerd
    fi
 }
+
+#Install rules specific to apq8053 target
 do_install_append_apq8053(){
-  if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'false', 'true', d)}; then
-   install -m 0755 ${S}/debuggerd/start_debuggerd64 -D ${D}${sysconfdir}/init.d/init_debuggerd
-  else
-   install -m 0755 ${S}/debuggerd/start_debuggerd64 -D ${D}${sysconfdir}/initscripts/init_debuggerd
+
+  DEBUGGERD_NO_INSTALL=${@base_conditional('USER_BUILD','1','no-debuggerd','',d)}
+  if [ "x$DEBUGGERD_NO_INSTALL" == "x" ]; then
+    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'false', 'true', d)}; then
+      install -m 0755 ${S}/debuggerd/start_debuggerd64 -D ${D}${sysconfdir}/init.d/init_debuggerd
+    else
+      install -m 0755 ${S}/debuggerd/start_debuggerd64 -D ${D}${sysconfdir}/initscripts/init_debuggerd
+    fi
   fi
 }
+
 do_install_append_apq8096() {
   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'false', 'true', d)}; then
     install -m 0755 ${S}/debuggerd/start_debuggerd64 -D ${D}${sysconfdir}/init.d/init_debuggerd
@@ -132,6 +145,13 @@ do_install_append_apq8017(){
   fi
 }
 
+do_install_append_apq8098(){
+  if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'false', 'true', d)}; then
+   install -m 0755 ${S}/debuggerd/start_debuggerd64 -D ${D}${sysconfdir}/init.d/init_debuggerd
+  else
+   install -m 0755 ${S}/debuggerd/start_debuggerd64 -D ${D}${sysconfdir}/initscripts/init_debuggerd
+  fi
+}
 INITSCRIPT_PACKAGES =+ "${PN}-usb"
 INITSCRIPT_NAME_${PN}-usb = "usb"
 INITSCRIPT_PARAMS_${PN}-usb = "start 30 2 3 4 5 ."
@@ -182,7 +202,7 @@ FILES_${PN}-debuggerd     += "${systemd_unitdir}/system/init_debuggerd.service $
 PACKAGES =+ "${PN}-leprop-dbg ${PN}-leprop"
 FILES_${PN}-leprop-dbg  = "${base_sbindir}/.debug/leprop-service ${bindir}/.debug/getprop ${bindir}/.debug/setprop"
 FILES_${PN}-leprop      = "${base_sbindir}/leprop-service ${bindir}/getprop ${bindir}/setprop ${sysconfdir}/proptrigger.sh ${sysconfdir}/proptrigger.conf"
-FILES_${PN}-leprop     += "${systemd_unitdir}/system/leprop.service ${systemd_unitdir}/system/multi-user.target.wants/leprop.service ${systemd_unitdir}/system/ffbm.target.wants/leprop.service"
+FILES_${PN}-leprop     += "${systemd_unitdir}/system/leprop.service ${systemd_unitdir}/system/multi-user.target.wants/leprop.service ${systemd_unitdir}/system/ffbm.target.wants/leprop.service ${userfsdatadir}/persist/build.prop"
 
 FILES_${PN}-dbg  = "${bindir}/.debug/* ${libdir}/.debug/*"
 FILES_${PN}      = "${bindir}/* ${libdir}/pkgconfig/* ${libdir}/*.so.* "

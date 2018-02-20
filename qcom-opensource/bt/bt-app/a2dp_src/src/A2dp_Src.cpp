@@ -64,7 +64,7 @@ static pthread_t playback_thread = NULL;
 AttrType mAttrType;
 bool media_playing = false;
 bool use_bigger_metadata = false;
-btrc_play_status_t playStatus = BTRC_PLAYSTATE_ERROR;
+btrc_play_status_t playStatus = BTRC_PLAYSTATE_STOPPED;
 btrc_notification_type_t mPlayStatusNotiType = BTRC_NOTIFICATION_TYPE_CHANGED;
 btrc_notification_type_t mTrackChangeNotiType = BTRC_NOTIFICATION_TYPE_CHANGED;
 btrc_notification_type_t mAddrPlayerChangedNotiType = BTRC_NOTIFICATION_TYPE_CHANGED;
@@ -91,6 +91,10 @@ static uint32_t a2dp_playstatus = A2DP_SOURCE_AUDIO_STOPPED;
 long NO_TRACK_SELECTED = -1L;
 long TRACK_IS_SELECTED = 0L;
 long mCurrentTrackID = NO_TRACK_SELECTED;
+
+static uint16_t MTU_src;
+static uint16_t sequence_number;
+static uint32_t timestamp;
 
 int mCurrentEqualizer = default_eq_value;
 int mCurrentRepeat = default_repeat_value;
@@ -138,6 +142,30 @@ extern bool GetCodecInfoByAddr(bt_bdaddr_t* bd_addr, uint16_t *dev_codec_type, b
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct {
+
+    uint8_t nrof_blocks;   /**< The block size used to encode the stream. Input parameter. */
+    uint8_t blocks;
+
+
+    uint8_t nrof_subbands; /**< The number of subbands of the encoded stream. Input parameter. */
+    uint8_t subbands;
+
+    uint8_t mode;          /**< The mode of the encoded channel. Input parameter. */
+    uint8_t nrof_channels; /**< The number of channels of the encoded stream. */
+
+    uint8_t bitpool;       /**< Size of the bit allocation pool used to encode the stream. Input parameter. */
+
+} A2DP_SBC_FRAME;
+
+  #define SBC_HEADER_LEN 4
+  #define SBC_SYNCWORD 0x9c
+
+#define SBC_MONO 0         /**< The mode of the A2DP channel is mono*/
+#define SBC_DUAL_CHANNEL 1 /**< The mode of the A2DP channel is dual-channel*/
+#define SBC_STEREO 2       /**< The mode of the A2DP channel is stereo*/
+#define SBC_JOINT_STEREO 3 /**< The mode of the A2DP channel is joint stereo*/
 
 #ifndef _ARRAYSIZE
 #define _ARRAYSIZE(a) (sizeof(a)/sizeof(a[0]))
@@ -401,7 +429,7 @@ static bool A2dpCodecList(char *codec_param_list, int *num_codec_configs)
         switch (a2dpSrcCodecList[k].codec_type) {
             case A2DP_SOURCE_AUDIO_CODEC_SBC:
                 /* check number of parameters passed are ok or not */
-                if (j + SBC_PARAM_LEN > codec_params_list_size) {
+                if (j + SBC_PARAM_LEN > codec_params_list_size + 1) {
                     fprintf(stdout, "Invalid SBC Parameters passed\n");
                     return false;
                 }
@@ -485,7 +513,7 @@ static bool A2dpCodecList(char *codec_param_list, int *num_codec_configs)
                 break;
             case A2DP_SOURCE_AUDIO_CODEC_APTX:
                 /* check number of parameters passed are ok or not */
-                if (j + APTX_PARAM_LEN > codec_params_list_size) {
+                if (j + APTX_PARAM_LEN > codec_params_list_size + 1) {
                     fprintf(stdout, "Invalid APTX Parameters passed\n");
                     return false;
                 }
@@ -556,6 +584,58 @@ void registerMediaPlayers () {
     ALOGD(LOGTAG_AVRCP "Exit registerMediaPlayers()");
 }
 
+uint16_t A2DP_SBC_Calculate_FrameLength(A2DP_SBC_FRAME *frame, const uint8_t *data)
+{
+    uint8_t d1;
+    uint16_t nbits,nrof_subbands,result;
+
+    uint16_t freq_values[] =    { 16000, 32000, 44100, 48000 };
+    uint8_t block_values[] =    { 4, 8, 12, 16 };
+    uint8_t channel_values[] =  { 1, 2, 2, 2 };
+    uint8_t band_values[] =     { 4, 8 };
+
+    uint8_t bit_0 = 0x01;
+    uint8_t bit_1 = 0x02;
+    uint8_t bit_2 = 0x04;
+    uint8_t bit_3 = 0x08;
+    uint8_t bit_4 = 0x10;
+    uint8_t bit_5 = 0x20;
+    uint8_t bit_6 = 0x40;
+    uint8_t bit_7 = 0x80;
+
+    if(data[0] != SBC_SYNCWORD)
+    {
+        ALOGE(LOGTAG_A2DP "A2dp src :Error SBC sync word doesn't match");
+        return 0;
+    }
+
+    d1 = data[1];
+
+    frame->blocks = (d1 & (bit_5 | bit_4)) >> 4;
+    frame->nrof_blocks = block_values[frame->blocks];
+
+    frame->mode = (d1 & (bit_3 | bit_2)) >> 2;
+    frame->nrof_channels = channel_values[frame->mode];
+
+    frame->subbands = (d1 & bit_0);
+    frame->nrof_subbands = band_values[frame->subbands];
+
+    frame->bitpool = data[2];
+
+    nbits = frame->nrof_blocks * frame->bitpool;
+    nrof_subbands = frame->nrof_subbands;
+    result = nbits;
+    if (frame->mode == SBC_JOINT_STEREO) {
+        result += nrof_subbands + (8 * nrof_subbands);
+    } else {
+        if (frame->mode == SBC_DUAL_CHANNEL) { result += nbits; }
+        if (frame->mode == SBC_MONO) { result += 4*nrof_subbands; } else { result += 8*nrof_subbands; }
+    }
+    return SBC_HEADER_LEN + (result + 7) / 8;
+}
+
+extern uint8_t get_rtp_offset(uint8_t* p_start, uint16_t codec_type);
+
 void A2dp_Source:: updateResetNotification(btrc_event_id_t noti) {
     ALOGD(LOGTAG_AVRCP "updateResetNotification for %d", noti);
     btrc_register_notification_t param;
@@ -590,6 +670,7 @@ void A2dp_Source:: updateResetNotification(btrc_event_id_t noti) {
                 sBtAvrcpTargetInterface->register_notification_rsp(BTRC_EVT_PLAY_POS_CHANGED,
                                 mPlayPosChangedNotiType, &param, &pA2dpSource->mConnectedAvrcpDevice);
             }
+            break;
         default:
             ALOGD(LOGTAG_AVRCP "Invalid Noti");
             break;
@@ -785,6 +866,10 @@ static void BtA2dpOpenOutputStream()
 static void BtA2dpSuspendStreaming()
 {
     ALOGD(LOGTAG_A2DP "Suspend A2dp Stream");
+    if(pA2dpSource->pump_encoded_data)
+    {
+        pA2dpSource->SendSuspendStreamReq();
+    }
 #if (defined(BT_AUDIO_HAL_INTEGRATION))
     pthread_mutex_lock(&a2dp_hal_mutex);
     if(!output_stream)
@@ -801,6 +886,10 @@ static void BtA2dpSuspendStreaming()
 static void BtA2dpResumeStreaming()
 {
     ALOGD(LOGTAG_A2DP "Resume A2dp Stream");
+    if(pA2dpSource->pump_encoded_data)
+    {
+        pA2dpSource->SendStartStreamReq();
+    }
 #if (defined(BT_AUDIO_HAL_INTEGRATION))
     pthread_mutex_lock(&a2dp_hal_mutex);
     if(!output_stream)
@@ -851,6 +940,13 @@ void enque_relay_data(uint8_t* buffer, size_t size, uint8_t codec_type)
         pthread_mutex_unlock(&a2dp_sink_relay_mutex);
         return;
     }
+
+    if (pA2dpSource->pump_encoded_data && a2dp_playstatus!=A2DP_SOURCE_AUDIO_STARTED) {
+        ALOGE(LOGTAG_A2DP "%s:A2DP source audio is not started",__func__);
+        pthread_mutex_unlock(&a2dp_sink_relay_mutex);
+        return;
+    }
+
     /* allocate memory, first 4 bytes will have size, next 4 bytes will have offset */
     t_SINK_RELAY_DATA* ptr = (t_SINK_RELAY_DATA*)osi_malloc(size + sizeof(t_SINK_RELAY_DATA));
     uint8_t* data_ptr;
@@ -1061,7 +1157,17 @@ static void *thread_func(void *in_param)
                                 //if src and snk codec match, compare codec config here;
                                 //if(src_codec_type == A2DP_SINK_AUDIO_CODEC_SBC
                                 if (!memcmp(&src_codec_cfg,&snk_codec_cfg,sizeof(btav_sbc_codec_config_t)))
-                                    len = get_sbc_data((uint8_t*)buffer, out_buffer_size);
+                                {
+                                    if(pA2dpSource->pump_encoded_data)
+                                    {
+                                        pA2dpSource->SendEncodedData();
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        len = get_sbc_data((uint8_t*)buffer, out_buffer_size);
+                                    }
+                                }
                                 else
                                 {
                                     ALOGD(LOGTAG_A2DP "sbc codec not match, and decoding is not enabled. using file");
@@ -1198,7 +1304,14 @@ static void bta2dp_audio_state_callback(btav_audio_state_t state, bt_bdaddr_t* b
             a2dp_playstatus = A2DP_SOURCE_AUDIO_STOPPED;
         break;
         case BTAV_AUDIO_STATE_STARTED:
-            pEvent->a2dpSourceEvent.event_id = A2DP_SOURCE_AUDIO_STARTED;
+            if(!pA2dpSource->pump_encoded_data){
+                pEvent->a2dpSourceEvent.event_id = A2DP_SOURCE_AUDIO_STARTED;
+            }
+            else {
+                pEvent->avrcpTargetEvent.event_id = A2DP_SOURCE_AUDIO_CMD_REQ;
+                pEvent->avrcpTargetEvent.key_id = CMD_ID_PLAY;
+                fprintf(stdout, "A2DP Source Audio state changes to: %d \n",A2DP_SOURCE_AUDIO_STARTED);
+            }
             a2dp_playstatus = A2DP_SOURCE_AUDIO_STARTED;
         break;
     }
@@ -1224,6 +1337,16 @@ static void bta2dp_delay_report_vendor_callback(bt_bdaddr_t *bd_addr, uint16_t r
     fprintf(stdout, "Received delay report! the delay is %d ms\n", report_delay);
 }
 
+static void mtu_packettype_vendor_callback(uint16_t mtu,uint8_t packettype, bt_bdaddr_t *bd_addr) {
+    ALOGD(LOGTAG_A2DP "mtu_packettype_vendor_callback: L2cap mtu = %d , packet type = %d", mtu,packettype);
+    MTU_src = mtu;
+    if(bd_addr!=NULL)
+        ALOGD(LOGTAG_A2DP "mtu_packettype_vendor_callback: bd_addr = %02x:%02x:%02x:%02x:%02x:%02x" ,
+            bd_addr->address[0],bd_addr->address[1],bd_addr->address[2],bd_addr->address[3],bd_addr->address[4],bd_addr->address[5]);
+    else
+        ALOGD(LOGTAG_A2DP "bd_addr is NULL");
+}
+
 static void bta2dp_audio_codec_config_vendor_callback(bt_bdaddr_t *bd_addr, uint16_t codec_type,
         btav_codec_config_t codec_config) {
     ALOGD(LOGTAG_A2DP " bta2dp_audio_codec_config_vendor_callback codec_type=%d",codec_type);
@@ -1236,6 +1359,10 @@ static void bta2dp_audio_codec_config_vendor_callback(bt_bdaddr_t *bd_addr, uint
     memcpy(pEvent->a2dpSourceEvent.buf_ptr, &codec_config, pEvent->a2dpSourceEvent.buf_size);
     pEvent->a2dpSourceEvent.arg1 = codec_type;
     PostMessage(THREAD_ID_A2DP_SOURCE, pEvent);
+}
+
+static void bta2dp_audio_registration_callback(bool state) {
+    ALOGD(LOGTAG_A2DP " Audio Registration Callback: state = %d", state);
 }
 
 static btav_callbacks_t sBluetoothA2dpSourceCallbacks = {
@@ -1253,6 +1380,8 @@ static btav_vendor_callbacks_t sBluetoothA2dpSourceVendorCallbacks = {
     NULL,
     bta2dp_delay_report_vendor_callback,
     bta2dp_audio_codec_config_vendor_callback,
+    mtu_packettype_vendor_callback,
+    bta2dp_audio_registration_callback,
 };
 
 static void btavrc_target_passthrough_cmd_vendor_callback(int id, int key_state, bt_bdaddr_t* bd_addr) {
@@ -1607,7 +1736,7 @@ void A2dp_Source::HandleAvrcpEvents(BtEvent* pEvent) {
     btrc_register_notification_t param;
     btrc_vendor_folder_list_entries_t *p_param;
     btrc_player_attr_t p_attr[BTRC_MAX_APP_SETTINGS];
-    uint8_t *attr_values;
+    uint8_t *attr_values = NULL;
 
     switch(pEvent->avrcpTargetEvent.event_id) {
         case AVRCP_TARGET_USE_BIGGER_METADATA:
@@ -2026,9 +2155,14 @@ void A2dp_Source::HandleAvrcpEvents(BtEvent* pEvent) {
         case AVRCP_TARGET_PLAY_POSITION_TIMEOUT:
             param.song_pos = a2dp_play_position;
             pA2dpSource->StopPlayPostionTimer();
-            mPlayPosChangedNotiType = BTRC_NOTIFICATION_TYPE_CHANGED;
-            sBtAvrcpTargetInterface->register_notification_rsp(BTRC_EVT_PLAY_POS_CHANGED,
+            if(sBtAvrcpTargetInterface != NULL)
+            {
+                mPlayPosChangedNotiType = BTRC_NOTIFICATION_TYPE_CHANGED;
+                sBtAvrcpTargetInterface->register_notification_rsp(BTRC_EVT_PLAY_POS_CHANGED,
                                   mPlayPosChangedNotiType, &param, &pA2dpSource->mConnectedAvrcpDevice);
+            }
+            else
+                ALOGD(LOGTAG_AVRCP " sBtAvrcpTargetInterface == NULL, ignore calling the register_notification_rsp!");
             break;
         case AVRCP_TARGET_GET_PLAY_STATUS:
             ALOGD(LOGTAG_AVRCP " Send response for Get play status = %d",playStatus);
@@ -2206,6 +2340,11 @@ void A2dp_Source::HandleAvrcpEvents(BtEvent* pEvent) {
             }
             switch(key_id) {
                 case CMD_ID_PLAY:
+                    if(pump_encoded_data && a2dp_playstatus !=
+                                              A2DP_SOURCE_AUDIO_STARTED){
+                        sBtA2dpSourceVendorInterface->start_stream(&mConnectedDevice);
+                        break;
+                    }
                     if (media_playing)
                         BtA2dpResumeStreaming();
                     else
@@ -2240,7 +2379,13 @@ void A2dp_Source::HandleAvrcpEvents(BtEvent* pEvent) {
                     break;
                 case CMD_ID_PAUSE:
                     /*Pause key id is mapped to A2dp suspend*/
-                    BtA2dpSuspendStreaming();
+                  if(pump_encoded_data){
+                      sBtA2dpSourceVendorInterface->suspend_stream(&mConnectedDevice);
+                      flush_relay_data();
+                  }
+                  else{
+                       BtA2dpSuspendStreaming();
+                  }
                     pA2dpSource->StopPlayPostionTimer();
                     if (playStatus != BTRC_PLAYSTATE_PAUSED)
                     {
@@ -2257,7 +2402,13 @@ void A2dp_Source::HandleAvrcpEvents(BtEvent* pEvent) {
                 case CMD_ID_STOP:
                     /*Pause and Stop passthrough commands are handled here*/
                     media_playing = false;
-                    BtA2dpStopStreaming();
+                    if(pump_encoded_data){
+                        sBtA2dpSourceVendorInterface->suspend_stream(&mConnectedDevice);
+                        flush_relay_data();
+                    }
+                    else{
+                        BtA2dpStopStreaming();
+                    }
                     pA2dpSource->StopPlayPostionTimer();
                     if (playStatus != BTRC_PLAYSTATE_STOPPED)
                     {
@@ -2281,6 +2432,7 @@ void A2dp_Source::HandleAvrcpEvents(BtEvent* pEvent) {
 
 void A2dp_Source::HandleEnableSource(void) {
     BtEvent *pEvent = new BtEvent;
+    uint8_t streaming_param = 0;
     char value[PROPERTY_VALUE_MAX] = {'\0'};
     if (bluetooth_interface != NULL)
     {
@@ -2296,8 +2448,16 @@ void A2dp_Source::HandleEnableSource(void) {
              PostMessage(THREAD_ID_GAP, pEvent);
              return;
         }
-        enable_delay_report = config_get_bool (config, CONFIG_DEFAULT_SECTION, "BtA2dpDelayReportEnable", false);
-        ALOGD(LOGTAG_A2DP " ~~ Try to get config , enable_delay_report %d", enable_delay_report);
+        enable_delay_report = config_get_bool (config, CONFIG_DEFAULT_SECTION,
+                                             "BtA2dpDelayReportEnable", false);
+
+        pump_encoded_data = config_get_bool (config, CONFIG_DEFAULT_SECTION,
+                                              "BtA2dpPumpEncodedData", false);
+        if(pump_encoded_data)
+            streaming_param |= A2DP_SRC_PUMP_ENCODED_DATA;
+        if(enable_delay_report)
+            streaming_param |= A2DP_SRC_ENABLE_DELAY_REPORTING;
+        ALOGD(LOGTAG_A2DP " ~~ Try to get config , enable_delay_report %d, pump_encoded_data %d", enable_delay_report, pump_encoded_data);
         //TODO: check and update
 #ifdef USE_LIBHW_AOSP
         sBtA2dpSourceInterface->init(&sBluetoothA2dpSourceCallbacks);
@@ -2308,17 +2468,13 @@ void A2dp_Source::HandleEnableSource(void) {
         ALOGD(LOGTAG_A2DP "offload_cap:%s", value);
         if (strcmp(value, "false") == 0)
         {
-            if(enable_delay_report)
-                sBtA2dpSourceVendorInterface->init_vendor(&sBluetoothA2dpSourceVendorCallbacks, 1, 0, A2DP_SRC_ENABLE_DELAY_REPORTING, NULL);
-            else
-                sBtA2dpSourceVendorInterface->init_vendor(&sBluetoothA2dpSourceVendorCallbacks, 1, 0, 0, NULL);
+            sBtA2dpSourceVendorInterface->init_vendor(
+            &sBluetoothA2dpSourceVendorCallbacks, 1, 0, streaming_param, NULL);
         }
         else
         {
-            if(enable_delay_report)
-                sBtA2dpSourceVendorInterface->init_vendor(&sBluetoothA2dpSourceVendorCallbacks, 1, 0, A2DP_SRC_ENABLE_DELAY_REPORTING, value);
-            else
-                sBtA2dpSourceVendorInterface->init_vendor(&sBluetoothA2dpSourceVendorCallbacks, 1, 0, 0, value);
+            sBtA2dpSourceVendorInterface->init_vendor(
+            &sBluetoothA2dpSourceVendorCallbacks, 1, 0, streaming_param, value);
         }
         //sBtA2dpSourceVendorInterface->init_vendor(&sBluetoothA2dpSourceVendorCallbacks, 1, 0, NULL);
         pEvent->profile_start_event.event_id = PROFILE_EVENT_START_DONE;
@@ -2347,7 +2503,7 @@ void A2dp_Source::HandleEnableSource(void) {
         ALOGD(LOGTAG_A2DP "Calling BtA2dpLoadA2dpHal");
         BtA2dpLoadA2dpHal();
         media_playing = false;
-        playStatus = BTRC_PLAYSTATE_ERROR;
+        playStatus = BTRC_PLAYSTATE_STOPPED;
         mCurrentTrackID = NO_TRACK_SELECTED;
         registerMediaPlayers();
     }
@@ -2371,7 +2527,7 @@ void A2dp_Source::HandleDisableSource(void) {
    pEvent->profile_stop_event.status = true;
    PostMessage(THREAD_ID_GAP, pEvent);
    media_playing = false;
-   playStatus = BTRC_PLAYSTATE_ERROR;
+   playStatus = BTRC_PLAYSTATE_STOPPED;
    mCurrentTrackID = NO_TRACK_SELECTED;
    if(a2dp_sink_relay_data_list != NULL)
    list_free(a2dp_sink_relay_data_list);
@@ -2521,7 +2677,8 @@ void A2dp_Source::state_pending_handler(BtEvent* pEvent) {
         case A2DP_SOURCE_DISCONNECTED_CB:
             fprintf(stdout, "A2DP Source DisConnected \n");
             media_playing = false;
-            playStatus = BTRC_PLAYSTATE_ERROR;
+            playStatus = BTRC_PLAYSTATE_STOPPED;
+            a2dp_playstatus = A2DP_SOURCE_AUDIO_STOPPED;
             mCurrentTrackID = NO_TRACK_SELECTED;
             pA2dpSource->mAbsVolRemoteSupported = false;
             BtA2dpCloseOutputStream();
@@ -2598,6 +2755,92 @@ void A2dp_Source::state_pending_handler(BtEvent* pEvent) {
     }
 }
 
+void A2dp_Source::SendStartStreamReq(){
+    sBtA2dpSourceVendorInterface->start_stream(&mConnectedDevice);
+}
+
+void A2dp_Source::SendSuspendStreamReq(){
+    sBtA2dpSourceVendorInterface->suspend_stream(&mConnectedDevice);
+}
+
+void A2dp_Source::SendEncodedData(){
+    uint8_t no_of_frames=0;
+    uint8_t sbc_frame_size=0;
+    uint16_t data_pushed = 0;
+    uint8_t rtp_header =0;
+    A2DP_SBC_FRAME sbc_frame;
+    uint8_t* p_buf = (uint8_t*)osi_malloc(MTU_src);
+    if(p_buf == NULL)
+    {
+        ALOGD(LOGTAG_A2DP "memory allocation failed");
+        return;
+    }
+    ALOGD(LOGTAG_A2DP "pump_encoded_data is true , reading from sink");
+    pthread_mutex_lock(&a2dp_sink_relay_mutex);
+    if(list_is_empty(a2dp_sink_relay_data_list))
+    {
+        pthread_mutex_unlock(&a2dp_sink_relay_mutex);
+        return;
+    }
+    t_SINK_RELAY_DATA* ptr = (t_SINK_RELAY_DATA*)list_front(a2dp_sink_relay_data_list);
+    uint8_t* data_ptr;
+    data_ptr = (uint8_t*)(ptr + 1);
+    rtp_header = get_rtp_offset(data_ptr,A2DP_SINK_AUDIO_CODEC_SBC);
+    memcpy(p_buf,data_ptr,rtp_header+1);// copying rtp header and Media packet header
+    data_pushed += rtp_header+1;
+    if(ptr->offset < rtp_header+1)
+        ptr->offset = rtp_header+1;
+    while((data_pushed < MTU_src) && (no_of_frames < 7))
+    {
+        while(*(data_ptr+ptr->offset)!= SBC_SYNCWORD)
+        {
+            ALOGD(LOGTAG_A2DP "syncword doesn't match");
+            data_ptr++;
+            ptr->offset++;
+        }
+        sbc_frame_size = A2DP_SBC_Calculate_FrameLength(&sbc_frame, data_ptr+ptr->offset);
+        ALOGD(LOGTAG_A2DP "SBC calculated frame length : %d", sbc_frame_size);
+        if((data_pushed+sbc_frame_size) > MTU_src)
+            break;
+        memcpy(p_buf+data_pushed,data_ptr+ptr->offset,sbc_frame_size);
+        data_pushed += sbc_frame_size;
+        ptr->offset += sbc_frame_size;
+        no_of_frames++;
+
+        if(ptr->offset >= ptr->len)
+        {
+            list_remove(a2dp_sink_relay_data_list, ptr);
+            osi_free(ptr);
+            if(list_is_empty(a2dp_sink_relay_data_list))
+                break;
+            ptr = (t_SINK_RELAY_DATA*)list_front(a2dp_sink_relay_data_list);
+            data_ptr = (uint8_t*)(ptr + 1);
+            uint8_t new_rtp_header =get_rtp_offset(data_ptr,A2DP_SINK_AUDIO_CODEC_SBC);;
+            ptr->offset = new_rtp_header+1;
+        }
+    }
+
+    sequence_number++;
+
+    *(p_buf+3) = (uint8_t) sequence_number;
+    *(p_buf+2) = (uint8_t)(sequence_number>>8);
+
+    uint8_t *temp_timestamp;
+    temp_timestamp = (uint8_t*) &timestamp;
+    *(p_buf+7) = (uint8_t)(timestamp);
+    *(p_buf+6) = (uint8_t)(timestamp>>8);
+    *(p_buf+5) = (uint8_t)(timestamp>>16);
+    *(p_buf+4) = (uint8_t)(timestamp>>24);
+
+    *(p_buf + rtp_header) = no_of_frames;
+    timestamp += no_of_frames*sbc_frame.nrof_subbands*sbc_frame.nrof_blocks;
+    pthread_mutex_unlock(&a2dp_sink_relay_mutex);
+    sBtA2dpSourceVendorInterface->btav_send_encoded_data_vendor(&mConnectedDevice,p_buf,data_pushed,A2DP_SINK_AUDIO_CODEC_SBC);
+    ALOGD(LOGTAG_A2DP "sent one packet of encoded data contaning %d sbc frames and data pushed = %d", no_of_frames, data_pushed);
+    osi_free(p_buf);
+    return;
+}
+
 void A2dp_Source::state_connected_handler(BtEvent* pEvent) {
     char str[18];
     bt_bdaddr_t mDevice;
@@ -2621,7 +2864,7 @@ void A2dp_Source::state_connected_handler(BtEvent* pEvent) {
             bdaddr_to_string(&mConnectedDevice, str, 18);
             fprintf(stdout, "A2DP Source DisConnecting: %s\n", str);
             media_playing = false;
-            playStatus = BTRC_PLAYSTATE_ERROR;
+            playStatus = BTRC_PLAYSTATE_STOPPED;
             mCurrentTrackID = NO_TRACK_SELECTED;
             pA2dpSource->mAbsVolRemoteSupported = false;
             if (sBtA2dpSourceInterface != NULL) {
@@ -2636,7 +2879,8 @@ void A2dp_Source::state_connected_handler(BtEvent* pEvent) {
             break;
         case A2DP_SOURCE_DISCONNECTED_CB:
             media_playing = false;
-            playStatus = BTRC_PLAYSTATE_ERROR;
+            playStatus = BTRC_PLAYSTATE_STOPPED;
+            a2dp_playstatus = A2DP_SOURCE_AUDIO_STOPPED;
             mCurrentTrackID = NO_TRACK_SELECTED;
             pA2dpSource->mAbsVolRemoteSupported = false;
             BtA2dpCloseOutputStream();
@@ -2857,6 +3101,8 @@ A2dp_Source :: A2dp_Source(const bt_interface_t *bt_interface, config_t *config)
     mPreviousAddrPlayerId = 0;
     mCurrentAddrPlayerId = 0;
     mAbsVolRemoteSupported = false;
+    sequence_number = 0;
+    timestamp = 0;
     memset(&mConnectedDevice, 0, sizeof(bt_bdaddr_t));
     memset(&mConnectingDevice, 0, sizeof(bt_bdaddr_t));
     memset(&mConnectedAvrcpDevice, 0, sizeof(bt_bdaddr_t));

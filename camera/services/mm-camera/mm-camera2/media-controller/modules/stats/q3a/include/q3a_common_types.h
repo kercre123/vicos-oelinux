@@ -369,6 +369,7 @@ typedef enum {
   STATS_RS     = (1<<12),
   STATS_IHISTO = (1<<13),
   STATS_HDR_VID = (1<<14),
+  STATS_SHDR = (1<<15)
 } stats_type_t;
 
 /**

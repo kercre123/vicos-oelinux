@@ -1,5 +1,7 @@
 # sources and intermediate files are separated
 
+external_bt_path := $(top_srcdir)/../../vendor/qcom/opensource/bluetooth
+
 AM_CFLAGS = -Wall \
         -Wundef \
         -Wstrict-prototypes \
@@ -14,12 +16,12 @@ AM_CPPFLAGS = \
         -I../hci/include \
         -I../include \
         -I../stack/include \
-		-I$(WORKSPACE)/vendor/qcom/opensource/bluetooth/system_bt_ext
+        -I$(external_bt_path)/system_bt_ext
 
 c_sources = \
         src/classic/peer.c \
         src/controller.c \
-		$(WORKSPACE)/vendor/qcom/opensource/bluetooth/system_bt_ext/device/src/interop.c
+        $(external_bt_path)/system_bt_ext/device/src/interop.c
 
 common_LDFLAGS = -lpthread
 common_CFLAGS =  $(AM_CFLAGS) -fPIC -D_GNU_SOURCE

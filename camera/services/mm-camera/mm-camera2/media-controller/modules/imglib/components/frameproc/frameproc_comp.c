@@ -680,6 +680,7 @@ int frameproc_comp_check_create_bundle(frameproc_comp_t *p_comp)
       }
     }
 
+    p_msg->type = IMG_MSG_BUNDLE;
     status = img_q_enqueue(&p_comp->msgQ, p_msg);
     if (IMG_ERROR(status)) {
       IDBG_ERROR("%s:%d] Cannot enqueue bundle", __func__, __LINE__);

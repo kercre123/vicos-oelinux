@@ -12,6 +12,7 @@
 #include <linux/msm_ion.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 /**
  * CONSTANTS and MACROS

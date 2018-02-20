@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved.
+ * Copyright (c) 2013, 2017 Qualcomm Technologies, Inc. All Rights Reserved.
  *  Qualcomm Technologies Proprietary and Confidential.
  */
 
@@ -67,6 +67,7 @@ static boolean is_module_query_mod(mct_module_t *module, void *cap,
 #else
   query_cap->stats_cap.supported_is_types[eis_count++] = IS_TYPE_DIS;
 #endif
+  query_cap->stats_cap.supported_is_types[eis_count++] = IS_TYPE_DIG_GIMB;
 
   query_cap->stats_cap.supported_is_types_cnt = eis_count;
   query_cap->stats_cap.supported_is_type_margins[0] = 0.1;

@@ -65,7 +65,7 @@ bin_PROGRAMS += weston
 if ENABLE_DRM_COMPOSITOR
 COMPOSITOR_LIBS += -lgbm -lEGL_adreno -lGLESv2_adreno
 COMPOSITOR_CFLAGS += -DENABLE_EGL $(AM_CPPFLAGS)
-COMPOSITOR_LIBS += -lsdmutils -lhdr_tm -lsdmcore -lsdedrm
+COMPOSITOR_LIBS += -lsdmutils -lgpu_tonemapper -lhdr_tm -lsdmcore -lsdedrm
 endif
 
 weston_LDFLAGS = -export-dynamic
@@ -290,6 +290,7 @@ drm_backend_la_SOURCES =			\
 	shared/timespec-util.h			\
 	src/libbacklight.c			\
 	src/libbacklight.h			\
+	sdm-service/sdm_display_tonemapper.cpp	\
 	sdm-service/sdm_display.cpp		\
 	sdm-service/sdm_display_debugger.cpp	\
 	sdm-service/sdm_display_buffer_allocator.cpp \

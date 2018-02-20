@@ -32,19 +32,19 @@
 
 */
 /*====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*
-  Copyright (c) 2006-2015 Qualcomm Technologies, Inc. All rights reserved.
+  Copyright (c) 2006-2015, 2017 Qualcomm Technologies, Inc. All rights reserved.
   Confidential and Proprietary - Qualcomm Technologies, Inc.
   
 
 
-  $Header: //components/rel/qmimsgs.mpss/4.3.3/nas/api/network_access_service_v01.h#8 $
+  $Header$
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 /*====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7 
-   It was generated on: Mon Mar 13 2017 (Spin 0)
+   It was generated on: Thu Nov  2 2017 (Spin 0)
    From IDL File: network_access_service_v01.idl */
 
 /** @defgroup nas_qmi_consts Constant values defined in the IDL */
@@ -59,6 +59,7 @@
 #include "qmi_idl_lib.h"
 #include "common_v01.h"
 #include "network_access_service_common_v01.h"
+#include "voice_nas_services_common_v01.h"
 
 
 #ifdef __cplusplus
@@ -71,11 +72,11 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define NAS_V01_IDL_MAJOR_VERS 0x01
 /** Revision Number of the IDL used to generate this file */
-#define NAS_V01_IDL_MINOR_VERS 0xBA
+#define NAS_V01_IDL_MINOR_VERS 0xCA
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define NAS_V01_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
-#define NAS_V01_MAX_MESSAGE_ID 0x00CA
+#define NAS_V01_MAX_MESSAGE_ID 0x00D1
 /**
     @}
   */
@@ -85,9 +86,7 @@ extern "C" {
     @{
   */
 
-/** 
-
- Constants used for various array max lengths */
+/**  Constants used for various array max lengths */
 #define NAS_SIG_STRENGTH_LIST_MAX_V01 2
 #define NAS_SIG_STRENGTH_THRESHOLD_LIST_MAX_V01 5
 #define NAS_ECIO_THRESHOLD_LIST_MAX_V01 10
@@ -119,6 +118,9 @@ extern "C" {
 #define NAS_PLMN_NAME_MAX_V01 255
 #define QMI_NAS_UATI_LENGTH_V01 16
 #define NAS_CA_BAND_COMBO_MAX_LEN_V01 2304
+#define NAS_WCDMA_ARFCN_LIST_MAX_V01 10
+#define NAS_LTE_ARFCN_LIST_MAX_V01 10
+#define NAS_PREFERRED_PLMN_LIST_MAX_V01 40
 #define QMI_NAS_REQUEST_SIG_INFO_RSSI_BIT_V01 0
 #define QMI_NAS_REQUEST_SIG_INFO_ECIO_BIT_V01 1
 #define QMI_NAS_REQUEST_SIG_INFO_IO_BIT_V01 2
@@ -154,6 +156,7 @@ extern "C" {
 #define QMI_NAS_RAT_MODE_PREF_UMTS_BIT_V01 3
 #define QMI_NAS_RAT_MODE_PREF_LTE_BIT_V01 4
 #define QMI_NAS_RAT_MODE_PREF_TDSCDMA_BIT_V01 5
+#define QMI_NAS_RAT_MODE_PREF_NR5G_BIT_V01 6
 #define QMI_NAS_DDTM_ACTION_SUPPRESS_L2ACK_BIT_V01 0
 #define QMI_NAS_DDTM_ACTION_SUPPRESS_REG_BIT_V01 1
 #define QMI_NAS_DDTM_ACTION_IGNORE_SO_PAGES_BIT_V01 2
@@ -333,6 +336,23 @@ typedef enum {
     @{
   */
 typedef enum {
+  LTE_RRC_STATE_EXT_E_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  LTE_RRC_STATE_EXT_NULL_V01 = 0, /**<  Null \n  */
+  LTE_RRC_STATE_EXT_IDLE_CAMPED_ANYCELL_V01 = 1, /**<  Idle, Camped on Any Cell \n  */
+  LTE_RRC_STATE_EXT_IDLE_CAMPED_NORMAL_V01 = 2, /**<  Idle, Camped Normal \n  */
+  LTE_RRC_STATE_EXT_CONNECTING_V01 = 3, /**<  Connecting \n  */
+  LTE_RRC_STATE_EXT_CONNECTED_V01 = 4, /**<  Connected \n  */
+  LTE_RRC_STATE_EXT_CLOSING_V01 = 5, /**<  Releasing \n  */
+  LTE_RRC_STATE_EXT_E_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}lte_rrc_state_ext_e_type_v01;
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_enums
+    @{
+  */
+typedef enum {
   NAS_LTE_UE_CATEGORY_E_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   LTE_UE_CATEGORY_DEFAULT_V01 = 0, /**<  Default; return to power-up configuration \n  */
   LTE_UE_CATEGORY_1_V01 = 1, /**<  Type~1 \n  */
@@ -368,6 +388,34 @@ typedef enum {
   NAS_PROC_TYPE_IMS_UT_V01 = 5, /**<  IMS UT service  */
   NAS_PROC_TYPE_E_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_proc_type_e_type_v01;
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_enums
+    @{
+  */
+typedef enum {
+  NAS_V2X_STATUS_E_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  NAS_V2X_STATUS_INACTIVE_V01 = 0, /**<  V2X Status is Inactive \n   */
+  NAS_V2X_STATUS_ACTIVE_V01 = 1, /**<  V2X Status is Active \n   */
+  NAS_V2X_STATUS_SUSPENDED_V01 = 2, /**<  V2X Status is Suspended  */
+  NAS_V2X_STATUS_E_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}nas_v2x_status_e_type_v01;
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_enums
+    @{
+  */
+typedef enum {
+  NAS_V2X_CAUSE_E_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  NAS_V2X_STATUS_CAUSE_TIMING_INVALID_V01 = 0, 
+  NAS_V2X_STATUS_CAUSE_CONFIG_INVALID_V01 = 1, 
+  NAS_V2X_STATUS_CAUSE_UE_MODE_INVALID_V01 = 2, 
+  NAS_V2X_CAUSE_E_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}nas_v2x_cause_e_type_v01;
 /**
     @}
   */
@@ -918,12 +966,17 @@ typedef enum {
   NAS_ACTIVE_BAND_E_UTRA_OPERATING_BAND_46_V01 = 163, 
   NAS_ACTIVE_BAND_E_UTRA_OPERATING_BAND_27_V01 = 164, 
   NAS_ACTIVE_BAND_E_UTRA_OPERATING_BAND_31_V01 = 165, 
+  NAS_ACTIVE_BAND_E_UTRA_OPERATING_BAND_71_V01 = 166, 
+  NAS_ACTIVE_BAND_E_UTRA_OPERATING_BAND_47_V01 = 167, 
+  NAS_ACTIVE_BAND_E_UTRA_OPERATING_BAND_48_V01 = 168, 
   NAS_ACTIVE_BAND_TDSCDMA_BAND_A_V01 = 200, 
   NAS_ACTIVE_BAND_TDSCDMA_BAND_B_V01 = 201, 
   NAS_ACTIVE_BAND_TDSCDMA_BAND_C_V01 = 202, 
   NAS_ACTIVE_BAND_TDSCDMA_BAND_D_V01 = 203, 
   NAS_ACTIVE_BAND_TDSCDMA_BAND_E_V01 = 204, 
   NAS_ACTIVE_BAND_TDSCDMA_BAND_F_V01 = 205, 
+  NAS_ACTIVE_BAND_NR5G_BAND_1_V01 = 250, 
+  NAS_ACTIVE_BAND_NR5G_BAND_2_V01 = 251, 
   NAS_ACTIVE_BAND_ENUM_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_active_band_enum_v01;
 /**
@@ -943,7 +996,8 @@ typedef struct {
        - 0x04 -- GSM \n
        - 0x05 -- UMTS \n
        - 0x08 -- LTE \n
-       - 0x09 -- TD-SCDMA
+       - 0x09 -- TD-SCDMA \n
+       - 0x0C -- NR5G
   */
 
   nas_active_band_enum_v01 active_band;
@@ -952,8 +1006,9 @@ typedef struct {
       - 00 to 39   -- CDMA band classes  \n
       - 40 to 79   -- GSM band classes   \n
       - 80 to 91   -- WCDMA band classes \n
-      - 120 to 165 -- LTE band classes   \n
-      - 200 to 205 -- TD-SCDMA band classes
+      - 120 to 168 -- LTE band classes   \n
+      - 200 to 205 -- TD-SCDMA band classes \n
+      - 250 to 251 -- NR-5G band classes
   */
 
   uint16_t active_channel;
@@ -987,7 +1042,7 @@ typedef struct {
       - 00 to 39   -- CDMA band classes  \n
       - 40 to 79   -- GSM band classes   \n
       - 80 to 91   -- WCDMA band classes \n
-      - 120 to 165 -- LTE band classes   \n
+      - 120 to 168 -- LTE band classes   \n
       - 200 to 205 -- TD-SCDMA band classes \n
       - 0xFFFF is invalid; indicates that the UE moved out from the dedicated band
   */
@@ -1001,12 +1056,18 @@ typedef struct {
   */
 typedef enum {
   NAS_BANDWIDTH_ENUM_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  NAS_LTE_BW_NRB_6_V01 = 0, /**<  1.4 MHz bandwidth \n  */
-  NAS_LTE_BW_NRB_15_V01 = 1, /**<  3 MHz bandwidth \n  */
-  NAS_LTE_BW_NRB_25_V01 = 2, /**<  5 MHz bandwidth \n  */
-  NAS_LTE_BW_NRB_50_V01 = 3, /**<  10 MHz bandwidth \n  */
-  NAS_LTE_BW_NRB_75_V01 = 4, /**<  15 MHz bandwidth \n  */
-  NAS_LTE_BW_NRB_100_V01 = 5, /**<  20 MHz bandwidth  */
+  NAS_LTE_BW_NRB_6_V01 = 0, /**<  LTE 1.4 MHz bandwidth \n  */
+  NAS_LTE_BW_NRB_15_V01 = 1, /**<  LTE 3 MHz bandwidth \n  */
+  NAS_LTE_BW_NRB_25_V01 = 2, /**<  LTE 5 MHz bandwidth \n  */
+  NAS_LTE_BW_NRB_50_V01 = 3, /**<  LTE 10 MHz bandwidth \n  */
+  NAS_LTE_BW_NRB_75_V01 = 4, /**<  LTE 15 MHz bandwidth \n  */
+  NAS_LTE_BW_NRB_100_V01 = 5, /**<  LTE 20 MHz bandwidth \n */
+  NAS_NR5G_BW_NRB_6_V01 = 6, /**<  NR5G 1.4 MHz bandwidth \n  */
+  NAS_NR5G_BW_NRB_15_V01 = 7, /**<  NR5G 3 MHz bandwidth \n  */
+  NAS_NR5G_BW_NRB_25_V01 = 8, /**<  NR5G 5 MHz bandwidth \n  */
+  NAS_NR5G_BW_NRB_50_V01 = 9, /**<  NR5G 10 MHz bandwidth \n  */
+  NAS_NR5G_BW_NRB_75_V01 = 10, /**<  NR5G 15 MHz bandwidth \n  */
+  NAS_NR5G_BW_NRB_100_V01 = 11, /**<  NR5G 20 MHz bandwidth  */
   NAS_BANDWIDTH_ENUM_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_bandwidth_enum_type_v01;
 /**
@@ -1030,19 +1091,24 @@ typedef struct {
       - NAS_RADIO_IF_GPS (0x07) --  GPS \n 
       - NAS_RADIO_IF_LTE (0x08) --  LTE \n 
       - NAS_RADIO_IF_TDSCDMA (0x09) --  TD-SCDMA \n 
-      - NAS_RADIO_IF_LTE_M1 (0x0a) --  LTE-M1 \n 
-      - NAS_RADIO_IF_LTE_NB1 (0x0b) --  LTE-NB1 \n 
+      - NAS_RADIO_IF_NR5G (0x0C) --  NR5G \n 
       - NAS_RADIO_IF_NO_CHANGE (-1) --  No change 
  */
 
   nas_bandwidth_enum_type_v01 bandwidth;
   /**<   Bandwidth. Values: \n
-      - NAS_LTE_BW_NRB_6 (0) --  1.4 MHz bandwidth \n 
-      - NAS_LTE_BW_NRB_15 (1) --  3 MHz bandwidth \n 
-      - NAS_LTE_BW_NRB_25 (2) --  5 MHz bandwidth \n 
-      - NAS_LTE_BW_NRB_50 (3) --  10 MHz bandwidth \n 
-      - NAS_LTE_BW_NRB_75 (4) --  15 MHz bandwidth \n 
-      - NAS_LTE_BW_NRB_100 (5) --  20 MHz bandwidth 
+      - NAS_LTE_BW_NRB_6 (0) --  LTE 1.4 MHz bandwidth \n 
+      - NAS_LTE_BW_NRB_15 (1) --  LTE 3 MHz bandwidth \n 
+      - NAS_LTE_BW_NRB_25 (2) --  LTE 5 MHz bandwidth \n 
+      - NAS_LTE_BW_NRB_50 (3) --  LTE 10 MHz bandwidth \n 
+      - NAS_LTE_BW_NRB_75 (4) --  LTE 15 MHz bandwidth \n 
+      - NAS_LTE_BW_NRB_100 (5) --  LTE 20 MHz bandwidth \n
+      - NAS_NR5G_BW_NRB_6 (6) --  NR5G 1.4 MHz bandwidth \n 
+      - NAS_NR5G_BW_NRB_15 (7) --  NR5G 3 MHz bandwidth \n 
+      - NAS_NR5G_BW_NRB_25 (8) --  NR5G 5 MHz bandwidth \n 
+      - NAS_NR5G_BW_NRB_50 (9) --  NR5G 10 MHz bandwidth \n 
+      - NAS_NR5G_BW_NRB_75 (10) --  NR5G 15 MHz bandwidth \n 
+      - NAS_NR5G_BW_NRB_100 (11) --  NR5G 20 MHz bandwidth 
  */
 }nas_rf_bandwidth_info_type_v01;  /* Type */
 /**
@@ -1541,8 +1607,7 @@ typedef struct {
   /*  LTE Physical Carrier Aggregation Information */
   uint8_t reg_lte_cphy_ca_valid;  /**< Must be set to true if reg_lte_cphy_ca is being passed */
   uint8_t reg_lte_cphy_ca;
-  /**<   Controls the reporting of QMI_NAS_LTE_CPHY_CA_IND 
-        and QMI_NAS_LTE_CPHY_CA_AGG_DL_BW_IND. Values: \n
+  /**<   Controls the reporting of QMI_NAS_LTE_CPHY_CA_IND. Values: \n
        - 0x00 -- Disable (default value) \n
        - 0x01 -- Enable
   */
@@ -1678,6 +1743,33 @@ typedef struct {
   uint8_t lte_rrc_tx_info_ind_valid;  /**< Must be set to true if lte_rrc_tx_info_ind is being passed */
   uint8_t lte_rrc_tx_info_ind;
   /**<   Controls the reporting of QMI_NAS_LTE_RRC_TX_INFO_IND. Values: \n
+      - 0x00 -- Disable (default value) \n
+      - 0x01 -- Enable
+  */
+
+  /* Optional */
+  /*  SUB blocked status info */
+  uint8_t nas_sub_blocked_status_ind_valid;  /**< Must be set to true if nas_sub_blocked_status_ind is being passed */
+  uint8_t nas_sub_blocked_status_ind;
+  /**<   Controls the reporting of QMI_NAS_SUB_BLOCKED_STATUS_IND. Values: \n
+      - 0x00 -- Disable (default value) \n
+      - 0x01 -- Enable
+  */
+
+  /* Optional */
+  /*  E911 Search Failure Indication */
+  uint8_t reg_e911_search_fail_ind_valid;  /**< Must be set to true if reg_e911_search_fail_ind is being passed */
+  uint8_t reg_e911_search_fail_ind;
+  /**<   Controls the reporting of QMI_NAS_E911_SEARCH_FAIL_IND. Values: \n
+      - 0x00 -- Disable (default value) \n
+      - 0x01 -- Enable
+  */
+
+  /* Optional */
+  /*  Reg V2X Status Info */
+  uint8_t reg_v2x_status_ind_valid;  /**< Must be set to true if reg_v2x_status_ind is being passed */
+  uint8_t reg_v2x_status_ind;
+  /**<   Controls the reporting of QMI_NAS_V2X_STATUS_INFO_IND. Values: \n
       - 0x00 -- Disable (default value) \n
       - 0x01 -- Enable
   */
@@ -1979,9 +2071,32 @@ typedef uint64_t lte_band_pref_mask_type_v01;
 #define E_UTRA_OPERATING_BAND_42_V01 ((lte_band_pref_mask_type_v01)0x000020000000000ull) /**<  Bit  41 -- E-UTRA Operating Band 42 \n  */
 #define E_UTRA_OPERATING_BAND_43_V01 ((lte_band_pref_mask_type_v01)0x000040000000000ull) /**<  Bit  42 -- E-UTRA Operating Band 43 \n  */
 #define E_UTRA_OPERATING_BAND_46_V01 ((lte_band_pref_mask_type_v01)0x000200000000000ull) /**<  Bit  45 -- E-UTRA Operating Band 46 \n   */
+#define E_UTRA_OPERATING_BAND_47_V01 ((lte_band_pref_mask_type_v01)0x000400000000000ull) /**<  Bit  46 -- E-UTRA Operating Band 47 \n  */
+#define E_UTRA_OPERATING_BAND_48_V01 ((lte_band_pref_mask_type_v01)0x000800000000000ull) /**<  Bit  47 -- E-UTRA Operating Band 48 \n  */
 #define E_UTRA_OPERATING_BAND_125_V01 ((lte_band_pref_mask_type_v01)0x1000000000000000ull) /**<  Bit  60 -- E-UTRA Operating Band 125 \n  */
 #define E_UTRA_OPERATING_BAND_126_V01 ((lte_band_pref_mask_type_v01)0x2000000000000000ull) /**<  Bit  61 -- E-UTRA Operating Band 126 \n  */
 #define E_UTRA_OPERATING_BAND_127_V01 ((lte_band_pref_mask_type_v01)0x4000000000000000ull) /**<  Bit  62 -- E-UTRA Operating Band 127   */
+/** @addtogroup nas_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint64_t bits_1_64;
+  /**<   Bits 1 to 64 of the 256-bit NR5G Operating Band bitmask*/
+
+  uint64_t bits_65_128;
+  /**<   Bits 65 to 128 of the 256-bit NR5G Operating Band bitmask*/
+
+  uint64_t bits_129_192;
+  /**<   Bits 129 to 192 of the 256-bit NR5G Operating Band bitmask*/
+
+  uint64_t bits_193_256;
+  /**<   Bits 193 to 256 of the 256-bit NR5G Operating Band bitmask*/
+}nas_nr5g_band_pref_mask_type_v01;  /* Type */
+/**
+    @}
+  */
+
 typedef uint64_t nas_tdscdma_band_pref_mask_type_v01;
 #define NAS_TDSCDMA_BAND_A_V01 ((nas_tdscdma_band_pref_mask_type_v01)0x01ull) /**<  TD-SCDMA Band A \n  */
 #define NAS_TDSCDMA_BAND_B_V01 ((nas_tdscdma_band_pref_mask_type_v01)0x02ull) /**<  TD-SCDMA Band B \n  */
@@ -2000,6 +2115,27 @@ typedef enum {
   NAS_CIOT_SYS_MODE_LTE_NB1_V01 = 0x03, /**<  Camped on LTE NB1  */
   NAS_CAMPED_CIOT_LTE_OP_MODE_ENUM_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_camped_ciot_lte_op_mode_enum_type_v01;
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint64_t bits_1_64;
+  /**<   Bits 1 to 64 of the 256-bit LTE E-UTRA Operating Band bitmask*/
+
+  uint64_t bits_65_128;
+  /**<   Bits 65 to 128 of the 256-bit LTE E-UTRA Operating Band bitmask*/
+
+  uint64_t bits_129_192;
+  /**<   Bits 129 to 192 of the 256-bit LTE E-UTRA Operating Band bitmask*/
+
+  uint64_t bits_193_256;
+  /**<   Bits 193 to 256 of the 256-bit LTE E-UTRA Operating Band bitmask*/
+}lte_band_pref_mask_ext_type_v01;  /* Type */
 /**
     @}
   */
@@ -2085,7 +2221,7 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE M1 Band Preference */
+  /*  LTE M1 Band Preference (Deprecated; use LTE M1 Band Preference Extended) */
   uint8_t lte_m1_band_pref_valid;  /**< Must be set to true if lte_m1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_m1_band_pref;
   /**<   Bitmask representing the LTE M1 band preference.
@@ -2094,9 +2230,27 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE NB1 Band Preference */
+  /*  LTE NB1 Band Preference (Deprecated; use LTE NB1 Band Preference Extended) */
   uint8_t lte_nb1_band_pref_valid;  /**< Must be set to true if lte_nb1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_nb1_band_pref;
+  /**<   Bitmask representing the LTE NB1 band preference.
+       See Table @latexonly\ref{tbl:lteBandPreference}@endlatexonly 
+       for details.  
+  */
+
+  /* Optional */
+  /*  LTE M1 Band Preference Extended */
+  uint8_t lte_m1_band_pref_ext_valid;  /**< Must be set to true if lte_m1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_m1_band_pref_ext;
+  /**<   Bitmask representing the LTE M1 band preference.
+       See Table @latexonly\ref{tbl:lteBandPreference}@endlatexonly 
+       for details.  
+  */
+
+  /* Optional */
+  /*  LTE NB1 Band Preference Extended */
+  uint8_t lte_nb1_band_pref_ext_valid;  /**< Must be set to true if lte_nb1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_nb1_band_pref_ext;
   /**<   Bitmask representing the LTE NB1 band preference.
        See Table @latexonly\ref{tbl:lteBandPreference}@endlatexonly 
        for details.  
@@ -3142,6 +3296,20 @@ typedef enum {
     @}
   */
 
+/** @addtogroup nas_qmi_enums
+    @{
+  */
+typedef enum {
+  NAS_CP_SMS_SERVICE_STATUS_E_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  NAS_CP_SMS_SERVICE_STATUS_NOT_AVAILABLE_V01 = 0x00, /**<  SMS service status  over CP is not available \n   */
+  NAS_CP_SMS_SERVICE_STATUS_TEMP_FAILURE_V01 = 0x01, /**<  SMS service status  over CP is not available temporarily \n   */
+  NAS_CP_SMS_SERVICE_STATUS_AVAILABLE_V01 = 0x02, /**<  SMS service status  over CP is available \n   */
+  NAS_CP_SMS_SERVICE_STATUS_E_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}nas_cp_sms_service_status_e_type_v01;
+/**
+    @}
+  */
+
 /** @addtogroup nas_qmi_messages
     @{
   */
@@ -3705,25 +3873,6 @@ typedef enum {
   NAS_NETWORK_DESC_ENCODING_GSM_7_BIT_DEFAULT_V01 = 0x09, 
   NAS_NETWORK_DESC_ENCODING_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_network_desc_encoding_type_v01;
-/**
-    @}
-  */
-
-/** @addtogroup nas_qmi_aggregates
-    @{
-  */
-typedef struct {
-
-  /*  MCC */
-  uint16_t mcc;
-  /**<   A 16-bit integer representation of MCC. Range: 0 to 999.
-  */
-
-  /*  MNC */
-  uint16_t mnc;
-  /**<   A 16-bit integer representation of MNC. Range: 0 to 999.
-  */
-}nas_plmn_id_type_v01;  /* Type */
 /**
     @}
   */
@@ -4448,7 +4597,8 @@ typedef struct {
         - 0x04 -- GSM \n
         - 0x05 -- UMTS \n
         - 0x08 -- LTE \n
-        - 0x09 -- TD-SCDMA
+        - 0x09 -- TD-SCDMA \n
+        - 0x0C -- NR5G
    */
 
   nas_active_band_enum_v01 active_band;
@@ -4457,8 +4607,9 @@ typedef struct {
        - 00 to 39   -- CDMA band classes  \n
        - 40 to 79   -- GSM band classes   \n
        - 80 to 91   -- WCDMA band classes \n
-       - 120 to 165 -- LTE band classes   \n
-       - 200 to 205 -- TD-SCDMA band classes
+       - 120 to 168 -- LTE band classes   \n
+       - 200 to 205 -- TD-SCDMA band classes \n
+       - 250 to 251 -- NR-5G band classes
    */
 
   uint32_t active_channel;
@@ -4708,6 +4859,7 @@ typedef enum {
   NAS_RADIO_TDSCDMA_V01 = 0x09, /**<  TD-SCDMA \n  */
   NAS_RADIO_LTE_M1_V01 = 0x0a, /**<  LTE-M1 \n  */
   NAS_RADIO_LTE_NB1_V01 = 0x0b, /**<  LTE-M1 \n  */
+  NAS_RADIO_NR5G_V01 = 0x0c, /**<  NR5G \n  */
   NAS_RADIO_NO_CHANGE_V01 = -1, /**<  No change  */
   NAS_ACQ_ORDER_PREF_RADIO_IF_ENUM_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_acq_order_pref_radio_if_enum_v01;
@@ -4747,13 +4899,6 @@ typedef struct {
     @}
   */
 
-typedef uint16_t mode_pref_mask_type_v01;
-#define QMI_NAS_RAT_MODE_PREF_CDMA2000_1X_V01 ((mode_pref_mask_type_v01)0x01) 
-#define QMI_NAS_RAT_MODE_PREF_CDMA2000_HRPD_V01 ((mode_pref_mask_type_v01)0x02) 
-#define QMI_NAS_RAT_MODE_PREF_GSM_V01 ((mode_pref_mask_type_v01)0x04) 
-#define QMI_NAS_RAT_MODE_PREF_UMTS_V01 ((mode_pref_mask_type_v01)0x08) 
-#define QMI_NAS_RAT_MODE_PREF_LTE_V01 ((mode_pref_mask_type_v01)0x10) 
-#define QMI_NAS_RAT_MODE_PREF_TDSCDMA_V01 ((mode_pref_mask_type_v01)0x20) 
 /** @addtogroup nas_qmi_aggregates
     @{
   */
@@ -4794,27 +4939,6 @@ typedef struct {
     @}
   */
 
-/** @addtogroup nas_qmi_aggregates
-    @{
-  */
-typedef struct {
-
-  uint64_t bits_1_64;
-  /**<   Bits 1 to 64 of the 256-bit LTE E-UTRA Operating Band bitmask*/
-
-  uint64_t bits_65_128;
-  /**<   Bits 65 to 128 of the 256-bit LTE E-UTRA Operating Band bitmask*/
-
-  uint64_t bits_129_192;
-  /**<   Bits 129 to 192 of the 256-bit LTE E-UTRA Operating Band bitmask*/
-
-  uint64_t bits_193_256;
-  /**<   Bits 193 to 256 of the 256-bit LTE E-UTRA Operating Band bitmask*/
-}lte_band_pref_mask_ext_type_v01;  /* Type */
-/**
-    @}
-  */
-
 /** @addtogroup nas_qmi_messages
     @{
   */
@@ -4844,7 +4968,8 @@ typedef struct {
        - Bit 2 (0x04) -- QMI_NAS_RAT_MODE_PREF_ GSM            -- GSM \n
        - Bit 3 (0x08) -- QMI_NAS_RAT_MODE_PREF_ UMTS           -- UMTS \n
        - Bit 4 (0x10) -- QMI_NAS_RAT_MODE_PREF_ LTE            -- LTE \n
-       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA
+       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA \n
+       - Bit 6 (0x40) -- QMI_NAS_RAT_MODE_PREF_ NR5G           -- NR5G
 
        \vspace{3pt}
        All unlisted bits are reserved for future use and the service point
@@ -4973,7 +5098,8 @@ typedef struct {
     - 0x04 -- NAS_RADIO_IF_GSM         -- GSM \n
     - 0x05 -- NAS_RADIO_IF_UMTS        -- UMTS \n
     - 0x08 -- NAS_RADIO_IF_LTE         -- LTE \n
-    - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA
+    - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA \n
+    - 0x0C -- NAS_RADIO_IF_NR5G        -- NR5G
   */
 
   /* Optional */
@@ -5024,6 +5150,7 @@ typedef struct {
     - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA \n
     - 0x0A -- NAS_RADIO_IF_LTE_M1      -- LTE-M1 \n
     - 0x0B -- NAS_RADIO_IF_LTE_NB1     -- LTE-NB1
+    - 0x0C -- NAS_RADIO_IF_NR5G        -- NR5G
   */
 
   /* Optional */
@@ -5072,7 +5199,7 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE M1 Band Preference */
+  /*  LTE M1 Band Preference (Deprecated; use LTE M1 Band Preference Extended) */
   uint8_t lte_m1_band_pref_valid;  /**< Must be set to true if lte_m1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_m1_band_pref;
   /**<   Bitmask representing the LTE M1 band preference to be set.
@@ -5085,7 +5212,7 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE NB1 Band Preference */
+  /*  LTE NB1 Band Preference (Deprecated; use LTE NB1 Band Preference Extended) */
   uint8_t lte_nb1_band_pref_valid;  /**< Must be set to true if lte_nb1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_nb1_band_pref;
   /**<   Bitmask representing the LTE NB1 band preference to be set.
@@ -5101,8 +5228,10 @@ typedef struct {
   /*  LTE Operational Mode */
   uint8_t man_ciot_lte_mode_valid;  /**< Must be set to true if man_ciot_lte_mode is being passed */
   nas_camped_ciot_lte_op_mode_enum_type_v01 man_ciot_lte_mode;
-  /**<   This TLV will be used when the net_sel_pref is MANUAL and RAT TLV is LTE.
- This TLV will indicate the te operational mode to be used during the manual LTE PLMN selection. 
+  /**<   This TLV is used when the net_sel_pref is MANUAL and RAT TLV is LTE.
+
+ This TLV indicates the the operational mode to be used during the manual
+ LTE PLMN selection. Values: \n
  
       - NAS_CIOT_SYS_MODE_NO_SRV (0x00) --  No service \n 
       - NAS_CIOT_SYS_MODE_LTE_WB (0x01) --  Camped on LTE wideband \n 
@@ -5126,6 +5255,33 @@ typedef struct {
     - 0x09 -- NAS_RADIO_TDSCDMA     -- TD-SCDMA\n
     - 0x0a -- NAS_RADIO_LTE_M1     -- LTE_M1\n
     - 0x0b -- NAS_RADIO_LTE_NB1     -- LTE_NB1
+  */
+
+  /* Optional */
+  /*  NR5G Band Preference */
+  uint8_t nr5g_band_pref_valid;  /**< Must be set to true if nr5g_band_pref is being passed */
+  nas_nr5g_band_pref_mask_type_v01 nr5g_band_pref;
+
+  /* Optional */
+  /*  LTE M1 Band Preference Extended */
+  uint8_t lte_m1_band_pref_ext_valid;  /**< Must be set to true if lte_m1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_m1_band_pref_ext;
+  /**<   Bitmask representing the LTE M1 band preference to be set.
+
+       \vspace{3pt}
+       If this field is not present, the modem will use the 
+       M1 band preference value read from the NV.
+  */
+
+  /* Optional */
+  /*  LTE NB1 Band Preference Extended */
+  uint8_t lte_nb1_band_pref_ext_valid;  /**< Must be set to true if lte_nb1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_nb1_band_pref_ext;
+  /**<   Bitmask representing the LTE NB1 band preference to be set.
+ 
+       \vspace{3pt}
+       If this field is not present, the modem will use the 
+       NB1 band preference value read from the NV.
   */
 }nas_set_system_selection_preference_req_msg_v01;  /* Message */
 /**
@@ -5219,7 +5375,8 @@ typedef struct {
        - Bit 2 (0x04) -- QMI_NAS_RAT_MODE_PREF_ GSM            -- GSM \n
        - Bit 3 (0x08) -- QMI_NAS_RAT_MODE_PREF_ UMTS           -- UMTS \n
        - Bit 4 (0x10) -- QMI_NAS_RAT_MODE_PREF_ LTE            -- LTE \n
-       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA
+       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA \n
+       - Bit 6 (0x40) -- QMI_NAS_RAT_MODE_PREF_ NR5G           -- NR5G
 
        \vspace{3pt}
        All unlisted bits are reserved for future use and the service point
@@ -5361,7 +5518,8 @@ typedef struct {
     - 0x04 -- NAS_RADIO_IF_GSM         -- GSM \n
     - 0x05 -- NAS_RADIO_IF_UMTS        -- UMTS \n
     - 0x08 -- NAS_RADIO_IF_LTE         -- LTE \n
-    - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA
+    - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA \n
+    - 0x0C -- NAS_RADIO_IF_NR5G        -- NR5G
   */
 
   /* Optional */
@@ -5435,7 +5593,8 @@ typedef struct {
        - Bit 2 (0x04) -- QMI_NAS_RAT_MODE_PREF_ GSM            -- GSM \n
        - Bit 3 (0x08) -- QMI_NAS_RAT_MODE_PREF_ UMTS           -- UMTS \n
        - Bit 4 (0x10) -- QMI_NAS_RAT_MODE_PREF_ LTE            -- LTE \n
-       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA
+       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA \n
+       - Bit 6 (0x40) -- QMI_NAS_RAT_MODE_PREF_ NR5G           -- NR5G
 
        \vspace{3pt}
        All unlisted bits are reserved for future use and the service point
@@ -5464,7 +5623,7 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE M1 Band Preference */
+  /*  LTE M1 Band Preference (Deprecated; use LTE M1 Band Preference Extended) */
   uint8_t lte_m1_band_pref_valid;  /**< Must be set to true if lte_m1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_m1_band_pref;
   /**<   Bitmask representing the LTE M1 band preference.
@@ -5473,7 +5632,7 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE NB1 Band Preference */
+  /*  LTE NB1 Band Preference (Deprecated; use LTE NB1 Band Preference Extended) */
   uint8_t lte_nb1_band_pref_valid;  /**< Must be set to true if lte_nb1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_nb1_band_pref;
   /**<   Bitmask representing the LTE NB1 band preference.
@@ -5497,6 +5656,29 @@ typedef struct {
     - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA\n
     - 0x0a -- NAS_RADIO_IF_LTE_M1     -- LTE_M1\n
     - 0x0b -- NAS_RADIO_IF_LTE_NB1     -- LTE_NB1
+  */
+
+  /* Optional */
+  /*  NR5G Band Preference */
+  uint8_t nr5g_band_pref_valid;  /**< Must be set to true if nr5g_band_pref is being passed */
+  nas_nr5g_band_pref_mask_type_v01 nr5g_band_pref;
+
+  /* Optional */
+  /*  LTE M1 Band Preference Extended */
+  uint8_t lte_m1_band_pref_ext_valid;  /**< Must be set to true if lte_m1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_m1_band_pref_ext;
+  /**<   Bitmask representing the LTE M1 band preference.
+       See Table @latexonly\ref{tbl:lteBandPreference}@endlatexonly 
+       for details.  
+  */
+
+  /* Optional */
+  /*  LTE NB1 Band Preference Extended */
+  uint8_t lte_nb1_band_pref_ext_valid;  /**< Must be set to true if lte_nb1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_nb1_band_pref_ext;
+  /**<   Bitmask representing the LTE NB1 band preference.
+       See Table @latexonly\ref{tbl:lteBandPreference}@endlatexonly 
+       for details.  
   */
 }nas_get_system_selection_preference_resp_msg_v01;  /* Message */
 /**
@@ -5533,7 +5715,8 @@ typedef struct {
        - Bit 2 (0x04) -- QMI_NAS_RAT_MODE_PREF_ GSM            -- GSM \n
        - Bit 3 (0x08) -- QMI_NAS_RAT_MODE_PREF_ UMTS           -- UMTS \n
        - Bit 4 (0x10) -- QMI_NAS_RAT_MODE_PREF_ LTE            -- LTE \n
-       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA
+       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA \n
+       - Bit 6 (0x40) -- QMI_NAS_RAT_MODE_PREF_ NR5G           -- NR5G
 
        \vspace{3pt}
        All unlisted bits are reserved for future use.
@@ -5641,7 +5824,8 @@ typedef struct {
     - 0x04 -- NAS_RADIO_IF_GSM         -- GSM \n
     - 0x05 -- NAS_RADIO_IF_UMTS        -- UMTS \n
     - 0x08 -- NAS_RADIO_IF_LTE         -- LTE \n
-    - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA
+    - 0x09 -- NAS_RADIO_IF_TDSCDMA     -- TD-SCDMA \n
+    - 0x0C -- NAS_RADIO_IF_NR5G        -- NR5G
   */
 
   /* Optional */
@@ -5715,7 +5899,8 @@ typedef struct {
        - Bit 2 (0x04) -- QMI_NAS_RAT_MODE_PREF_ GSM            -- GSM \n
        - Bit 3 (0x08) -- QMI_NAS_RAT_MODE_PREF_ UMTS           -- UMTS \n
        - Bit 4 (0x10) -- QMI_NAS_RAT_MODE_PREF_ LTE            -- LTE \n
-       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA
+       - Bit 5 (0x20) -- QMI_NAS_RAT_MODE_PREF_ TDSCDMA        -- TD-SCDMA \n
+       - Bit 6 (0x40) -- QMI_NAS_RAT_MODE_PREF_ NR5G           -- NR5G
 
        \vspace{3pt}
        All unlisted bits are reserved for future use and the service point
@@ -5743,7 +5928,7 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE M1 Band Preference */
+  /*  LTE M1 Band Preference (Deprecated; use LTE M1 Band Preference Extended) */
   uint8_t lte_m1_band_pref_valid;  /**< Must be set to true if lte_m1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_m1_band_pref;
   /**<   Bitmask representing the LTE M1 band preference.
@@ -5752,7 +5937,7 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE NB1 Band Preference */
+  /*  LTE NB1 Band Preference (Deprecated; use LTE NB1 Band Preference Extended) */
   uint8_t lte_nb1_band_pref_valid;  /**< Must be set to true if lte_nb1_band_pref is being passed */
   lte_band_pref_mask_type_v01 lte_nb1_band_pref;
   /**<   Bitmask representing the LTE NB1 band preference.
@@ -5776,6 +5961,29 @@ typedef struct {
     - 0x09 -- NAS_RADIO_TDSCDMA     -- TD-SCDMA\n
     - 0x0a -- NAS_RADIO_LTE_M1     -- LTE_M1\n
     - 0x0b -- NAS_RADIO_LTE_NB1     -- LTE_NB1
+  */
+
+  /* Optional */
+  /*  NR5G Band Preference */
+  uint8_t nr5g_band_pref_valid;  /**< Must be set to true if nr5g_band_pref is being passed */
+  nas_nr5g_band_pref_mask_type_v01 nr5g_band_pref;
+
+  /* Optional */
+  /*  LTE M1 Band Preference Extended */
+  uint8_t lte_m1_band_pref_ext_valid;  /**< Must be set to true if lte_m1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_m1_band_pref_ext;
+  /**<   Bitmask representing the LTE M1 band preference.
+       See Table @latexonly\ref{tbl:lteBandPreference}@endlatexonly 
+       for details.  
+  */
+
+  /* Optional */
+  /*  LTE NB1 Band Preference Extended */
+  uint8_t lte_nb1_band_pref_ext_valid;  /**< Must be set to true if lte_nb1_band_pref_ext is being passed */
+  lte_band_pref_mask_ext_type_v01 lte_nb1_band_pref_ext;
+  /**<   Bitmask representing the LTE NB1 band preference.
+       See Table @latexonly\ref{tbl:lteBandPreference}@endlatexonly 
+       for details.  
   */
 }nas_system_selection_preference_ind_msg_v01;  /* Message */
 /**
@@ -8209,6 +8417,19 @@ typedef struct {
       - NAS_RRC_IDLE (0) --  Status: Idle \n 
       - NAS_RRC_CONNECTED (1) --  Status: Connected  
  */
+
+  /* Optional */
+  /*  LTE Info Extended - RRC State */
+  uint8_t lte_rrc_state_ext_valid;  /**< Must be set to true if lte_rrc_state_ext is being passed */
+  lte_rrc_state_ext_e_type_v01 lte_rrc_state_ext;
+  /**<   LTE RRC state. Values: \n
+      - LTE_RRC_STATE_EXT_NULL (0) --  Null \n 
+      - LTE_RRC_STATE_EXT_IDLE_CAMPED_ANYCELL (1) --  Idle, Camped on Any Cell \n 
+      - LTE_RRC_STATE_EXT_IDLE_CAMPED_NORMAL (2) --  Idle, Camped Normal \n 
+      - LTE_RRC_STATE_EXT_CONNECTING (3) --  Connecting \n 
+      - LTE_RRC_STATE_EXT_CONNECTED (4) --  Connected \n 
+      - LTE_RRC_STATE_EXT_CLOSING (5) --  Releasing \n 
+ */
 }nas_get_cell_location_info_resp_msg_v01;  /* Message */
 /**
     @}
@@ -10029,6 +10250,27 @@ typedef struct {
   */
 typedef struct {
 
+  /*  Is the TAC Valid */
+  uint8_t tac_valid;
+  /**<   
+      Indicates whether the tracking area code is valid. 
+  */
+
+  /*  Tracking Area Code */
+  uint16_t tac;
+  /**<  
+     Tracking area code (only applicable for NR5G).
+    */
+}nas_nr5g_only_sys_info_type_v01;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_aggregates
+    @{
+  */
+typedef struct {
+
   /*  Is the System PRL Match Valid */
   uint8_t is_sys_prl_match_valid;
   /**<   
@@ -10178,6 +10420,21 @@ typedef struct {
 
   nas_lte_only_sys_info_type_v01 lte_specific_sys_info;
 }nas_lte_sys_info_type_v01;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  nas_common_sys_info_type_v01 common_sys_info;
+
+  nas_3gpp_only_sys_info_type_v01 threegpp_specific_sys_info;
+
+  nas_nr5g_only_sys_info_type_v01 nr5g_specific_sys_info;
+}nas_nr5g_sys_info_type_v01;  /* Type */
 /**
     @}
   */
@@ -11076,6 +11333,40 @@ typedef struct {
       - NAS_CIOT_SYS_MODE_LTE_M1 (0x02) --  Camped on LTE M1 \n 
       - NAS_CIOT_SYS_MODE_LTE_NB1 (0x03) --  Camped on LTE NB1 
  */
+
+  /* Optional */
+  /*  NR5G Service Status Info */
+  uint8_t nr5g_srv_status_info_valid;  /**< Must be set to true if nr5g_srv_status_info is being passed */
+  nas_3gpp_srv_status_info_type_v01 nr5g_srv_status_info;
+
+  /* Optional */
+  /*  NR5G System Info */
+  uint8_t nr5g_sys_info_valid;  /**< Must be set to true if nr5g_sys_info is being passed */
+  nas_nr5g_sys_info_type_v01 nr5g_sys_info;
+
+  /* Optional */
+  /*  NR5G Cell Access Status Info */
+  uint8_t nr5g_cell_status_valid;  /**< Must be set to true if nr5g_cell_status is being passed */
+  nas_cell_access_status_e_type_v01 nr5g_cell_status;
+  /**<  
+ Cell access status for NR5G calls. Values: \n
+      - NAS_CELL_ACCESS_NORMAL_ONLY (0x00) --  Cell access is allowed for normal calls only \n  
+      - NAS_CELL_ACCESS_EMERGENCY_ONLY (0x01) --  Cell access is allowed for emergency calls only \n  
+      - NAS_CELL_ACCESS_NO_CALLS (0x02) --  Cell access is not allowed for any call type \n  
+      - NAS_CELL_ACCESS_ALL_CALLS (0x03) --  Cell access is allowed for all call types \n  
+      - NAS_CELL_ACCESS_UNKNOWN (-1) --  Cell access type is unknown  
+ */
+
+  /* Optional */
+  /*  CP SMS Service Status Info */
+  uint8_t cp_sms_service_status_valid;  /**< Must be set to true if cp_sms_service_status is being passed */
+  nas_cp_sms_service_status_e_type_v01 cp_sms_service_status;
+  /**<  
+ SMS service status over Control Plane. Values: \n
+      - NAS_CP_SMS_SERVICE_STATUS_NOT_AVAILABLE (0x00) --  SMS service status  over CP is not available \n  
+      - NAS_CP_SMS_SERVICE_STATUS_TEMP_FAILURE (0x01) --  SMS service status  over CP is not available temporarily \n  
+      - NAS_CP_SMS_SERVICE_STATUS_AVAILABLE (0x02) --  SMS service status  over CP is available \n  
+ */
 }nas_get_sys_info_resp_msg_v01;  /* Message */
 /**
     @}
@@ -11681,6 +11972,40 @@ typedef struct {
       - NAS_CIOT_SYS_MODE_LTE_WB (0x01) --  Camped on LTE wideband \n 
       - NAS_CIOT_SYS_MODE_LTE_M1 (0x02) --  Camped on LTE M1 \n 
       - NAS_CIOT_SYS_MODE_LTE_NB1 (0x03) --  Camped on LTE NB1 
+ */
+
+  /* Optional */
+  /*  NR5G Service Status Info */
+  uint8_t nr5g_srv_status_info_valid;  /**< Must be set to true if nr5g_srv_status_info is being passed */
+  nas_3gpp_srv_status_info_type_v01 nr5g_srv_status_info;
+
+  /* Optional */
+  /*  NR5G System Info */
+  uint8_t nr5g_sys_info_valid;  /**< Must be set to true if nr5g_sys_info is being passed */
+  nas_nr5g_sys_info_type_v01 nr5g_sys_info;
+
+  /* Optional */
+  /*  NR5G Cell Access Status Info */
+  uint8_t nr5g_cell_status_valid;  /**< Must be set to true if nr5g_cell_status is being passed */
+  nas_cell_access_status_e_type_v01 nr5g_cell_status;
+  /**<  
+ Cell access status for NR5G calls. Values: \n
+      - NAS_CELL_ACCESS_NORMAL_ONLY (0x00) --  Cell access is allowed for normal calls only \n  
+      - NAS_CELL_ACCESS_EMERGENCY_ONLY (0x01) --  Cell access is allowed for emergency calls only \n  
+      - NAS_CELL_ACCESS_NO_CALLS (0x02) --  Cell access is not allowed for any call type \n  
+      - NAS_CELL_ACCESS_ALL_CALLS (0x03) --  Cell access is allowed for all call types \n  
+      - NAS_CELL_ACCESS_UNKNOWN (-1) --  Cell access type is unknown  
+ */
+
+  /* Optional */
+  /*  CP SMS Service Status Info */
+  uint8_t cp_sms_service_status_valid;  /**< Must be set to true if cp_sms_service_status is being passed */
+  nas_cp_sms_service_status_e_type_v01 cp_sms_service_status;
+  /**<  
+ SMS service status over Control Plane. Values: \n
+      - NAS_CP_SMS_SERVICE_STATUS_NOT_AVAILABLE (0x00) --  SMS service status  over CP is not available \n  
+      - NAS_CP_SMS_SERVICE_STATUS_TEMP_FAILURE (0x01) --  SMS service status  over CP is not available temporarily \n  
+      - NAS_CP_SMS_SERVICE_STATUS_AVAILABLE (0x02) --  SMS service status  over CP is available \n  
  */
 }nas_sys_info_ind_msg_v01;  /* Message */
 /**
@@ -13579,10 +13904,10 @@ typedef struct {
   nas_rf_bandwidth_info_type_v01 nas_rf_bandwidth_info;
 
   /* Optional */
-  /*  LTE operational mode */
+  /*  LTE Operational Mode */
   uint8_t ciot_lte_op_mode_valid;  /**< Must be set to true if ciot_lte_op_mode is being passed */
   nas_camped_ciot_lte_op_mode_enum_type_v01 ciot_lte_op_mode;
-  /**<   CIOT LTE operational mode.
+  /**<   CIOT LTE operational mode. Values: \n
 
       - NAS_CIOT_SYS_MODE_NO_SRV (0x00) --  No service \n 
       - NAS_CIOT_SYS_MODE_LTE_WB (0x01) --  Camped on LTE wideband \n 
@@ -13675,10 +14000,10 @@ typedef struct {
   */
 
   /* Optional */
-  /*  LTE operational mode */
+  /*  LTE Operational Mode */
   uint8_t ciot_lte_op_mode_valid;  /**< Must be set to true if ciot_lte_op_mode is being passed */
   nas_camped_ciot_lte_op_mode_enum_type_v01 ciot_lte_op_mode;
-  /**<   CIOT LTE mode on which reject indication is received.
+  /**<   CIOT LTE mode on which reject indication is received. Values: \n
 
       - NAS_CIOT_SYS_MODE_NO_SRV (0x00) --  No service \n 
       - NAS_CIOT_SYS_MODE_LTE_WB (0x01) --  Camped on LTE wideband \n 
@@ -15420,7 +15745,7 @@ typedef struct {
   /**<   Priority list for LTE bands 
        (see Table @latexonly\ref{tbl:bandClass}@endlatexonly for details). 
        Values: \n
-       - 120 to 165 -- LTE band classes
+       - 120 to 168 -- LTE band classes
   */
 }nas_set_lte_band_priority_req_msg_v01;  /* Message */
 /**
@@ -15648,7 +15973,7 @@ typedef struct {
 
   nas_active_band_enum_v01 band;
   /**<    Band. Values: \n
-        - 120 to 165 -- LTE band classes
+        - 120 to 168 -- LTE band classes
   */
 
   nas_scell_state_enum_v01 scell_state;
@@ -15708,7 +16033,7 @@ typedef struct {
 
   nas_active_band_enum_v01 band;
   /**<    Band. Values: \n
-        - 120 to 165 -- LTE band classes
+        - 120 to 168 -- LTE band classes
   */
 }nas_lte_cphy_pcell_info_type_v01;  /* Type */
 /**
@@ -15718,7 +16043,8 @@ typedef struct {
 /** @addtogroup nas_qmi_messages
     @{
   */
-/** Indication Message; Indicates a carrier aggregation event has occurred.  */
+/** Indication Message; Indicates a carrier aggregation event has occurred. 
+             \label{idl:lteCphyCAInd} */
 typedef struct {
 
   /* Mandatory */
@@ -15756,6 +16082,30 @@ typedef struct {
   uint8_t scell_idx_valid;  /**< Must be set to true if scell_idx is being passed */
   uint8_t scell_idx;
   /**<   Scell index. */
+
+  /* Optional */
+  /*  Aggregated DL Bandwidth */
+  uint8_t cphy_ca_aggregated_dl_bandwidth_valid;  /**< Must be set to true if cphy_ca_aggregated_dl_bandwidth is being passed */
+  uint16_t cphy_ca_aggregated_dl_bandwidth;
+  /**<   Aggregated DL bandwidth. \n
+       Units: MHz
+  */
+
+  /* Optional */
+  /*  Number of Scells Configured */
+  uint8_t num_scells_configured_valid;  /**< Must be set to true if num_scells_configured is being passed */
+  uint16_t num_scells_configured;
+  /**<   Number of Scells configured.
+  */
+
+  /* Optional */
+  /*  Unchanged Configured Scell Information Array */
+  uint8_t unchanged_scell_info_list_valid;  /**< Must be set to true if unchanged_scell_info_list is being passed */
+  uint32_t unchanged_scell_info_list_len;  /**< Must be set to # of elements in unchanged_scell_info_list */
+  nas_cphy_scell_info_v01 unchanged_scell_info_list[NAS_MAX_SCELL_LIST_LEN_V01];
+  /**<   Unchanged Configured Scell Information array.  If a Scell state is changed, It 
+       will not be included in this array.
+  */
 }nas_lte_cphy_ca_ind_msg_v01;  /* Message */
 /**
     @}
@@ -15799,7 +16149,7 @@ typedef struct {
   /**<   List of the user-configured LTE bands, ordered by priority. The ordering 
        of this list overrides the ordering of any bands it shares with 
        supported_band_priority_list. Values: \n
-       - 120 to 165 -- LTE band classes (see Table @latexonly\ref{tbl:bandClass}@endlatexonly for details)
+       - 120 to 168 -- LTE band classes (see Table @latexonly\ref{tbl:bandClass}@endlatexonly for details)
   */
 
   /* Optional */
@@ -15809,7 +16159,7 @@ typedef struct {
   nas_active_band_enum_v01 supported_band_priority_list[NAS_LTE_BAND_PRIORITY_LIST_MAX_V01];
   /**<   List of the LTE bands supported by the device, ordered by priority. 
 	   Values: \n
-	   - 120 to 165 -- LTE band classes (see Table @latexonly\ref{tbl:bandClass}@endlatexonly for details)
+	   - 120 to 168 -- LTE band classes (see Table @latexonly\ref{tbl:bandClass}@endlatexonly for details)
   */
 }nas_get_lte_band_priority_list_resp_msg_v01;  /* Message */
 /**
@@ -16006,6 +16356,141 @@ typedef struct {
  \vspace{3pt}
  All other bits are reserved and must be set to 0.
  */
+
+  /* Optional */
+  /*  WCDMA ARFCN List ** */
+  uint8_t wcdma_arfcn_valid;  /**< Must be set to true if wcdma_arfcn is being passed */
+  uint32_t wcdma_arfcn_len;  /**< Must be set to # of elements in wcdma_arfcn */
+  uint16_t wcdma_arfcn[NAS_WCDMA_ARFCN_LIST_MAX_V01];
+  /**<   A list of WCDMA RF channel numbers to be scanned. If a list is not provided,
+       all channels will be scanned for the specified WCDMA preference.
+
+       \vspace{3pt}
+       Only applicable to the following scan types: \n
+       - NAS_SCAN_TYPE_PLMN 
+       - NAS_SCAN_TYPE_MODE_PREF
+       
+       \vspace{3pt}
+       If another scan type is provided, this TLV is ignored.
+  */
+
+  /* Optional */
+  /*  LTE ARFCN List ** */
+  uint8_t lte_arfcn_valid;  /**< Must be set to true if lte_arfcn is being passed */
+  uint32_t lte_arfcn_len;  /**< Must be set to # of elements in lte_arfcn */
+  uint32_t lte_arfcn[NAS_LTE_ARFCN_LIST_MAX_V01];
+  /**<   A list of LTE RF channel numbers to be scanned. If a list is not provided,
+       all channels will be scanned for the specified LTE preference.
+
+       \vspace{3pt}
+       Only applicable to the following scan types: \n
+       - NAS_SCAN_TYPE_PLMN 
+       - NAS_SCAN_TYPE_MODE_PREF
+       
+       \vspace{3pt}
+       If another scan type is provided, this TLV is ignored.
+  */
+
+  /* Optional */
+  /*  Search Periodicity ** */
+  uint8_t search_periodicity_valid;  /**< Must be set to true if search_periodicity is being passed */
+  uint8_t search_periodicity;
+  /**<   Search periodicity (in seconds).
+
+       If the search periodicity is not provided, or value 0 is provided, it means the 
+       periodic search is disabled and only one scan will be performed.
+
+       \vspace{3pt}
+       Only applicable to the following scan types: \n
+       - NAS_SCAN_TYPE_PLMN 
+       - NAS_SCAN_TYPE_MODE_PREF
+       
+       \vspace{3pt}
+       If another scan type is provided, this TLV is ignored.
+  */
+
+  /* Optional */
+  /*  Max Search Time ** */
+  uint8_t max_search_time_valid;  /**< Must be set to true if max_search_time is being passed */
+  uint16_t max_search_time;
+  /**<   Maximum duration of the periodic search (in seconds). \n
+       - If the search lasts this long, it must be terminated.
+       - If the max search time is not provided, or if the value provided is longer than the modem's internal max duration value, the modem uses the internal max duration value as the maximum duration of the periodic search. \n
+       - Any non-zero value is accepted as valid if the search_periodicity is valid.
+
+       \vspace{3pt}
+       Only applicable to the following scan types: \n
+       - NAS_SCAN_TYPE_PLMN 
+       - NAS_SCAN_TYPE_MODE_PREF
+       
+       \vspace{3pt}
+       If another scan type is provided, this TLV is ignored.
+  */
+
+  /* Optional */
+  /*  Incremental Results ** */
+  uint8_t incremental_results_valid;  /**< Must be set to true if incremental_results is being passed */
+  uint8_t incremental_results;
+  /**<   Indicates whether the modem reports incremental results of the network scan 
+       to the client. \n
+       - 0 -- Incremental results are not reported.
+       - 1 (default) -- Incremental results are reported if one of the following is also true:     
+       @latexonly
+       \begin{itemize}[label=\textendash, leftmargin=.3in]
+         \item incremental\_results\_periodicity is provided and valid (modem will use this) 
+         \item incremental\_results\_periodicity is not provided but the periodicity NV item is valid (modem will use the NV item value).
+       \end{itemize}
+       @endlatexonly
+
+       \vspace{3pt}
+       Only applicable to the following scan types: \n
+       - NAS_SCAN_TYPE_PLMN 
+       - NAS_SCAN_TYPE_MODE_PREF
+       
+       \vspace{3pt}
+       If another scan type is provided, this TLV is ignored.
+  */
+
+  /* Optional */
+  /*  Incremental Results Periodicity ** */
+  uint8_t incremental_results_periodicity_valid;  /**< Must be set to true if incremental_results_periodicity is being passed */
+  uint8_t incremental_results_periodicity;
+  /**<   Indicates the periodicity with which the modem should report incremental 
+       results to the client (in seconds). \n
+       - If not provided, modem will use the periodicity provided by the NV item value. \n
+
+       - If the incremental_results flag is 0, this value and the NV item value are ignored (incremental results are not reported).
+
+       \vspace{3pt}
+       Only applicable to the following scan types: \n
+       - NAS_SCAN_TYPE_PLMN 
+       - NAS_SCAN_TYPE_MODE_PREF
+       
+       \vspace{3pt}
+       If another scan type is provided, this TLV is ignored.
+  */
+
+  /* Optional */
+  /*  Preferred PLMN List ** */
+  uint8_t preferred_plmn_list_valid;  /**< Must be set to true if preferred_plmn_list is being passed */
+  uint32_t preferred_plmn_list_len;  /**< Must be set to # of elements in preferred_plmn_list */
+  nas_plmn_id_ext_type_v01 preferred_plmn_list[NAS_PREFERRED_PLMN_LIST_MAX_V01];
+  /**<   
+       @latexonly
+       \newline
+       Preferred PLMN list provided to the modem. \\
+       \textbullet~~If any PLMN in this list is found, the search must end and all PLMNs found must be sent to the client.
+       \textbullet~~If the list is not provided, the search runs to completion and all PLMNs found must be sent to the client.
+
+       \vspace{3pt}
+       Only applicable to the following scan types: \\
+       \textbullet~~NAS\_SCAN\_TYPE\_PLMN 
+       \textbullet~~NAS\_SCAN\_TYPE\_MODE\_PREF
+       
+       \vspace{3pt}
+       If another scan type is provided, this TLV is ignored.
+       @endlatexonly
+  */
 }nas_perform_incremental_network_scan_req_msg_v01;  /* Message */
 /**
     @}
@@ -16041,6 +16526,7 @@ typedef enum {
   NAS_SCAN_STATUS_ABORT_V01 = 0x02, /**<  Network scan was aborted \n  */
   NAS_SCAN_STATUS_REJ_IN_RLF_V01 = 0x03, /**<   Network scan did not complete due to a radio link failure recovery in progress \n  */
   NAS_SCAN_STATUS_INCREMENT_ERROR_V01 = 0x04, /**<  Sending incremental network scan errors  */
+  NAS_SCAN_STATUS_PARTIAL_PERIODIC_V01 = 0x05, /**<   Periodic network scan gave partial results \n  */
   NAS_SCAN_STATUS_ENUM_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_scan_status_enum_v01;
 /**
@@ -16112,6 +16598,21 @@ typedef struct {
     @}
   */
 
+/** @addtogroup nas_qmi_enums
+    @{
+  */
+typedef enum {
+  NAS_SIGNAL_QUALITY_E_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  SYS_SIGNAL_QUALITY_LOW_V01 = 0x00, /**<  Low-quality PLMN signal
+   */
+  SYS_SIGNAL_QUALITY_HIGH_V01 = 0x01, /**<  High-quality PLMN signal
+   */
+  NAS_SIGNAL_QUALITY_E_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}nas_signal_quality_e_type_v01;
+/**
+    @}
+  */
+
 /** @addtogroup nas_qmi_messages
     @{
   */
@@ -16127,6 +16628,7 @@ typedef struct {
       - NAS_SCAN_STATUS_ABORT (0x02) --  Network scan was aborted \n 
       - NAS_SCAN_STATUS_REJ_IN_RLF (0x03) --   Network scan did not complete due to a radio link failure recovery in progress \n 
       - NAS_SCAN_STATUS_INCREMENT_ERROR (0x04) --  Sending incremental network scan errors 
+      - NAS_SCAN_STATUS_PARTIAL_PERIODIC (0x05) --   Periodic network scan gave partial results \n 
  */
 
   /* Optional */
@@ -16155,6 +16657,26 @@ typedef struct {
       - NAS_NW_NAME_SOURCE_MCC_MNC (0x05) --  Mobile country code and mobile network code \n 
       - NAS_NW_NAME_SOURCE_SPN (0x06) --  Service provider name 
  */
+
+  /* Optional */
+  /*  Signal Quality */
+  uint8_t signal_quality_valid;  /**< Must be set to true if signal_quality is being passed */
+  uint32_t signal_quality_len;  /**< Must be set to # of elements in signal_quality */
+  nas_signal_quality_e_type_v01 signal_quality[NAS_3GPP_NETWORK_INFO_LIST_MAX_V01];
+  /**<   PLMN signal quality.
+      - SYS_SIGNAL_QUALITY_LOW (0x00) --  Low-quality PLMN signal
+  
+      - SYS_SIGNAL_QUALITY_HIGH (0x01) --  High-quality PLMN signal
+  
+ */
+
+  /* Optional */
+  /*  Signal Strength */
+  uint8_t signal_strength_valid;  /**< Must be set to true if signal_strength is being passed */
+  uint32_t signal_strength_len;  /**< Must be set to # of elements in signal_strength */
+  int32_t signal_strength[NAS_3GPP_NETWORK_INFO_LIST_MAX_V01];
+  /**<   PLMN's signal strength information (in dBm).
+  */
 }nas_perform_incremental_network_scan_ind_msg_v01;  /* Message */
 /**
     @}
@@ -18773,6 +19295,15 @@ typedef struct {
        - TRUE -- International roaming is enabled \n 
        - FALSE -- International roaming is disabled
   */
+
+  /* Optional */
+  /*  Domestic Voice Roaming Status */
+  uint8_t domestic_voice_roaming_allowed_valid;  /**< Must be set to true if domestic_voice_roaming_allowed is being passed */
+  uint8_t domestic_voice_roaming_allowed;
+  /**<   Configures the domestic voice roaming status. Values: \n
+       - TRUE -- Domestic roaming is enabled (default)\n 
+       - FALSE -- Domestic roaming is disabled \n
+  */
 }nas_set_voice_roaming_req_msg_v01;  /* Message */
 /**
     @}
@@ -18826,6 +19357,15 @@ typedef struct {
   /**<   International voice roaming status. Values: \n
        - TRUE -- International roaming is enabled \n 
        - FALSE -- International roaming is disabled
+  */
+
+  /* Optional */
+  /*  Domestic Voice Roaming Status */
+  uint8_t domestic_voice_roaming_allowed_valid;  /**< Must be set to true if domestic_voice_roaming_allowed is being passed */
+  uint8_t domestic_voice_roaming_allowed;
+  /**<   Domestic voice roaming status. Values: \n
+       - TRUE -- Domestic roaming is enabled \n 
+       - FALSE -- Domestic roaming is disabled
   */
 }nas_get_voice_roaming_resp_msg_v01;  /* Message */
 /**
@@ -18915,8 +19455,7 @@ typedef struct {
       - NAS_RADIO_IF_GPS (0x07) --  GPS \n 
       - NAS_RADIO_IF_LTE (0x08) --  LTE \n 
       - NAS_RADIO_IF_TDSCDMA (0x09) --  TD-SCDMA \n 
-      - NAS_RADIO_IF_LTE_M1 (0x0a) --  LTE-M1 \n 
-      - NAS_RADIO_IF_LTE_NB1 (0x0b) --  LTE-NB1 \n 
+      - NAS_RADIO_IF_NR5G (0x0C) --  NR5G \n 
       - NAS_RADIO_IF_NO_CHANGE (-1) --  No change 
 
  \vspace{3pt}
@@ -18925,7 +19464,7 @@ typedef struct {
  */
 
   /* Optional */
-  /*  LTE operational mode */
+  /*  LTE Operational Mode */
   uint8_t edrx_ciot_lte_mode_valid;  /**< Must be set to true if edrx_ciot_lte_mode is being passed */
   nas_camped_ciot_lte_op_mode_enum_type_v01 edrx_ciot_lte_mode;
   /**<   CIOT LTE mode. Values: \n
@@ -18933,7 +19472,8 @@ typedef struct {
       - NAS_CIOT_SYS_MODE_LTE_WB (0x01) --  Camped on LTE wideband \n 
       - NAS_CIOT_SYS_MODE_LTE_M1 (0x02) --  Camped on LTE M1 \n 
       - NAS_CIOT_SYS_MODE_LTE_NB1 (0x03) --  Camped on LTE NB1 
- Note: This TLV should be set when edrx_rat_type is LTE
+
+ Note: This TLV should be set when edrx_rat_type is LTE.
  */
 }nas_set_edrx_params_req_msg_v01;  /* Message */
 /**
@@ -18980,8 +19520,7 @@ typedef struct {
       - NAS_RADIO_IF_GPS (0x07) --  GPS \n 
       - NAS_RADIO_IF_LTE (0x08) --  LTE \n 
       - NAS_RADIO_IF_TDSCDMA (0x09) --  TD-SCDMA \n 
-      - NAS_RADIO_IF_LTE_M1 (0x0a) --  LTE-M1 \n 
-      - NAS_RADIO_IF_LTE_NB1 (0x0b) --  LTE-NB1 \n 
+      - NAS_RADIO_IF_NR5G (0x0C) --  NR5G \n 
       - NAS_RADIO_IF_NO_CHANGE (-1) --  No change 
 
  \vspace{3pt}
@@ -18990,7 +19529,7 @@ typedef struct {
  */
 
   /* Optional */
-  /*  LTE operational mode */
+  /*  LTE Operational Mode */
   uint8_t edrx_ciot_lte_mode_valid;  /**< Must be set to true if edrx_ciot_lte_mode is being passed */
   nas_camped_ciot_lte_op_mode_enum_type_v01 edrx_ciot_lte_mode;
   /**<   CIOT LTE mode. Values: \n
@@ -18998,7 +19537,8 @@ typedef struct {
       - NAS_CIOT_SYS_MODE_LTE_WB (0x01) --  Camped on LTE wideband \n 
       - NAS_CIOT_SYS_MODE_LTE_M1 (0x02) --  Camped on LTE M1 \n 
       - NAS_CIOT_SYS_MODE_LTE_NB1 (0x03) --  Camped on LTE NB1 
- Note: This TLV should be set when edrx_rat_type is LTE
+
+ Note: This TLV should be set when edrx_rat_type is LTE.
  */
 }nas_get_edrx_params_req_msg_v01;  /* Message */
 /**
@@ -19060,13 +19600,12 @@ typedef struct {
       - NAS_RADIO_IF_GPS (0x07) --  GPS \n 
       - NAS_RADIO_IF_LTE (0x08) --  LTE \n 
       - NAS_RADIO_IF_TDSCDMA (0x09) --  TD-SCDMA \n 
-      - NAS_RADIO_IF_LTE_M1 (0x0a) --  LTE-M1 \n 
-      - NAS_RADIO_IF_LTE_NB1 (0x0b) --  LTE-NB1 \n 
+      - NAS_RADIO_IF_NR5G (0x0C) --  NR5G \n 
       - NAS_RADIO_IF_NO_CHANGE (-1) --  No change 
  */
 
   /* Optional */
-  /*  LTE operational mode */
+  /*  LTE Operational Mode */
   uint8_t edrx_ciot_lte_mode_valid;  /**< Must be set to true if edrx_ciot_lte_mode is being passed */
   nas_camped_ciot_lte_op_mode_enum_type_v01 edrx_ciot_lte_mode;
   /**<   CIOT LTE mode. Values: \n
@@ -19169,13 +19708,12 @@ typedef struct {
       - NAS_RADIO_IF_GPS (0x07) --  GPS \n 
       - NAS_RADIO_IF_LTE (0x08) --  LTE \n 
       - NAS_RADIO_IF_TDSCDMA (0x09) --  TD-SCDMA \n 
-      - NAS_RADIO_IF_LTE_M1 (0x0a) --  LTE-M1 \n 
-      - NAS_RADIO_IF_LTE_NB1 (0x0b) --  LTE-NB1 \n 
+      - NAS_RADIO_IF_NR5G (0x0C) --  NR5G \n 
       - NAS_RADIO_IF_NO_CHANGE (-1) --  No change 
  */
 
   /* Optional */
-  /*  LTE operational mode */
+  /*  LTE Operational Mode */
   uint8_t edrx_ciot_lte_mode_valid;  /**< Must be set to true if edrx_ciot_lte_mode is being passed */
   nas_camped_ciot_lte_op_mode_enum_type_v01 edrx_ciot_lte_mode;
   /**<   CIOT LTE mode. Values: \n
@@ -19657,7 +20195,7 @@ typedef struct {
 /** @addtogroup nas_qmi_messages
     @{
   */
-/** Indication Message; Indicates the aggregated CA DL bandwidth information. */
+/** Indication Message; Indicates the aggregated CA DL bandwidth information. (Deprecated) */
 typedef struct {
 
   /* Optional */
@@ -19789,6 +20327,330 @@ typedef struct {
     @}
   */
 
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Request Message; Sets the V2X status for the device. */
+typedef struct {
+
+  /* Optional */
+  /*  V2X Start Concurrent with WWAN */
+  uint8_t concurrent_with_WWAN_valid;  /**< Must be set to true if concurrent_with_WWAN is being passed */
+  uint8_t concurrent_with_WWAN;
+  /**<   Configures V2X concurrent with WWAN mode. \n: \n
+       - FALSE -- Non_Concurrent with WWAN (default value) \n
+       - TRUE -- Concurrent with WWAN
+  */
+}nas_v2x_start_req_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Response Message; Sets the V2X status for the device. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+  /**<   Standard response type. Contains the following data members:
+     - qmi_result_type -- QMI_RESULT_SUCCESS or QMI_RESULT_FAILURE \n
+     - qmi_error_type  -- Error code. Possible error code values are described in
+                          the error codes section of each message definition.
+  */
+}nas_v2x_start_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Request Message; Sets the V2X status for the device. */
+typedef struct {
+  /* This element is a placeholder to prevent the declaration of
+     an empty struct.  DO NOT USE THIS FIELD UNDER ANY CIRCUMSTANCE */
+  char __placeholder;
+}nas_v2x_stop_req_msg_v01;
+
+  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Response Message; Sets the V2X status for the device. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+  /**<   Standard response type. Contains the following data members:
+     - qmi_result_type -- QMI_RESULT_SUCCESS or QMI_RESULT_FAILURE \n
+     - qmi_error_type  -- Error code. Possible error code values are described in
+                          the error codes section of each message definition.
+  */
+}nas_v2x_stop_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Request Message; Gets the V2X status for the device. */
+typedef struct {
+  /* This element is a placeholder to prevent the declaration of
+     an empty struct.  DO NOT USE THIS FIELD UNDER ANY CIRCUMSTANCE */
+  char __placeholder;
+}nas_get_v2x_status_req_msg_v01;
+
+  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Response Message; Gets the V2X status for the device. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+  /**<   Standard response type. Contains the following data members:
+     - qmi_result_type -- QMI_RESULT_SUCCESS or QMI_RESULT_FAILURE \n
+     - qmi_error_type  -- Error code. Possible error code values are described in
+                          the error codes section of each message definition.
+  */
+
+  /* Optional */
+  /*  V2X Tx Status */
+  uint8_t tx_status_valid;  /**< Must be set to true if tx_status is being passed */
+  nas_v2x_status_e_type_v01 tx_status;
+  /**<   V2X Tx Status. Values: \n
+      - NAS_V2X_STATUS_INACTIVE (0) --  V2X Status is Inactive \n  
+      - NAS_V2X_STATUS_ACTIVE (1) --  V2X Status is Active \n  
+      - NAS_V2X_STATUS_SUSPENDED (2) --  V2X Status is Suspended 
+ */
+
+  /* Optional */
+  /*  V2X Rx Status */
+  uint8_t rx_status_valid;  /**< Must be set to true if rx_status is being passed */
+  nas_v2x_status_e_type_v01 rx_status;
+  /**<   V2X Rx Status. Values: \n
+      - NAS_V2X_STATUS_INACTIVE (0) --  V2X Status is Inactive \n  
+      - NAS_V2X_STATUS_ACTIVE (1) --  V2X Status is Active \n  
+      - NAS_V2X_STATUS_SUSPENDED (2) --  V2X Status is Suspended 
+ */
+}nas_get_v2x_status_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Indication Message; Indicates the V2X Notification for the device. */
+typedef struct {
+
+  /* Optional */
+  /*  V2X Tx Status */
+  uint8_t tx_status_valid;  /**< Must be set to true if tx_status is being passed */
+  nas_v2x_status_e_type_v01 tx_status;
+  /**<   
+ V2X Tx Status. 
+ Values:      - NAS_V2X_STATUS_INACTIVE (0) --  V2X Status is Inactive \n  
+      - NAS_V2X_STATUS_ACTIVE (1) --  V2X Status is Active \n  
+      - NAS_V2X_STATUS_SUSPENDED (2) --  V2X Status is Suspended 
+ */
+
+  /* Optional */
+  /*  V2X Rx Status */
+  uint8_t rx_status_valid;  /**< Must be set to true if rx_status is being passed */
+  nas_v2x_status_e_type_v01 rx_status;
+  /**<   
+ V2X Rx Status. 
+ Values:      - NAS_V2X_STATUS_INACTIVE (0) --  V2X Status is Inactive \n  
+      - NAS_V2X_STATUS_ACTIVE (1) --  V2X Status is Active \n  
+      - NAS_V2X_STATUS_SUSPENDED (2) --  V2X Status is Suspended 
+ */
+
+  /* Optional */
+  /*  V2X Tx Cause */
+  uint8_t tx_cause_valid;  /**< Must be set to true if tx_cause is being passed */
+  nas_v2x_cause_e_type_v01 tx_cause;
+  /**<   
+ V2X Tx Cause. 
+ Values:      - NAS_V2X_STATUS_CAUSE_TIMING_INVALID (0) -- 
+      - NAS_V2X_STATUS_CAUSE_CONFIG_INVALID (1) -- 
+      - NAS_V2X_STATUS_CAUSE_UE_MODE_INVALID (2) -- 
+ */
+
+  /* Optional */
+  /*  V2X Rx Cause */
+  uint8_t rx_cause_valid;  /**< Must be set to true if rx_cause is being passed */
+  nas_v2x_cause_e_type_v01 rx_cause;
+  /**<   
+ V2X Rx Cause. 
+ Values:      - NAS_V2X_STATUS_CAUSE_TIMING_INVALID (0) -- 
+      - NAS_V2X_STATUS_CAUSE_CONFIG_INVALID (1) -- 
+      - NAS_V2X_STATUS_CAUSE_UE_MODE_INVALID (2) -- 
+ */
+
+  /* Optional */
+  /*  V2X Channel Busy Ratio (CBR) */
+  uint8_t cbr_value_valid;  /**< Must be set to true if cbr_value is being passed */
+  uint8_t cbr_value;
+  /**<  
+    V2X Channel Busy Ratio (CBR). CBR values is expressed as a percentage (i.e. CBR*100).
+   */
+}nas_v2x_notification_ind_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Indication Message; Informs whether Subscription is blocked */
+typedef struct {
+
+  /* Mandatory */
+  /*  Blocked status */
+  uint8_t is_blocked;
+  /**<    Subscription blocked status\n
+  */
+}nas_sub_blocked_status_ind_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Request Message; Retrieves the current blocked status of Subscription. */
+typedef struct {
+  /* This element is a placeholder to prevent the declaration of
+     an empty struct.  DO NOT USE THIS FIELD UNDER ANY CIRCUMSTANCE */
+  char __placeholder;
+}nas_get_sub_blocked_status_req_msg_v01;
+
+  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Response Message; Retrieves the current blocked status of Subscription. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+  /**<   Standard response type. */
+
+  /* Optional */
+  /*  Blocked status */
+  uint8_t is_blocked_valid;  /**< Must be set to true if is_blocked is being passed */
+  uint8_t is_blocked;
+  /**<    Subscription blocked status\n
+  */
+}nas_get_sub_blocked_status_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_enums
+    @{
+  */
+typedef enum {
+  LTE_B2_THRESHOLD_ADJ_CONFIG_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  QMI_NAS_LTE_B2_THRESH_ADJ_DISABLE_V01 = 0x01, 
+  QMI_NAS_LTE_B2_THRESH_ADJ_IF_EFS_PRESENT_V01 = 0x02, 
+  QMI_NAS_LTE_B2_THRESH_ADJ_DISABLE_AND_UPDATE_EFS_V01 = 0x09, 
+  QMI_NAS_LTE_B2_THRESH_ADJ_UPDATE_EFS_V01 = 0x0A, 
+  LTE_B2_THRESHOLD_ADJ_CONFIG_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}lte_b2_threshold_adj_config_type_v01;
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  int32_t rsrq_thresh;
+
+  int32_t rsrp_thresh;
+
+  int32_t thresh1_adj;
+}nas_lte_b2_thresh_adj_info_type_v01;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Request Message; Configures modem with B2 adjusted threshold values */
+typedef struct {
+
+  /* Mandatory */
+  /*  LTE B2 THRESHOLD ADJUSTMENT INFO TYPE */
+  lte_b2_threshold_adj_config_type_v01 config_type;
+
+  /* Optional */
+  /*  LTE B2 THRESHOLD ADJUSTMENT INFO */
+  uint8_t lte_b2_thresh_adj_info_valid;  /**< Must be set to true if lte_b2_thresh_adj_info is being passed */
+  nas_lte_b2_thresh_adj_info_type_v01 lte_b2_thresh_adj_info;
+}nas_lte_b2_thresh_adj_config_req_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_enums
+    @{
+  */
+typedef enum {
+  CONFIG_RSP_E_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  CONFIG_ERROR_UPDATE_REJECT_NO_EFS_V01 = 1, 
+  CONFIG_ERROR_EFS_WRITE_REJECT_NO_EFS_V01 = 2, 
+  CONFIG_INVALID_V01 = 3, 
+  CONFIG_RSP_E_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}config_rsp_e_v01;
+/**
+    @}
+  */
+
+/** @addtogroup nas_qmi_messages
+    @{
+  */
+/** Response Message; Configures modem with B2 adjusted threshold values */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+  /**<   Standard response type. */
+
+  /* Optional */
+  /*  CONFIG RESPONSE */
+  uint8_t config_rsp_valid;  /**< Must be set to true if config_rsp is being passed */
+  config_rsp_e_v01 config_rsp;
+}nas_lte_b2_thresh_adj_config_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
 /* Conditional compilation tags for message removal */ 
 //#define REMOVE_QMI_NAS_ABORT_V01 
 //#define REMOVE_QMI_NAS_ABORT_SCAN_V01 
@@ -19877,6 +20739,7 @@ typedef struct {
 //#define REMOVE_QMI_NAS_GET_SSAC_HYSTERESIS_TIMER_V01 
 //#define REMOVE_QMI_NAS_GET_SSAC_INFO_V01 
 //#define REMOVE_QMI_NAS_GET_SUBSCRIPTION_INFO_V01 
+//#define REMOVE_QMI_NAS_GET_SUB_BLOCKED_STATUS_V01 
 //#define REMOVE_QMI_NAS_GET_SUPPORTED_FIELDS_V01 
 //#define REMOVE_QMI_NAS_GET_SUPPORTED_MSGS_V01 
 //#define REMOVE_QMI_NAS_GET_SYSTEM_SELECTION_PREFERENCE_V01 
@@ -19885,6 +20748,7 @@ typedef struct {
 //#define REMOVE_QMI_NAS_GET_TDS_CELL_AND_POSITION_INFO_V01 
 //#define REMOVE_QMI_NAS_GET_TECHNOLOGY_PREFERENCE_V01 
 //#define REMOVE_QMI_NAS_GET_TX_RX_INFO_V01 
+//#define REMOVE_QMI_NAS_GET_V2X_STATUS_V01 
 //#define REMOVE_QMI_NAS_GET_VOICE_ROAMING_V01 
 //#define REMOVE_QMI_NAS_HDR_SESSION_CLOSE_IND_V01 
 //#define REMOVE_QMI_NAS_HDR_UATI_UPDATE_IND_V01 
@@ -19893,6 +20757,7 @@ typedef struct {
 //#define REMOVE_QMI_NAS_INITIATE_ATTACH_V01 
 //#define REMOVE_QMI_NAS_INITIATE_NETWORK_REGISTER_V01 
 //#define REMOVE_QMI_NAS_LIMIT_SYS_INFO_IND_REPORTING_V01 
+//#define REMOVE_QMI_NAS_LTE_B2_THRESH_ADJ_CONFIG_V01 
 //#define REMOVE_QMI_NAS_LTE_CPHY_CA_AGG_DL_BW_IND_V01 
 //#define REMOVE_QMI_NAS_LTE_CPHY_CA_IND_V01 
 //#define REMOVE_QMI_NAS_LTE_RACH_FAIL_IND_V01 
@@ -19950,6 +20815,7 @@ typedef struct {
 //#define REMOVE_QMI_NAS_SSAC_CHANGE_INFO_IND_V01 
 //#define REMOVE_QMI_NAS_SSAC_INFO_IND_V01 
 //#define REMOVE_QMI_NAS_SUBSCRIPTION_INFO_IND_V01 
+//#define REMOVE_QMI_NAS_SUB_BLOCKED_STATUS_IND_V01 
 //#define REMOVE_QMI_NAS_SYS_INFO_IND_V01 
 //#define REMOVE_QMI_NAS_TIMER_EXPIRY_IND_V01 
 //#define REMOVE_QMI_NAS_UNBLOCK_LTE_PLMN_V01 
@@ -19957,6 +20823,9 @@ typedef struct {
 //#define REMOVE_QMI_NAS_UPDATE_AKEY_EXT_V01 
 //#define REMOVE_QMI_NAS_UPDATE_CA_BAND_COMBO_MSG_V01 
 //#define REMOVE_QMI_NAS_UPDATE_IMS_STATUS_V01 
+//#define REMOVE_QMI_NAS_V2X_NOTIFICATION_IND_V01 
+//#define REMOVE_QMI_NAS_V2X_START_V01 
+//#define REMOVE_QMI_NAS_V2X_STOP_V01 
 
 /*Service Message Definition*/
 /** @addtogroup nas_qmi_msg_ids
@@ -20267,6 +21136,18 @@ typedef struct {
 #define QMI_NAS_SET_ECID_CONFIG_RESP_MSG_V01 0x00C9
 #define QMI_NAS_GET_ECID_CONFIG_REQ_MSG_V01 0x00CA
 #define QMI_NAS_GET_ECID_CONFIG_RESP_MSG_V01 0x00CA
+#define QMI_NAS_SUB_BLOCKED_STATUS_IND_V01 0x00CB
+#define QMI_NAS_GET_SUB_BLOCKED_STATUS_REQ_MSG_V01 0x00CC
+#define QMI_NAS_GET_SUB_BLOCKED_STATUS_RESP_MSG_V01 0x00CC
+#define QMI_NAS_LTE_B2_THRESH_ADJ_CONFIG_REQ_MSG_V01 0x00CD
+#define QMI_NAS_LTE_B2_THRESH_ADJ_CONFIG_RESP_MSG_V01 0x00CD
+#define QMI_NAS_V2X_START_REQ_MSG_V01 0x00CE
+#define QMI_NAS_V2X_START_RESP_MSG_V01 0x00CE
+#define QMI_NAS_V2X_STOP_REQ_MSG_V01 0x00CF
+#define QMI_NAS_V2X_STOP_RESP_MSG_V01 0x00CF
+#define QMI_NAS_GET_V2X_STATUS_REQ_MSG_V01 0x00D0
+#define QMI_NAS_GET_V2X_STATUS_RESP_MSG_V01 0x00D0
+#define QMI_NAS_V2X_NOTIFICATION_IND_V01 0x00D1
 /**
     @}
   */

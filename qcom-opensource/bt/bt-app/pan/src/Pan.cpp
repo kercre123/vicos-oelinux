@@ -134,6 +134,12 @@ void BtPanMsgHandler(void *msg)
                 PostMessage(THREAD_ID_GAP, stop_event);
             }
             break;
+        case PAN_EVENT_API_DISABLE:
+            if (g_pan) {
+                ALOGV(LOGTAG "%s PAN_EVENT_API_DISABLE", __FUNCTION__);
+                g_pan->HandleAPIDisablePan();
+            }
+            break;
 
         default:
             if(g_pan) {
@@ -326,6 +332,35 @@ bool Pan :: HandleDisablePan()
         ALOGE(LOGTAG "%s: Cleaning up Bluetooth PAN Interface...", __FUNCTION__);
         pan_interface->cleanup();
         pan_interface = NULL;
+    }
+    return true;
+}
+bool Pan ::HandleAPIDisablePan()
+{
+    ALOGV(LOGTAG "%s", __FUNCTION__);
+    for (int i = 0; i < MAX_PAN_DEVICES; i++)
+    {
+        if (pan_device[i].remote_role == REMOTE_PANU_ROLE) {
+            if ((pan_state == TETHERED || pan_state == PENDING)) {
+                BtEvent *event = new BtEvent;
+                event->event_id = SKT_API_IPC_MSG_WRITE;
+                event->bt_ipc_msg_event.ipc_msg.type = BT_IPC_DISABLE_TETHERING;
+                event->bt_ipc_msg_event.ipc_msg.status = INITIATED;
+                ALOGV (LOGTAG "%s: Posting msg main thread: disable tethering", __FUNCTION__);
+                PostMessage (THREAD_ID_MAIN, event);
+            }
+        }
+        else if (pan_device[i].remote_role == REMOTE_NAP_ROLE) {
+            if (pan_state == REVERSE_TETHERED || pan_state == PENDING) {
+                BtEvent *event = new BtEvent;
+                event->event_id = SKT_API_IPC_MSG_WRITE;
+                event->bt_ipc_msg_event.ipc_msg.type = BT_IPC_DISABLE_REVERSE_TETHERING;
+                event->bt_ipc_msg_event.ipc_msg.status = INITIATED;
+                ALOGV (LOGTAG "%s: Posting msg main thread: disable reverse tethering",
+                        __FUNCTION__);
+                PostMessage (THREAD_ID_MAIN, event);
+            }
+        }
     }
     return true;
 }

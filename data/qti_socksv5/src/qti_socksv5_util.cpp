@@ -241,8 +241,8 @@ namespace QC_SOCKSv5_Util
     {
       //std::cout << "Client selected service no: " << service_no << std::endl;
       //update the egress_wan_iface appropriately
-      egress_wan_service = configuration->getWANService(service_no);
-      if((NULL != egress_wan_service) && (NULL != egress_wan_service->wan_iface)) 
+      egress_wan_service = (struct wan_service*)configuration->getWANService(service_no);
+      if((NULL != egress_wan_service) && (NULL != egress_wan_service->wan_iface))
       {
         *egress_wan_iface = egress_wan_service->wan_iface;
       } else {
@@ -1007,7 +1007,7 @@ static int respondToConnectRequest(int cli_sock, int reply_errno, int wan_req_ty
           }
           if(send(cli_sock, cmd_reply->payload, cmd_reply->payload_size, 0) <= -1)
           {
-            LOG_MSG_INFO1("error writing to client socket", 0, 0, 0);
+            LOG_MSG_INFO1("error writing to client socket: %s", strerror(errno), 0, 0);
             ret = -1;
             break;
           }
@@ -1327,7 +1327,8 @@ unsigned char auth_method
   char line[256] = {0}; //no domain name request can be larger than 255 bytes, RFC 1928
   struct sockaddr_in temp_addr_v4;
   struct sockaddr_in6 temp_addr_v6;
-  std::string dig_cmd("dig +short +retry=10 ");
+  const char* base_dig = "dig +short +retry=10 ";
+  char* dig_cmd = NULL;
   std::string resolved_addr_str;
 
   if(NULL == name_to_resolve)
@@ -1342,48 +1343,88 @@ unsigned char auth_method
     return NULL;
   }
 
+  //allocate some heap for worst case scenario
+  if(NULL == dns_ip_addr)
+  {
+    if((dig_cmd = (char*)calloc(1, strlen(base_dig) + strlen("@") + strlen(" ") +
+                                   strlen(name_to_resolve) + strlen(" -tAAAA") + 1)) == NULL)
+    {
+      LOG_MSG_INFO1("error with calloc: %s", strerror(errno), 0, 0);
+      return NULL;
+    }
+  } else {
+    if((dig_cmd = (char*)calloc(1, strlen(base_dig) + strlen("@") + strlen(dns_ip_addr) +
+                                   strlen(" ") + strlen(name_to_resolve) + strlen(" -tAAAA") + 1))
+                                   == NULL)
+    {
+      LOG_MSG_INFO1("error with calloc: %s", strerror(errno), 0, 0);
+      return NULL;
+    }
+  }
+
   switch(auth_method)
   {
     case(Pref_Auth_Method::UNAME_PASSWD):
     {
-      dig_cmd.append("@");
-      dig_cmd.append(dns_ip_addr);
-      dig_cmd.append(" ");
+      if(snprintf(dig_cmd, strlen(base_dig) + strlen("@") + strlen(dns_ip_addr) + strlen(" ") + 1,
+                           "dig +short +retry=10 @%s ", dns_ip_addr) < 0)
+      {
+        LOG_MSG_INFO1("error with snprintf: %s", strerror(errno), 0, 0);
+        goto dns_failure;
+      }
+      break;
     }
     default:
     {
+      if(snprintf(dig_cmd, strlen(base_dig) + 1, base_dig) < 0)
+      {
+        LOG_MSG_INFO1("error with snprintf: %s", strerror(errno), 0, 0);
+        goto dns_failure;
+      }
       break;
     }
   }
 
-  dig_cmd.append(name_to_resolve);
+  if(snprintf(dig_cmd + strlen(dig_cmd), strlen(name_to_resolve) + 1, "%s", name_to_resolve) < 0)
+  {
+    LOG_MSG_INFO1("error with snprintf: %s", strerror(errno), 0, 0);
+    goto dns_failure;
+  }
 
   switch(wan_ip_ver)
   {
     case(Addr_Type::IPV4):
     {
-      dig_cmd.append(" -tA");
+      if(snprintf(dig_cmd + strlen(dig_cmd), strlen(" -tA") + 1, " -tA") < 0)
+      {
+        LOG_MSG_INFO1("error with snprintf: %s", strerror(errno), 0, 0);
+        goto dns_failure;
+      }
       break;
     }
     case(Addr_Type::IPV6):
     {
-      dig_cmd.append(" -tAAAA");
+      if(snprintf(dig_cmd + strlen(dig_cmd), strlen(" -tAAAA") + 1, " -tAAAA") < 0)
+      {
+        LOG_MSG_INFO1("error with snprintf: %s", strerror(errno), 0, 0);
+        goto dns_failure;
+      }
       break;
     }
     default:
     {
       LOG_MSG_INFO1("Invalid wan_ip_ver: %d", wan_ip_ver, 0, 0);
-      return NULL;
+      goto dns_failure;
       break;
     }
   }
 
-  LOG_MSG_INFO1("%s", dig_cmd.c_str(), 0, 0);
+  LOG_MSG_INFO1("%s", dig_cmd, 0, 0);
 
-  if((fp = popen(dig_cmd.c_str(), "r")) == NULL)
+  if((fp = popen(dig_cmd, "r")) == NULL)
   {
-    LOG_MSG_INFO1("Error with popen", 0, 0, 0);
-    return NULL;
+    LOG_MSG_INFO1("Error with popen: %s", strerror(errno), 0, 0);
+    goto dns_failure;
   }
 
   while(!(resolved_addr_str.length()) && (fgets(line, sizeof(line), fp) != NULL))
@@ -1419,27 +1460,38 @@ unsigned char auth_method
       default:
       {
         LOG_MSG_INFO1("Invalid wan_ip_ver: %d", wan_ip_ver, 0, 0);
-        pclose(fp);
-        return NULL;
+        if(pclose(fp))
+        {
+          LOG_MSG_INFO1("error with pclose: %s", strerror(errno), 0, 0);
+        }
+        goto dns_failure;
         break;
       }
     }
   }
-  pclose(fp);
+  if(pclose(fp))
+  {
+    LOG_MSG_INFO1("error with pclose: %s", strerror(errno), 0, 0);
+  }
 
   if(!(resolved_addr_str.length()))
   {
-    return NULL;
+    goto dns_failure;
   }
-
 
   if((resolved_addr = (char*)calloc(1, strlen(resolved_addr_str.c_str()) + 1)) == NULL)
   {
     LOG_MSG_INFO1("Failed to calloc", 0, 0, 0);
-    return NULL;
+    goto dns_failure;
   }
 
   memcpy(resolved_addr, resolved_addr_str.c_str(), strlen(resolved_addr_str.c_str()));
 
-  return resolved_addr;
+  dns_success:
+    free(dig_cmd);
+    return resolved_addr;
+
+  dns_failure:
+    free(dig_cmd);
+    return NULL;
 }

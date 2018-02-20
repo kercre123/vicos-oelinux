@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "SystemKeytone"
+#define LOG_TAG "SystemKeytone"
 
 #include "system/src/service/qmmf_system_keytone.h"
 
@@ -42,7 +42,7 @@
 
 #include "common/audio/inc/qmmf_audio_definitions.h"
 #include "common/audio/inc/qmmf_audio_endpoint.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 #include "qmmf-sdk/qmmf_system_params.h"
 #include "system/src/service/qmmf_system_common.h"
 
@@ -58,6 +58,7 @@ using ::qmmf::common::audio::AudioFlag;
 using ::qmmf::common::audio::AudioMetadata;
 using ::qmmf::common::audio::AudioEventType;
 using ::qmmf::common::audio::AudioEventData;
+using ::qmmf::common::audio::AudioParamType;
 using ::std::chrono::milliseconds;
 using ::std::mutex;
 using ::std::thread;
@@ -73,19 +74,19 @@ status_t SystemKeytone::PlayTone(const SystemHandle system_handle,
                                  const vector<DeviceId>& devices,
                                  const Tone& tone,
                                  const SystemToneHandler& handler) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: system_handle[%d]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: system_handle[%d]", __func__,
                system_handle);
   for (const DeviceId& device : devices)
-    QMMF_VERBOSE("%s: %s() INPARAM: device[%d]", TAG, __func__, device);
-  QMMF_VERBOSE("%s: %s() INPARAM: tone[%s]", TAG, __func__,
+    QMMF_VERBOSE("%s() INPARAM: device[%d]", __func__, device);
+  QMMF_VERBOSE("%s() INPARAM: tone[%s]", __func__,
                tone.ToString().c_str());
   int32_t result;
   int32_t buffer_size;
   int32_t number_of_buffers;
 
   if (current_handle_ != 0 || end_point_ != nullptr) {
-    QMMF_ERROR("%s: %s() endpoint already exists", TAG, __func__);
+    QMMF_ERROR("%s() endpoint already exists", __func__);
     return ::android::ALREADY_EXISTS;
   }
 
@@ -100,7 +101,7 @@ status_t SystemKeytone::PlayTone(const SystemHandle system_handle,
 
   end_point_ = new AudioEndPoint;
   if (end_point_ == nullptr) {
-    QMMF_ERROR("%s: %s() could not instantiate endpoint", TAG, __func__);
+    QMMF_ERROR("%s() could not instantiate endpoint", __func__);
     return ::android::NO_MEMORY;
   }
 
@@ -114,12 +115,15 @@ status_t SystemKeytone::PlayTone(const SystemHandle system_handle,
         case AudioEventType::kBuffer:
           BufferHandler(event_data.buffer);
           break;
+        case AudioEventType::kStopped:
+          StoppedHandler();
+          break;
       }
     };
 
   result = end_point_->Connect(audio_handler);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Connect failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Connect failed: %d[%s]", __func__,
                result, strerror(result));
     goto error_free;
   }
@@ -134,28 +138,28 @@ status_t SystemKeytone::PlayTone(const SystemHandle system_handle,
 
   result = end_point_->Configure(AudioEndPointType::kSink, devices, metadata);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Configure failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Configure failed: %d[%s]", __func__,
                result, strerror(result));
     goto error_disconnect;
   }
 
   result = end_point_->GetBufferSize(&buffer_size);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->GetBufferSize failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->GetBufferSize failed: %d[%s]", __func__,
                result, strerror(result));
     goto error_disconnect;
   }
   if (buffer_size == 0) {
-    QMMF_ERROR("%s: %s() endpoint->GetBufferSize returned 0", TAG, __func__);
+    QMMF_ERROR("%s() endpoint->GetBufferSize returned 0", __func__);
     goto error_disconnect;
   }
-  QMMF_INFO("%s: %s() buffer_size is %d", TAG, __func__, buffer_size);
+  QMMF_INFO("%s() buffer_size is %d", __func__, buffer_size);
 
   number_of_buffers = tone.size / buffer_size;
   if (tone.size % buffer_size != 0) ++number_of_buffers;
   result = ion_.Allocate(number_of_buffers, buffer_size);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() ion->Allocate failed: %d[%s]", TAG, __func__, result,
+    QMMF_ERROR("%s() ion->Allocate failed: %d[%s]", __func__, result,
                strerror(result));
     goto error_deallocate;
   }
@@ -163,20 +167,21 @@ status_t SystemKeytone::PlayTone(const SystemHandle system_handle,
   memset(&tone_, 0x0, sizeof tone_);
   tone_.buffer = calloc(1, tone.size);
   if (tone_.buffer == NULL) {
-    QMMF_ERROR("%s: %s() could not allocate memory", TAG, __func__);
+    QMMF_ERROR("%s() could not allocate memory", __func__);
     goto error_malloc;
   }
   memcpy(tone_.buffer, tone.buffer, tone.size);
   tone_.size = tone.size;
   tone_.loop_num = tone.loop_num;
   tone_.delay = tone.delay;
+  tone_.volume = tone.volume;
 
   while (!messages_.empty())
     messages_.pop();
 
   thread_ = new thread(SystemKeytone::ThreadEntry, this);
   if (thread_ == nullptr) {
-    QMMF_ERROR("%s: %s() could not instantiate thread", TAG, __func__);
+    QMMF_ERROR("%s() could not instantiate thread", __func__);
     goto error_malloc;
   }
 
@@ -188,13 +193,13 @@ error_malloc:
 error_deallocate:
   result = ion_.Deallocate();
   if (result < 0)
-    QMMF_ERROR("%s: %s() ion->Deallocate failed: %d[%s]", TAG, __func__, result,
+    QMMF_ERROR("%s() ion->Deallocate failed: %d[%s]", __func__, result,
                strerror(result));
 
 error_disconnect:
   result = end_point_->Disconnect();
   if (result < 0)
-    QMMF_ERROR("%s: %s() endpoint->Disconnect failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Disconnect failed: %d[%s]", __func__,
                result, strerror(result));
 
 error_free:
@@ -208,11 +213,11 @@ error_free:
 }
 
 void SystemKeytone::ErrorHandler(const int32_t error) {
-  QMMF_DEBUG("%s: %s() TRACE: current_handle[%d]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: current_handle[%d]", __func__,
              current_handle_);
-  QMMF_VERBOSE("%s: %s() INPARAM: error[%d]", TAG, __func__, error);
+  QMMF_VERBOSE("%s() INPARAM: error[%d]", __func__, error);
 
-  QMMF_ERROR("%s: %s() received error from endpoint: %d[%s]", TAG, __func__,
+  QMMF_ERROR("%s() received error from endpoint: %d[%s]", __func__,
                error, strerror(error));
 
   SystemMessage message;
@@ -226,9 +231,9 @@ void SystemKeytone::ErrorHandler(const int32_t error) {
 }
 
 void SystemKeytone::BufferHandler(const AudioBuffer& buffer) {
-  QMMF_DEBUG("%s: %s() TRACE: current_handle[%d]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: current_handle[%d]", __func__,
              current_handle_);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer.ToString().c_str());
 
   SystemMessage message;
@@ -241,13 +246,26 @@ void SystemKeytone::BufferHandler(const AudioBuffer& buffer) {
   signal_.notify_one();
 }
 
+void SystemKeytone::StoppedHandler() {
+  QMMF_DEBUG("%s() TRACE: current_handle[%d]", __func__,
+             current_handle_);
+
+  SystemMessage message;
+  message.type = SystemMessageType::kMessageStopped;
+
+  message_lock_.lock();
+  messages_.push(message);
+  message_lock_.unlock();
+  signal_.notify_one();
+}
+
 void SystemKeytone::ThreadEntry(SystemKeytone* source) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   source->Thread();
 }
 
 void SystemKeytone::Thread() {
-  QMMF_DEBUG("%s: %s() TRACE: current_handle[%d]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: current_handle[%d]", __func__,
              current_handle_);
   vector<AudioBuffer> buffers;
   int32_t result;
@@ -261,6 +279,7 @@ void SystemKeytone::Thread() {
       memcpy(buffer.data, local_pointer + (idx * buffer.capacity),
              tone_.size % buffer.capacity);
       buffer.size = tone_.size % buffer.capacity;
+      buffer.flags |= static_cast<uint32_t>(BufferFlags::kFlagEOS);
     } else {
       memcpy(buffer.data, local_pointer + (idx * buffer.capacity),
              buffer.capacity);
@@ -269,7 +288,7 @@ void SystemKeytone::Thread() {
     ++idx;
   }
   free(tone_.buffer);
-  size_t number_of_buffers = idx;
+  size_t number_of_buffers = buffers.size();
 
   bool error_detected = false;
   for (uint32_t loop_idx = 0; loop_idx < tone_.loop_num; ++loop_idx) {
@@ -278,16 +297,21 @@ void SystemKeytone::Thread() {
 
     int32_t result = end_point_->Start();
     if (result < 0) {
-      QMMF_ERROR("%s: %s() endpoint->Start failed: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() endpoint->Start failed: %d[%s]", __func__,
                  result, strerror(result));
       tone_handler_(current_handle_, result);
       error_detected = true;
       break;
     }
 
+    result = end_point_->SetParam(AudioParamType::kVolume, tone_.volume);
+    if (result < 0)
+      QMMF_ERROR("%s() endpoint->SetParam failed: %d[%s]", __func__,
+                 result, strerror(result));
+
     result = end_point_->SendBuffers(buffers);
     if (result < 0) {
-      QMMF_ERROR("%s: %s() endpoint->SendBuffers failed: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() endpoint->SendBuffers failed: %d[%s]", __func__,
                  result, strerror(result));
       tone_handler_(current_handle_, result);
       error_detected = true;
@@ -296,6 +320,7 @@ void SystemKeytone::Thread() {
     buffers.clear();
 
     bool keep_running = true;
+    bool stop_received = false;
     while (keep_running) {
       // wait until there is something to do
       if (messages_.empty()) {
@@ -310,8 +335,8 @@ void SystemKeytone::Thread() {
 
         switch (message.type) {
           case SystemMessageType::kMessageError:
-            QMMF_DEBUG("%s: %s-MessageError() TRACE", TAG, __func__);
-            QMMF_VERBOSE("%s: %s() INPARAM: error[%d]", TAG, __func__,
+            QMMF_DEBUG("%s-MessageError() TRACE", __func__);
+            QMMF_VERBOSE("%s() INPARAM: error[%d]", __func__,
                          message.error);
             tone_handler_(current_handle_, message.error);
             keep_running = false;
@@ -319,50 +344,41 @@ void SystemKeytone::Thread() {
             break;
 
           case SystemMessageType::kMessageBuffer:
-            QMMF_DEBUG("%s: %s-MessageBuffer() TRACE", TAG, __func__);
-            QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s] to vector[%u]",
-                         TAG, __func__, message.buffer.ToString().c_str(),
+            QMMF_DEBUG("%s-MessageBuffer() TRACE", __func__);
+            QMMF_VERBOSE("%s() INPARAM: buffer[%s] to vector[%u]",
+                         __func__, message.buffer.ToString().c_str(),
                          buffers.size());
             message.buffer.size = message.buffer.capacity;
             buffers.push_back(message.buffer);
-            QMMF_VERBOSE("%s: %s() buffers vector is now %u deep",
-                         TAG, __func__, buffers.size());
+            QMMF_VERBOSE("%s() buffers vector is now %u deep",
+                         __func__, buffers.size());
+            break;
+
+          case SystemMessageType::kMessageStopped:
+            QMMF_DEBUG("%s-StoppedBuffer() TRACE", __func__);
+            stop_received = true;
             break;
         }
         messages_.pop();
       }
       message_lock_.unlock();
 
-      if (buffers.size() == number_of_buffers)
+      if (buffers.size() == number_of_buffers && stop_received)
         keep_running = false;
     }
 
     if (error_detected)
       break;
-
-    result = end_point_->Stop(false);
-    if (result < 0) {
-      QMMF_ERROR("%s: %s() endpoint->Stop failed: %d[%s]", TAG, __func__,
-                 result, strerror(result));
-      tone_handler_(current_handle_, result);
-      error_detected = true;
-      break;
-    }
   }
-
-  result = end_point_->Stop(false);
-  if (result < 0)
-    QMMF_ERROR("%s: %s() endpoint->Stop failed: %d[%s]", TAG, __func__,
-               result, strerror(result));
 
   result = end_point_->Disconnect();
   if (result < 0)
-    QMMF_ERROR("%s: %s() endpoint->Disconnect failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Disconnect failed: %d[%s]", __func__,
                result, strerror(result));
 
   result = ion_.Deallocate();
   if (result < 0)
-    QMMF_ERROR("%s: %s() ion->Deallocate failed: %d[%s]", TAG, __func__, result,
+    QMMF_ERROR("%s() ion->Deallocate failed: %d[%s]", __func__, result,
                strerror(result));
 
   delete end_point_;

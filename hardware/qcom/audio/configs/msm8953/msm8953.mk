@@ -120,10 +120,15 @@ audio_hal.period_size=192
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"
 PRODUCT_PROPERTY_OVERRIDES += \
-ro.qc.sdk.audio.fluencetype=none\
+ro.qc.sdk.audio.fluencetype=fluencepro\
+persist.audio.fluence.audiorec=true\
 persist.audio.fluence.voicecall=true\
 persist.audio.fluence.voicerec=false\
 persist.audio.fluence.speaker=true
+
+#enable generic handset mic
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.apptype.multirec.enabled=1
 
 #disable tunnel encoding
 PRODUCT_PROPERTY_OVERRIDES += \

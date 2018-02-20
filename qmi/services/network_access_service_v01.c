@@ -5,19 +5,19 @@
 GENERAL DESCRIPTION
   This is the file which defines the nas service Data structures.
 
-  Copyright (c) 2006-2015 Qualcomm Technologies, Inc. All rights reserved.
+  Copyright (c) 2006-2015, 2017 Qualcomm Technologies, Inc. All rights reserved.
   Confidential and Proprietary - Qualcomm Technologies, Inc.
   
 
 
-  $Header: //components/rel/qmimsgs.mpss/4.3.3/nas/src/network_access_service_v01.c#8 $
+  $Header$
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 /*====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7 
-   It was generated on: Mon Mar 13 2017 (Spin 0)
+   It was generated on: Thu Nov  2 2017 (Spin 0)
    From IDL File: network_access_service_v01.idl */
 
 #include "stdint.h"
@@ -25,6 +25,7 @@ GENERAL DESCRIPTION
 #include "network_access_service_v01.h"
 #include "common_v01.h"
 #include "network_access_service_common_v01.h"
+#include "voice_nas_services_common_v01.h"
 
 
 /*Type Definitions*/
@@ -130,6 +131,16 @@ static const uint8_t nas_snr_indicator_type_data_v01[] = {
 
   QMI_IDL_GENERIC_2_BYTE,
   QMI_IDL_OFFSET8(nas_snr_indicator_type_v01, lte_snr_delta),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t nas_supp_ciot_optimizations_type_data_v01[] = {
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_supp_ciot_optimizations_type_v01, cp_ciot_supported),
+
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_supp_ciot_optimizations_type_v01, up_ciot_supported),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -247,6 +258,38 @@ static const uint8_t nas_signal_strength_list_type_data_v01[] = {
   QMI_IDL_FLAG_END_VALUE
 };
 
+static const uint8_t nas_nr5g_band_pref_mask_type_data_v01[] = {
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(nas_nr5g_band_pref_mask_type_v01, bits_1_64),
+
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(nas_nr5g_band_pref_mask_type_v01, bits_65_128),
+
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(nas_nr5g_band_pref_mask_type_v01, bits_129_192),
+
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(nas_nr5g_band_pref_mask_type_v01, bits_193_256),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t lte_band_pref_mask_ext_type_data_v01[] = {
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_1_64),
+
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_65_128),
+
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_129_192),
+
+  QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_193_256),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
 static const uint8_t nas_3gpp_network_info_type_data_v01[] = {
   QMI_IDL_GENERIC_2_BYTE,
   QMI_IDL_OFFSET8(nas_3gpp_network_info_type_v01, mobile_country_code),
@@ -273,6 +316,19 @@ static const uint8_t nas_network_radio_access_technology_type_data_v01[] = {
 
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(nas_network_radio_access_technology_type_v01, rat),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t nas_scanned_ciot_lte_op_mode_type_data_v01[] = {
+  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(nas_scanned_ciot_lte_op_mode_type_v01, mcc),
+
+  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(nas_scanned_ciot_lte_op_mode_type_v01, mnc),
+
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_scanned_ciot_lte_op_mode_type_v01, lte_op_mode),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -314,7 +370,7 @@ static const uint8_t nas_csg_nw_info_type_data_v01[] = {
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_csg_nw_info_type_v01, csg_info),
-  QMI_IDL_TYPE88(0, 24),
+  QMI_IDL_TYPE88(0, 28),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -361,7 +417,7 @@ static const uint8_t nas_pci_scan_cell_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_pci_scan_cell_info_type_v01, plmn),
   NAS_PCI_SCAN_MAX_NUM_PLMN_V01,
   QMI_IDL_OFFSET8(nas_pci_scan_cell_info_type_v01, plmn) - QMI_IDL_OFFSET8(nas_pci_scan_cell_info_type_v01, plmn_len),
-  QMI_IDL_TYPE88(0, 27),
+  QMI_IDL_TYPE88(0, 31),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -392,10 +448,10 @@ static const uint8_t nas_pci_nw_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_pci_nw_info_type_v01, pci_cell_info),
   NAS_PCI_SCAN_LIST_MAX_V01,
   QMI_IDL_OFFSET8(nas_pci_nw_info_type_v01, pci_cell_info) - QMI_IDL_OFFSET8(nas_pci_nw_info_type_v01, pci_cell_info_len),
-  QMI_IDL_TYPE88(0, 28),
+  QMI_IDL_TYPE88(0, 32),
   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_pci_nw_info_type_v01, signal_info),
-  QMI_IDL_TYPE88(0, 29),
+  QMI_IDL_TYPE88(0, 33),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -557,20 +613,10 @@ static const uint8_t nas_universal_time_and_local_time_zone_3gpp_type_data_v01[]
   QMI_IDL_FLAG_END_VALUE
 };
 
-static const uint8_t nas_plmn_id_type_data_v01[] = {
-  QMI_IDL_GENERIC_2_BYTE,
-  QMI_IDL_OFFSET8(nas_plmn_id_type_v01, mcc),
-
-  QMI_IDL_GENERIC_2_BYTE,
-  QMI_IDL_OFFSET8(nas_plmn_id_type_v01, mnc),
-
-  QMI_IDL_FLAG_END_VALUE
-};
-
 static const uint8_t nas_3gpp2_home_network_ext_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_3gpp2_home_network_ext_type_v01, mcc_mnc),
-  QMI_IDL_TYPE88(0, 42),
+  QMI_IDL_TYPE88(3, 0),
   QMI_IDL_1_BYTE_ENUM,
   QMI_IDL_OFFSET8(nas_3gpp2_home_network_ext_type_v01, network_desc_display),
 
@@ -699,22 +745,6 @@ static const uint8_t nas_csg_nw_iden_type_data_v01[] = {
 
   QMI_IDL_1_BYTE_ENUM,
   QMI_IDL_OFFSET8(nas_csg_nw_iden_type_v01, rat),
-
-  QMI_IDL_FLAG_END_VALUE
-};
-
-static const uint8_t lte_band_pref_mask_ext_type_data_v01[] = {
-  QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_1_64),
-
-  QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_65_128),
-
-  QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_129_192),
-
-  QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(lte_band_pref_mask_ext_type_v01, bits_193_256),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -936,7 +966,7 @@ static const uint8_t nas_geran_cell_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_geran_cell_info_type_v01, nmr_cell_info),
   NAS_NMR_MAX_NUM_V01,
   QMI_IDL_OFFSET8(nas_geran_cell_info_type_v01, nmr_cell_info) - QMI_IDL_OFFSET8(nas_geran_cell_info_type_v01, nmr_cell_info_len),
-  QMI_IDL_TYPE88(0, 63),
+  QMI_IDL_TYPE88(0, 65),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1021,12 +1051,12 @@ static const uint8_t nas_umts_cell_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_umts_cell_info_type_v01, umts_monitored_cell),
   NAS_UMTS_MAX_MONITORED_CELL_SET_NUM_V01,
   QMI_IDL_OFFSET8(nas_umts_cell_info_type_v01, umts_monitored_cell) - QMI_IDL_OFFSET8(nas_umts_cell_info_type_v01, umts_monitored_cell_len),
-  QMI_IDL_TYPE88(0, 65),
+  QMI_IDL_TYPE88(0, 67),
   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_umts_cell_info_type_v01, umts_geran_nbr_cell),
   NAS_UMTS_GERAN_MAX_NBR_CELL_SET_NUM_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_umts_cell_info_type_v01, umts_geran_nbr_cell) - QMI_IDL_OFFSET16RELATIVE(nas_umts_cell_info_type_v01, umts_geran_nbr_cell_len),
-  QMI_IDL_TYPE88(0, 66),
+  QMI_IDL_TYPE88(0, 68),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1107,7 +1137,7 @@ static const uint8_t nas_lte_intra_freq_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_intra_freq_type_v01, cells),
   NAS_MAX_LTE_NGBR_NUM_CELLS_V01,
   QMI_IDL_OFFSET8(nas_lte_intra_freq_type_v01, cells) - QMI_IDL_OFFSET8(nas_lte_intra_freq_type_v01, cells_len),
-  QMI_IDL_TYPE88(0, 70),
+  QMI_IDL_TYPE88(0, 72),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1128,7 +1158,7 @@ static const uint8_t nas_lte_inter_freq_freqs_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_inter_freq_freqs_type_v01, cells),
   NAS_MAX_LTE_NGBR_NUM_CELLS_V01,
   QMI_IDL_OFFSET8(nas_lte_inter_freq_freqs_type_v01, cells) - QMI_IDL_OFFSET8(nas_lte_inter_freq_freqs_type_v01, cells_len),
-  QMI_IDL_TYPE88(0, 70),
+  QMI_IDL_TYPE88(0, 72),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1140,7 +1170,7 @@ static const uint8_t nas_lte_inter_freq_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_inter_freq_type_v01, freqs),
   NAS_MAX_LTE_NGBR_NUM_FREQS_V01,
   QMI_IDL_OFFSET8(nas_lte_inter_freq_type_v01, freqs) - QMI_IDL_OFFSET8(nas_lte_inter_freq_type_v01, freqs_len),
-  QMI_IDL_TYPE88(0, 72),
+  QMI_IDL_TYPE88(0, 74),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1183,7 +1213,7 @@ static const uint8_t nas_lte_ngbr_gsm_freq_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_ngbr_gsm_freq_type_v01, cells),
   NAS_MAX_LTE_NGBR_GSM_NUM_CELLS_V01,
   QMI_IDL_OFFSET8(nas_lte_ngbr_gsm_freq_type_v01, cells) - QMI_IDL_OFFSET8(nas_lte_ngbr_gsm_freq_type_v01, cells_len),
-  QMI_IDL_TYPE88(0, 74),
+  QMI_IDL_TYPE88(0, 76),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1195,7 +1225,7 @@ static const uint8_t nas_lte_ngbr_gsm_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_ngbr_gsm_type_v01, freqs),
   NAS_MAX_LTE_NGBR_GSM_NUM_FREQS_V01,
   QMI_IDL_OFFSET8(nas_lte_ngbr_gsm_type_v01, freqs) - QMI_IDL_OFFSET8(nas_lte_ngbr_gsm_type_v01, freqs_len),
-  QMI_IDL_TYPE88(0, 75),
+  QMI_IDL_TYPE88(0, 77),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1232,7 +1262,7 @@ static const uint8_t nas_lte_ngbr_wcdma_freq_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_ngbr_wcdma_freq_type_v01, cells),
   NAS_MAX_LTE_NGBR_WCDMA_NUM_CELLS_V01,
   QMI_IDL_OFFSET8(nas_lte_ngbr_wcdma_freq_type_v01, cells) - QMI_IDL_OFFSET8(nas_lte_ngbr_wcdma_freq_type_v01, cells_len),
-  QMI_IDL_TYPE88(0, 77),
+  QMI_IDL_TYPE88(0, 79),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1244,7 +1274,7 @@ static const uint8_t nas_lte_ngbr_wcdma_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_ngbr_wcdma_type_v01, freqs),
   NAS_MAX_LTE_NGBR_WCDMA_NUM_FREQS_V01,
   QMI_IDL_OFFSET8(nas_lte_ngbr_wcdma_type_v01, freqs) - QMI_IDL_OFFSET8(nas_lte_ngbr_wcdma_type_v01, freqs_len),
-  QMI_IDL_TYPE88(0, 78),
+  QMI_IDL_TYPE88(0, 80),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1256,7 +1286,7 @@ static const uint8_t nas_wcdma_ngbr_lte_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_wcdma_ngbr_lte_type_v01, umts_lte_nbr_cell),
   NAS_UMTS_LTE_MAX_NBR_CELL_SET_NUM_V01,
   QMI_IDL_OFFSET8(nas_wcdma_ngbr_lte_type_v01, umts_lte_nbr_cell) - QMI_IDL_OFFSET8(nas_wcdma_ngbr_lte_type_v01, umts_lte_nbr_cell_len),
-  QMI_IDL_TYPE88(0, 67),
+  QMI_IDL_TYPE88(0, 69),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1415,12 +1445,12 @@ static const uint8_t nas_umts_cell_ext_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_umts_cell_ext_info_type_v01, umts_monitored_ext_ext_cell),
   NAS_UMTS_MAX_MONITORED_CELL_SET_NUM_V01,
   QMI_IDL_OFFSET8(nas_umts_cell_ext_info_type_v01, umts_monitored_ext_ext_cell) - QMI_IDL_OFFSET8(nas_umts_cell_ext_info_type_v01, umts_monitored_ext_ext_cell_len),
-  QMI_IDL_TYPE88(0, 86),
+  QMI_IDL_TYPE88(0, 88),
   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_umts_cell_ext_info_type_v01, umts_geran_ext_nbr_cell),
   NAS_UMTS_GERAN_MAX_NBR_CELL_SET_NUM_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_umts_cell_ext_info_type_v01, umts_geran_ext_nbr_cell) - QMI_IDL_OFFSET16RELATIVE(nas_umts_cell_ext_info_type_v01, umts_geran_ext_nbr_cell_len),
-  QMI_IDL_TYPE88(0, 87),
+  QMI_IDL_TYPE88(0, 89),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1517,7 +1547,7 @@ static const uint8_t nas_geran_cell_info_ext_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_geran_cell_info_ext_type_v01, nmr_cell_info),
   NAS_NMR_MAX_NUM_V01,
   QMI_IDL_OFFSET8(nas_geran_cell_info_ext_type_v01, nmr_cell_info) - QMI_IDL_OFFSET8(nas_geran_cell_info_ext_type_v01, nmr_cell_info_len),
-  QMI_IDL_TYPE88(0, 90),
+  QMI_IDL_TYPE88(0, 92),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1760,13 +1790,13 @@ static const uint8_t nas_cdma_only_sys_info_type_data_v01[] = {
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_cdma_only_sys_info_type_v01, cdma_sys_id),
-  QMI_IDL_TYPE88(0, 34),
+  QMI_IDL_TYPE88(0, 38),
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(nas_cdma_only_sys_info_type_v01, bs_info_valid),
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_cdma_only_sys_info_type_v01, bs_info),
-  QMI_IDL_TYPE88(0, 35),
+  QMI_IDL_TYPE88(0, 39),
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(nas_cdma_only_sys_info_type_v01, packet_zone_valid),
 
@@ -1778,7 +1808,7 @@ static const uint8_t nas_cdma_only_sys_info_type_data_v01[] = {
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_cdma_only_sys_info_type_v01, network_id),
-  QMI_IDL_TYPE88(0, 103),
+  QMI_IDL_TYPE88(0, 105),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -1853,6 +1883,16 @@ static const uint8_t nas_lte_only_sys_info_type_data_v01[] = {
   QMI_IDL_FLAG_END_VALUE
 };
 
+static const uint8_t nas_nr5g_only_sys_info_type_data_v01[] = {
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_nr5g_only_sys_info_type_v01, tac_valid),
+
+  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(nas_nr5g_only_sys_info_type_v01, tac),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
 static const uint8_t nas_cdma_hdr_only_sys_info_type_data_v01[] = {
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(nas_cdma_hdr_only_sys_info_type_v01, is_sys_prl_match_valid),
@@ -1881,78 +1921,91 @@ static const uint8_t nas_3gpp_only_sys_info_type_data_v01[] = {
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_3gpp_only_sys_info_type_v01, reg_reject_info),
-  QMI_IDL_TYPE88(0, 100),
+  QMI_IDL_TYPE88(0, 102),
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(nas_3gpp_only_sys_info_type_v01, network_id_valid),
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_3gpp_only_sys_info_type_v01, network_id),
-  QMI_IDL_TYPE88(0, 103),
+  QMI_IDL_TYPE88(0, 105),
   QMI_IDL_FLAG_END_VALUE
 };
 
 static const uint8_t nas_cdma_sys_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_cdma_sys_info_type_v01, common_sys_info),
-  QMI_IDL_TYPE88(0, 104),
+  QMI_IDL_TYPE88(0, 106),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_cdma_sys_info_type_v01, cdma_hdr_only_sys_info),
-  QMI_IDL_TYPE88(0, 110),
+  QMI_IDL_TYPE88(0, 113),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_cdma_sys_info_type_v01, cdma_specific_sys_info),
-  QMI_IDL_TYPE88(0, 105),
+  QMI_IDL_TYPE88(0, 107),
   QMI_IDL_FLAG_END_VALUE
 };
 
 static const uint8_t nas_hdr_sys_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_hdr_sys_info_type_v01, common_sys_info),
-  QMI_IDL_TYPE88(0, 104),
+  QMI_IDL_TYPE88(0, 106),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_hdr_sys_info_type_v01, cdma_hdr_only_sys_info),
-  QMI_IDL_TYPE88(0, 110),
+  QMI_IDL_TYPE88(0, 113),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_hdr_sys_info_type_v01, hdr_specific_sys_info),
-  QMI_IDL_TYPE88(0, 106),
+  QMI_IDL_TYPE88(0, 108),
   QMI_IDL_FLAG_END_VALUE
 };
 
 static const uint8_t nas_gsm_sys_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_gsm_sys_info_type_v01, common_sys_info),
-  QMI_IDL_TYPE88(0, 104),
+  QMI_IDL_TYPE88(0, 106),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_gsm_sys_info_type_v01, threegpp_specific_sys_info),
-  QMI_IDL_TYPE88(0, 111),
+  QMI_IDL_TYPE88(0, 114),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_gsm_sys_info_type_v01, gsm_specific_sys_info),
-  QMI_IDL_TYPE88(0, 107),
+  QMI_IDL_TYPE88(0, 109),
   QMI_IDL_FLAG_END_VALUE
 };
 
 static const uint8_t nas_wcdma_sys_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_wcdma_sys_info_type_v01, common_sys_info),
-  QMI_IDL_TYPE88(0, 104),
+  QMI_IDL_TYPE88(0, 106),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_wcdma_sys_info_type_v01, threegpp_specific_sys_info),
-  QMI_IDL_TYPE88(0, 111),
+  QMI_IDL_TYPE88(0, 114),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_wcdma_sys_info_type_v01, wcdma_specific_sys_info),
-  QMI_IDL_TYPE88(0, 108),
+  QMI_IDL_TYPE88(0, 110),
   QMI_IDL_FLAG_END_VALUE
 };
 
 static const uint8_t nas_lte_sys_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_sys_info_type_v01, common_sys_info),
-  QMI_IDL_TYPE88(0, 104),
+  QMI_IDL_TYPE88(0, 106),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_sys_info_type_v01, threegpp_specific_sys_info),
-  QMI_IDL_TYPE88(0, 111),
+  QMI_IDL_TYPE88(0, 114),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_sys_info_type_v01, lte_specific_sys_info),
-  QMI_IDL_TYPE88(0, 109),
+  QMI_IDL_TYPE88(0, 111),
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t nas_nr5g_sys_info_type_data_v01[] = {
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_nr5g_sys_info_type_v01, common_sys_info),
+  QMI_IDL_TYPE88(0, 106),
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_nr5g_sys_info_type_v01, threegpp_specific_sys_info),
+  QMI_IDL_TYPE88(0, 114),
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_nr5g_sys_info_type_v01, nr5g_specific_sys_info),
+  QMI_IDL_TYPE88(0, 112),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -2005,13 +2058,13 @@ static const uint8_t nas_tdscdma_only_sys_info_type_data_v01[] = {
 static const uint8_t nas_tdscdma_sys_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_tdscdma_sys_info_type_v01, common_sys_info),
-  QMI_IDL_TYPE88(0, 104),
+  QMI_IDL_TYPE88(0, 106),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_tdscdma_sys_info_type_v01, threegpp_specific_sys_info),
-  QMI_IDL_TYPE88(0, 111),
+  QMI_IDL_TYPE88(0, 114),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_tdscdma_sys_info_type_v01, tdscdma_specific_sys_info),
-  QMI_IDL_TYPE88(0, 117),
+  QMI_IDL_TYPE88(0, 121),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -2072,7 +2125,7 @@ static const uint8_t nas_common_sig_info_param_type_data_v01[] = {
 static const uint8_t nas_hdr_sig_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_hdr_sig_info_type_v01, common_sig_str),
-  QMI_IDL_TYPE88(0, 124),
+  QMI_IDL_TYPE88(0, 128),
   QMI_IDL_1_BYTE_ENUM,
   QMI_IDL_OFFSET8(nas_hdr_sig_info_type_v01, sinr),
 
@@ -2247,14 +2300,14 @@ static const uint8_t nas_cdma_position_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_cdma_position_info_type_v01, bs),
   NAS_CDMA_POSITION_INFO_MAX_V01,
   QMI_IDL_OFFSET8(nas_cdma_position_info_type_v01, bs) - QMI_IDL_OFFSET8(nas_cdma_position_info_type_v01, bs_len),
-  QMI_IDL_TYPE88(0, 135),
+  QMI_IDL_TYPE88(0, 139),
   QMI_IDL_FLAG_END_VALUE
 };
 
 static const uint8_t nas_tds_cell_info_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_tds_cell_info_type_v01, plmn),
-  QMI_IDL_TYPE88(0, 27),
+  QMI_IDL_TYPE88(0, 31),
   QMI_IDL_GENERIC_2_BYTE,
   QMI_IDL_OFFSET8(nas_tds_cell_info_type_v01, lac),
 
@@ -2344,7 +2397,7 @@ static const uint8_t nas_cdma_avoid_sys_info_type_data_v01[] = {
 static const uint8_t nas_network_time_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_network_time_type_v01, universal_time),
-  QMI_IDL_TYPE88(0, 99),
+  QMI_IDL_TYPE88(0, 101),
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(nas_network_time_type_v01, time_zone),
 
@@ -2416,7 +2469,7 @@ static const uint8_t nas_lte_embms_signal_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_embms_signal_type_v01, tmgi_info),
   NAS_TMGI_BEARER_INFO_MAX_V01,
   QMI_IDL_OFFSET8(nas_lte_embms_signal_type_v01, tmgi_info) - QMI_IDL_OFFSET8(nas_lte_embms_signal_type_v01, tmgi_info_len),
-  QMI_IDL_TYPE88(0, 145),
+  QMI_IDL_TYPE88(0, 149),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -2448,6 +2501,16 @@ static const uint8_t nas_lte_cphy_scell_info_type_data_v01[] = {
 
   QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET8(nas_lte_cphy_scell_info_type_v01, scell_state),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t nas_cphy_scell_info_data_v01[] = {
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_cphy_scell_info_v01, scell_info),
+  QMI_IDL_TYPE88(0, 152),
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_cphy_scell_info_v01, scell_idx),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -2490,7 +2553,7 @@ static const uint8_t nas_oplmn_list_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_oplmn_list_type_v01, oplmn),
   ((NAS_MAX_BUILTIN_OPLMN_ENTRIES_V01) & 0xFF), ((NAS_MAX_BUILTIN_OPLMN_ENTRIES_V01) >> 8),
   QMI_IDL_OFFSET8(nas_oplmn_list_type_v01, oplmn) - QMI_IDL_OFFSET8(nas_oplmn_list_type_v01, oplmn_len),
-  QMI_IDL_TYPE88(0, 150),
+  QMI_IDL_TYPE88(0, 155),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -2583,7 +2646,7 @@ static const uint8_t nas_lte_ml1_pmch_bler_per_area_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_ml1_pmch_bler_per_area_info_type_v01, pmch_bler),
   NAS_LTE_PMCH_PER_MBSFN_AREA_MAX_V01,
   QMI_IDL_OFFSET8(nas_lte_ml1_pmch_bler_per_area_info_type_v01, pmch_bler) - QMI_IDL_OFFSET8(nas_lte_ml1_pmch_bler_per_area_info_type_v01, pmch_bler_len),
-  QMI_IDL_TYPE88(0, 156),
+  QMI_IDL_TYPE88(0, 161),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -2696,16 +2759,6 @@ static const uint8_t geran_grr_gcell_identifier_s_data_v01[] = {
   QMI_IDL_FLAG_END_VALUE
 };
 
-static const uint8_t nas_cphy_scell_info_data_v01[] = {
-  QMI_IDL_AGGREGATE,
-  QMI_IDL_OFFSET8(nas_cphy_scell_info_v01, scell_info),
-  QMI_IDL_TYPE88(0, 148),
-  QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_cphy_scell_info_v01, scell_idx),
-
-  QMI_IDL_FLAG_END_VALUE
-};
-
 static const uint8_t nas_lte_rach_fail_ind_type_data_v01[] = {
   QMI_IDL_GENERIC_2_BYTE,
   QMI_IDL_OFFSET8(nas_lte_rach_fail_ind_type_v01, phy_cell_id),
@@ -2722,25 +2775,15 @@ static const uint8_t nas_lte_rach_fail_ind_type_data_v01[] = {
   QMI_IDL_FLAG_END_VALUE
 };
 
-static const uint8_t nas_supp_ciot_optimizations_type_data_v01[] = {
-  QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_supp_ciot_optimizations_type_v01, cp_ciot_supported),
-
-  QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_supp_ciot_optimizations_type_v01, up_ciot_supported),
-
-  QMI_IDL_FLAG_END_VALUE
-};
-
-static const uint8_t nas_scanned_ciot_lte_op_mode_type_data_v01[] = {
-  QMI_IDL_GENERIC_2_BYTE,
-  QMI_IDL_OFFSET8(nas_scanned_ciot_lte_op_mode_type_v01, mcc),
-
-  QMI_IDL_GENERIC_2_BYTE,
-  QMI_IDL_OFFSET8(nas_scanned_ciot_lte_op_mode_type_v01, mnc),
+static const uint8_t nas_lte_b2_thresh_adj_info_type_data_v01[] = {
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_info_type_v01, rsrq_thresh),
 
   QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET8(nas_scanned_ciot_lte_op_mode_type_v01, lte_op_mode),
+  QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_info_type_v01, rsrp_thresh),
+
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_info_type_v01, thresh1_adj),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -2861,7 +2904,7 @@ static const uint8_t nas_event_report_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_event_report_ind_msg_v01, signal_strength),
-  QMI_IDL_TYPE88(0, 10),
+  QMI_IDL_TYPE88(0, 11),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_event_report_ind_msg_v01, rf_band_info_list) - QMI_IDL_OFFSET8(nas_event_report_ind_msg_v01, rf_band_info_list_valid)),
   0x11,
@@ -2869,25 +2912,25 @@ static const uint8_t nas_event_report_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_event_report_ind_msg_v01, rf_band_info_list),
   NAS_RADIO_IF_LIST_MAX_V01,
   QMI_IDL_OFFSET8(nas_event_report_ind_msg_v01, rf_band_info_list) - QMI_IDL_OFFSET8(nas_event_report_ind_msg_v01, rf_band_info_list_len),
-  QMI_IDL_TYPE88(0, 11),
+  QMI_IDL_TYPE88(0, 12),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, registration_reject_reason) - QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, registration_reject_reason_valid)),
   0x12,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_event_report_ind_msg_v01, registration_reject_reason),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 15),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, rssi) - QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, rssi_valid)),
   0x13,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_event_report_ind_msg_v01, rssi),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 16),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, ecio) - QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, ecio_valid)),
   0x14,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_event_report_ind_msg_v01, ecio),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 17),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, io) - QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, io_valid)),
   0x15,
@@ -2903,13 +2946,13 @@ static const uint8_t nas_event_report_ind_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_event_report_ind_msg_v01, error_rate),
-  QMI_IDL_TYPE88(0, 17),
+  QMI_IDL_TYPE88(0, 18),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, rsrq) - QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, rsrq_valid)),
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_event_report_ind_msg_v01, rsrq),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 19),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, snr) - QMI_IDL_OFFSET16RELATIVE(nas_event_report_ind_msg_v01, snr_valid)),
   0x19,
@@ -3002,7 +3045,7 @@ static const uint8_t nas_indication_register_req_msg_data_v01[] = {
   0x21,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, network_reject),
-  QMI_IDL_TYPE88(0, 19),
+  QMI_IDL_TYPE88(0, 20),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_operator_name_data) - QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_operator_name_data_valid)),
   0x22,
@@ -3109,10 +3152,25 @@ static const uint8_t nas_indication_register_req_msg_data_v01[] = {
    QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_lte_rach_fail_ind),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, lte_rrc_tx_info_ind) - QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, lte_rrc_tx_info_ind_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, lte_rrc_tx_info_ind) - QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, lte_rrc_tx_info_ind_valid)),
   0x37,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, lte_rrc_tx_info_ind)
+  QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, lte_rrc_tx_info_ind),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, nas_sub_blocked_status_ind) - QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, nas_sub_blocked_status_ind_valid)),
+  0x38,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, nas_sub_blocked_status_ind),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_e911_search_fail_ind) - QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_e911_search_fail_ind_valid)),
+  0x39,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_e911_search_fail_ind),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_v2x_status_ind) - QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_v2x_status_ind_valid)),
+  0x3A,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_indication_register_req_msg_v01, reg_v2x_status_ind)
 };
 
 static const uint8_t nas_indication_register_resp_msg_data_v01[] = {
@@ -3138,7 +3196,7 @@ static const uint8_t nas_get_signal_strength_resp_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, signal_strength),
-  QMI_IDL_TYPE88(0, 10),
+  QMI_IDL_TYPE88(0, 11),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, signal_strength_list) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, signal_strength_list_valid)),
   0x10,
@@ -3146,7 +3204,7 @@ static const uint8_t nas_get_signal_strength_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, signal_strength_list),
   ((NAS_SIG_STRENGTH_LIST_MAX_V01) & 0xFF), ((NAS_SIG_STRENGTH_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, signal_strength_list) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, signal_strength_list_len),
-  QMI_IDL_TYPE88(0, 20),
+  QMI_IDL_TYPE88(0, 21),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, rssi) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, rssi_valid)),
   0x11,
@@ -3154,7 +3212,7 @@ static const uint8_t nas_get_signal_strength_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, rssi),
   ((NAS_RSSI_LIST_MAX_V01) & 0xFF), ((NAS_RSSI_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, rssi) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, rssi_len),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 16),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, ecio) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, ecio_valid)),
   0x12,
@@ -3162,7 +3220,7 @@ static const uint8_t nas_get_signal_strength_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, ecio),
   ((NAS_ECIO_LIST_MAX_V01) & 0xFF), ((NAS_ECIO_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, ecio) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, ecio_len),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 17),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, io) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, io_valid)),
   0x13,
@@ -3180,13 +3238,13 @@ static const uint8_t nas_get_signal_strength_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, error_rate),
   ((NAS_ERROR_RATE_LIST_MAX_V01) & 0xFF), ((NAS_ERROR_RATE_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, error_rate) - QMI_IDL_OFFSET8(nas_get_signal_strength_resp_msg_v01, error_rate_len),
-  QMI_IDL_TYPE88(0, 17),
+  QMI_IDL_TYPE88(0, 18),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_signal_strength_resp_msg_v01, rsrq) - QMI_IDL_OFFSET16RELATIVE(nas_get_signal_strength_resp_msg_v01, rsrq_valid)),
   0x16,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_signal_strength_resp_msg_v01, rsrq),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 19),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_signal_strength_resp_msg_v01, snr) - QMI_IDL_OFFSET16RELATIVE(nas_get_signal_strength_resp_msg_v01, snr_valid)),
   0x17,
@@ -3235,10 +3293,22 @@ static const uint8_t nas_perform_network_scan_req_msg_data_v01[] = {
    QMI_IDL_GENERIC_8_BYTE,
   QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_m1_band_pref),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref) - QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref) - QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref_valid)),
   0x17,
    QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref)
+  QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_m1_band_pref_ext) - QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_m1_band_pref_ext_valid)),
+  0x18,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_m1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref_ext) - QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref_ext_valid)),
+  0x19,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_perform_network_scan_req_msg_v01, lte_nb1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23)
 };
 
 static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
@@ -3253,7 +3323,7 @@ static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_perform_network_scan_resp_msg_v01, nas_3gpp_network_info),
   ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_perform_network_scan_resp_msg_v01, nas_3gpp_network_info) - QMI_IDL_OFFSET8(nas_perform_network_scan_resp_msg_v01, nas_3gpp_network_info_len),
-  QMI_IDL_TYPE88(0, 21),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, nas_network_radio_access_technology) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, nas_network_radio_access_technology_valid)),
   0x11,
@@ -3261,7 +3331,7 @@ static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_perform_network_scan_resp_msg_v01, nas_network_radio_access_technology),
   ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, nas_network_radio_access_technology) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, nas_network_radio_access_technology_len),
-  QMI_IDL_TYPE88(0, 22),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, mnc_includes_pcs_digit_valid)),
   0x12,
@@ -3269,7 +3339,7 @@ static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_perform_network_scan_resp_msg_v01, mnc_includes_pcs_digit),
   ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, mnc_includes_pcs_digit_len),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, scan_result) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, scan_result_valid)),
   0x13,
@@ -3282,7 +3352,7 @@ static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_perform_network_scan_resp_msg_v01, csg_info),
   NAS_3GPP_NETWORK_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, csg_info) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, csg_info_len),
-  QMI_IDL_TYPE88(0, 25),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, csg_sig_info) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, csg_sig_info_valid)),
   0x15,
@@ -3290,7 +3360,7 @@ static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_perform_network_scan_resp_msg_v01, csg_sig_info),
   NAS_3GPP_NETWORK_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, csg_sig_info) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, csg_sig_info_len),
-  QMI_IDL_TYPE88(0, 26),
+  QMI_IDL_TYPE88(0, 30),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, nw_name_source) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, nw_name_source_valid)),
   0x16,
@@ -3303,7 +3373,7 @@ static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_perform_network_scan_resp_msg_v01, pci_plmn_info),
-  QMI_IDL_TYPE88(0, 30),
+  QMI_IDL_TYPE88(0, 34),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, lte_op_mode) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, lte_op_mode_valid)),
   0x18,
@@ -3311,7 +3381,7 @@ static const uint8_t nas_perform_network_scan_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_perform_network_scan_resp_msg_v01, lte_op_mode),
   NAS_3GPP_NETWORK_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, lte_op_mode) - QMI_IDL_OFFSET16RELATIVE(nas_perform_network_scan_resp_msg_v01, lte_op_mode_len),
-  QMI_IDL_TYPE88(0, 170)
+  QMI_IDL_TYPE88(0, 26)
 };
 
 static const uint8_t nas_initiate_network_register_req_msg_data_v01[] = {
@@ -3323,7 +3393,7 @@ static const uint8_t nas_initiate_network_register_req_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_initiate_network_register_req_msg_v01, manual_network_register_info),
-  QMI_IDL_TYPE88(0, 31),
+  QMI_IDL_TYPE88(0, 35),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_initiate_network_register_req_msg_v01, change_duration) - QMI_IDL_OFFSET8(nas_initiate_network_register_req_msg_v01, change_duration_valid)),
   0x11,
@@ -3372,7 +3442,7 @@ static const uint8_t nas_get_serving_system_resp_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_serving_system_resp_msg_v01, serving_system),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 36),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, roaming_indicator) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, roaming_indicator_valid)),
   0x10,
@@ -3390,19 +3460,19 @@ static const uint8_t nas_get_serving_system_resp_msg_data_v01[] = {
   0x12,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, current_plmn),
-  QMI_IDL_TYPE88(0, 33),
+  QMI_IDL_TYPE88(0, 37),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, cdma_system_id) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, cdma_system_id_valid)),
   0x13,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, cdma_system_id),
-  QMI_IDL_TYPE88(0, 34),
+  QMI_IDL_TYPE88(0, 38),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, cdma_base_station_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, cdma_base_station_info_valid)),
   0x14,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, cdma_base_station_info),
-  QMI_IDL_TYPE88(0, 35),
+  QMI_IDL_TYPE88(0, 39),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, roaming_indicator_list) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, roaming_indicator_list_valid)),
   0x15,
@@ -3410,7 +3480,7 @@ static const uint8_t nas_get_serving_system_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, roaming_indicator_list),
   NAS_ROAMING_INDICATOR_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, roaming_indicator_list) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, roaming_indicator_list_len),
-  QMI_IDL_TYPE88(0, 36),
+  QMI_IDL_TYPE88(0, 40),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, def_roam_ind) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, def_roam_ind_valid)),
   0x16,
@@ -3421,7 +3491,7 @@ static const uint8_t nas_get_serving_system_resp_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, nas_3gpp_time_zone),
-  QMI_IDL_TYPE88(0, 37),
+  QMI_IDL_TYPE88(0, 41),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, p_rev_in_use) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, p_rev_in_use_valid)),
   0x18,
@@ -3467,13 +3537,13 @@ static const uint8_t nas_get_serving_system_resp_msg_data_v01[] = {
   0x21,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, detailed_service_info),
-  QMI_IDL_TYPE88(0, 38),
+  QMI_IDL_TYPE88(0, 42),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, cdma_system_id_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, cdma_system_id_ext_valid)),
   0x22,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, cdma_system_id_ext),
-  QMI_IDL_TYPE88(0, 39),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, hdr_personality) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, hdr_personality_valid)),
   0x23,
@@ -3489,7 +3559,7 @@ static const uint8_t nas_get_serving_system_resp_msg_data_v01[] = {
   0x25,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, call_barring_status),
-  QMI_IDL_TYPE88(0, 40),
+  QMI_IDL_TYPE88(0, 44),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, umts_psc) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, umts_psc_valid)),
   0x26,
@@ -3500,7 +3570,7 @@ static const uint8_t nas_get_serving_system_resp_msg_data_v01[] = {
   0x27,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_serving_system_resp_msg_v01, mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, hs_call_status) - QMI_IDL_OFFSET16RELATIVE(nas_get_serving_system_resp_msg_v01, hs_call_status_valid)),
   0x28,
@@ -3517,7 +3587,7 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_serving_system_ind_msg_v01, serving_system),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 36),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, roaming_indicator) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, roaming_indicator_valid)),
   0x10,
@@ -3535,19 +3605,19 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   0x12,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, current_plmn),
-  QMI_IDL_TYPE88(0, 33),
+  QMI_IDL_TYPE88(0, 37),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, cdma_system_id) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, cdma_system_id_valid)),
   0x13,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, cdma_system_id),
-  QMI_IDL_TYPE88(0, 34),
+  QMI_IDL_TYPE88(0, 38),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, cdma_base_station_info) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, cdma_base_station_info_valid)),
   0x14,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, cdma_base_station_info),
-  QMI_IDL_TYPE88(0, 35),
+  QMI_IDL_TYPE88(0, 39),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, roaming_indicator_list) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, roaming_indicator_list_valid)),
   0x15,
@@ -3555,7 +3625,7 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, roaming_indicator_list),
   NAS_ROAMING_INDICATOR_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, roaming_indicator_list) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, roaming_indicator_list_len),
-  QMI_IDL_TYPE88(0, 36),
+  QMI_IDL_TYPE88(0, 40),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, def_roam_ind) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, def_roam_ind_valid)),
   0x16,
@@ -3566,7 +3636,7 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, nas_3gpp_time_zone),
-  QMI_IDL_TYPE88(0, 37),
+  QMI_IDL_TYPE88(0, 41),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, p_rev_in_use) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, p_rev_in_use_valid)),
   0x18,
@@ -3592,7 +3662,7 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   0x1C,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, universal_time_and_local_time_3gpp_zone),
-  QMI_IDL_TYPE88(0, 41),
+  QMI_IDL_TYPE88(0, 45),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, lac) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, lac_valid)),
   0x1D,
@@ -3623,13 +3693,13 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   0x22,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, detailed_service_info),
-  QMI_IDL_TYPE88(0, 38),
+  QMI_IDL_TYPE88(0, 42),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, cdma_system_id_ext) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, cdma_system_id_ext_valid)),
   0x23,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, cdma_system_id_ext),
-  QMI_IDL_TYPE88(0, 39),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, hdr_personality) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, hdr_personality_valid)),
   0x24,
@@ -3645,7 +3715,7 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   0x26,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, call_barring_status),
-  QMI_IDL_TYPE88(0, 40),
+  QMI_IDL_TYPE88(0, 44),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, srv_sys_no_change) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, srv_sys_no_change_valid)),
   0x27,
@@ -3661,7 +3731,7 @@ static const uint8_t nas_serving_system_ind_msg_data_v01[] = {
   0x29,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_serving_system_ind_msg_v01, mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, hs_call_status) - QMI_IDL_OFFSET16RELATIVE(nas_serving_system_ind_msg_v01, hs_call_status_valid)),
   0x2A,
@@ -3689,25 +3759,25 @@ static const uint8_t nas_get_home_network_resp_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_home_network_resp_msg_v01, home_network),
-  QMI_IDL_TYPE88(0, 33),
+  QMI_IDL_TYPE88(0, 37),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, home_system_id) - QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, home_system_id_valid)),
   0x10,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_home_network_resp_msg_v01, home_system_id),
-  QMI_IDL_TYPE88(0, 34),
+  QMI_IDL_TYPE88(0, 38),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, nas_3gpp2_home_network_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, nas_3gpp2_home_network_ext_valid)),
   0x11,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_home_network_resp_msg_v01, nas_3gpp2_home_network_ext),
-  QMI_IDL_TYPE88(0, 43),
+  QMI_IDL_TYPE88(0, 46),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, nas_3gpp_mcs_include_digit) - QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, nas_3gpp_mcs_include_digit_valid)),
   0x12,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_home_network_resp_msg_v01, nas_3gpp_mcs_include_digit),
-  QMI_IDL_TYPE88(0, 44),
+  QMI_IDL_TYPE88(0, 47),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, nas_3gpp_nw_name_source) - QMI_IDL_OFFSET16RELATIVE(nas_get_home_network_resp_msg_v01, nas_3gpp_nw_name_source_valid)),
   0x13,
@@ -3733,7 +3803,7 @@ static const uint8_t nas_get_preferred_networks_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_preferred_networks),
   ((NAS_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_preferred_networks) - QMI_IDL_OFFSET8(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_preferred_networks_len),
-  QMI_IDL_TYPE88(0, 45),
+  QMI_IDL_TYPE88(0, 48),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_preferred_networks) - QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_preferred_networks_valid)),
   0x11,
@@ -3741,7 +3811,7 @@ static const uint8_t nas_get_preferred_networks_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_preferred_networks_resp_msg_v01, static_3gpp_preferred_networks),
   ((NAS_STATIC_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01) & 0xFF), ((NAS_STATIC_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_preferred_networks) - QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_preferred_networks_len),
-  QMI_IDL_TYPE88(0, 45),
+  QMI_IDL_TYPE88(0, 48),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_mnc_includes_pcs_digit_valid)),
   0x12,
@@ -3749,7 +3819,7 @@ static const uint8_t nas_get_preferred_networks_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_mnc_includes_pcs_digit),
   NAS_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, nas_3gpp_mnc_includes_pcs_digit_len),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_mnc_includes_pcs_digit_valid)),
   0x13,
@@ -3757,7 +3827,7 @@ static const uint8_t nas_get_preferred_networks_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_preferred_networks_resp_msg_v01, static_3gpp_mnc_includes_pcs_digit),
   NAS_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_get_preferred_networks_resp_msg_v01, static_3gpp_mnc_includes_pcs_digit_len),
-  QMI_IDL_TYPE88(0, 23)
+  QMI_IDL_TYPE88(0, 27)
 };
 
 static const uint8_t nas_set_preferred_networks_req_msg_data_v01[] = {
@@ -3767,7 +3837,7 @@ static const uint8_t nas_set_preferred_networks_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_set_preferred_networks_req_msg_v01, nas_3gpp_preferred_networks),
   ((NAS_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_set_preferred_networks_req_msg_v01, nas_3gpp_preferred_networks) - QMI_IDL_OFFSET8(nas_set_preferred_networks_req_msg_v01, nas_3gpp_preferred_networks_len),
-  QMI_IDL_TYPE88(0, 45),
+  QMI_IDL_TYPE88(0, 48),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_preferred_networks_req_msg_v01, nas_3gpp_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_set_preferred_networks_req_msg_v01, nas_3gpp_mnc_includes_pcs_digit_valid)),
   0x11,
@@ -3775,7 +3845,7 @@ static const uint8_t nas_set_preferred_networks_req_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_set_preferred_networks_req_msg_v01, nas_3gpp_mnc_includes_pcs_digit),
   NAS_3GPP_PREFERRED_NETWORKS_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_set_preferred_networks_req_msg_v01, nas_3gpp_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(nas_set_preferred_networks_req_msg_v01, nas_3gpp_mnc_includes_pcs_digit_len),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_preferred_networks_req_msg_v01, clear_prev_preferred_networks) - QMI_IDL_OFFSET16RELATIVE(nas_set_preferred_networks_req_msg_v01, clear_prev_preferred_networks_valid)),
   0x12,
@@ -3808,7 +3878,7 @@ static const uint8_t nas_get_forbidden_networks_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_forbidden_networks_resp_msg_v01, nas_3gpp_forbidden_networks),
   ((NAS_3GPP_FORBIDDEN_NETWORKS_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_FORBIDDEN_NETWORKS_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_get_forbidden_networks_resp_msg_v01, nas_3gpp_forbidden_networks) - QMI_IDL_OFFSET8(nas_get_forbidden_networks_resp_msg_v01, nas_3gpp_forbidden_networks_len),
-  QMI_IDL_TYPE88(0, 46)
+  QMI_IDL_TYPE88(0, 49)
 };
 
 static const uint8_t nas_set_forbidden_networks_req_msg_data_v01[] = {
@@ -3818,7 +3888,7 @@ static const uint8_t nas_set_forbidden_networks_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_set_forbidden_networks_req_msg_v01, nas_3gpp_forbidden_networks),
   ((NAS_3GPP_FORBIDDEN_NETWORKS_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_FORBIDDEN_NETWORKS_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_set_forbidden_networks_req_msg_v01, nas_3gpp_forbidden_networks) - QMI_IDL_OFFSET8(nas_set_forbidden_networks_req_msg_v01, nas_3gpp_forbidden_networks_len),
-  QMI_IDL_TYPE88(0, 46)
+  QMI_IDL_TYPE88(0, 49)
 };
 
 static const uint8_t nas_set_forbidden_networks_resp_msg_data_v01[] = {
@@ -3849,7 +3919,7 @@ static const uint8_t nas_set_accolc_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_accolc_req_msg_v01, accolc_set),
-  QMI_IDL_TYPE88(0, 47)
+  QMI_IDL_TYPE88(0, 50)
 };
 
 static const uint8_t nas_set_accolc_resp_msg_data_v01[] = {
@@ -3885,7 +3955,7 @@ static const uint8_t nas_get_device_config_resp_msg_data_v01[] = {
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_device_config_resp_msg_v01, registration_parameters),
-  QMI_IDL_TYPE88(0, 48),
+  QMI_IDL_TYPE88(0, 51),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_device_config_resp_msg_v01, force_rev0) - QMI_IDL_OFFSET8(nas_get_device_config_resp_msg_v01, force_rev0_valid)),
   0x14,
@@ -3896,7 +3966,7 @@ static const uint8_t nas_get_device_config_resp_msg_data_v01[] = {
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_device_config_resp_msg_v01, hdr_scp_config),
-  QMI_IDL_TYPE88(0, 49),
+  QMI_IDL_TYPE88(0, 52),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_device_config_resp_msg_v01, roam_pref) - QMI_IDL_OFFSET8(nas_get_device_config_resp_msg_v01, roam_pref_valid)),
   0x16,
@@ -3925,7 +3995,7 @@ static const uint8_t nas_set_device_config_req_msg_data_v01[] = {
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_device_config_req_msg_v01, hdr_scp_config),
-  QMI_IDL_TYPE88(0, 49),
+  QMI_IDL_TYPE88(0, 52),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_device_config_req_msg_v01, roam_pref) - QMI_IDL_OFFSET8(nas_set_device_config_req_msg_v01, roam_pref_valid)),
   0x16,
@@ -3957,7 +4027,7 @@ static const uint8_t nas_get_rf_band_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list),
   NAS_RF_BAND_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET8(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list) - QMI_IDL_OFFSET8(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list_len),
-  QMI_IDL_TYPE88(0, 11),
+  QMI_IDL_TYPE88(0, 12),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_dedicated_band_info_list) - QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_dedicated_band_info_list_valid)),
   0x10,
@@ -3965,7 +4035,7 @@ static const uint8_t nas_get_rf_band_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_rf_band_info_resp_msg_v01, rf_dedicated_band_info_list),
   NAS_RF_BAND_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_dedicated_band_info_list) - QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_dedicated_band_info_list_len),
-  QMI_IDL_TYPE88(0, 12),
+  QMI_IDL_TYPE88(0, 13),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list_ext_valid)),
   0x11,
@@ -3973,7 +4043,7 @@ static const uint8_t nas_get_rf_band_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list_ext),
   NAS_RF_BAND_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, rf_band_info_list_ext_len),
-  QMI_IDL_TYPE88(0, 50),
+  QMI_IDL_TYPE88(0, 53),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, nas_rf_bandwidth_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, nas_rf_bandwidth_info_valid)),
   0x12,
@@ -3981,7 +4051,7 @@ static const uint8_t nas_get_rf_band_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_rf_band_info_resp_msg_v01, nas_rf_bandwidth_info),
   NAS_RF_BAND_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, nas_rf_bandwidth_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, nas_rf_bandwidth_info_len),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 14),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, ciot_lte_op_mode) - QMI_IDL_OFFSET16RELATIVE(nas_get_rf_band_info_resp_msg_v01, ciot_lte_op_mode_valid)),
   0x13,
@@ -4041,7 +4111,7 @@ static const uint8_t nas_set_system_selection_preference_req_msg_data_v01[] = {
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_system_selection_preference_req_msg_v01, net_sel_pref),
-  QMI_IDL_TYPE88(0, 51),
+  QMI_IDL_TYPE88(0, 54),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_system_selection_preference_req_msg_v01, change_duration) - QMI_IDL_OFFSET8(nas_set_system_selection_preference_req_msg_v01, change_duration_valid)),
   0x17,
@@ -4094,7 +4164,7 @@ static const uint8_t nas_set_system_selection_preference_req_msg_data_v01[] = {
   0x20,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_system_selection_preference_req_msg_v01, csg_info),
-  QMI_IDL_TYPE88(0, 52),
+  QMI_IDL_TYPE88(0, 55),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_system_selection_preference_req_msg_v01, usage_setting) - QMI_IDL_OFFSET8(nas_set_system_selection_preference_req_msg_v01, usage_setting_valid)),
   0x21,
@@ -4115,7 +4185,7 @@ static const uint8_t nas_set_system_selection_preference_req_msg_data_v01[] = {
   0x24,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_system_selection_preference_req_msg_v01, lte_band_pref_ext),
-  QMI_IDL_TYPE88(0, 53),
+  QMI_IDL_TYPE88(0, 23),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, force) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, force_valid)),
   0x25,
@@ -4142,12 +4212,30 @@ static const uint8_t nas_set_system_selection_preference_req_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_set_system_selection_preference_req_msg_v01, man_ciot_lte_mode),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order_valid)),
   0x2A,
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order),
   NAS_ACQ_ORDER_LIST_MAX_V01,
-  QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order_len)
+  QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, ciot_acq_order_len),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, nr5g_band_pref) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, nr5g_band_pref_valid)),
+  0x2B,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_set_system_selection_preference_req_msg_v01, nr5g_band_pref),
+  QMI_IDL_TYPE88(0, 22),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, lte_m1_band_pref_ext) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, lte_m1_band_pref_ext_valid)),
+  0x2C,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_set_system_selection_preference_req_msg_v01, lte_m1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, lte_nb1_band_pref_ext) - QMI_IDL_OFFSET16RELATIVE(nas_set_system_selection_preference_req_msg_v01, lte_nb1_band_pref_ext_valid)),
+  0x2D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_set_system_selection_preference_req_msg_v01, lte_nb1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23)
 };
 
 static const uint8_t nas_set_system_selection_preference_resp_msg_data_v01[] = {
@@ -4223,7 +4311,7 @@ static const uint8_t nas_get_system_selection_preference_resp_msg_data_v01[] = {
   0x1B,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_system_selection_preference_resp_msg_v01, manual_net_sel_plmn),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_system_selection_preference_resp_msg_v01, acq_order) - QMI_IDL_OFFSET8(nas_get_system_selection_preference_resp_msg_v01, acq_order_valid)),
   0x1C,
@@ -4241,7 +4329,7 @@ static const uint8_t nas_get_system_selection_preference_resp_msg_data_v01[] = {
   0x1E,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_system_selection_preference_resp_msg_v01, csg_info),
-  QMI_IDL_TYPE88(0, 52),
+  QMI_IDL_TYPE88(0, 55),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_system_selection_preference_resp_msg_v01, usage_setting) - QMI_IDL_OFFSET8(nas_get_system_selection_preference_resp_msg_v01, usage_setting_valid)),
   0x1F,
@@ -4267,7 +4355,7 @@ static const uint8_t nas_get_system_selection_preference_resp_msg_data_v01[] = {
   0x23,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_system_selection_preference_resp_msg_v01, lte_band_pref_ext),
-  QMI_IDL_TYPE88(0, 53),
+  QMI_IDL_TYPE88(0, 23),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_lte_op_mode_pref) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_lte_op_mode_pref_valid)),
   0x24,
@@ -4284,12 +4372,30 @@ static const uint8_t nas_get_system_selection_preference_resp_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_8_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_get_system_selection_preference_resp_msg_v01, lte_nb1_band_pref),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order_valid)),
   0x27,
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order),
   NAS_ACQ_ORDER_LIST_MAX_V01,
-  QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order_len)
+  QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, ciot_acq_order_len),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, nr5g_band_pref) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, nr5g_band_pref_valid)),
+  0x28,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_system_selection_preference_resp_msg_v01, nr5g_band_pref),
+  QMI_IDL_TYPE88(0, 22),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, lte_m1_band_pref_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, lte_m1_band_pref_ext_valid)),
+  0x29,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_system_selection_preference_resp_msg_v01, lte_m1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, lte_nb1_band_pref_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_system_selection_preference_resp_msg_v01, lte_nb1_band_pref_ext_valid)),
+  0x2A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_system_selection_preference_resp_msg_v01, lte_nb1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23)
 };
 
 static const uint8_t nas_system_selection_preference_ind_msg_data_v01[] = {
@@ -4347,7 +4453,7 @@ static const uint8_t nas_system_selection_preference_ind_msg_data_v01[] = {
   0x1B,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_system_selection_preference_ind_msg_v01, manual_net_sel_plmn),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_system_selection_preference_ind_msg_v01, acq_order) - QMI_IDL_OFFSET8(nas_system_selection_preference_ind_msg_v01, acq_order_valid)),
   0x1C,
@@ -4365,7 +4471,7 @@ static const uint8_t nas_system_selection_preference_ind_msg_data_v01[] = {
   0x1E,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_system_selection_preference_ind_msg_v01, csg_info),
-  QMI_IDL_TYPE88(0, 52),
+  QMI_IDL_TYPE88(0, 55),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_system_selection_preference_ind_msg_v01, usage_setting) - QMI_IDL_OFFSET8(nas_system_selection_preference_ind_msg_v01, usage_setting_valid)),
   0x1F,
@@ -4391,7 +4497,7 @@ static const uint8_t nas_system_selection_preference_ind_msg_data_v01[] = {
   0x23,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_system_selection_preference_ind_msg_v01, lte_band_pref_ext),
-  QMI_IDL_TYPE88(0, 53),
+  QMI_IDL_TYPE88(0, 23),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_lte_op_mode_pref) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_lte_op_mode_pref_valid)),
   0x24,
@@ -4408,19 +4514,37 @@ static const uint8_t nas_system_selection_preference_ind_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_8_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_system_selection_preference_ind_msg_v01, lte_nb1_band_pref),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order_valid)),
   0x27,
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_system_selection_preference_ind_msg_v01, ciot_acq_order),
   NAS_ACQ_ORDER_LIST_MAX_V01,
-  QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order_len)
+  QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, ciot_acq_order_len),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, nr5g_band_pref) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, nr5g_band_pref_valid)),
+  0x28,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_system_selection_preference_ind_msg_v01, nr5g_band_pref),
+  QMI_IDL_TYPE88(0, 22),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, lte_m1_band_pref_ext) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, lte_m1_band_pref_ext_valid)),
+  0x29,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_system_selection_preference_ind_msg_v01, lte_m1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, lte_nb1_band_pref_ext) - QMI_IDL_OFFSET16RELATIVE(nas_system_selection_preference_ind_msg_v01, lte_nb1_band_pref_ext_valid)),
+  0x2A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_system_selection_preference_ind_msg_v01, lte_nb1_band_pref_ext),
+  QMI_IDL_TYPE88(0, 23)
 };
 
 static const uint8_t nas_set_ddtm_preference_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_ddtm_preference_req_msg_v01, ddtm_preference),
-  QMI_IDL_TYPE88(0, 54)
+  QMI_IDL_TYPE88(0, 56)
 };
 
 static const uint8_t nas_set_ddtm_preference_resp_msg_data_v01[] = {
@@ -4434,7 +4558,7 @@ static const uint8_t nas_ddtm_ind_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_ddtm_ind_msg_v01, ddtm_settings),
-  QMI_IDL_TYPE88(0, 55)
+  QMI_IDL_TYPE88(0, 57)
 };
 
 /*
@@ -4453,7 +4577,7 @@ static const uint8_t nas_get_operator_name_data_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_operator_name_data_resp_msg_v01, service_provider_name),
-  QMI_IDL_TYPE88(0, 56),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_operator_name_data_resp_msg_v01, operator_plmn_list) - QMI_IDL_OFFSET8(nas_get_operator_name_data_resp_msg_v01, operator_plmn_list_valid)),
   0x11,
@@ -4461,7 +4585,7 @@ static const uint8_t nas_get_operator_name_data_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_operator_name_data_resp_msg_v01, operator_plmn_list),
   ((NAS_OPERATOR_PLMN_LIST_MAX_V01) & 0xFF), ((NAS_OPERATOR_PLMN_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_get_operator_name_data_resp_msg_v01, operator_plmn_list) - QMI_IDL_OFFSET8(nas_get_operator_name_data_resp_msg_v01, operator_plmn_list_len),
-  QMI_IDL_TYPE88(0, 57),
+  QMI_IDL_TYPE88(0, 59),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_operator_name_data_resp_msg_v01, plmn_network_name) - QMI_IDL_OFFSET16RELATIVE(nas_get_operator_name_data_resp_msg_v01, plmn_network_name_valid)),
   0x12,
@@ -4469,7 +4593,7 @@ static const uint8_t nas_get_operator_name_data_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_operator_name_data_resp_msg_v01, plmn_network_name),
   NAS_PLMN_NETWORK_NAME_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_operator_name_data_resp_msg_v01, plmn_network_name) - QMI_IDL_OFFSET16RELATIVE(nas_get_operator_name_data_resp_msg_v01, plmn_network_name_len),
-  QMI_IDL_TYPE88(0, 58),
+  QMI_IDL_TYPE88(0, 60),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_operator_name_data_resp_msg_v01, plmn_name) - QMI_IDL_OFFSET16RELATIVE(nas_get_operator_name_data_resp_msg_v01, plmn_name_valid)),
   0x13,
@@ -4481,7 +4605,7 @@ static const uint8_t nas_get_operator_name_data_resp_msg_data_v01[] = {
   0x14,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_operator_name_data_resp_msg_v01, nitz_information),
-  QMI_IDL_TYPE88(0, 58)
+  QMI_IDL_TYPE88(0, 60)
 };
 
 static const uint8_t nas_operator_name_data_ind_msg_data_v01[] = {
@@ -4489,7 +4613,7 @@ static const uint8_t nas_operator_name_data_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_operator_name_data_ind_msg_v01, service_provider_name),
-  QMI_IDL_TYPE88(0, 56),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_operator_name_data_ind_msg_v01, operator_plmn_list) - QMI_IDL_OFFSET8(nas_operator_name_data_ind_msg_v01, operator_plmn_list_valid)),
   0x11,
@@ -4497,7 +4621,7 @@ static const uint8_t nas_operator_name_data_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_operator_name_data_ind_msg_v01, operator_plmn_list),
   ((NAS_OPERATOR_PLMN_LIST_MAX_V01) & 0xFF), ((NAS_OPERATOR_PLMN_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_operator_name_data_ind_msg_v01, operator_plmn_list) - QMI_IDL_OFFSET8(nas_operator_name_data_ind_msg_v01, operator_plmn_list_len),
-  QMI_IDL_TYPE88(0, 57),
+  QMI_IDL_TYPE88(0, 59),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_operator_name_data_ind_msg_v01, plmn_network_name) - QMI_IDL_OFFSET16RELATIVE(nas_operator_name_data_ind_msg_v01, plmn_network_name_valid)),
   0x12,
@@ -4505,7 +4629,7 @@ static const uint8_t nas_operator_name_data_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_operator_name_data_ind_msg_v01, plmn_network_name),
   NAS_PLMN_NETWORK_NAME_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_operator_name_data_ind_msg_v01, plmn_network_name) - QMI_IDL_OFFSET16RELATIVE(nas_operator_name_data_ind_msg_v01, plmn_network_name_len),
-  QMI_IDL_TYPE88(0, 58),
+  QMI_IDL_TYPE88(0, 60),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_operator_name_data_ind_msg_v01, plmn_name) - QMI_IDL_OFFSET16RELATIVE(nas_operator_name_data_ind_msg_v01, plmn_name_valid)),
   0x13,
@@ -4517,7 +4641,7 @@ static const uint8_t nas_operator_name_data_ind_msg_data_v01[] = {
   0x14,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_operator_name_data_ind_msg_v01, nitz_information),
-  QMI_IDL_TYPE88(0, 58)
+  QMI_IDL_TYPE88(0, 60)
 };
 
 /*
@@ -4596,25 +4720,25 @@ static const uint8_t nas_get_3gpp2_subscription_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, cdma_sys_id),
   NAS_MAX_3GPP2_HOME_SID_NID_NUM_V01,
   QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, cdma_sys_id) - QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, cdma_sys_id_len),
-  QMI_IDL_TYPE88(0, 59),
+  QMI_IDL_TYPE88(0, 61),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, min_based_info) - QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, min_based_info_valid)),
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, min_based_info),
-  QMI_IDL_TYPE88(0, 60),
+  QMI_IDL_TYPE88(0, 62),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, true_imsi) - QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, true_imsi_valid)),
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, true_imsi),
-  QMI_IDL_TYPE88(0, 61),
+  QMI_IDL_TYPE88(0, 63),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, cdma_channel_info) - QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, cdma_channel_info_valid)),
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, cdma_channel_info),
-  QMI_IDL_TYPE88(0, 62),
+  QMI_IDL_TYPE88(0, 64),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, mdn) - QMI_IDL_OFFSET8(nas_get_3gpp2_subscription_info_resp_msg_v01, mdn_valid)),
   0x16,
@@ -4642,25 +4766,25 @@ static const uint8_t nas_set_3gpp2_subscription_info_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, cdma_sys_id),
   NAS_MAX_3GPP2_HOME_SID_NID_NUM_V01,
   QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, cdma_sys_id) - QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, cdma_sys_id_len),
-  QMI_IDL_TYPE88(0, 59),
+  QMI_IDL_TYPE88(0, 61),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, min_based_info) - QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, min_based_info_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, min_based_info),
-  QMI_IDL_TYPE88(0, 60),
+  QMI_IDL_TYPE88(0, 62),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, true_imsi) - QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, true_imsi_valid)),
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, true_imsi),
-  QMI_IDL_TYPE88(0, 61),
+  QMI_IDL_TYPE88(0, 63),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, cdma_channel_info) - QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, cdma_channel_info_valid)),
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, cdma_channel_info),
-  QMI_IDL_TYPE88(0, 62),
+  QMI_IDL_TYPE88(0, 64),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, nam_name) - QMI_IDL_OFFSET8(nas_set_3gpp2_subscription_info_req_msg_v01, nam_name_valid)),
   0x15,
@@ -4766,43 +4890,43 @@ static const uint8_t nas_get_cell_location_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_cell_location_info_resp_msg_v01, geran_info),
-  QMI_IDL_TYPE88(0, 64),
+  QMI_IDL_TYPE88(0, 66),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_cell_location_info_resp_msg_v01, umts_info) - QMI_IDL_OFFSET8(nas_get_cell_location_info_resp_msg_v01, umts_info_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_cell_location_info_resp_msg_v01, umts_info),
-  QMI_IDL_TYPE88(0, 68),
+  QMI_IDL_TYPE88(0, 70),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, cdma_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, cdma_info_valid)),
   0x12,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, cdma_info),
-  QMI_IDL_TYPE88(0, 69),
+  QMI_IDL_TYPE88(0, 71),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_intra) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_intra_valid)),
   0x13,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, lte_intra),
-  QMI_IDL_TYPE88(0, 71),
+  QMI_IDL_TYPE88(0, 73),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_inter) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_inter_valid)),
   0x14,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, lte_inter),
-  QMI_IDL_TYPE88(0, 73),
+  QMI_IDL_TYPE88(0, 75),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_gsm) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_gsm_valid)),
   0x15,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, lte_gsm),
-  QMI_IDL_TYPE88(0, 76),
+  QMI_IDL_TYPE88(0, 78),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_wcdma) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_wcdma_valid)),
   0x16,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, lte_wcdma),
-  QMI_IDL_TYPE88(0, 79),
+  QMI_IDL_TYPE88(0, 81),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, umts_cell_id) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, umts_cell_id_valid)),
   0x17,
@@ -4813,31 +4937,31 @@ static const uint8_t nas_get_cell_location_info_resp_msg_data_v01[] = {
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, wcdma_lte),
-  QMI_IDL_TYPE88(0, 80),
+  QMI_IDL_TYPE88(0, 82),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, cdma_rx_power) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, cdma_rx_power_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, cdma_rx_power),
-  QMI_IDL_TYPE88(0, 81),
+  QMI_IDL_TYPE88(0, 83),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, hdr_rx_power) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, hdr_rx_power_valid)),
   0x1A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, hdr_rx_power),
-  QMI_IDL_TYPE88(0, 81),
+  QMI_IDL_TYPE88(0, 83),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, gsm_info_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, gsm_info_ext_valid)),
   0x1B,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, gsm_info_ext),
-  QMI_IDL_TYPE88(0, 82),
+  QMI_IDL_TYPE88(0, 84),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_info_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_info_ext_valid)),
   0x1C,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, wcdma_info_ext),
-  QMI_IDL_TYPE88(0, 83),
+  QMI_IDL_TYPE88(0, 85),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, gncell_bcch) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, gncell_bcch_valid)),
   0x1D,
@@ -4857,25 +4981,25 @@ static const uint8_t nas_get_cell_location_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, cells),
   NAS_UMTS_MAX_ACTIVE_CELL_SET_NUM_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, cells) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, cells_len),
-  QMI_IDL_TYPE88(0, 84),
+  QMI_IDL_TYPE88(0, 86),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_reference_rl) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_reference_rl_valid)),
   0x20,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_reference_rl),
-  QMI_IDL_TYPE88(0, 85),
+  QMI_IDL_TYPE88(0, 87),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, geran_info_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, geran_info_ext_valid)),
   0x21,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, geran_info_ext),
-  QMI_IDL_TYPE88(0, 91),
+  QMI_IDL_TYPE88(0, 93),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, umts_ext_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, umts_ext_info_valid)),
   0x22,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, umts_ext_info),
-  QMI_IDL_TYPE88(0, 88),
+  QMI_IDL_TYPE88(0, 90),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_cells) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_cells_valid)),
   0x23,
@@ -4883,13 +5007,13 @@ static const uint8_t nas_get_cell_location_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_cells),
   NAS_UMTS_MAX_ACTIVE_CELL_SET_NUM_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_cells) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, wcdma_active_set_cells_len),
-  QMI_IDL_TYPE88(0, 89),
+  QMI_IDL_TYPE88(0, 91),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, scell_geran_config) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, scell_geran_config_valid)),
   0x24,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, scell_geran_config),
-  QMI_IDL_TYPE88(0, 92),
+  QMI_IDL_TYPE88(0, 94),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, current_l1_ts) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, current_l1_ts_valid)),
   0x25,
@@ -4930,17 +5054,22 @@ static const uint8_t nas_get_cell_location_info_resp_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, emm_substate),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, emm_connection_state) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, emm_connection_state_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, emm_connection_state) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, emm_connection_state_valid)),
   0x2C,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, emm_connection_state)
+  QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, emm_connection_state),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_rrc_state_ext) - QMI_IDL_OFFSET16RELATIVE(nas_get_cell_location_info_resp_msg_v01, lte_rrc_state_ext_valid)),
+  0x2D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_cell_location_info_resp_msg_v01, lte_rrc_state_ext)
 };
 
 static const uint8_t nas_get_plmn_name_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_plmn_name_req_msg_v01, plmn),
-  QMI_IDL_TYPE88(0, 42),
+  QMI_IDL_TYPE88(3, 0),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_plmn_name_req_msg_v01, suppress_sim_error) - QMI_IDL_OFFSET8(nas_get_plmn_name_req_msg_v01, suppress_sim_error_valid)),
   0x10,
@@ -4988,13 +5117,13 @@ static const uint8_t nas_get_plmn_name_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_plmn_name_resp_msg_v01, eons_plmn_name_3gpp),
-  QMI_IDL_TYPE88(0, 93),
+  QMI_IDL_TYPE88(0, 95),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, eons_display_bit_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, eons_display_bit_info_valid)),
   0x11,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_plmn_name_resp_msg_v01, eons_display_bit_info),
-  QMI_IDL_TYPE88(0, 94),
+  QMI_IDL_TYPE88(0, 96),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, is_home_network) - QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, is_home_network_valid)),
   0x12,
@@ -5007,7 +5136,7 @@ static const uint8_t nas_get_plmn_name_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_plmn_name_resp_msg_v01, lang_plmn_names),
   NAS_ALT_LANG_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, lang_plmn_names) - QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, lang_plmn_names_len),
-  QMI_IDL_TYPE88(0, 95),
+  QMI_IDL_TYPE88(0, 97),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, addl_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_plmn_name_resp_msg_v01, addl_info_valid)),
   0x14,
@@ -5086,7 +5215,7 @@ static const uint8_t nas_dual_standby_pref_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_dual_standby_pref_ind_msg_v01, standby_pref),
-  QMI_IDL_TYPE88(0, 96),
+  QMI_IDL_TYPE88(0, 98),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_dual_standby_pref_ind_msg_v01, default_voice_subs) - QMI_IDL_OFFSET8(nas_dual_standby_pref_ind_msg_v01, default_voice_subs_valid)),
   0x11,
@@ -5168,7 +5297,7 @@ static const uint8_t nas_set_technology_preference_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_technology_preference_req_msg_v01, technology_pref),
-  QMI_IDL_TYPE88(0, 97)
+  QMI_IDL_TYPE88(0, 99)
 };
 
 static const uint8_t nas_set_technology_preference_resp_msg_data_v01[] = {
@@ -5193,7 +5322,7 @@ static const uint8_t nas_get_technology_preference_resp_type_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_technology_preference_resp_type_v01, active_technology_pref),
-  QMI_IDL_TYPE88(0, 98),
+  QMI_IDL_TYPE88(0, 100),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_technology_preference_resp_type_v01, persistent_technology_pref) - QMI_IDL_OFFSET8(nas_get_technology_preference_resp_type_v01, persistent_technology_pref_valid)),
   0x10,
@@ -5222,7 +5351,7 @@ static const uint8_t nas_network_time_ind_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_network_time_ind_msg_v01, universal_time),
-  QMI_IDL_TYPE88(0, 99),
+  QMI_IDL_TYPE88(0, 101),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_network_time_ind_msg_v01, time_zone) - QMI_IDL_OFFSET8(nas_network_time_ind_msg_v01, time_zone_valid)),
   0x10,
@@ -5256,103 +5385,103 @@ static const uint8_t nas_get_sys_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, cdma_srv_status_info),
-  QMI_IDL_TYPE88(0, 101),
+  QMI_IDL_TYPE88(0, 103),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, hdr_srv_status_info) - QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, hdr_srv_status_info_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, hdr_srv_status_info),
-  QMI_IDL_TYPE88(0, 101),
+  QMI_IDL_TYPE88(0, 103),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, gsm_srv_status_info) - QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, gsm_srv_status_info_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, gsm_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, wcdma_srv_status_info) - QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, wcdma_srv_status_info_valid)),
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, wcdma_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, lte_srv_status_info) - QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, lte_srv_status_info_valid)),
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, lte_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, cdma_sys_info) - QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, cdma_sys_info_valid)),
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, cdma_sys_info),
-  QMI_IDL_TYPE88(0, 112),
+  QMI_IDL_TYPE88(0, 115),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, hdr_sys_info) - QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, hdr_sys_info_valid)),
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sys_info_resp_msg_v01, hdr_sys_info),
-  QMI_IDL_TYPE88(0, 113),
+  QMI_IDL_TYPE88(0, 116),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, gsm_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, gsm_sys_info_valid)),
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, gsm_sys_info),
-  QMI_IDL_TYPE88(0, 114),
+  QMI_IDL_TYPE88(0, 117),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, wcdma_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, wcdma_sys_info_valid)),
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, wcdma_sys_info),
-  QMI_IDL_TYPE88(0, 115),
+  QMI_IDL_TYPE88(0, 118),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_sys_info_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, lte_sys_info),
-  QMI_IDL_TYPE88(0, 116),
+  QMI_IDL_TYPE88(0, 119),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, cdma_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, cdma_sys_info2_valid)),
   0x1A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, cdma_sys_info2),
-  QMI_IDL_TYPE88(0, 119),
+  QMI_IDL_TYPE88(0, 123),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, hdr_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, hdr_sys_info2_valid)),
   0x1B,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, hdr_sys_info2),
-  QMI_IDL_TYPE88(0, 120),
+  QMI_IDL_TYPE88(0, 124),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, gsm_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, gsm_sys_info2_valid)),
   0x1C,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, gsm_sys_info2),
-  QMI_IDL_TYPE88(0, 121),
+  QMI_IDL_TYPE88(0, 125),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, wcdma_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, wcdma_sys_info2_valid)),
   0x1D,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, wcdma_sys_info2),
-  QMI_IDL_TYPE88(0, 122),
+  QMI_IDL_TYPE88(0, 126),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_sys_info2_valid)),
   0x1E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, lte_sys_info2),
-  QMI_IDL_TYPE88(0, 123),
+  QMI_IDL_TYPE88(0, 127),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, gsm_sys_info3) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, gsm_sys_info3_valid)),
   0x1F,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, gsm_sys_info3),
-  QMI_IDL_TYPE88(0, 40),
+  QMI_IDL_TYPE88(0, 44),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, wcdma_sys_info3) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, wcdma_sys_info3_valid)),
   0x20,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, wcdma_sys_info3),
-  QMI_IDL_TYPE88(0, 40),
+  QMI_IDL_TYPE88(0, 44),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, voice_support_on_lte) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, voice_support_on_lte_valid)),
   0x21,
@@ -5373,13 +5502,13 @@ static const uint8_t nas_get_sys_info_resp_msg_data_v01[] = {
   0x24,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, tdscdma_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, tdscdma_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, tdscdma_sys_info_valid)),
   0x25,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, tdscdma_sys_info),
-  QMI_IDL_TYPE88(0, 118),
+  QMI_IDL_TYPE88(0, 122),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_embms_coverage) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_embms_coverage_valid)),
   0x26,
@@ -5460,7 +5589,7 @@ static const uint8_t nas_get_sys_info_resp_msg_data_v01[] = {
   0x35,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, wcdma_csg_info),
-  QMI_IDL_TYPE88(0, 24),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, hdr_voice_status) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, hdr_voice_status_valid)),
   0x36,
@@ -5531,7 +5660,7 @@ static const uint8_t nas_get_sys_info_resp_msg_data_v01[] = {
   0x43,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, lte_csg_info),
-  QMI_IDL_TYPE88(0, 24),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_cell_status) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, lte_cell_status_valid)),
   0x44,
@@ -5557,12 +5686,34 @@ static const uint8_t nas_get_sys_info_resp_msg_data_v01[] = {
   0x48,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, nas_supp_ciot_optimizations),
-  QMI_IDL_TYPE88(0, 169),
+  QMI_IDL_TYPE88(0, 10),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nas_camped_ciot_lte_op_mode) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nas_camped_ciot_lte_op_mode_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nas_camped_ciot_lte_op_mode) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nas_camped_ciot_lte_op_mode_valid)),
   0x49,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, nas_camped_ciot_lte_op_mode)
+  QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, nas_camped_ciot_lte_op_mode),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nr5g_srv_status_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nr5g_srv_status_info_valid)),
+  0x4A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, nr5g_srv_status_info),
+  QMI_IDL_TYPE88(0, 104),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nr5g_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nr5g_sys_info_valid)),
+  0x4B,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, nr5g_sys_info),
+  QMI_IDL_TYPE88(0, 120),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nr5g_cell_status) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, nr5g_cell_status_valid)),
+  0x4C,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, nr5g_cell_status),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, cp_sms_service_status) - QMI_IDL_OFFSET16RELATIVE(nas_get_sys_info_resp_msg_v01, cp_sms_service_status_valid)),
+  0x4D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(nas_get_sys_info_resp_msg_v01, cp_sms_service_status)
 };
 
 static const uint8_t nas_sys_info_ind_msg_data_v01[] = {
@@ -5570,103 +5721,103 @@ static const uint8_t nas_sys_info_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, cdma_srv_status_info),
-  QMI_IDL_TYPE88(0, 101),
+  QMI_IDL_TYPE88(0, 103),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, hdr_srv_status_info) - QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, hdr_srv_status_info_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, hdr_srv_status_info),
-  QMI_IDL_TYPE88(0, 101),
+  QMI_IDL_TYPE88(0, 103),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, gsm_srv_status_info) - QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, gsm_srv_status_info_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, gsm_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, wcdma_srv_status_info) - QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, wcdma_srv_status_info_valid)),
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, wcdma_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, lte_srv_status_info) - QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, lte_srv_status_info_valid)),
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, lte_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, cdma_sys_info) - QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, cdma_sys_info_valid)),
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, cdma_sys_info),
-  QMI_IDL_TYPE88(0, 112),
+  QMI_IDL_TYPE88(0, 115),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, hdr_sys_info) - QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, hdr_sys_info_valid)),
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sys_info_ind_msg_v01, hdr_sys_info),
-  QMI_IDL_TYPE88(0, 113),
+  QMI_IDL_TYPE88(0, 116),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, gsm_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, gsm_sys_info_valid)),
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, gsm_sys_info),
-  QMI_IDL_TYPE88(0, 114),
+  QMI_IDL_TYPE88(0, 117),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, wcdma_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, wcdma_sys_info_valid)),
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, wcdma_sys_info),
-  QMI_IDL_TYPE88(0, 115),
+  QMI_IDL_TYPE88(0, 118),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_sys_info_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, lte_sys_info),
-  QMI_IDL_TYPE88(0, 116),
+  QMI_IDL_TYPE88(0, 119),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, cdma_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, cdma_sys_info2_valid)),
   0x1A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, cdma_sys_info2),
-  QMI_IDL_TYPE88(0, 119),
+  QMI_IDL_TYPE88(0, 123),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, hdr_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, hdr_sys_info2_valid)),
   0x1B,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, hdr_sys_info2),
-  QMI_IDL_TYPE88(0, 120),
+  QMI_IDL_TYPE88(0, 124),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, gsm_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, gsm_sys_info2_valid)),
   0x1C,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, gsm_sys_info2),
-  QMI_IDL_TYPE88(0, 121),
+  QMI_IDL_TYPE88(0, 125),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, wcdma_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, wcdma_sys_info2_valid)),
   0x1D,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, wcdma_sys_info2),
-  QMI_IDL_TYPE88(0, 122),
+  QMI_IDL_TYPE88(0, 126),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_sys_info2) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_sys_info2_valid)),
   0x1E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, lte_sys_info2),
-  QMI_IDL_TYPE88(0, 123),
+  QMI_IDL_TYPE88(0, 127),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, gsm_sys_info3) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, gsm_sys_info3_valid)),
   0x1F,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, gsm_sys_info3),
-  QMI_IDL_TYPE88(0, 40),
+  QMI_IDL_TYPE88(0, 44),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, wcdma_sys_info3) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, wcdma_sys_info3_valid)),
   0x20,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, wcdma_sys_info3),
-  QMI_IDL_TYPE88(0, 40),
+  QMI_IDL_TYPE88(0, 44),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, voice_support_on_lte) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, voice_support_on_lte_valid)),
   0x21,
@@ -5692,13 +5843,13 @@ static const uint8_t nas_sys_info_ind_msg_data_v01[] = {
   0x25,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, tdscdma_srv_status_info),
-  QMI_IDL_TYPE88(0, 102),
+  QMI_IDL_TYPE88(0, 104),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, tdscdma_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, tdscdma_sys_info_valid)),
   0x26,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, tdscdma_sys_info),
-  QMI_IDL_TYPE88(0, 118),
+  QMI_IDL_TYPE88(0, 122),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_embms_coverage) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_embms_coverage_valid)),
   0x27,
@@ -5779,7 +5930,7 @@ static const uint8_t nas_sys_info_ind_msg_data_v01[] = {
   0x36,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, wcdma_csg_info),
-  QMI_IDL_TYPE88(0, 24),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, hdr_voice_status) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, hdr_voice_status_valid)),
   0x37,
@@ -5850,7 +6001,7 @@ static const uint8_t nas_sys_info_ind_msg_data_v01[] = {
   0x44,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, lte_csg_info),
-  QMI_IDL_TYPE88(0, 24),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_cell_status) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, lte_cell_status_valid)),
   0x45,
@@ -5881,12 +6032,34 @@ static const uint8_t nas_sys_info_ind_msg_data_v01[] = {
   0x4A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, nas_supp_ciot_optimizations),
-  QMI_IDL_TYPE88(0, 169),
+  QMI_IDL_TYPE88(0, 10),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nas_camped_ciot_lte_op_mode) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nas_camped_ciot_lte_op_mode_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nas_camped_ciot_lte_op_mode) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nas_camped_ciot_lte_op_mode_valid)),
   0x4B,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, nas_camped_ciot_lte_op_mode)
+  QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, nas_camped_ciot_lte_op_mode),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nr5g_srv_status_info) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nr5g_srv_status_info_valid)),
+  0x4C,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, nr5g_srv_status_info),
+  QMI_IDL_TYPE88(0, 104),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nr5g_sys_info) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nr5g_sys_info_valid)),
+  0x4D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, nr5g_sys_info),
+  QMI_IDL_TYPE88(0, 120),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nr5g_cell_status) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, nr5g_cell_status_valid)),
+  0x4E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, nr5g_cell_status),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, cp_sms_service_status) - QMI_IDL_OFFSET16RELATIVE(nas_sys_info_ind_msg_v01, cp_sms_service_status_valid)),
+  0x4F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(nas_sys_info_ind_msg_v01, cp_sms_service_status)
 };
 
 /*
@@ -5905,13 +6078,13 @@ static const uint8_t nas_get_sig_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, cdma_sig_info),
-  QMI_IDL_TYPE88(0, 124),
+  QMI_IDL_TYPE88(0, 128),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, hdr_sig_info) - QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, hdr_sig_info_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, hdr_sig_info),
-  QMI_IDL_TYPE88(0, 125),
+  QMI_IDL_TYPE88(0, 129),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, gsm_sig_info) - QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, gsm_sig_info_valid)),
   0x12,
@@ -5922,13 +6095,13 @@ static const uint8_t nas_get_sig_info_resp_msg_data_v01[] = {
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, wcdma_sig_info),
-  QMI_IDL_TYPE88(0, 124),
+  QMI_IDL_TYPE88(0, 128),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, lte_sig_info) - QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, lte_sig_info_valid)),
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, lte_sig_info),
-  QMI_IDL_TYPE88(0, 126),
+  QMI_IDL_TYPE88(0, 130),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, rscp) - QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, rscp_valid)),
   0x15,
@@ -5939,7 +6112,7 @@ static const uint8_t nas_get_sig_info_resp_msg_data_v01[] = {
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_sig_info_resp_msg_v01, tdscdma_sig_info),
-  QMI_IDL_TYPE88(0, 127)
+  QMI_IDL_TYPE88(0, 131)
 };
 
 static const uint8_t nas_config_sig_info_req_msg_data_v01[] = {
@@ -5996,7 +6169,7 @@ static const uint8_t nas_config_sig_info_req_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_config_sig_info_req_msg_v01, lte_sig_rpt_config),
-  QMI_IDL_TYPE88(0, 128),
+  QMI_IDL_TYPE88(0, 132),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_config_sig_info_req_msg_v01, rscp_threshold_list) - QMI_IDL_OFFSET16RELATIVE(nas_config_sig_info_req_msg_v01, rscp_threshold_list_valid)),
   0x18,
@@ -6025,13 +6198,13 @@ static const uint8_t nas_sig_info_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, cdma_sig_info),
-  QMI_IDL_TYPE88(0, 124),
+  QMI_IDL_TYPE88(0, 128),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, hdr_sig_info) - QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, hdr_sig_info_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, hdr_sig_info),
-  QMI_IDL_TYPE88(0, 125),
+  QMI_IDL_TYPE88(0, 129),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, gsm_sig_info) - QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, gsm_sig_info_valid)),
   0x12,
@@ -6042,13 +6215,13 @@ static const uint8_t nas_sig_info_ind_msg_data_v01[] = {
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, wcdma_sig_info),
-  QMI_IDL_TYPE88(0, 124),
+  QMI_IDL_TYPE88(0, 128),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, lte_sig_info) - QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, lte_sig_info_valid)),
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, lte_sig_info),
-  QMI_IDL_TYPE88(0, 126),
+  QMI_IDL_TYPE88(0, 130),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, rscp) - QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, rscp_valid)),
   0x15,
@@ -6059,7 +6232,7 @@ static const uint8_t nas_sig_info_ind_msg_data_v01[] = {
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_sig_info_ind_msg_v01, tdscdma_sig_info),
-  QMI_IDL_TYPE88(0, 127)
+  QMI_IDL_TYPE88(0, 131)
 };
 
 /*
@@ -6223,7 +6396,7 @@ static const uint8_t nas_set_rx_diversity_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_rx_diversity_req_msg_v01, req_param),
-  QMI_IDL_TYPE88(0, 129)
+  QMI_IDL_TYPE88(0, 133)
 };
 
 static const uint8_t nas_set_rx_diversity_resp_msg_data_v01[] = {
@@ -6249,19 +6422,19 @@ static const uint8_t nas_get_tx_rx_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_0),
-  QMI_IDL_TYPE88(0, 130),
+  QMI_IDL_TYPE88(0, 134),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_1) - QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_1_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_1),
-  QMI_IDL_TYPE88(0, 130),
+  QMI_IDL_TYPE88(0, 134),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, tx) - QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, tx_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, tx),
-  QMI_IDL_TYPE88(0, 131),
+  QMI_IDL_TYPE88(0, 135),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, downlink_mod) - QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, downlink_mod_valid)),
   0x13,
@@ -6281,20 +6454,20 @@ static const uint8_t nas_get_tx_rx_info_resp_msg_data_v01[] = {
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_2),
-  QMI_IDL_TYPE88(0, 130),
+  QMI_IDL_TYPE88(0, 134),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_3) - QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_3_valid)),
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_tx_rx_info_resp_msg_v01, rx_chain_3),
-  QMI_IDL_TYPE88(0, 130)
+  QMI_IDL_TYPE88(0, 134)
 };
 
 static const uint8_t nas_update_akey_ext_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_update_akey_ext_req_msg_v01, akey_with_spc),
-  QMI_IDL_TYPE88(0, 132)
+  QMI_IDL_TYPE88(0, 136)
 };
 
 static const uint8_t nas_update_akey_ext_resp_msg_data_v01[] = {
@@ -6371,7 +6544,7 @@ static const uint8_t nas_block_lte_plmn_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_block_lte_plmn_req_msg_v01, plmn),
-  QMI_IDL_TYPE88(0, 27),
+  QMI_IDL_TYPE88(0, 31),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_block_lte_plmn_req_msg_v01, blocking_interval_abs) - QMI_IDL_OFFSET8(nas_block_lte_plmn_req_msg_v01, blocking_interval_abs_valid)),
   0x10,
@@ -6395,7 +6568,7 @@ static const uint8_t nas_unblock_lte_plmn_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_unblock_lte_plmn_req_msg_v01, plmn),
-  QMI_IDL_TYPE88(0, 27)
+  QMI_IDL_TYPE88(0, 31)
 };
 
 static const uint8_t nas_unblock_lte_plmn_resp_msg_data_v01[] = {
@@ -6423,25 +6596,25 @@ static const uint8_t nas_current_plmn_name_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_current_plmn_name_ind_msg_v01, plmn_id),
-  QMI_IDL_TYPE88(0, 27),
+  QMI_IDL_TYPE88(0, 31),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_current_plmn_name_ind_msg_v01, spn) - QMI_IDL_OFFSET8(nas_current_plmn_name_ind_msg_v01, spn_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_current_plmn_name_ind_msg_v01, spn),
-  QMI_IDL_TYPE88(0, 133),
+  QMI_IDL_TYPE88(0, 137),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_current_plmn_name_ind_msg_v01, short_name) - QMI_IDL_OFFSET8(nas_current_plmn_name_ind_msg_v01, short_name_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_current_plmn_name_ind_msg_v01, short_name),
-  QMI_IDL_TYPE88(0, 134),
+  QMI_IDL_TYPE88(0, 138),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, long_name) - QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, long_name_valid)),
   0x13,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_current_plmn_name_ind_msg_v01, long_name),
-  QMI_IDL_TYPE88(0, 134),
+  QMI_IDL_TYPE88(0, 138),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, csg_id) - QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, csg_id_valid)),
   0x14,
@@ -6452,7 +6625,7 @@ static const uint8_t nas_current_plmn_name_ind_msg_data_v01[] = {
   0x15,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_current_plmn_name_ind_msg_v01, eons_display_bit_info),
-  QMI_IDL_TYPE88(0, 94),
+  QMI_IDL_TYPE88(0, 96),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, is_home_network) - QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, is_home_network_valid)),
   0x16,
@@ -6470,7 +6643,7 @@ static const uint8_t nas_current_plmn_name_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_current_plmn_name_ind_msg_v01, lang_plmn_names),
   NAS_ALT_LANG_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, lang_plmn_names) - QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, lang_plmn_names_len),
-  QMI_IDL_TYPE88(0, 95),
+  QMI_IDL_TYPE88(0, 97),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, addl_info) - QMI_IDL_OFFSET16RELATIVE(nas_current_plmn_name_ind_msg_v01, addl_info_valid)),
   0x19,
@@ -6565,32 +6738,32 @@ static const uint8_t nas_get_cdma_position_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_cdma_position_info_resp_msg_v01, info),
-  QMI_IDL_TYPE88(0, 136)
+  QMI_IDL_TYPE88(0, 140)
 };
 
 static const uint8_t nas_rf_band_info_ind_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, rf_band_info),
-  QMI_IDL_TYPE88(0, 11),
+  QMI_IDL_TYPE88(0, 12),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, rf_dedicated_band_info) - QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, rf_dedicated_band_info_valid)),
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, rf_dedicated_band_info),
-  QMI_IDL_TYPE88(0, 12),
+  QMI_IDL_TYPE88(0, 13),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, rf_band_info_list_ext) - QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, rf_band_info_list_ext_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, rf_band_info_list_ext),
-  QMI_IDL_TYPE88(0, 50),
+  QMI_IDL_TYPE88(0, 53),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, nas_rf_bandwidth_info) - QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, nas_rf_bandwidth_info_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, nas_rf_bandwidth_info),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 14),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, ciot_lte_op_mode) - QMI_IDL_OFFSET8(nas_rf_band_info_ind_msg_v01, ciot_lte_op_mode_valid)),
   0x13,
@@ -6628,7 +6801,7 @@ static const uint8_t nas_network_reject_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_network_reject_ind_msg_v01, plmn_id),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_network_reject_ind_msg_v01, csg_id) - QMI_IDL_OFFSET8(nas_network_reject_ind_msg_v01, csg_id_valid)),
   0x11,
@@ -6850,7 +7023,7 @@ static const uint8_t nas_config_sig_info2_req_msg_data_v01[] = {
   0x2A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(nas_config_sig_info2_req_msg_v01, lte_sig_rpt_config),
-  QMI_IDL_TYPE88(0, 128),
+  QMI_IDL_TYPE88(0, 132),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_config_sig_info2_req_msg_v01, tdscdma_rscp_threshold_list) - QMI_IDL_OFFSET16RELATIVE(nas_config_sig_info2_req_msg_v01, tdscdma_rscp_threshold_list_valid)),
   0x2B,
@@ -6924,7 +7097,7 @@ static const uint8_t nas_get_tds_cell_and_position_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_tds_cell_and_position_info_resp_msg_v01, tds_cell_info),
-  QMI_IDL_TYPE88(0, 137),
+  QMI_IDL_TYPE88(0, 141),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_tds_cell_and_position_info_resp_msg_v01, tds_nbr_cell_info) - QMI_IDL_OFFSET8(nas_get_tds_cell_and_position_info_resp_msg_v01, tds_nbr_cell_info_valid)),
   0x11,
@@ -6932,7 +7105,7 @@ static const uint8_t nas_get_tds_cell_and_position_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_tds_cell_and_position_info_resp_msg_v01, tds_nbr_cell_info),
   NAS_TDS_MAX_NBR_CELL_NUM_V01,
   QMI_IDL_OFFSET8(nas_get_tds_cell_and_position_info_resp_msg_v01, tds_nbr_cell_info) - QMI_IDL_OFFSET8(nas_get_tds_cell_and_position_info_resp_msg_v01, tds_nbr_cell_info_len),
-  QMI_IDL_TYPE88(0, 138)
+  QMI_IDL_TYPE88(0, 142)
 };
 
 static const uint8_t nas_set_hplmn_irat_search_timer_req_msg_data_v01[] = {
@@ -6972,7 +7145,7 @@ static const uint8_t nas_get_embms_sig_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_embms_sig_resp_msg_v01, sig_list),
   NAS_LTE_EMBMS_MAX_MBSFN_AREA_V01,
   QMI_IDL_OFFSET8(nas_get_embms_sig_resp_msg_v01, sig_list) - QMI_IDL_OFFSET8(nas_get_embms_sig_resp_msg_v01, sig_list_len),
-  QMI_IDL_TYPE88(0, 139)
+  QMI_IDL_TYPE88(0, 143)
 };
 
 static const uint8_t nas_limit_sys_info_ind_reporting_req_msg_data_v01[] = {
@@ -7015,7 +7188,7 @@ static const uint8_t nas_update_ims_status_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_update_ims_status_req_msg_v01, registration_state),
   NAS_IMS_REG_STATUS_MAX_V01,
   QMI_IDL_OFFSET8(nas_update_ims_status_req_msg_v01, registration_state) - QMI_IDL_OFFSET8(nas_update_ims_status_req_msg_v01, registration_state_len),
-  QMI_IDL_TYPE88(0, 140),
+  QMI_IDL_TYPE88(0, 144),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_update_ims_status_req_msg_v01, registration_end_cause) - QMI_IDL_OFFSET16RELATIVE(nas_update_ims_status_req_msg_v01, registration_end_cause_valid)),
   0x10,
@@ -7051,14 +7224,14 @@ static const uint8_t nas_get_ims_pref_status_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_ims_pref_status_resp_msg_v01, ims_pref),
-  QMI_IDL_TYPE88(0, 141)
+  QMI_IDL_TYPE88(0, 145)
 };
 
 static const uint8_t nas_ims_pref_status_ind_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_ims_pref_status_ind_msg_v01, ims_pref),
-  QMI_IDL_TYPE88(0, 141)
+  QMI_IDL_TYPE88(0, 145)
 };
 
 static const uint8_t nas_config_plmn_name_ind_reporting_req_msg_data_v01[] = {
@@ -7105,7 +7278,7 @@ static const uint8_t nas_get_cdma_avoid_system_list_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_cdma_avoid_system_list_resp_msg_v01, nam1_systems),
   NAS_MAX_CDMA_SYSTEMS_AVOIDED_V01,
   QMI_IDL_OFFSET8(nas_get_cdma_avoid_system_list_resp_msg_v01, nam1_systems) - QMI_IDL_OFFSET8(nas_get_cdma_avoid_system_list_resp_msg_v01, nam1_systems_len),
-  QMI_IDL_TYPE88(0, 142)
+  QMI_IDL_TYPE88(0, 146)
 };
 
 static const uint8_t nas_set_hplmn_search_timer_req_msg_data_v01[] = {
@@ -7203,13 +7376,13 @@ static const uint8_t nas_get_network_time_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_network_time_resp_msg_v01, nas_3gpp2_time),
-  QMI_IDL_TYPE88(0, 143),
+  QMI_IDL_TYPE88(0, 147),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_network_time_resp_msg_v01, nas_3gpp_time) - QMI_IDL_OFFSET8(nas_get_network_time_resp_msg_v01, nas_3gpp_time_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_network_time_resp_msg_v01, nas_3gpp_time),
-  QMI_IDL_TYPE88(0, 143)
+  QMI_IDL_TYPE88(0, 147)
 };
 
 /*
@@ -7233,7 +7406,7 @@ static const uint8_t nas_get_lte_sib16_network_time_resp_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_lte_sib16_network_time_resp_msg_v01, universal_time),
-  QMI_IDL_TYPE88(0, 144),
+  QMI_IDL_TYPE88(0, 148),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_sib16_network_time_resp_msg_v01, abs_time) - QMI_IDL_OFFSET8(nas_get_lte_sib16_network_time_resp_msg_v01, abs_time_valid)),
   0x12,
@@ -7266,7 +7439,7 @@ static const uint8_t nas_lte_sib16_network_time_ind_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_sib16_network_time_ind_msg_v01, universal_time),
-  QMI_IDL_TYPE88(0, 144),
+  QMI_IDL_TYPE88(0, 148),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_sib16_network_time_ind_msg_v01, abs_time) - QMI_IDL_OFFSET8(nas_lte_sib16_network_time_ind_msg_v01, abs_time_valid)),
   0x12,
@@ -7328,14 +7501,14 @@ static const uint8_t nas_get_embms_sig_ext_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_embms_sig_ext_resp_msg_v01, snr_and_tmgi_list),
   NAS_LTE_EMBMS_MAX_MBSFN_AREA_V01,
   QMI_IDL_OFFSET8(nas_get_embms_sig_ext_resp_msg_v01, snr_and_tmgi_list) - QMI_IDL_OFFSET8(nas_get_embms_sig_ext_resp_msg_v01, snr_and_tmgi_list_len),
-  QMI_IDL_TYPE88(0, 146)
+  QMI_IDL_TYPE88(0, 150)
 };
 
 static const uint8_t nas_lte_cphy_ca_ind_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, cphy_ca),
-  QMI_IDL_TYPE88(0, 147),
+  QMI_IDL_TYPE88(0, 151),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, cphy_ca_dl_bandwidth) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, cphy_ca_dl_bandwidth_valid)),
   0x10,
@@ -7346,18 +7519,36 @@ static const uint8_t nas_lte_cphy_ca_ind_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, scell_info),
-  QMI_IDL_TYPE88(0, 148),
+  QMI_IDL_TYPE88(0, 152),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, pcell_info) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, pcell_info_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, pcell_info),
-  QMI_IDL_TYPE88(0, 149),
+  QMI_IDL_TYPE88(0, 154),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, scell_idx) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, scell_idx_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, scell_idx) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, scell_idx_valid)),
   0x13,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, scell_idx)
+  QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, scell_idx),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, cphy_ca_aggregated_dl_bandwidth) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, cphy_ca_aggregated_dl_bandwidth_valid)),
+  0x14,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, cphy_ca_aggregated_dl_bandwidth),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, num_scells_configured) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, num_scells_configured_valid)),
+  0x15,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, num_scells_configured),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, unchanged_scell_info_list) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, unchanged_scell_info_list_valid)),
+  0x16,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, unchanged_scell_info_list),
+  NAS_MAX_SCELL_LIST_LEN_V01,
+  QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, unchanged_scell_info_list) - QMI_IDL_OFFSET8(nas_lte_cphy_ca_ind_msg_v01, unchanged_scell_info_list_len),
+  QMI_IDL_TYPE88(0, 153)
 };
 
 /*
@@ -7392,7 +7583,7 @@ static const uint8_t nas_set_builtin_plmn_list_req_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_builtin_plmn_list_req_msg_v01, oplmn_list),
-  QMI_IDL_TYPE88(0, 151),
+  QMI_IDL_TYPE88(0, 156),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_set_builtin_plmn_list_req_msg_v01, ind_token) - QMI_IDL_OFFSET16RELATIVE(nas_set_builtin_plmn_list_req_msg_v01, ind_token_valid)),
   0x11,
@@ -7449,10 +7640,52 @@ static const uint8_t nas_perform_incremental_network_scan_req_msg_data_v01[] = {
    QMI_IDL_GENERIC_8_BYTE,
   QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, lte_band_pref),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, tdscdma_band_pref) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, tdscdma_band_pref_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, tdscdma_band_pref) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, tdscdma_band_pref_valid)),
   0x14,
    QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, tdscdma_band_pref)
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, tdscdma_band_pref),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, wcdma_arfcn) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, wcdma_arfcn_valid)),
+  0x15,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, wcdma_arfcn),
+  NAS_WCDMA_ARFCN_LIST_MAX_V01,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, wcdma_arfcn) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, wcdma_arfcn_len),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, lte_arfcn) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, lte_arfcn_valid)),
+  0x16,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, lte_arfcn),
+  NAS_LTE_ARFCN_LIST_MAX_V01,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, lte_arfcn) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, lte_arfcn_len),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, search_periodicity) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, search_periodicity_valid)),
+  0x17,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, search_periodicity),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, max_search_time) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, max_search_time_valid)),
+  0x18,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, max_search_time),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, incremental_results) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, incremental_results_valid)),
+  0x19,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, incremental_results),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, incremental_results_periodicity) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, incremental_results_periodicity_valid)),
+  0x1A,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, incremental_results_periodicity),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, preferred_plmn_list) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, preferred_plmn_list_valid)),
+  0x1B,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, preferred_plmn_list),
+  NAS_PREFERRED_PLMN_LIST_MAX_V01,
+  QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, preferred_plmn_list) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_req_msg_v01, preferred_plmn_list_len),
+  QMI_IDL_TYPE88(0, 31)
 };
 
 static const uint8_t nas_perform_incremental_network_scan_resp_msg_data_v01[] = {
@@ -7473,7 +7706,7 @@ static const uint8_t nas_perform_incremental_network_scan_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_ind_msg_v01, nas_network_scan_info),
   ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) & 0xFF), ((NAS_3GPP_NETWORK_INFO_LIST_MAX_V01) >> 8),
   QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_ind_msg_v01, nas_network_scan_info) - QMI_IDL_OFFSET8(nas_perform_incremental_network_scan_ind_msg_v01, nas_network_scan_info_len),
-  QMI_IDL_TYPE88(0, 152),
+  QMI_IDL_TYPE88(0, 157),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, csg_info) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, csg_info_valid)),
   0x11,
@@ -7481,14 +7714,28 @@ static const uint8_t nas_perform_incremental_network_scan_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_perform_incremental_network_scan_ind_msg_v01, csg_info),
   NAS_3GPP_NETWORK_INFO_LIST_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, csg_info) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, csg_info_len),
-  QMI_IDL_TYPE88(0, 25),
+  QMI_IDL_TYPE88(0, 29),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source_valid)),
   0x12,
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source),
   NAS_3GPP_NETWORK_INFO_LIST_MAX_V01,
-  QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source_len)
+  QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, nw_name_source_len),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_quality) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_quality_valid)),
+  0x13,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(nas_perform_incremental_network_scan_ind_msg_v01, signal_quality),
+  NAS_3GPP_NETWORK_INFO_LIST_MAX_V01,
+  QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_quality) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_quality_len),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_strength) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_strength_valid)),
+  0x14,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(nas_perform_incremental_network_scan_ind_msg_v01, signal_strength),
+  NAS_3GPP_NETWORK_INFO_LIST_MAX_V01,
+  QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_strength) - QMI_IDL_OFFSET16RELATIVE(nas_perform_incremental_network_scan_ind_msg_v01, signal_strength_len)
 };
 
 static const uint8_t nas_set_drx_req_msg_data_v01[] = {
@@ -7694,7 +7941,7 @@ static const uint8_t nas_ssac_info_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_ssac_info_ind_msg_v01, ssac_info),
-  QMI_IDL_TYPE88(0, 153)
+  QMI_IDL_TYPE88(0, 158)
 };
 
 /*
@@ -7720,7 +7967,7 @@ static const uint8_t nas_get_lte_embms_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_data_mcs),
   NAS_LTE_ACTIVE_PMCH_MAX_V01,
   QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_data_mcs) - QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_data_mcs_len),
-  QMI_IDL_TYPE88(0, 154),
+  QMI_IDL_TYPE88(0, 159),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, is_active_tmgi_valid) - QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, is_active_tmgi_valid_valid)),
   0x12,
@@ -7733,7 +7980,7 @@ static const uint8_t nas_get_lte_embms_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, mbsfn_area_signal_data),
   NAS_LTE_EMBMS_MBSFN_AREAS_MAX_V01,
   QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, mbsfn_area_signal_data) - QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, mbsfn_area_signal_data_len),
-  QMI_IDL_TYPE88(0, 155),
+  QMI_IDL_TYPE88(0, 160),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_bler_info) - QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_bler_info_valid)),
   0x14,
@@ -7741,7 +7988,7 @@ static const uint8_t nas_get_lte_embms_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_bler_info),
   NAS_LTE_EMBMS_MBSFN_AREAS_MAX_V01,
   QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_bler_info) - QMI_IDL_OFFSET8(nas_get_lte_embms_info_resp_msg_v01, pmch_bler_info_len),
-  QMI_IDL_TYPE88(0, 157),
+  QMI_IDL_TYPE88(0, 162),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(nas_get_lte_embms_info_resp_msg_v01, mtch_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_lte_embms_info_resp_msg_v01, mtch_info_valid)),
   0x15,
@@ -7749,7 +7996,7 @@ static const uint8_t nas_get_lte_embms_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(nas_get_lte_embms_info_resp_msg_v01, mtch_info),
   NAS_LTE_EMBMS_ACTIVE_SESSIONS_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(nas_get_lte_embms_info_resp_msg_v01, mtch_info) - QMI_IDL_OFFSET16RELATIVE(nas_get_lte_embms_info_resp_msg_v01, mtch_info_len),
-  QMI_IDL_TYPE88(0, 158)
+  QMI_IDL_TYPE88(0, 163)
 };
 
 static const uint8_t nas_get_serv_cell_sib_req_msg_data_v01[] = {
@@ -7787,25 +8034,25 @@ static const uint8_t nas_ssac_change_info_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, ssac_voice_info),
-  QMI_IDL_TYPE88(0, 159),
+  QMI_IDL_TYPE88(0, 164),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, ssac_video_info) - QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, ssac_video_info_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, ssac_video_info),
-  QMI_IDL_TYPE88(0, 161),
+  QMI_IDL_TYPE88(0, 166),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, sib2_ssac_voice_info) - QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, sib2_ssac_voice_info_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, sib2_ssac_voice_info),
-  QMI_IDL_TYPE88(0, 160),
+  QMI_IDL_TYPE88(0, 165),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, sib2_ssac_video_info) - QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, sib2_ssac_video_info_valid)),
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, sib2_ssac_video_info),
-  QMI_IDL_TYPE88(0, 162),
+  QMI_IDL_TYPE88(0, 167),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, special_ac_barring_voice) - QMI_IDL_OFFSET8(nas_ssac_change_info_ind_msg_v01, special_ac_barring_voice_valid)),
   0x14,
@@ -7834,25 +8081,25 @@ static const uint8_t nas_get_ssac_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, ssac_voice_info),
-  QMI_IDL_TYPE88(0, 159),
+  QMI_IDL_TYPE88(0, 164),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, ssac_video_info) - QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, ssac_video_info_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, ssac_video_info),
-  QMI_IDL_TYPE88(0, 161),
+  QMI_IDL_TYPE88(0, 166),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, sib2_ssac_voice_info) - QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, sib2_ssac_voice_info_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, sib2_ssac_voice_info),
-  QMI_IDL_TYPE88(0, 160),
+  QMI_IDL_TYPE88(0, 165),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, sib2_ssac_video_info) - QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, sib2_ssac_video_info_valid)),
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, sib2_ssac_video_info),
-  QMI_IDL_TYPE88(0, 162),
+  QMI_IDL_TYPE88(0, 167),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, special_ac_barring_voice) - QMI_IDL_OFFSET8(nas_get_ssac_info_resp_msg_v01, special_ac_barring_voice_valid)),
   0x14,
@@ -7906,13 +8153,13 @@ static const uint8_t nas_get_acb_info_resp_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_acb_info_resp_msg_v01, ac_barring_mo_signalling),
-  QMI_IDL_TYPE88(0, 163),
+  QMI_IDL_TYPE88(0, 168),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_acb_info_resp_msg_v01, ac_barring_mo_data) - QMI_IDL_OFFSET8(nas_get_acb_info_resp_msg_v01, ac_barring_mo_data_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_acb_info_resp_msg_v01, ac_barring_mo_data),
-  QMI_IDL_TYPE88(0, 163)
+  QMI_IDL_TYPE88(0, 168)
 };
 
 static const uint8_t nas_acb_info_ind_msg_data_v01[] = {
@@ -7925,13 +8172,13 @@ static const uint8_t nas_acb_info_ind_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_acb_info_ind_msg_v01, ac_barring_mo_signalling),
-  QMI_IDL_TYPE88(0, 163),
+  QMI_IDL_TYPE88(0, 168),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_acb_info_ind_msg_v01, ac_barring_mo_data) - QMI_IDL_OFFSET8(nas_acb_info_ind_msg_v01, ac_barring_mo_data_valid)),
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_acb_info_ind_msg_v01, ac_barring_mo_data),
-  QMI_IDL_TYPE88(0, 163)
+  QMI_IDL_TYPE88(0, 168)
 };
 
 static const uint8_t nas_set_data_subs_priority_req_msg_data_v01[] = {
@@ -7982,6 +8229,19 @@ static const uint8_t nas_avoid_tuneaway_resp_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_avoid_tuneaway_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t nas_set_lte_proc_type_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_set_lte_proc_type_req_msg_v01, proc_type)
+};
+
+static const uint8_t nas_set_lte_proc_type_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_set_lte_proc_type_resp_msg_v01, resp),
   QMI_IDL_TYPE88(1, 0)
 };
 
@@ -8125,7 +8385,7 @@ static const uint8_t nas_set_drx_scaling_factor_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_set_drx_scaling_factor_req_msg_v01, idle_meas_skip_freq),
   NAS_MAX_TARGET_FREQUENCIES_V01,
   QMI_IDL_OFFSET8(nas_set_drx_scaling_factor_req_msg_v01, idle_meas_skip_freq) - QMI_IDL_OFFSET8(nas_set_drx_scaling_factor_req_msg_v01, idle_meas_skip_freq_len),
-  QMI_IDL_TYPE88(0, 164)
+  QMI_IDL_TYPE88(0, 169)
 };
 
 static const uint8_t nas_set_drx_scaling_factor_resp_msg_data_v01[] = {
@@ -8316,7 +8576,7 @@ static const uint8_t nas_get_lte_cphy_ca_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, cphy_ca),
-  QMI_IDL_TYPE88(0, 147),
+  QMI_IDL_TYPE88(0, 151),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, cphy_ca_dl_bandwidth) - QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, cphy_ca_dl_bandwidth_valid)),
   0x11,
@@ -8327,13 +8587,13 @@ static const uint8_t nas_get_lte_cphy_ca_info_resp_msg_data_v01[] = {
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, scell_info),
-  QMI_IDL_TYPE88(0, 148),
+  QMI_IDL_TYPE88(0, 152),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, pcell_info) - QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, pcell_info_valid)),
   0x13,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, pcell_info),
-  QMI_IDL_TYPE88(0, 149),
+  QMI_IDL_TYPE88(0, 154),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, scell_idx) - QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, scell_idx_valid)),
   0x14,
@@ -8346,7 +8606,7 @@ static const uint8_t nas_get_lte_cphy_ca_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, cphy_scell_info_list),
   NAS_MAX_SCELL_LIST_LEN_V01,
   QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, cphy_scell_info_list) - QMI_IDL_OFFSET8(nas_get_lte_cphy_ca_info_resp_msg_v01, cphy_scell_info_list_len),
-  QMI_IDL_TYPE88(0, 167)
+  QMI_IDL_TYPE88(0, 153)
 };
 
 /*
@@ -8361,7 +8621,7 @@ static const uint8_t nas_set_cell_lock_config_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_set_cell_lock_config_req_msg_v01, cell_list),
   NAS_MAX_CELL_LOCK_ENTRIES_V01,
   QMI_IDL_OFFSET8(nas_set_cell_lock_config_req_msg_v01, cell_list) - QMI_IDL_OFFSET8(nas_set_cell_lock_config_req_msg_v01, cell_list_len),
-  QMI_IDL_TYPE88(0, 165)
+  QMI_IDL_TYPE88(0, 170)
 };
 
 static const uint8_t nas_set_cell_lock_config_resp_msg_data_v01[] = {
@@ -8424,7 +8684,7 @@ static const uint8_t nas_update_ca_band_combo_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_update_ca_band_combo_req_msg_v01, plmn),
-  QMI_IDL_TYPE88(0, 27),
+  QMI_IDL_TYPE88(0, 31),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_update_ca_band_combo_req_msg_v01, ca_band_combo) - QMI_IDL_OFFSET8(nas_update_ca_band_combo_req_msg_v01, ca_band_combo_valid)),
   0x10,
@@ -8445,7 +8705,7 @@ static const uint8_t nas_get_ca_band_combo_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_get_ca_band_combo_req_msg_v01, plmn),
-  QMI_IDL_TYPE88(0, 27)
+  QMI_IDL_TYPE88(0, 31)
 };
 
 static const uint8_t nas_get_ca_band_combo_resp_msg_data_v01[] = {
@@ -8480,9 +8740,14 @@ static const uint8_t nas_ecall_timer_restart_resp_msg_data_v01[] = {
 };
 
 static const uint8_t nas_set_voice_roaming_req_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+  0x01,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_set_voice_roaming_req_msg_v01, international_voice_roaming_allowed)
+  QMI_IDL_OFFSET8(nas_set_voice_roaming_req_msg_v01, international_voice_roaming_allowed),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_voice_roaming_req_msg_v01, domestic_voice_roaming_allowed) - QMI_IDL_OFFSET8(nas_set_voice_roaming_req_msg_v01, domestic_voice_roaming_allowed_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_set_voice_roaming_req_msg_v01, domestic_voice_roaming_allowed)
 };
 
 static const uint8_t nas_set_voice_roaming_resp_msg_data_v01[] = {
@@ -8504,10 +8769,15 @@ static const uint8_t nas_get_voice_roaming_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, resp),
   QMI_IDL_TYPE88(1, 0),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, international_voice_roaming_allowed) - QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, international_voice_roaming_allowed_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, international_voice_roaming_allowed) - QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, international_voice_roaming_allowed_valid)),
   0x10,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, international_voice_roaming_allowed)
+  QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, international_voice_roaming_allowed),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, domestic_voice_roaming_allowed) - QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, domestic_voice_roaming_allowed_valid)),
+  0x11,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_get_voice_roaming_resp_msg_v01, domestic_voice_roaming_allowed)
 };
 
 static const uint8_t nas_set_edrx_req_msg_data_v01[] = {
@@ -8521,6 +8791,84 @@ static const uint8_t nas_set_edrx_resp_msg_data_v01[] = {
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_set_edrx_resp_msg_v01, resp),
   QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t nas_set_edrx_params_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_enabled) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_enabled_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_enabled),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_cycle_length) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_cycle_length_valid)),
+  0x11,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_cycle_length),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ptw) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ptw_valid)),
+  0x12,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ptw),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_rat_type_valid)),
+  0x13,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_rat_type),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ciot_lte_mode_valid)),
+  0x14,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ciot_lte_mode)
+};
+
+static const uint8_t nas_set_edrx_params_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_set_edrx_params_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t nas_get_edrx_params_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_rat_type_valid)),
+  0x10,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_rat_type),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_ciot_lte_mode_valid)),
+  0x11,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_ciot_lte_mode)
+};
+
+static const uint8_t nas_get_edrx_params_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_cycle_length) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_cycle_length_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_cycle_length),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ptw) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ptw_valid)),
+  0x11,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ptw),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_enabled) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_enabled_valid)),
+  0x12,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_enabled),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_rat_type_valid)),
+  0x13,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_rat_type),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ciot_lte_mode_valid)),
+  0x14,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ciot_lte_mode)
 };
 
 /*
@@ -8541,11 +8889,85 @@ static const uint8_t nas_get_edrx_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_edrx_resp_msg_v01, edrx_params)
 };
 
+static const uint8_t nas_edrx_change_info_ind_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_enabled) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_enabled_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_enabled),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_cycle_length) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_cycle_length_valid)),
+  0x11,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_cycle_length),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ptw) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ptw_valid)),
+  0x12,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ptw),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_rat_type_valid)),
+  0x13,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_rat_type),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ciot_lte_mode_valid)),
+  0x14,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ciot_lte_mode)
+};
+
+static const uint8_t nas_set_gnss_session_status_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_set_gnss_session_status_req_msg_v01, gnss_session_active)
+};
+
+static const uint8_t nas_set_gnss_session_status_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_set_gnss_session_status_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+/*
+ * nas_get_lte_rrc_tx_info_req_msg is empty
+ * static const uint8_t nas_get_lte_rrc_tx_info_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t nas_get_lte_rrc_tx_info_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_is_active) - QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_is_active_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_is_active),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_band) - QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_band_valid)),
+  0x11,
+   QMI_IDL_2_BYTE_ENUM,
+  QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_band)
+};
+
+static const uint8_t nas_lte_rrc_tx_info_ind_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_is_active),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_band) - QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_band_valid)),
+  0x10,
+   QMI_IDL_2_BYTE_ENUM,
+  QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_band)
+};
+
 static const uint8_t nas_gcell_info_ind_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_gcell_info_ind_v01, uid_camped_cell),
-  QMI_IDL_TYPE88(0, 166),
+  QMI_IDL_TYPE88(0, 171),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_gcell_info_ind_v01, broadcast_si_mask) - QMI_IDL_OFFSET8(nas_gcell_info_ind_v01, broadcast_si_mask_valid)),
   0x10,
@@ -8637,7 +9059,7 @@ static const uint8_t nas_gcell_info_resp_msg_data_v01[] = {
   0x03,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_gcell_info_resp_msg_v01, uid_camped_cell),
-  QMI_IDL_TYPE88(0, 166),
+  QMI_IDL_TYPE88(0, 171),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_gcell_info_resp_msg_v01, broadcast_si_mask) - QMI_IDL_OFFSET8(nas_gcell_info_resp_msg_v01, broadcast_si_mask_valid)),
   0x10,
@@ -8718,7 +9140,7 @@ static const uint8_t nas_bar_gcell_req_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_bar_gcell_req_v01, uid_camped_cell),
-  QMI_IDL_TYPE88(0, 166),
+  QMI_IDL_TYPE88(0, 171),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
    QMI_IDL_GENERIC_4_BYTE,
@@ -8730,111 +9152,6 @@ static const uint8_t nas_bar_gcell_resp_data_v01[] = {
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_bar_gcell_resp_v01, resp),
   QMI_IDL_TYPE88(1, 0)
-};
-
-static const uint8_t nas_set_edrx_params_req_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_enabled) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_enabled_valid)),
-  0x10,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_enabled),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_cycle_length) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_cycle_length_valid)),
-  0x11,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_cycle_length),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ptw) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ptw_valid)),
-  0x12,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ptw),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_rat_type_valid)),
-  0x13,
-   QMI_IDL_1_BYTE_ENUM,
-  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_rat_type),
-
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ciot_lte_mode_valid)),
-  0x14,
-   QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET8(nas_set_edrx_params_req_msg_v01, edrx_ciot_lte_mode)
-};
-
-static const uint8_t nas_set_edrx_params_resp_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
-   QMI_IDL_AGGREGATE,
-  QMI_IDL_OFFSET8(nas_set_edrx_params_resp_msg_v01, resp),
-  QMI_IDL_TYPE88(1, 0)
-};
-
-static const uint8_t nas_get_edrx_params_req_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_rat_type_valid)),
-  0x10,
-   QMI_IDL_1_BYTE_ENUM,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_rat_type),
-
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_ciot_lte_mode_valid)),
-  0x11,
-   QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_req_msg_v01, edrx_ciot_lte_mode)
-};
-
-static const uint8_t nas_get_edrx_params_resp_msg_data_v01[] = {
-  0x02,
-   QMI_IDL_AGGREGATE,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, resp),
-  QMI_IDL_TYPE88(1, 0),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_cycle_length) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_cycle_length_valid)),
-  0x10,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_cycle_length),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ptw) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ptw_valid)),
-  0x11,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ptw),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_enabled) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_enabled_valid)),
-  0x12,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_enabled),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_rat_type_valid)),
-  0x13,
-   QMI_IDL_1_BYTE_ENUM,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_rat_type),
-
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ciot_lte_mode_valid)),
-  0x14,
-   QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET8(nas_get_edrx_params_resp_msg_v01, edrx_ciot_lte_mode)
-};
-
-static const uint8_t nas_edrx_change_info_ind_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_enabled) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_enabled_valid)),
-  0x10,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_enabled),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_cycle_length) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_cycle_length_valid)),
-  0x11,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_cycle_length),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ptw) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ptw_valid)),
-  0x12,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ptw),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_rat_type) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_rat_type_valid)),
-  0x13,
-   QMI_IDL_1_BYTE_ENUM,
-  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_rat_type),
-
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ciot_lte_mode) - QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ciot_lte_mode_valid)),
-  0x14,
-   QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET8(nas_edrx_change_info_ind_v01, edrx_ciot_lte_mode)
 };
 
 /*
@@ -8862,71 +9179,11 @@ static const uint8_t nas_lte_cphy_ca_agg_dl_bw_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_lte_cphy_ca_agg_dl_bw_ind_msg_v01, num_scells_configured)
 };
 
-static const uint8_t nas_set_lte_proc_type_req_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
-   QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET8(nas_set_lte_proc_type_req_msg_v01, proc_type)
-};
-
-static const uint8_t nas_set_lte_proc_type_resp_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
-   QMI_IDL_AGGREGATE,
-  QMI_IDL_OFFSET8(nas_set_lte_proc_type_resp_msg_v01, resp),
-  QMI_IDL_TYPE88(1, 0)
-};
-
 static const uint8_t nas_lte_rach_fail_ind_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(nas_lte_rach_fail_ind_v01, lte_rach_fail),
-  QMI_IDL_TYPE88(0, 168)
-};
-
-static const uint8_t nas_set_gnss_session_status_req_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_set_gnss_session_status_req_msg_v01, gnss_session_active)
-};
-
-static const uint8_t nas_set_gnss_session_status_resp_msg_data_v01[] = {
-  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
-   QMI_IDL_AGGREGATE,
-  QMI_IDL_OFFSET8(nas_set_gnss_session_status_resp_msg_v01, resp),
-  QMI_IDL_TYPE88(1, 0)
-};
-
-/*
- * nas_get_lte_rrc_tx_info_req_msg is empty
- * static const uint8_t nas_get_lte_rrc_tx_info_req_msg_data_v01[] = {
- * };
- */
-
-static const uint8_t nas_get_lte_rrc_tx_info_resp_msg_data_v01[] = {
-  0x02,
-   QMI_IDL_AGGREGATE,
-  QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, resp),
-  QMI_IDL_TYPE88(1, 0),
-
-  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_is_active) - QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_is_active_valid)),
-  0x10,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_is_active),
-
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_band) - QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_band_valid)),
-  0x11,
-   QMI_IDL_2_BYTE_ENUM,
-  QMI_IDL_OFFSET8(nas_get_lte_rrc_tx_info_resp_msg_v01, lte_tx_band)
-};
-
-static const uint8_t nas_lte_rrc_tx_info_ind_data_v01[] = {
-  0x01,
-   QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_is_active),
-
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_band) - QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_band_valid)),
-  0x10,
-   QMI_IDL_2_BYTE_ENUM,
-  QMI_IDL_OFFSET8(nas_lte_rrc_tx_info_ind_v01, lte_tx_band)
+  QMI_IDL_TYPE88(0, 172)
 };
 
 static const uint8_t nas_set_ecid_config_req_msg_data_v01[] = {
@@ -8961,6 +9218,131 @@ static const uint8_t nas_get_ecid_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(nas_get_ecid_config_resp_msg_v01, ecid_is_enabled)
 };
 
+static const uint8_t nas_v2x_start_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_v2x_start_req_msg_v01, concurrent_with_WWAN) - QMI_IDL_OFFSET8(nas_v2x_start_req_msg_v01, concurrent_with_WWAN_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_v2x_start_req_msg_v01, concurrent_with_WWAN)
+};
+
+static const uint8_t nas_v2x_start_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_v2x_start_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+/*
+ * nas_v2x_stop_req_msg is empty
+ * static const uint8_t nas_v2x_stop_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t nas_v2x_stop_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_v2x_stop_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+/*
+ * nas_get_v2x_status_req_msg is empty
+ * static const uint8_t nas_get_v2x_status_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t nas_get_v2x_status_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_get_v2x_status_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_v2x_status_resp_msg_v01, tx_status) - QMI_IDL_OFFSET8(nas_get_v2x_status_resp_msg_v01, tx_status_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_get_v2x_status_resp_msg_v01, tx_status),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_v2x_status_resp_msg_v01, rx_status) - QMI_IDL_OFFSET8(nas_get_v2x_status_resp_msg_v01, rx_status_valid)),
+  0x11,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_get_v2x_status_resp_msg_v01, rx_status)
+};
+
+static const uint8_t nas_v2x_notification_ind_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, tx_status) - QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, tx_status_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, tx_status),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, rx_status) - QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, rx_status_valid)),
+  0x11,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, rx_status),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, tx_cause) - QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, tx_cause_valid)),
+  0x12,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, tx_cause),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, rx_cause) - QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, rx_cause_valid)),
+  0x13,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, rx_cause),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, cbr_value) - QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, cbr_value_valid)),
+  0x14,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_v2x_notification_ind_v01, cbr_value)
+};
+
+static const uint8_t nas_sub_blocked_status_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_sub_blocked_status_ind_msg_v01, is_blocked)
+};
+
+/*
+ * nas_get_sub_blocked_status_req_msg is empty
+ * static const uint8_t nas_get_sub_blocked_status_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t nas_get_sub_blocked_status_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_get_sub_blocked_status_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_get_sub_blocked_status_resp_msg_v01, is_blocked) - QMI_IDL_OFFSET8(nas_get_sub_blocked_status_resp_msg_v01, is_blocked_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(nas_get_sub_blocked_status_resp_msg_v01, is_blocked)
+};
+
+static const uint8_t nas_lte_b2_thresh_adj_config_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_req_msg_v01, config_type),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_req_msg_v01, lte_b2_thresh_adj_info) - QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_req_msg_v01, lte_b2_thresh_adj_info_valid)),
+  0x10,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_req_msg_v01, lte_b2_thresh_adj_info),
+  QMI_IDL_TYPE88(0, 173)
+};
+
+static const uint8_t nas_lte_b2_thresh_adj_config_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_resp_msg_v01, config_rsp) - QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_resp_msg_v01, config_rsp_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(nas_lte_b2_thresh_adj_config_resp_msg_v01, config_rsp)
+};
+
 /* Type Table */
 static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_signal_stregth_indicator_type_v01), nas_signal_stregth_indicator_type_data_v01},
@@ -8973,6 +9355,7 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_sinr_indicator_threshold_type_v01), nas_sinr_indicator_threshold_type_data_v01},
   {sizeof(nas_rsrp_indicator_type_v01), nas_rsrp_indicator_type_data_v01},
   {sizeof(nas_snr_indicator_type_v01), nas_snr_indicator_type_data_v01},
+  {sizeof(nas_supp_ciot_optimizations_type_v01), nas_supp_ciot_optimizations_type_data_v01},
   {sizeof(nas_signal_strength_type_v01), nas_signal_strength_type_data_v01},
   {sizeof(nas_rf_band_info_type_v01), nas_rf_band_info_type_data_v01},
   {sizeof(nas_rf_dedicated_band_info_type_v01), nas_rf_dedicated_band_info_type_data_v01},
@@ -8984,8 +9367,11 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_rsrq_type_v01), nas_rsrq_type_data_v01},
   {sizeof(nas_reg_network_reject_v01), nas_reg_network_reject_data_v01},
   {sizeof(nas_signal_strength_list_type_v01), nas_signal_strength_list_type_data_v01},
+  {sizeof(nas_nr5g_band_pref_mask_type_v01), nas_nr5g_band_pref_mask_type_data_v01},
+  {sizeof(lte_band_pref_mask_ext_type_v01), lte_band_pref_mask_ext_type_data_v01},
   {sizeof(nas_3gpp_network_info_type_v01), nas_3gpp_network_info_type_data_v01},
   {sizeof(nas_network_radio_access_technology_type_v01), nas_network_radio_access_technology_type_data_v01},
+  {sizeof(nas_scanned_ciot_lte_op_mode_type_v01), nas_scanned_ciot_lte_op_mode_type_data_v01},
   {sizeof(nas_mnc_pcs_digit_include_status_type_v01), nas_mnc_pcs_digit_include_status_type_data_v01},
   {sizeof(nas_csg_info_type_v01), nas_csg_info_type_data_v01},
   {sizeof(nas_csg_nw_info_type_v01), nas_csg_nw_info_type_data_v01},
@@ -9005,7 +9391,6 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_cdma_system_id_ext_type_v01), nas_cdma_system_id_ext_type_data_v01},
   {sizeof(nas_gw_sys_info3_type_v01), nas_gw_sys_info3_type_data_v01},
   {sizeof(nas_universal_time_and_local_time_zone_3gpp_type_v01), nas_universal_time_and_local_time_zone_3gpp_type_data_v01},
-  {sizeof(nas_plmn_id_type_v01), nas_plmn_id_type_data_v01},
   {sizeof(nas_3gpp2_home_network_ext_type_v01), nas_3gpp2_home_network_ext_type_data_v01},
   {sizeof(nas_3gpp_mcs_digit_type_v01), nas_3gpp_mcs_digit_type_data_v01},
   {sizeof(nas_3gpp_preferred_networks_type_v01), nas_3gpp_preferred_networks_type_data_v01},
@@ -9016,7 +9401,6 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_rf_band_info_ext_type_v01), nas_rf_band_info_ext_type_data_v01},
   {sizeof(nas_net_sel_pref_type_v01), nas_net_sel_pref_type_data_v01},
   {sizeof(nas_csg_nw_iden_type_v01), nas_csg_nw_iden_type_data_v01},
-  {sizeof(lte_band_pref_mask_ext_type_v01), lte_band_pref_mask_ext_type_data_v01},
   {sizeof(nas_ddtm_preference_type_v01), nas_ddtm_preference_type_data_v01},
   {sizeof(nas_ddtm_settings_type_v01), nas_ddtm_settings_type_data_v01},
   {sizeof(nas_service_provider_name_type_v01), nas_service_provider_name_type_data_v01},
@@ -9073,6 +9457,7 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_gsm_only_sys_info_type_v01), nas_gsm_only_sys_info_type_data_v01},
   {sizeof(nas_wcdma_only_sys_info_type_v01), nas_wcdma_only_sys_info_type_data_v01},
   {sizeof(nas_lte_only_sys_info_type_v01), nas_lte_only_sys_info_type_data_v01},
+  {sizeof(nas_nr5g_only_sys_info_type_v01), nas_nr5g_only_sys_info_type_data_v01},
   {sizeof(nas_cdma_hdr_only_sys_info_type_v01), nas_cdma_hdr_only_sys_info_type_data_v01},
   {sizeof(nas_3gpp_only_sys_info_type_v01), nas_3gpp_only_sys_info_type_data_v01},
   {sizeof(nas_cdma_sys_info_type_v01), nas_cdma_sys_info_type_data_v01},
@@ -9080,6 +9465,7 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_gsm_sys_info_type_v01), nas_gsm_sys_info_type_data_v01},
   {sizeof(nas_wcdma_sys_info_type_v01), nas_wcdma_sys_info_type_data_v01},
   {sizeof(nas_lte_sys_info_type_v01), nas_lte_sys_info_type_data_v01},
+  {sizeof(nas_nr5g_sys_info_type_v01), nas_nr5g_sys_info_type_data_v01},
   {sizeof(nas_tdscdma_only_sys_info_type_v01), nas_tdscdma_only_sys_info_type_data_v01},
   {sizeof(nas_tdscdma_sys_info_type_v01), nas_tdscdma_sys_info_type_data_v01},
   {sizeof(nas_cdma_sys_info2_type_v01), nas_cdma_sys_info2_type_data_v01},
@@ -9112,6 +9498,7 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_lte_embms_signal_type_v01), nas_lte_embms_signal_type_data_v01},
   {sizeof(nas_lte_cphy_ca_indicator_type_v01), nas_lte_cphy_ca_indicator_type_data_v01},
   {sizeof(nas_lte_cphy_scell_info_type_v01), nas_lte_cphy_scell_info_type_data_v01},
+  {sizeof(nas_cphy_scell_info_v01), nas_cphy_scell_info_data_v01},
   {sizeof(nas_lte_cphy_pcell_info_type_v01), nas_lte_cphy_pcell_info_type_data_v01},
   {sizeof(nas_oplmn_entry_type_v01), nas_oplmn_entry_type_data_v01},
   {sizeof(nas_oplmn_list_type_v01), nas_oplmn_list_type_data_v01},
@@ -9130,10 +9517,8 @@ static const qmi_idl_type_table_entry  nas_type_table_v01[] = {
   {sizeof(nas_target_frequency_info_type_v01), nas_target_frequency_info_type_data_v01},
   {sizeof(nas_cell_lock_entry_type_v01), nas_cell_lock_entry_type_data_v01},
   {sizeof(geran_grr_gcell_identifier_s_v01), geran_grr_gcell_identifier_s_data_v01},
-  {sizeof(nas_cphy_scell_info_v01), nas_cphy_scell_info_data_v01},
   {sizeof(nas_lte_rach_fail_ind_type_v01), nas_lte_rach_fail_ind_type_data_v01},
-  {sizeof(nas_supp_ciot_optimizations_type_v01), nas_supp_ciot_optimizations_type_data_v01},
-  {sizeof(nas_scanned_ciot_lte_op_mode_type_v01), nas_scanned_ciot_lte_op_mode_type_data_v01}
+  {sizeof(nas_lte_b2_thresh_adj_info_type_v01), nas_lte_b2_thresh_adj_info_type_data_v01}
 };
 
 /* Message Table */
@@ -9359,6 +9744,8 @@ static const qmi_idl_message_table_entry nas_message_table_v01[] = {
   {sizeof(nas_data_subs_priority_ind_msg_v01), nas_data_subs_priority_ind_msg_data_v01},
   {sizeof(nas_avoid_tuneaway_req_msg_v01), nas_avoid_tuneaway_req_msg_data_v01},
   {sizeof(nas_avoid_tuneaway_resp_msg_v01), nas_avoid_tuneaway_resp_msg_data_v01},
+  {sizeof(nas_set_lte_proc_type_req_msg_v01), nas_set_lte_proc_type_req_msg_data_v01},
+  {sizeof(nas_set_lte_proc_type_resp_msg_v01), nas_set_lte_proc_type_resp_msg_data_v01},
   {sizeof(nas_set_mcc_req_msg_v01), nas_set_mcc_req_msg_data_v01},
   {sizeof(nas_set_mcc_resp_msg_v01), nas_set_mcc_resp_msg_data_v01},
   {sizeof(nas_set_data_roaming_req_msg_v01), nas_set_data_roaming_req_msg_data_v01},
@@ -9412,33 +9799,43 @@ static const qmi_idl_message_table_entry nas_message_table_v01[] = {
   {sizeof(nas_get_voice_roaming_resp_msg_v01), nas_get_voice_roaming_resp_msg_data_v01},
   {sizeof(nas_set_edrx_req_msg_v01), nas_set_edrx_req_msg_data_v01},
   {sizeof(nas_set_edrx_resp_msg_v01), nas_set_edrx_resp_msg_data_v01},
-  {sizeof(nas_get_edrx_req_msg_v01), 0},
-  {sizeof(nas_get_edrx_resp_msg_v01), nas_get_edrx_resp_msg_data_v01},
-  {sizeof(nas_gcell_info_ind_v01), nas_gcell_info_ind_data_v01},
-  {sizeof(nas_gcell_info_req_msg_v01), 0},
-  {sizeof(nas_gcell_info_resp_msg_v01), nas_gcell_info_resp_msg_data_v01},
-  {sizeof(nas_bar_gcell_req_v01), nas_bar_gcell_req_data_v01},
-  {sizeof(nas_bar_gcell_resp_v01), nas_bar_gcell_resp_data_v01},
   {sizeof(nas_set_edrx_params_req_msg_v01), nas_set_edrx_params_req_msg_data_v01},
   {sizeof(nas_set_edrx_params_resp_msg_v01), nas_set_edrx_params_resp_msg_data_v01},
   {sizeof(nas_get_edrx_params_req_msg_v01), nas_get_edrx_params_req_msg_data_v01},
   {sizeof(nas_get_edrx_params_resp_msg_v01), nas_get_edrx_params_resp_msg_data_v01},
+  {sizeof(nas_get_edrx_req_msg_v01), 0},
+  {sizeof(nas_get_edrx_resp_msg_v01), nas_get_edrx_resp_msg_data_v01},
   {sizeof(nas_edrx_change_info_ind_v01), nas_edrx_change_info_ind_data_v01},
-  {sizeof(nas_abort_scan_req_msg_v01), 0},
-  {sizeof(nas_abort_scan_resp_msg_v01), nas_abort_scan_resp_msg_data_v01},
-  {sizeof(nas_lte_cphy_ca_agg_dl_bw_ind_msg_v01), nas_lte_cphy_ca_agg_dl_bw_ind_msg_data_v01},
-  {sizeof(nas_set_lte_proc_type_req_msg_v01), nas_set_lte_proc_type_req_msg_data_v01},
-  {sizeof(nas_set_lte_proc_type_resp_msg_v01), nas_set_lte_proc_type_resp_msg_data_v01},
-  {sizeof(nas_lte_rach_fail_ind_v01), nas_lte_rach_fail_ind_data_v01},
   {sizeof(nas_set_gnss_session_status_req_msg_v01), nas_set_gnss_session_status_req_msg_data_v01},
   {sizeof(nas_set_gnss_session_status_resp_msg_v01), nas_set_gnss_session_status_resp_msg_data_v01},
   {sizeof(nas_get_lte_rrc_tx_info_req_msg_v01), 0},
   {sizeof(nas_get_lte_rrc_tx_info_resp_msg_v01), nas_get_lte_rrc_tx_info_resp_msg_data_v01},
   {sizeof(nas_lte_rrc_tx_info_ind_v01), nas_lte_rrc_tx_info_ind_data_v01},
+  {sizeof(nas_gcell_info_ind_v01), nas_gcell_info_ind_data_v01},
+  {sizeof(nas_gcell_info_req_msg_v01), 0},
+  {sizeof(nas_gcell_info_resp_msg_v01), nas_gcell_info_resp_msg_data_v01},
+  {sizeof(nas_bar_gcell_req_v01), nas_bar_gcell_req_data_v01},
+  {sizeof(nas_bar_gcell_resp_v01), nas_bar_gcell_resp_data_v01},
+  {sizeof(nas_abort_scan_req_msg_v01), 0},
+  {sizeof(nas_abort_scan_resp_msg_v01), nas_abort_scan_resp_msg_data_v01},
+  {sizeof(nas_lte_cphy_ca_agg_dl_bw_ind_msg_v01), nas_lte_cphy_ca_agg_dl_bw_ind_msg_data_v01},
+  {sizeof(nas_lte_rach_fail_ind_v01), nas_lte_rach_fail_ind_data_v01},
   {sizeof(nas_set_ecid_config_req_msg_v01), nas_set_ecid_config_req_msg_data_v01},
   {sizeof(nas_set_ecid_config_resp_msg_v01), nas_set_ecid_config_resp_msg_data_v01},
   {sizeof(nas_get_ecid_config_req_msg_v01), 0},
-  {sizeof(nas_get_ecid_config_resp_msg_v01), nas_get_ecid_config_resp_msg_data_v01}
+  {sizeof(nas_get_ecid_config_resp_msg_v01), nas_get_ecid_config_resp_msg_data_v01},
+  {sizeof(nas_v2x_start_req_msg_v01), nas_v2x_start_req_msg_data_v01},
+  {sizeof(nas_v2x_start_resp_msg_v01), nas_v2x_start_resp_msg_data_v01},
+  {sizeof(nas_v2x_stop_req_msg_v01), 0},
+  {sizeof(nas_v2x_stop_resp_msg_v01), nas_v2x_stop_resp_msg_data_v01},
+  {sizeof(nas_get_v2x_status_req_msg_v01), 0},
+  {sizeof(nas_get_v2x_status_resp_msg_v01), nas_get_v2x_status_resp_msg_data_v01},
+  {sizeof(nas_v2x_notification_ind_v01), nas_v2x_notification_ind_data_v01},
+  {sizeof(nas_sub_blocked_status_ind_msg_v01), nas_sub_blocked_status_ind_msg_data_v01},
+  {sizeof(nas_get_sub_blocked_status_req_msg_v01), 0},
+  {sizeof(nas_get_sub_blocked_status_resp_msg_v01), nas_get_sub_blocked_status_resp_msg_data_v01},
+  {sizeof(nas_lte_b2_thresh_adj_config_req_msg_v01), nas_lte_b2_thresh_adj_config_req_msg_data_v01},
+  {sizeof(nas_lte_b2_thresh_adj_config_resp_msg_v01), nas_lte_b2_thresh_adj_config_resp_msg_data_v01}
 };
 
 /* Range Table */
@@ -9449,7 +9846,7 @@ static const qmi_idl_type_table_object nas_qmi_idl_type_table_object_v01;
 
 /*Referenced Tables Array*/
 static const qmi_idl_type_table_object *nas_qmi_idl_type_table_object_referenced_tables_v01[] =
-{&nas_qmi_idl_type_table_object_v01, &common_qmi_idl_type_table_object_v01, &network_access_service_common_qmi_idl_type_table_object_v01};
+{&nas_qmi_idl_type_table_object_v01, &common_qmi_idl_type_table_object_v01, &network_access_service_common_qmi_idl_type_table_object_v01, &voice_nas_services_common_qmi_idl_type_table_object_v01};
 
 /*Type Table Object*/
 static const qmi_idl_type_table_object nas_qmi_idl_type_table_object_v01 = {
@@ -9467,11 +9864,11 @@ static const qmi_idl_service_message_table_entry nas_service_command_messages_v0
   {QMI_NAS_RESET_REQ_MSG_V01, QMI_IDL_TYPE16(0, 0), 0},
   {QMI_NAS_ABORT_REQ_MSG_V01, QMI_IDL_TYPE16(0, 2), 5},
   {QMI_NAS_SET_EVENT_REPORT_REQ_MSG_V01, QMI_IDL_TYPE16(0, 4), 93},
-  {QMI_NAS_INDICATION_REGISTER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 7), 153},
+  {QMI_NAS_INDICATION_REGISTER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 7), 165},
   {QMI_NAS_GET_SUPPORTED_MSGS_REQ_V01, QMI_IDL_TYPE16(1, 0), 0},
   {QMI_NAS_GET_SUPPORTED_FIELDS_REQ_V01, QMI_IDL_TYPE16(1, 2), 5},
   {QMI_NAS_GET_SIGNAL_STRENGTH_REQ_MSG_V01, QMI_IDL_TYPE16(0, 9), 5},
-  {QMI_NAS_PERFORM_NETWORK_SCAN_REQ_MSG_V01, QMI_IDL_TYPE16(0, 11), 77},
+  {QMI_NAS_PERFORM_NETWORK_SCAN_REQ_MSG_V01, QMI_IDL_TYPE16(0, 11), 147},
   {QMI_NAS_INITIATE_NETWORK_REGISTER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 13), 20},
   {QMI_NAS_INITIATE_ATTACH_REQ_MSG_V01, QMI_IDL_TYPE16(0, 15), 4},
   {QMI_NAS_GET_SERVING_SYSTEM_REQ_MSG_V01, QMI_IDL_TYPE16(0, 17), 0},
@@ -9489,7 +9886,7 @@ static const qmi_idl_service_message_table_entry nas_service_command_messages_v0
   {QMI_NAS_SET_DEVICE_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 36), 33},
   {QMI_NAS_GET_RF_BAND_INFO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 38), 0},
   {QMI_NAS_GET_AN_AAA_STATUS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 40), 0},
-  {QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 42), 263},
+  {QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 42), 368},
   {QMI_NAS_GET_SYSTEM_SELECTION_PREFERENCE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 44), 0},
   {QMI_NAS_SET_DDTM_PREFERENCE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 47), 72},
   {QMI_NAS_GET_OPERATOR_NAME_DATA_REQ_MSG_V01, QMI_IDL_TYPE16(0, 50), 0},
@@ -9546,7 +9943,7 @@ static const qmi_idl_service_message_table_entry nas_service_command_messages_v0
   {QMI_NAS_GET_EMBMS_SIG_EXT_REQ_MSG_V01, QMI_IDL_TYPE16(0, 176), 5},
   {QMI_NAS_GET_LTE_BAND_PRIORITY_LIST_REQ_MSG_V01, QMI_IDL_TYPE16(0, 179), 0},
   {QMI_NAS_SET_BUILTIN_PLMN_LIST_REQ_MSG_V01, QMI_IDL_TYPE16(0, 181), 2520},
-  {QMI_NAS_PERFORM_INCREMENTAL_NETWORK_SCAN_REQ_MSG_V01, QMI_IDL_TYPE16(0, 184), 44},
+  {QMI_NAS_PERFORM_INCREMENTAL_NETWORK_SCAN_REQ_MSG_V01, QMI_IDL_TYPE16(0, 184), 333},
   {QMI_NAS_SET_DRX_REQ_MSG_V01, QMI_IDL_TYPE16(0, 187), 7},
   {QMI_NAS_GET_DRX_REQ_MSG_V01, QMI_IDL_TYPE16(0, 189), 0},
   {QMI_NAS_CSG_SEARCH_SELECTION_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 193), 86},
@@ -9560,43 +9957,48 @@ static const qmi_idl_service_message_table_entry nas_service_command_messages_v0
   {QMI_NAS_SET_DATA_SUBS_PRIORITY_REQ_MSG_V01, QMI_IDL_TYPE16(0, 214), 7},
   {QMI_NAS_GET_DATA_SUBS_PRIORITY_REQ_MSG_V01, QMI_IDL_TYPE16(0, 216), 0},
   {QMI_NAS_AVOID_TUNEAWAY_REQ_MSG_V01, QMI_IDL_TYPE16(0, 219), 4},
-  {QMI_NAS_SET_MCC_REQ_MSG_V01, QMI_IDL_TYPE16(0, 221), 19},
-  {QMI_NAS_SET_DATA_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 223), 7},
-  {QMI_NAS_GET_DATA_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 225), 0},
-  {QMI_NAS_SET_SRVCC_REQ_MSG_V01, QMI_IDL_TYPE16(0, 227), 4},
-  {QMI_NAS_SET_BSR_TIMER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 229), 7},
-  {QMI_NAS_GET_BSR_REQ_MSG_V01, QMI_IDL_TYPE16(0, 231), 0},
-  {QMI_NAS_SET_DRX_SCALING_FACTOR_REQ_MSG_V01, QMI_IDL_TYPE16(0, 233), 56},
-  {QMI_NAS_SET_SSAC_HYSTERESIS_TIMER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 235), 5},
-  {QMI_NAS_GET_SSAC_HYSTERESIS_TIMER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 237), 0},
-  {QMI_NAS_GET_HDR_INFO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 239), 0},
-  {QMI_NAS_GET_HDR_DRC_RATE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 241), 0},
-  {QMI_NAS_SET_RPM_PARAMETERS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 243), 9},
-  {QMI_NAS_GET_RPM_PARAMETERS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 245), 0},
-  {QMI_NAS_SET_RPM_STATE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 249), 4},
-  {QMI_NAS_GET_LTE_CPHY_CA_INFO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 251), 0},
+  {QMI_NAS_SET_MCC_REQ_MSG_V01, QMI_IDL_TYPE16(0, 223), 19},
+  {QMI_NAS_SET_DATA_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 225), 7},
+  {QMI_NAS_GET_DATA_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 227), 0},
+  {QMI_NAS_SET_SRVCC_REQ_MSG_V01, QMI_IDL_TYPE16(0, 229), 4},
+  {QMI_NAS_SET_BSR_TIMER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 231), 7},
+  {QMI_NAS_GET_BSR_REQ_MSG_V01, QMI_IDL_TYPE16(0, 233), 0},
+  {QMI_NAS_SET_DRX_SCALING_FACTOR_REQ_MSG_V01, QMI_IDL_TYPE16(0, 235), 56},
+  {QMI_NAS_SET_SSAC_HYSTERESIS_TIMER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 237), 5},
+  {QMI_NAS_GET_SSAC_HYSTERESIS_TIMER_REQ_MSG_V01, QMI_IDL_TYPE16(0, 239), 0},
+  {QMI_NAS_GET_HDR_INFO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 241), 0},
+  {QMI_NAS_GET_HDR_DRC_RATE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 243), 0},
+  {QMI_NAS_SET_RPM_PARAMETERS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 245), 9},
+  {QMI_NAS_GET_RPM_PARAMETERS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 247), 0},
+  {QMI_NAS_SET_RPM_STATE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 251), 4},
+  {QMI_NAS_GET_LTE_CPHY_CA_INFO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 253), 0},
   {QMI_NAS_GET_NEGOTIATED_DRX_REQ_MSG_V01, QMI_IDL_TYPE16(0, 191), 0},
-  {QMI_NAS_SET_CELL_LOCK_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 254), 244},
-  {QMI_NAS_LTE_UE_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 256), 11},
-  {QMI_NAS_ECALL_DEREGISTRATION_REQ_MSG_V01, QMI_IDL_TYPE16(0, 260), 0},
-  {QMI_NAS_UPDATE_CA_BAND_COMBO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 262), 2317},
-  {QMI_NAS_GET_CA_BAND_COMBO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 264), 8},
-  {QMI_NAS_ECALL_TIMER_RESTART_REQ_MSG_V01, QMI_IDL_TYPE16(0, 266), 14},
-  {QMI_NAS_SET_VOICE_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 268), 4},
-  {QMI_NAS_GET_VOICE_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 270), 0},
-  {QMI_NAS_SET_RPM_PARAMETERS_2_REQ_MSG_V01, QMI_IDL_TYPE16(0, 247), 9},
-  {QMI_NAS_SET_EDRX_REQ_MSG_V01, QMI_IDL_TYPE16(0, 272), 4},
-  {QMI_NAS_GET_EDRX_REQ_MSG_V01, QMI_IDL_TYPE16(0, 274), 0},
-  {QMI_NAS_GCELL_INFO_REQ_V01, QMI_IDL_TYPE16(0, 277), 0},
-  {QMI_NAS_BAR_GCELL_REQ_V01, QMI_IDL_TYPE16(0, 279), 20},
-  {QMI_NAS_SET_EDRX_PARAMS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 281), 23},
-  {QMI_NAS_GET_EDRX_PARAMS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 283), 11},
-  {QMI_NAS_ABORT_SCAN_REQ_V01, QMI_IDL_TYPE16(0, 286), 0},
-  {QMI_NAS_SET_LTE_PROC_TYPE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 289), 7},
-  {QMI_NAS_GET_LTE_RRC_TX_INFO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 294), 0},
-  {QMI_NAS_SET_GNSS_SESSION_STATUS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 292), 4},
+  {QMI_NAS_SET_CELL_LOCK_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 256), 244},
+  {QMI_NAS_LTE_UE_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 258), 11},
+  {QMI_NAS_ECALL_DEREGISTRATION_REQ_MSG_V01, QMI_IDL_TYPE16(0, 262), 0},
+  {QMI_NAS_UPDATE_CA_BAND_COMBO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 264), 2317},
+  {QMI_NAS_GET_CA_BAND_COMBO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 266), 8},
+  {QMI_NAS_ECALL_TIMER_RESTART_REQ_MSG_V01, QMI_IDL_TYPE16(0, 268), 14},
+  {QMI_NAS_SET_VOICE_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 270), 8},
+  {QMI_NAS_GET_VOICE_ROAMING_REQ_MSG_V01, QMI_IDL_TYPE16(0, 272), 0},
+  {QMI_NAS_SET_RPM_PARAMETERS_2_REQ_MSG_V01, QMI_IDL_TYPE16(0, 249), 9},
+  {QMI_NAS_SET_EDRX_REQ_MSG_V01, QMI_IDL_TYPE16(0, 274), 4},
+  {QMI_NAS_GET_EDRX_REQ_MSG_V01, QMI_IDL_TYPE16(0, 280), 0},
+  {QMI_NAS_GCELL_INFO_REQ_V01, QMI_IDL_TYPE16(0, 289), 0},
+  {QMI_NAS_BAR_GCELL_REQ_V01, QMI_IDL_TYPE16(0, 291), 20},
+  {QMI_NAS_SET_EDRX_PARAMS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 276), 23},
+  {QMI_NAS_GET_EDRX_PARAMS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 278), 11},
+  {QMI_NAS_ABORT_SCAN_REQ_V01, QMI_IDL_TYPE16(0, 293), 0},
+  {QMI_NAS_SET_LTE_PROC_TYPE_REQ_MSG_V01, QMI_IDL_TYPE16(0, 221), 7},
+  {QMI_NAS_GET_LTE_RRC_TX_INFO_REQ_MSG_V01, QMI_IDL_TYPE16(0, 285), 0},
+  {QMI_NAS_SET_GNSS_SESSION_STATUS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 283), 4},
   {QMI_NAS_SET_ECID_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 297), 4},
-  {QMI_NAS_GET_ECID_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 299), 0}
+  {QMI_NAS_GET_ECID_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 299), 0},
+  {QMI_NAS_GET_SUB_BLOCKED_STATUS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 309), 0},
+  {QMI_NAS_LTE_B2_THRESH_ADJ_CONFIG_REQ_MSG_V01, QMI_IDL_TYPE16(0, 311), 22},
+  {QMI_NAS_V2X_START_REQ_MSG_V01, QMI_IDL_TYPE16(0, 301), 4},
+  {QMI_NAS_V2X_STOP_REQ_MSG_V01, QMI_IDL_TYPE16(0, 303), 0},
+  {QMI_NAS_GET_V2X_STATUS_REQ_MSG_V01, QMI_IDL_TYPE16(0, 305), 0}
 };
 
 static const qmi_idl_service_message_table_entry nas_service_response_messages_v01[] = {
@@ -9626,7 +10028,7 @@ static const qmi_idl_service_message_table_entry nas_service_response_messages_v
   {QMI_NAS_GET_RF_BAND_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 39), 350},
   {QMI_NAS_GET_AN_AAA_STATUS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 41), 11},
   {QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 43), 7},
-  {QMI_NAS_GET_SYSTEM_SELECTION_PREFERENCE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 45), 257},
+  {QMI_NAS_GET_SYSTEM_SELECTION_PREFERENCE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 45), 362},
   {QMI_NAS_SET_DDTM_PREFERENCE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 48), 7},
   {QMI_NAS_GET_OPERATOR_NAME_DATA_RESP_MSG_V01, QMI_IDL_TYPE16(0, 51), 36643},
   {QMI_NAS_GET_CSP_PLMN_MODE_BIT_RESP_MSG_V01, QMI_IDL_TYPE16(0, 54), 11},
@@ -9636,12 +10038,12 @@ static const qmi_idl_service_message_table_entry nas_service_response_messages_v
   {QMI_NAS_GET_MOB_CAI_REV_RESP_MSG_V01, QMI_IDL_TYPE16(0, 63), 11},
   {QMI_NAS_GET_RTRE_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 65), 15},
   {QMI_NAS_SET_RTRE_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 67), 7},
-  {QMI_NAS_GET_CELL_LOCATION_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 69), 2836},
+  {QMI_NAS_GET_CELL_LOCATION_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 69), 2843},
   {QMI_NAS_GET_PLMN_NAME_RESP_MSG_V01, QMI_IDL_TYPE16(0, 71), 3840},
   {QMI_NAS_BIND_SUBSCRIPTION_RESP_MSG_V01, QMI_IDL_TYPE16(0, 73), 7},
   {QMI_NAS_GET_MODE_PREF_RESP_MSG_V01, QMI_IDL_TYPE16(0, 79), 22},
   {QMI_NAS_DUAL_STANDBY_PREF_RESP_MSG_V01, QMI_IDL_TYPE16(0, 75), 7},
-  {QMI_NAS_GET_SYS_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 88), 760},
+  {QMI_NAS_GET_SYS_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 88), 812},
   {QMI_NAS_GET_SIG_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 91), 66},
   {QMI_NAS_CONFIG_SIG_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 93), 7},
   {QMI_NAS_GET_ERR_RATE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 96), 29},
@@ -9696,49 +10098,54 @@ static const qmi_idl_service_message_table_entry nas_service_response_messages_v
   {QMI_NAS_SET_DATA_SUBS_PRIORITY_RESP_MSG_V01, QMI_IDL_TYPE16(0, 215), 7},
   {QMI_NAS_GET_DATA_SUBS_PRIORITY_RESP_MSG_V01, QMI_IDL_TYPE16(0, 217), 14},
   {QMI_NAS_AVOID_TUNEAWAY_RESP_MSG_V01, QMI_IDL_TYPE16(0, 220), 7},
-  {QMI_NAS_SET_MCC_RESP_MSG_V01, QMI_IDL_TYPE16(0, 222), 7},
-  {QMI_NAS_SET_DATA_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 224), 11},
-  {QMI_NAS_GET_DATA_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 226), 18},
-  {QMI_NAS_SET_SRVCC_RESP_MSG_V01, QMI_IDL_TYPE16(0, 228), 7},
-  {QMI_NAS_SET_BSR_TIMER_RESP_MSG_V01, QMI_IDL_TYPE16(0, 230), 11},
-  {QMI_NAS_GET_BSR_RESP_MSG_V01, QMI_IDL_TYPE16(0, 232), 18},
-  {QMI_NAS_SET_DRX_SCALING_FACTOR_RESP_MSG_V01, QMI_IDL_TYPE16(0, 234), 7},
-  {QMI_NAS_SET_SSAC_HYSTERESIS_TIMER_RESP_MSG_V01, QMI_IDL_TYPE16(0, 236), 7},
-  {QMI_NAS_GET_SSAC_HYSTERESIS_TIMER_RESP_MSG_V01, QMI_IDL_TYPE16(0, 238), 12},
-  {QMI_NAS_GET_HDR_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 240), 36},
-  {QMI_NAS_GET_HDR_DRC_RATE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 242), 11},
-  {QMI_NAS_SET_RPM_PARAMETERS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 244), 7},
-  {QMI_NAS_GET_RPM_PARAMETERS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 246), 29},
-  {QMI_NAS_SET_RPM_STATE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 250), 7},
-  {QMI_NAS_GET_LTE_CPHY_CA_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 252), 123},
+  {QMI_NAS_SET_MCC_RESP_MSG_V01, QMI_IDL_TYPE16(0, 224), 7},
+  {QMI_NAS_SET_DATA_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 226), 11},
+  {QMI_NAS_GET_DATA_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 228), 18},
+  {QMI_NAS_SET_SRVCC_RESP_MSG_V01, QMI_IDL_TYPE16(0, 230), 7},
+  {QMI_NAS_SET_BSR_TIMER_RESP_MSG_V01, QMI_IDL_TYPE16(0, 232), 11},
+  {QMI_NAS_GET_BSR_RESP_MSG_V01, QMI_IDL_TYPE16(0, 234), 18},
+  {QMI_NAS_SET_DRX_SCALING_FACTOR_RESP_MSG_V01, QMI_IDL_TYPE16(0, 236), 7},
+  {QMI_NAS_SET_SSAC_HYSTERESIS_TIMER_RESP_MSG_V01, QMI_IDL_TYPE16(0, 238), 7},
+  {QMI_NAS_GET_SSAC_HYSTERESIS_TIMER_RESP_MSG_V01, QMI_IDL_TYPE16(0, 240), 12},
+  {QMI_NAS_GET_HDR_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 242), 36},
+  {QMI_NAS_GET_HDR_DRC_RATE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 244), 11},
+  {QMI_NAS_SET_RPM_PARAMETERS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 246), 7},
+  {QMI_NAS_GET_RPM_PARAMETERS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 248), 29},
+  {QMI_NAS_SET_RPM_STATE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 252), 7},
+  {QMI_NAS_GET_LTE_CPHY_CA_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 254), 123},
   {QMI_NAS_GET_NEGOTIATED_DRX_RESP_MSG_V01, QMI_IDL_TYPE16(0, 192), 11},
-  {QMI_NAS_SET_CELL_LOCK_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 255), 7},
-  {QMI_NAS_LTE_UE_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 257), 7},
-  {QMI_NAS_ECALL_DEREGISTRATION_RESP_MSG_V01, QMI_IDL_TYPE16(0, 261), 7},
-  {QMI_NAS_UPDATE_CA_BAND_COMBO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 263), 7},
-  {QMI_NAS_GET_CA_BAND_COMBO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 265), 2316},
-  {QMI_NAS_ECALL_TIMER_RESTART_RESP_MSG_V01, QMI_IDL_TYPE16(0, 267), 7},
-  {QMI_NAS_SET_VOICE_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 269), 7},
-  {QMI_NAS_GET_VOICE_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 271), 11},
-  {QMI_NAS_SET_RPM_PARAMETERS_2_RESP_MSG_V01, QMI_IDL_TYPE16(0, 248), 7},
-  {QMI_NAS_SET_EDRX_RESP_MSG_V01, QMI_IDL_TYPE16(0, 273), 7},
-  {QMI_NAS_GET_EDRX_RESP_MSG_V01, QMI_IDL_TYPE16(0, 275), 11},
-  {QMI_NAS_GCELL_INFO_RESP_V01, QMI_IDL_TYPE16(0, 278), 389},
-  {QMI_NAS_BAR_GCELL_RESP_V01, QMI_IDL_TYPE16(0, 280), 7},
-  {QMI_NAS_SET_EDRX_PARAMS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 282), 7},
-  {QMI_NAS_GET_EDRX_PARAMS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 284), 30},
-  {QMI_NAS_ABORT_SCAN_RESP_V01, QMI_IDL_TYPE16(0, 287), 7},
-  {QMI_NAS_SET_LTE_PROC_TYPE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 290), 7},
-  {QMI_NAS_GET_LTE_RRC_TX_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 295), 16},
-  {QMI_NAS_SET_GNSS_SESSION_STATUS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 293), 7},
+  {QMI_NAS_SET_CELL_LOCK_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 257), 7},
+  {QMI_NAS_LTE_UE_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 259), 7},
+  {QMI_NAS_ECALL_DEREGISTRATION_RESP_MSG_V01, QMI_IDL_TYPE16(0, 263), 7},
+  {QMI_NAS_UPDATE_CA_BAND_COMBO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 265), 7},
+  {QMI_NAS_GET_CA_BAND_COMBO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 267), 2316},
+  {QMI_NAS_ECALL_TIMER_RESTART_RESP_MSG_V01, QMI_IDL_TYPE16(0, 269), 7},
+  {QMI_NAS_SET_VOICE_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 271), 7},
+  {QMI_NAS_GET_VOICE_ROAMING_RESP_MSG_V01, QMI_IDL_TYPE16(0, 273), 15},
+  {QMI_NAS_SET_RPM_PARAMETERS_2_RESP_MSG_V01, QMI_IDL_TYPE16(0, 250), 7},
+  {QMI_NAS_SET_EDRX_RESP_MSG_V01, QMI_IDL_TYPE16(0, 275), 7},
+  {QMI_NAS_GET_EDRX_RESP_MSG_V01, QMI_IDL_TYPE16(0, 281), 11},
+  {QMI_NAS_GCELL_INFO_RESP_V01, QMI_IDL_TYPE16(0, 290), 389},
+  {QMI_NAS_BAR_GCELL_RESP_V01, QMI_IDL_TYPE16(0, 292), 7},
+  {QMI_NAS_SET_EDRX_PARAMS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 277), 7},
+  {QMI_NAS_GET_EDRX_PARAMS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 279), 30},
+  {QMI_NAS_ABORT_SCAN_RESP_V01, QMI_IDL_TYPE16(0, 294), 7},
+  {QMI_NAS_SET_LTE_PROC_TYPE_RESP_MSG_V01, QMI_IDL_TYPE16(0, 222), 7},
+  {QMI_NAS_GET_LTE_RRC_TX_INFO_RESP_MSG_V01, QMI_IDL_TYPE16(0, 286), 16},
+  {QMI_NAS_SET_GNSS_SESSION_STATUS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 284), 7},
   {QMI_NAS_SET_ECID_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 298), 7},
-  {QMI_NAS_GET_ECID_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 300), 11}
+  {QMI_NAS_GET_ECID_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 300), 11},
+  {QMI_NAS_GET_SUB_BLOCKED_STATUS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 310), 11},
+  {QMI_NAS_LTE_B2_THRESH_ADJ_CONFIG_RESP_MSG_V01, QMI_IDL_TYPE16(0, 312), 14},
+  {QMI_NAS_V2X_START_RESP_MSG_V01, QMI_IDL_TYPE16(0, 302), 7},
+  {QMI_NAS_V2X_STOP_RESP_MSG_V01, QMI_IDL_TYPE16(0, 304), 7},
+  {QMI_NAS_GET_V2X_STATUS_RESP_MSG_V01, QMI_IDL_TYPE16(0, 306), 21}
 };
 
 static const qmi_idl_service_message_table_entry nas_service_indication_messages_v01[] = {
   {QMI_NAS_EVENT_REPORT_IND_MSG_V01, QMI_IDL_TYPE16(0, 6), 1332},
   {QMI_NAS_SERVING_SYSTEM_IND_MSG_V01, QMI_IDL_TYPE16(0, 19), 695},
-  {QMI_NAS_SYSTEM_SELECTION_PREFERENCE_IND_MSG_V01, QMI_IDL_TYPE16(0, 46), 250},
+  {QMI_NAS_SYSTEM_SELECTION_PREFERENCE_IND_MSG_V01, QMI_IDL_TYPE16(0, 46), 355},
   {QMI_NAS_DDTM_IND_MSG_V01, QMI_IDL_TYPE16(0, 49), 73},
   {QMI_NAS_OPERATOR_NAME_DATA_IND_MSG_V01, QMI_IDL_TYPE16(0, 52), 36636},
   {QMI_NAS_CSP_PLMN_MODE_BIT_IND_MSG_V01, QMI_IDL_TYPE16(0, 55), 4},
@@ -9746,7 +10153,7 @@ static const qmi_idl_service_message_table_entry nas_service_indication_messages
   {QMI_NAS_DUAL_STANDBY_PREF_IND_MSG_V01, QMI_IDL_TYPE16(0, 76), 22},
   {QMI_NAS_SUBSCRIPTION_INFO_IND_MSG_V01, QMI_IDL_TYPE16(0, 77), 37},
   {QMI_NAS_NETWORK_TIME_IND_MSG_V01, QMI_IDL_TYPE16(0, 86), 23},
-  {QMI_NAS_SYS_INFO_IND_MSG_V01, QMI_IDL_TYPE16(0, 89), 761},
+  {QMI_NAS_SYS_INFO_IND_MSG_V01, QMI_IDL_TYPE16(0, 89), 813},
   {QMI_NAS_SIG_INFO_IND_MSG_V01, QMI_IDL_TYPE16(0, 94), 59},
   {QMI_NAS_ERR_RATE_IND_MSG_V01, QMI_IDL_TYPE16(0, 97), 22},
   {QMI_NAS_HDR_SESSION_CLOSE_IND_MSG_V01, QMI_IDL_TYPE16(0, 98), 7},
@@ -9758,23 +10165,25 @@ static const qmi_idl_service_message_table_entry nas_service_indication_messages
   {QMI_NAS_RTRE_CONFIG_IND_V01, QMI_IDL_TYPE16(0, 137), 8},
   {QMI_NAS_IMS_PREF_STATUS_IND_V01, QMI_IDL_TYPE16(0, 156), 12},
   {QMI_NAS_LTE_SIB16_NETWORK_TIME_IND_V01, QMI_IDL_TYPE16(0, 173), 43},
-  {QMI_NAS_LTE_CPHY_CA_IND_V01, QMI_IDL_TYPE16(0, 178), 52},
+  {QMI_NAS_LTE_CPHY_CA_IND_V01, QMI_IDL_TYPE16(0, 178), 126},
   {QMI_NAS_SET_BUILTIN_PLMN_LIST_IND_MSG_V01, QMI_IDL_TYPE16(0, 183), 26},
-  {QMI_NAS_PERFORM_INCREMENTAL_NETWORK_SCAN_IND_MSG_V01, QMI_IDL_TYPE16(0, 186), 15060},
+  {QMI_NAS_PERFORM_INCREMENTAL_NETWORK_SCAN_IND_MSG_V01, QMI_IDL_TYPE16(0, 186), 15388},
   {QMI_NAS_SSAC_INFO_IND_V01, QMI_IDL_TYPE16(0, 199), 9},
   {QMI_NAS_GET_SERV_CELL_SIB_IND_MSG_V01, QMI_IDL_TYPE16(0, 204), 4105},
   {QMI_NAS_SSAC_CHANGE_INFO_IND_V01, QMI_IDL_TYPE16(0, 205), 32},
   {QMI_NAS_EMM_T3402_CHANGED_IND_V01, QMI_IDL_TYPE16(0, 210), 7},
   {QMI_NAS_ACB_INFO_IND_V01, QMI_IDL_TYPE16(0, 213), 18},
   {QMI_NAS_DATA_SUBS_PRIORITY_IND_MSG_V01, QMI_IDL_TYPE16(0, 218), 7},
-  {QMI_NAS_MANUAL_SCAN_FAIL_IND_MSG_V01, QMI_IDL_TYPE16(0, 253), 0},
-  {QMI_NAS_TIMER_EXPIRY_IND_V01, QMI_IDL_TYPE16(0, 258), 7},
-  {QMI_NAS_EMERGENCY_MODE_STATUS_IND_V01, QMI_IDL_TYPE16(0, 259), 11},
-  {QMI_NAS_GCELL_INFO_IND_V01, QMI_IDL_TYPE16(0, 276), 382},
-  {QMI_NAS_EDRX_CHANGE_INFO_IND_V01, QMI_IDL_TYPE16(0, 285), 23},
-  {QMI_NAS_LTE_CPHY_CA_AGG_DL_BW_IND_V01, QMI_IDL_TYPE16(0, 288), 10},
-  {QMI_NAS_LTE_RACH_FAIL_IND_V01, QMI_IDL_TYPE16(0, 291), 11},
-  {QMI_NAS_LTE_RRC_TX_INFO_IND_V01, QMI_IDL_TYPE16(0, 296), 9}
+  {QMI_NAS_MANUAL_SCAN_FAIL_IND_MSG_V01, QMI_IDL_TYPE16(0, 255), 0},
+  {QMI_NAS_TIMER_EXPIRY_IND_V01, QMI_IDL_TYPE16(0, 260), 7},
+  {QMI_NAS_EMERGENCY_MODE_STATUS_IND_V01, QMI_IDL_TYPE16(0, 261), 11},
+  {QMI_NAS_GCELL_INFO_IND_V01, QMI_IDL_TYPE16(0, 288), 382},
+  {QMI_NAS_EDRX_CHANGE_INFO_IND_V01, QMI_IDL_TYPE16(0, 282), 23},
+  {QMI_NAS_LTE_CPHY_CA_AGG_DL_BW_IND_V01, QMI_IDL_TYPE16(0, 295), 10},
+  {QMI_NAS_LTE_RACH_FAIL_IND_V01, QMI_IDL_TYPE16(0, 296), 11},
+  {QMI_NAS_LTE_RRC_TX_INFO_IND_V01, QMI_IDL_TYPE16(0, 287), 9},
+  {QMI_NAS_SUB_BLOCKED_STATUS_IND_V01, QMI_IDL_TYPE16(0, 308), 4},
+  {QMI_NAS_V2X_NOTIFICATION_IND_V01, QMI_IDL_TYPE16(0, 307), 32}
 };
 
 /*Service Object*/
@@ -9788,7 +10197,7 @@ struct qmi_idl_service_object nas_qmi_idl_service_object_v01 = {
     sizeof(nas_service_indication_messages_v01)/sizeof(qmi_idl_service_message_table_entry) },
   { nas_service_command_messages_v01, nas_service_response_messages_v01, nas_service_indication_messages_v01},
   &nas_qmi_idl_type_table_object_v01,
-  0xBA,
+  0xCA,
   NULL
 };
 

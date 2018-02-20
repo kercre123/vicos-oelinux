@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "RecorderRemoteCallBack"
+#define LOG_TAG "RecorderRemoteCallBack"
 
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_remote_cb.h"
@@ -42,14 +42,14 @@ RemoteCallBack::RemoteCallBack(const uint32_t client_id,
     : client_cb_handle_(remote_client)
     , client_id_(client_id) {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit client_id(%d) (0x%p)", TAG, __func__, client_id, this);
+  QMMF_INFO("%s: Enter ", __func__);
+  QMMF_INFO("%s: Exit client_id(%d) (0x%p)", __func__, client_id, this);
 }
 
 RemoteCallBack::~RemoteCallBack() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit (0x%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter ", __func__);
+  QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
 
 void RemoteCallBack::NotifyRecorderEvent(EventType event_type, void *event_data,

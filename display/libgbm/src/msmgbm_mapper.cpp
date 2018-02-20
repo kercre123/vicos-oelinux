@@ -33,8 +33,9 @@ bool msmgbm_mapper_instnce(void) {
  * @input param: ion_fd , gbm_buf_info object handle
  * @return     : none
  */
-void register_to_hashmap(int fd, struct gbm_buf_info * gbm_buf) {
-    msmgbm_mapper_->register_to_map(fd, gbm_buf);
+void register_to_hashmap(int fd, struct gbm_buf_info * gbm_buf,
+                                       struct msmgbm_private_info * gbo_private_info) {
+    msmgbm_mapper_->register_to_map(fd, gbm_buf, gbo_private_info);
 }
 
 /**
@@ -43,8 +44,9 @@ void register_to_hashmap(int fd, struct gbm_buf_info * gbm_buf) {
  * @return     : GBM error status
  *
  */
-int  search_hashmap(int fd, struct gbm_buf_info *buf_info ) {
-      if(msmgbm_mapper_->search_map(fd,buf_info))
+int  search_hashmap(int fd, struct gbm_buf_info *buf_info,
+                                struct msmgbm_private_info * gbo_private_info) {
+      if(msmgbm_mapper_->search_map(fd,buf_info, gbo_private_info))
         return GBM_ERROR_NONE;
       else
         return GBM_ERROR_BAD_HANDLE;
@@ -56,8 +58,9 @@ int  search_hashmap(int fd, struct gbm_buf_info *buf_info ) {
  * @return     : GBM error status
  *
  */
-int  update_hashmap(int fd, struct gbm_buf_info *buf_info ) {
-      if(msmgbm_mapper_->update_map(fd,buf_info))
+int  update_hashmap(int fd, struct gbm_buf_info *buf_info,
+                                struct msmgbm_private_info * gbo_private_info) {
+      if(msmgbm_mapper_->update_map(fd,buf_info, gbo_private_info))
         return GBM_ERROR_NONE;
       else
         return GBM_ERROR_BAD_HANDLE;
@@ -92,7 +95,12 @@ void  incr_refcnt(int fd) {
  *
  */
 int  decr_refcnt(int fd){
-    msmgbm_mapper_->del_map_entry(fd);
+    if (msmgbm_mapper_)
+        return msmgbm_mapper_->del_map_entry(fd);
+    else {
+        LOG(LOG_INFO,"gbm mapper had been de-instantiated\n");
+        return 1;
+    }
 }
 
 /**
@@ -134,20 +142,22 @@ bool msmgbm_mapper::init() {
  * @input param: ion_fd , gbm_buf_info object handle
  * @return    : none
  */
-void msmgbm_mapper::register_to_map(int fd,
-                                           struct gbm_buf_info * gbm_buf) {
+void msmgbm_mapper::register_to_map(int fd,      struct gbm_buf_info * gbm_buf,
+                                                 struct msmgbm_private_info *gbo_private_info) {
   auto buffer = std::make_shared<msmgbm_buffer>(fd,gbm_buf->metadata_fd,
-                                  gbm_buf->width,gbm_buf->height,gbm_buf->format);
+                                  gbm_buf->width,gbm_buf->height,gbm_buf->format,
+                                  gbo_private_info->cpuaddr, gbo_private_info->mt_cpuaddr);
   gbm_buf_map_.emplace(std::make_pair(fd, buffer));
 }
 
 /**
  * Function to search hash map using ion_fd and retrieve the gbm_buf_info
- * @input param: ion_fd , gbm_buf_info object handle
+ * @input param: ion_fd , gbm_buf_info object handle, msmgbm_private_info object handle
  * @return    : 1 or O
  *
  */
-int msmgbm_mapper::search_map(int fd, struct gbm_buf_info *buf_info){
+int msmgbm_mapper::search_map(int fd, struct gbm_buf_info *buf_info,
+                                         struct msmgbm_private_info *gbo_private_info){
   auto it = gbm_buf_map_.find(fd);
   if (it != gbm_buf_map_.end()) {
     buf_info->fd=it->second->ion_fd;
@@ -155,6 +165,8 @@ int msmgbm_mapper::search_map(int fd, struct gbm_buf_info *buf_info){
     buf_info->width=it->second->width;
     buf_info->height=it->second->height;
     buf_info->format=it->second->format;
+    gbo_private_info->cpuaddr = it->second->cpuaddr;
+    gbo_private_info->mt_cpuaddr = it->second->mt_cpuaddr;
     return 1;
   } else {
     return 0;
@@ -167,7 +179,8 @@ int msmgbm_mapper::search_map(int fd, struct gbm_buf_info *buf_info){
  * @return    : 1 or O
  *
  */
-int msmgbm_mapper::update_map(int fd, struct gbm_buf_info *buf_info){
+int msmgbm_mapper::update_map(int fd, struct gbm_buf_info *buf_info,
+                                         struct msmgbm_private_info *gbo_private_info){
   auto it = gbm_buf_map_.find(fd);
   if (it != gbm_buf_map_.end()) {
     it->second->ion_fd=buf_info->fd;
@@ -175,6 +188,8 @@ int msmgbm_mapper::update_map(int fd, struct gbm_buf_info *buf_info){
     it->second->width=buf_info->width;
     it->second->height=buf_info->height;
     it->second->format=buf_info->format;
+    it->second->cpuaddr=gbo_private_info->cpuaddr;
+    it->second->mt_cpuaddr=gbo_private_info->mt_cpuaddr;
     return 1;
   } else {
     return 0;
@@ -200,6 +215,8 @@ void msmgbm_mapper::map_dump(void) {
     printf("----width           = %u\n",buf->width);
     printf("----height          = %u\n",buf->height);
     printf("----format          = %u\n",buf->format);
+    printf("----cpuaddr         = %p\n",buf->cpuaddr);
+    printf("----mt_cpuaddr      = %p\n",buf->mt_cpuaddr);
     printf("---------------------------------\n");
   }
   printf("Total no.of entries=%d\n",count-1);
@@ -234,5 +251,6 @@ int msmgbm_mapper::del_map_entry(int fd) {
            return 1;
        }else
            return 0;
+    return 1;
 }
 }  // namespace msm_gbm

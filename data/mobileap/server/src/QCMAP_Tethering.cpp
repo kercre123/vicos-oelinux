@@ -413,7 +413,7 @@ void QCMAP_Tethering::AcceptIPAddrOnIfae(char* iface,
   QCMAP_Backhaul_Ethernet* QcMapBackhaulEthMgr=GET_DEFAULT_BACKHAUL_ETHERNET_OBJECT();
   QCMAP_MediaService *QcMapMediaServiceMgr = QCMAP_MediaService::Get_Instance(false);
   QCMAP_LAN* QCMAPLANMgr=GET_DEFAULT_LAN_OBJECT();
-QCMAP_Virtual_LAN* QcMapVLANMgr=QCMAP_Virtual_LAN::Get_Instance(false);
+  QCMAP_Virtual_LAN* QcMapVLANMgr=QCMAP_Virtual_LAN::Get_Instance(false);
   /* Create USB Tethering Object here */
   QCMAP_Tethering *QcMapTetheringMgr = QCMAP_Tethering::Get_Instance(true);
   QCMAP_L2TP* QcMapL2TPMgr=QCMAP_L2TP::Get_Instance(false);
@@ -425,6 +425,7 @@ QCMAP_Virtual_LAN* QcMapVLANMgr=QCMAP_Virtual_LAN::Get_Instance(false);
   qcmap_msgr_ip_passthrough_config_v01 passthrough_config;
   qcmap_msgr_ip_passthrough_mode_enum_v01 enable_state;
   char iface_name[QCMAP_MAX_IFACE_NAME_SIZE_V01] = {0};
+  qcmap_nl_addr_t qcmap_nl_buffer;
 /*------------------------------------------------------------------------*/
   QCMAP_Tethered_Backhaul::GetSetConfigFromXML(GET_VALUE,
                                              QCMAP_TETH_CRADLE_BACKHAUL,
@@ -515,6 +516,35 @@ QCMAP_Virtual_LAN* QcMapVLANMgr=QCMAP_Virtual_LAN::Get_Instance(false);
     if(QcMapBackhaulMgr)
     {
       QcMapBackhaulMgr->RestartRadish();
+    }
+    /* Store the IPV4 address. */
+    /* Update the connected devices information. */
+    memset(&qcmap_nl_buffer, 0, sizeof(qcmap_nl_buffer));
+    qcmap_nl_buffer.isValidIPv4address = true;
+    qcmap_nl_buffer.isValidIPv6address = false;
+    qcmap_nl_buffer.ip_addr = htonl(QCMAPLANMgr->lan_cfg.ppp_reserved_ip);
+    //Convert the MAC from char to hex
+    if(!ds_mac_addr_pton((char*)PPP_CLIENT_MAC_ADDR, qcmap_nl_buffer.mac_addr))
+    {
+      LOG_MSG_ERROR("Store PPP IPv4 address - Error in MAC address conversion",
+                    0,0,0);
+    }
+    QcMapTetheringMgr->SetUSBMac(qcmap_nl_buffer.mac_addr);
+    if ((QcMapMgr->MatchMacAddrInList(&(qcmap_nl_buffer))) == 0)
+    {
+      LOG_MSG_INFO1("No match found for the USB MAC,"
+                    "so add a linked list node\n",0, 0, 0);
+      if (!(QCMAP_ConnectionManager::AddNewDeviceEntry(
+           (void*)qcmap_nl_buffer.mac_addr,
+           QCMAP_MSGR_DEVICE_TYPE_USB_V01,
+           &qcmap_nl_buffer.ip_addr,
+           qcmap_nl_buffer.ip_v6_addr,
+           qcmap_nl_buffer.isValidIPv4address,
+           qcmap_nl_buffer.isValidIPv6address)))
+      {
+        LOG_MSG_ERROR("Error in adding a new device entry ",
+                      0, 0, 0);
+      }
     }
     return true;
   }
@@ -631,12 +661,18 @@ QCMAP_Virtual_LAN* QcMapVLANMgr=QCMAP_Virtual_LAN::Get_Instance(false);
      * Get IP Passthrough flag from XML
      * If the flag is set then enable passthrough
     */
+    memset(&passthrough_config, 0, sizeof(passthrough_config));
     if(QCMAPLANMgr->GetIPPassthroughConfig(&enable_state,&passthrough_config,&qmi_err_num))
     {
       if (enable_state == QCMAP_MSGR_IP_PASSTHROUGH_MODE_UP_V01)
       {
-        if (QCMAP_LAN::check_non_empty_mac_addr
-           (passthrough_config.mac_addr, mac_addr_string))
+        /* For Ethernet client, it is mandatory that mac address is non-empty
+         * otherwise passthrough is not enabled.
+         */
+        if ((tethered_link == QCMAP_QTI_TETHERED_LINK_RNDIS) ||
+            (tethered_link == QCMAP_QTI_TETHERED_LINK_ETH &&
+            QCMAP_LAN::check_non_empty_mac_addr
+            (passthrough_config.mac_addr, mac_addr_string)))
         {
           /* If mac addr is not empty*/
           if (QCMAPLANMgr->EnableIPPassthrough(mac_addr_string,
@@ -981,9 +1017,9 @@ boolean QCMAP_Tethering::BringDownTetheredLink
 
     /* Delete delegated prefix. */
     if (QcMapBackhaulWWANMgr && QcMapBackhaulWWANMgr->prefix_delegation_activated &&
-        !qcmap_cm_delete_ipv6_delegated_prefix(true,
+        (QCMAP_Backhaul_WWAN::SendDeleteDelegatedPrefix(true,
                                                QcMapTetheringMgr->ppp_ipv6_addr,
-                                               &qmi_err_num))
+                                               &qmi_err_num) == QCMAP_CM_ERROR))
     {
       LOG_MSG_ERROR("Error: Unable flush prefix's %d", qmi_err_num, 0, 0);
     }
@@ -1211,7 +1247,7 @@ boolean QCMAP_Tethering::BringDownTetheredLink
           if (mac_addr && memcmp(connected_devices[i].client_mac_addr, mac_addr, sizeof(mac_addr)) == 0)
             break;
         }
-        if (!qcmap_cm_delete_ipv6_delegated_prefix(true, connected_devices[i].ipv6[0].addr, &qmi_err_num))
+        if (QCMAP_Backhaul_WWAN::SendDeleteDelegatedPrefix(true, connected_devices[i].ipv6[0].addr, &qmi_err_num) == QCMAP_CM_ERROR)
         {
           LOG_MSG_ERROR("Error: Unable flush prefix's %d", qmi_err_num, 0, 0);
         }
@@ -1363,9 +1399,7 @@ void QCMAP_Tethering::StorePPPIPv6IID
 
     /* Update the connected devices information. */
     memset(&qcmap_nl_buffer, 0, sizeof(qcmap_nl_buffer));
-    qcmap_nl_buffer.isValidIPv4address = true;
     qcmap_nl_buffer.isValidIPv6address = true;
-    qcmap_nl_buffer.ip_addr = htonl(QCMAPLANMgr->lan_cfg.ppp_reserved_ip);
     memcpy(qcmap_nl_buffer.ip_v6_addr, ppp_ip, QCMAP_MSGR_IPV6_ADDR_LEN_V01);
     //Convert the MAC from char to hex
     if(!ds_mac_addr_pton((char*)PPP_CLIENT_MAC_ADDR, qcmap_nl_buffer.mac_addr))
@@ -1373,8 +1407,7 @@ void QCMAP_Tethering::StorePPPIPv6IID
       LOG_MSG_ERROR("StorePPPIPv6IID - Error in MAC address conversion",
                     0,0,0);
     }
-    QcMapTetheringMgr->SetUSBMac(qcmap_nl_buffer.mac_addr);
-    if (!(QcMapMgr->MatchMacAddrInList(&(qcmap_nl_buffer))))
+    if ((QcMapMgr->MatchMacAddrInList(&(qcmap_nl_buffer))) == 0)
     {
       LOG_MSG_INFO1("No match found for the USB MAC,"
                     "so add a linked list node\n",0, 0, 0);
@@ -1696,7 +1729,7 @@ void QCMAP_Tethering:: UpdateMACandIPOnPlugIn
     ds_mac_addr_pton(mac_str, mac_addr);
     memcpy( qcmap_nl_buffer.nl_addr.mac_addr, mac_addr,
             QCMAP_MSGR_MAC_ADDR_LEN_V01);
-    if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer.nl_addr))))
+    if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer.nl_addr))) == 0)
     {
       LOG_MSG_INFO1("No match found for the  MAC,"
                     "so add a linked list node\n",0, 0, 0);
@@ -1714,7 +1747,7 @@ void QCMAP_Tethering:: UpdateMACandIPOnPlugIn
       {
         Getclientaddr(&qcmap_nl_buffer.nl_addr);
 
-        if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer.nl_addr))))
+        if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer.nl_addr))) == 0)
         {
           ds_mac_addr_ntop(qcmap_nl_buffer.nl_addr.mac_addr, mac_str);
           ds_log_med("No match found for the USB Client MAC %s", mac_str, 0, 0);

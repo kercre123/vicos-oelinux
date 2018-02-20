@@ -416,6 +416,21 @@ typedef struct {
   uint32_t user_zoom; /* user zoom */
 } mct_bus_msg_stream_crop_t;
 
+typedef struct {
+  uint32_t frame_id;
+  struct timeval timestamp;
+  uint32_t session_id;
+  uint32_t stream_id;
+  uint32_t camif_w; /* scaler input width */
+  uint32_t camif_h; /* scaler input height */
+  uint32_t scaler_output_w; /* scaler ouput width */
+  uint32_t scaler_output_h; /* scaler output height */
+  uint32_t fov_output_x; /* fov left */
+  uint32_t fov_output_y; /* fov top */
+  uint32_t fov_output_w; /* fov width */
+  uint32_t fov_output_h; /* fov height */
+} mct_bus_msg_isp_config_t;
+
 
 typedef struct {
   uint32_t num_of_streams;
@@ -583,6 +598,7 @@ struct _mct_bus {
   /* SOF-monitor thread signalling constructs */
   pthread_mutex_t bus_sof_msg_lock;
   pthread_cond_t  bus_sof_msg_cond;
+  pthread_condattr_t bus_sof_msg_condattr;
   pthread_mutex_t bus_sof_init_lock;
   pthread_cond_t  bus_sof_init_cond;
   pthread_t       bus_sof_tid;

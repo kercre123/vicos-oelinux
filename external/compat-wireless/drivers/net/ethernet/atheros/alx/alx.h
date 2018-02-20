@@ -827,6 +827,7 @@ struct alx_adapter {
 	u32 *config_space;
 
 	struct work_struct alx_task;
+	struct work_struct ipa_ready_task;
 	struct timer_list  alx_timer;
 
 	unsigned long link_jiffies;

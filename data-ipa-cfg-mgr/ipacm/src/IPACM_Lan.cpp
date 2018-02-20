@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -337,6 +337,21 @@ void IPACM_Lan::event_callback(ipa_cm_event_id event, void *param)
 				}
 			}
 #endif
+
+#ifdef FEATURE_ETH_BRIDGE_LE
+			if(rx_prop != NULL)
+			{
+				free(rx_prop);
+			}
+			if(tx_prop != NULL)
+			{
+				free(tx_prop);
+			}
+			if(iface_query != NULL)
+			{
+				free(iface_query);
+			}
+#endif
 			delete this;
 		}
 		break;
@@ -424,9 +439,9 @@ void IPACM_Lan::event_callback(ipa_cm_event_id event, void *param)
 						if(IPACM_Wan::isWanUP_V6(ipa_if_num)) /* Modem v6 call is UP?*/
 						{
 #ifdef FEATURE_IPACM_UL_FIREWALL
-							IPACMDBG_H("LTE BH UP\n");
-							if (IPACM_Wan::firewall_config_ul.rule_action_accept == true) /* is whitelist ?? */
-							{	/* Configure and send the firewall filter table to Q6*/
+							if ((IPACM_Wan::backhaul_is_sta_mode == false) &&
+								IPACM_Wan::firewall_config_ul.rule_action_accept == true) /* LTE && whitelist ?? */
+							{
 								delete_uplink_filter_rule_ul(data->iptype, &iface_ul_firewall);
 
 								/* Configure and send the firewall filter table to Q6*/
@@ -463,18 +478,7 @@ void IPACM_Lan::event_callback(ipa_cm_event_id event, void *param)
 						}
 #ifdef FEATURE_IPACM_UL_FIREWALL
 						else
-						{
-							IPACMDBG_H("NON - LTE BH UP\n");
-							/* Config and install it on pipes directly, Other backhaul case*/
-							IPACMDBG_H ("Send indication to Q6 to disable UL firewall\n");
-							IPACM_Lan::config_wan_frag_firewall_rule_ul_ex(false, data->iptype, &iface_ul_firewall); /* Deleting frag filters rules installed on LTE BH Whitelisting */
-							install_wan_firewall_rule_ul(false, data->iptype);
-
-							IPACM_Lan::config_dft_firewall_rules_ul(IPACM_Wan::firewall_flt_rule_v6_ul, data->iptype, &iface_ul_firewall);
-							if(rx_prop) {
-								IPACMDBG_H ("Pipe (%d) configured with the new UL rules\n", rx_prop->rx[0].src_pipe);
-							}
-						}
+							IPACMDBG_H("WAN v6 is not UP\n");
 #endif //FEATURE_IPACM_UL_FIREWALL
 						/* Post event to NAT */
 						if (data->iptype == IPA_IP_v4)
@@ -665,8 +669,8 @@ void IPACM_Lan::event_callback(ipa_cm_event_id event, void *param)
 			IPACM_Wan::read_firewall_filter_rules_ul();
 			if(IPACM_Wan::isWanUP_V6(ipa_if_num))
 			{
-				IPACMDBG_H("LTE BH UP\n");
-				if (IPACM_Wan::firewall_config_ul.rule_action_accept == true) /* is whitelist ?? */
+				if ((IPACM_Wan::backhaul_is_sta_mode == false) &&
+					IPACM_Wan::firewall_config_ul.rule_action_accept == true) /* LTE && whitelist ?? */
 				{	/* Configure and send the firewall filter table to Q6*/
 					delete_uplink_filter_rule_ul(ip_type, &iface_ul_firewall);
 
@@ -688,18 +692,7 @@ void IPACM_Lan::event_callback(ipa_cm_event_id event, void *param)
 				}
 			}
 			else
-			{
-				IPACMDBG_H("NON - LTE BH UP\n");
-				/* Config and install it on pipes directly, Other backhaul case*/
-				IPACMDBG_H ("Send indication to Q6 to disable UL firewall\n");
-				IPACM_Lan::config_wan_frag_firewall_rule_ul_ex(false, ip_type, &iface_ul_firewall);
-				install_wan_firewall_rule_ul(false, ip_type);
-
-				IPACM_Lan::config_dft_firewall_rules_ul(IPACM_Wan::firewall_flt_rule_v6_ul, ip_type, &iface_ul_firewall);
-				if(rx_prop) {
-					IPACMDBG_H ("Pipe (%d) configured with the new UL rules\n", rx_prop->rx[0].src_pipe);
-				}
-			}
+				IPACMDBG_H("WAN v6 is not UP\n");
 #endif //FEATURE_IPACM_UL_FIREWALL
 			memcpy(ipv6_prefix, data_wan->ipv6_prefix, sizeof(ipv6_prefix));
 			install_ipv6_prefix_flt_rule(data_wan->ipv6_prefix);
@@ -783,8 +776,12 @@ void IPACM_Lan::event_callback(ipa_cm_event_id event, void *param)
 				}
 			}
 
-			if (ipa_interface_index == ipa_if_num || is_vlan_event(data->iface_name)
-				|| (is_l2tp_event(data->iface_name) && ipa_if_cate == ODU_IF))
+			if (ipa_interface_index == ipa_if_num
+#ifdef FEATURE_L2TP
+				|| is_vlan_event(data->iface_name)
+				|| (is_l2tp_event(data->iface_name) && ipa_if_cate == ODU_IF)
+#endif
+				)
 			{
 				IPACMDBG_H("ETH iface got client \n");
 				if(ipa_interface_index == ipa_if_num)
@@ -854,7 +851,10 @@ void IPACM_Lan::event_callback(ipa_cm_event_id event, void *param)
 			}
 
 			if (ipa_interface_index == ipa_if_num
-				|| (is_l2tp_event(data->iface_name) && ipa_if_cate == ODU_IF))
+#ifdef FEATURE_L2TP
+				|| (is_l2tp_event(data->iface_name) && ipa_if_cate == ODU_IF)
+#endif
+				)
 			{
 				if(ipa_interface_index == ipa_if_num)
 				{
@@ -1105,7 +1105,6 @@ int IPACM_Lan::handle_wan_down(bool is_sta_mode)
 
 			memset(wan_ul_fl_rule_hdl_v4, 0, MAX_WAN_UL_FILTER_RULES * sizeof(uint32_t));
 			num_wan_ul_fl_rule_v4 = 0;
-			modem_ul_v4_set = false;
 		}
 #ifdef FEATURE_IPACM_PER_CLIENT_STATS
 		else {
@@ -1118,6 +1117,7 @@ int IPACM_Lan::handle_wan_down(bool is_sta_mode)
 			num_wan_ul_fl_rule_v4 = 0;
 		}
 #endif
+		modem_ul_v4_set = false;
 		memset(&flt_index, 0, sizeof(flt_index));
 		flt_index.source_pipe_index = ioctl(fd, IPA_IOC_QUERY_EP_MAPPING, rx_prop->rx[0].src_pipe);
 		flt_index.install_status = IPA_QMI_RESULT_SUCCESS_V01;
@@ -1638,14 +1638,10 @@ int IPACM_Lan::handle_wan_up_ex(ipacm_ext_prop *ext_prop, ipa_ip_type iptype, ui
 	/* Install filter rules for the client. */
 	if (IPACM_Iface::ipacmcfg->ipacm_lan_stats_enable == true)
 	{
-		if (IPACM_Iface::ipacmcfg->ipacm_lan_stats_enable_wan_set == false)
+		if (enable_per_client_stats(&IPACM_Iface::ipacmcfg->ipacm_lan_stats_enable))
 		{
-			if (enable_per_client_stats(&IPACM_Iface::ipacmcfg->ipacm_lan_stats_enable))
-			{
-				IPACMERR("Failed to enable per client stats %d\n", IPACM_Iface::ipacmcfg->ipacm_lan_stats_enable);
-				return IPACM_FAILURE;
-			}
-			IPACM_Iface::ipacmcfg->ipacm_lan_stats_enable_wan_set = true;
+			IPACMERR("Failed to enable per client stats %d\n", IPACM_Iface::ipacmcfg->ipacm_lan_stats_enable);
+			return IPACM_FAILURE;
 		}
 	}
 #endif
@@ -2076,6 +2072,37 @@ int IPACM_Lan::handle_eth_client_ipaddr(ipacm_event_data_all *data)
 		IPACMDBG_H("ipv4 address: 0x%x\n", data->ipv4_addr);
 		if (data->ipv4_addr != 0) /* not 0.0.0.0 */
 		{
+			/* Special handling for Passthrough IP. */
+			if (IPACM_Iface::ipacmcfg->ipacm_ip_passthrough_mode)
+			{
+				/* if the MAC matches or RNDIS/ECM, then IP should not be private subnet. */
+				if (!memcmp(data->mac_addr, IPACM_Iface::ipacmcfg->ipacm_ip_passthrough_mac,
+					IPA_MAC_ADDR_SIZE))
+				{
+					/* check if the ip is in private subnet and ignore. */
+					if (IPACM_Iface::ipacmcfg->isPrivateSubnet(data->ipv4_addr))
+					{
+						IPACMDBG_H("Client is in IP passthrough mode, but got private IP: 0x%x\n", data->ipv4_addr);
+						return IPACM_FAILURE;
+					}
+				}
+				/* Check if the IP is not in private subnet and ignore. */
+				else if (!IPACM_Iface::ipacmcfg->isPrivateSubnet(data->ipv4_addr))
+				{
+					IPACMDBG_H("Client is not in IP passthrough mode, but got public IP: 0x%x\n", data->ipv4_addr);
+					return IPACM_FAILURE;
+				}
+			}
+			else
+			{
+				/* Check if the IP is not in private subnet and ignore. */
+				if (!IPACM_Iface::ipacmcfg->isPrivateSubnet(data->ipv4_addr))
+				{
+					IPACMDBG_H("Client is not in IP passthrough mode, but got public IP: 0x%x\n", data->ipv4_addr);
+					return IPACM_FAILURE;
+				}
+			}
+
 			if (get_client_memptr(eth_client, clnt_indx)->ipv4_set == false)
 			{
 				get_client_memptr(eth_client, clnt_indx)->v4_addr = data->ipv4_addr;
@@ -2226,7 +2253,7 @@ int IPACM_Lan::handle_eth_client_route_rule(uint8_t *mac_addr, ipa_ip_type iptyp
 		   	        continue;
 		    }
 
-  	   	    rt_rule_entry = &rt_rule->rules[0];
+			rt_rule_entry = &rt_rule->rules[0];
 			rt_rule_entry->at_rear = 0;
 
 			if (iptype == IPA_IP_v4)
@@ -2265,7 +2292,6 @@ int IPACM_Lan::handle_eth_client_route_rule(uint8_t *mac_addr, ipa_ip_type iptyp
 				IPACMDBG_H("tx:%d, rt rule hdl=%x ip-type: %d\n", tx_index,
 					get_client_memptr(eth_client, eth_index)->eth_rt_hdl[tx_index].eth_rt_rule_hdl_v4, iptype);
   	   	    } else {
-
 		        for(v6_num = get_client_memptr(eth_client, eth_index)->route_rule_set_v6;v6_num < get_client_memptr(eth_client, eth_index)->ipv6_set;v6_num++)
 			    {
                     IPACMDBG_H("client(%d): v6 header handle:(0x%x)\n",
@@ -2293,12 +2319,12 @@ int IPACM_Lan::handle_eth_client_route_rule(uint8_t *mac_addr, ipa_ip_type iptyp
 #ifdef FEATURE_IPA_V3
 					rt_rule_entry->rule.hashable = true;
 #endif
-   	                if (false == m_routing.AddRoutingRule(rt_rule))
-  	                {
-  	                	    IPACMERR("Routing rule addition failed!\n");
-  	                	    free(rt_rule);
-  	                	    return IPACM_FAILURE;
-			        }
+			if (false == m_routing.AddRoutingRule(rt_rule))
+			{
+				IPACMERR("Routing rule addition failed!\n");
+				free(rt_rule);
+				return IPACM_FAILURE;
+			}
 
 		            get_client_memptr(eth_client, eth_index)->eth_rt_hdl[tx_index].eth_rt_rule_hdl_v6[v6_num] = rt_rule->rules[0].rt_rule_hdl;
 					IPACMDBG_H("tx:%d, rt rule hdl=%x ip-type: %d\n", tx_index,
@@ -2338,7 +2364,7 @@ int IPACM_Lan::handle_eth_client_route_rule(uint8_t *mac_addr, ipa_ip_type iptyp
 			    }
 			}
 
-  	    } /* end of for loop */
+		} /* end of for loop */
 
 		free(rt_rule);
 
@@ -3554,14 +3580,16 @@ fail:
 		IPACMDBG_H("depend Got pipe %d rm index : %d \n", rx_prop->rx[0].src_pipe, IPACM_Iface::ipacmcfg->ipa_client_rm_map_tbl[rx_prop->rx[0].src_pipe]);
 		IPACM_Iface::ipacmcfg->DelRmDepend(IPACM_Iface::ipacmcfg->ipa_client_rm_map_tbl[rx_prop->rx[0].src_pipe]);
 		IPACMDBG_H("Finished delete dependency \n ");
+#ifndef FEATURE_ETH_BRIDGE_LE
 		free(rx_prop);
+#endif
 	}
 
 	if (eth_client != NULL)
 	{
 		free(eth_client);
 	}
-
+#ifndef FEATURE_ETH_BRIDGE_LE
 	if (tx_prop != NULL)
 	{
 		free(tx_prop);
@@ -3570,7 +3598,7 @@ fail:
 	{
 		free(iface_query);
 	}
-
+#endif
 	is_active = false;
 	post_del_self_evt();
 
@@ -3886,7 +3914,7 @@ int IPACM_Lan::delete_uplink_filter_rule_ul(ipa_ip_type iptype, ul_firewall_t *u
 	if (true == ul_firewall->ul_catch_installed)
 		num_of_rules++;
 
-	if (num_of_rules)
+	if (num_of_rules && num_of_rules < IPACM_MAX_FIREWALL_ENTRIES)
 	{
 		flt_rule_hdls = ul_firewall->ul_firewall_handle;
 		if (m_filtering.DeleteFilteringHdls(flt_rule_hdls,
@@ -3897,6 +3925,10 @@ int IPACM_Lan::delete_uplink_filter_rule_ul(ipa_ip_type iptype, ul_firewall_t *u
 		}
 		IPACM_Iface::ipacmcfg->decreaseFltRuleCount(rx_prop->rx[0].src_pipe, IPA_IP_v6, num_of_rules);
 		IPACMDBG_H("%d num UL rules on pipe (%d) deleted successfully\n", num_of_rules, rx_prop->rx[0].src_pipe);
+	}
+	else if (num_of_rules > IPACM_MAX_FIREWALL_ENTRIES)
+	{
+		IPACMDBG_H("The number of ul firewall rules exceed limit.\n");
 	}
 	else
 	{
@@ -4212,11 +4244,17 @@ int IPACM_Lan::re_config_dft_firewall_rules_ul(ipa_ip_type iptype, ul_firewall_t
 
 	IPACM_Wan::read_firewall_filter_rules_ul();
 	IPACMDBG_H ("Firewall Status (%d)\n", IPACM_Wan::firewall_config_ul.firewall_enable);
-	IPACMDBG_H("UL firewall needs to be reconfig on pipe (%d)\n", rx_prop->rx[0].src_pipe);
-	if (IPACM_Wan::firewall_config_ul.firewall_enable )
+
+	if (IPACM_Wan::firewall_config_ul.firewall_enable)
 	{
-		if (IPACM_Wan::isWanUP_V6(ipa_if_num) &&
-				IPACM_Wan::firewall_config_ul.rule_action_accept == true) /* check BH and WL/BL?*/
+		if (!IPACM_Wan::isWanUP_V6(ipa_if_num))
+		{
+			IPACMDBG_H("WAN v6 is not UP\n");
+			return IPACM_SUCCESS;
+		}
+
+		if ((IPACM_Wan::backhaul_is_sta_mode == false) &&
+			(IPACM_Wan::firewall_config_ul.rule_action_accept == true)) /* v6 LTE and WL ?*/
 		{
 			delete_uplink_filter_rule_ul(IPA_IP_v6, ul_firewall);
 
@@ -4226,7 +4264,7 @@ int IPACM_Lan::re_config_dft_firewall_rules_ul(ipa_ip_type iptype, ul_firewall_t
 			IPACMDBG_H ("New config rules sent to Q6\n");
 		}
 		else
-		{
+		{	/* BL or Other then LTE BH */
 			IPACMDBG_H ("Send indication to Q6 to disable UL firewall\n");
 			IPACM_Lan::config_wan_frag_firewall_rule_ul_ex(false, IPA_IP_v6, ul_firewall);
 			install_wan_firewall_rule_ul(false, IPA_IP_v6);
@@ -4235,14 +4273,12 @@ int IPACM_Lan::re_config_dft_firewall_rules_ul(ipa_ip_type iptype, ul_firewall_t
 			IPACMDBG_H ("Pipe (%d) reconfigured with the new UL rules\n", rx_prop->rx[0].src_pipe);
 		}
 	}
-	else if (ul_firewall->ul_firewall_installed &&
-			!IPACM_Wan::firewall_config_ul.firewall_enable)
-	{
-		delete_uplink_filter_rule_ul(IPA_IP_v6, ul_firewall);
-	}
 	else
 	{
-		IPACMDBG_H ("UL firewall rules are not installed \n");
+		if (ul_firewall->ul_firewall_installed == true)
+			delete_uplink_filter_rule_ul(IPA_IP_v6, ul_firewall);
+		else
+			IPACMDBG_H ("UL firewall rules are not installed \n");
 	}
 
 	if (IPACM_Wan::is_v6_ul_firewall_sent_to_q6 == true &&
@@ -4798,6 +4834,7 @@ int IPACM_Lan::delete_uplink_filter_rule_per_client
 
 	if ((iptype == IPA_IP_v4) && get_client_memptr(eth_client, clnt_indx)->ipv4_ul_rules_set)
 	{
+		IPACMDBG_H("Del (%d) num of v4 UL rules for cliend idx:%d\n", num_wan_ul_fl_rule_v4, clnt_indx);
 		if (m_filtering.DeleteFilteringHdls(get_client_memptr(eth_client, clnt_indx)->wan_ul_fl_rule_hdl_v4,
 				iptype, num_wan_ul_fl_rule_v4) == false)
 		{
@@ -4811,6 +4848,7 @@ int IPACM_Lan::delete_uplink_filter_rule_per_client
 
 	if ((iptype == IPA_IP_v6) && get_client_memptr(eth_client, clnt_indx)->ipv6_ul_rules_set)
 	{
+		IPACMDBG_H("Del (%d) num of v4 UL rules for cliend idx:%d\n", num_wan_ul_fl_rule_v4, clnt_indx);
 		if (m_filtering.DeleteFilteringHdls(get_client_memptr(eth_client, clnt_indx)->wan_ul_fl_rule_hdl_v6,
 				iptype, num_wan_ul_fl_rule_v6) == false)
 		{
@@ -5918,6 +5956,7 @@ void IPACM_Lan::eth_bridge_post_event(ipa_cm_event_id evt, ipa_ip_type iptype, u
 	memset(&eth_bridge_evt, 0, sizeof(ipacm_cmd_q_data));
 	eth_bridge_evt.event = evt;
 
+#ifdef FEATURE_L2TP
 	if(evt == IPA_HANDLE_VLAN_CLIENT_INFO || evt == IPA_HANDLE_VLAN_IFACE_INFO)
 	{
 		evt_data_all = (ipacm_event_data_all*)malloc(sizeof(*evt_data_all));
@@ -5948,6 +5987,7 @@ void IPACM_Lan::eth_bridge_post_event(ipa_cm_event_id evt, ipa_ip_type iptype, u
 		eth_bridge_evt.evt_data = (void*)evt_data_all;
 	}
 	else
+#endif
 	{
 		evt_data_eth_bridge = (ipacm_event_eth_bridge*)malloc(sizeof(*evt_data_eth_bridge));
 		if(evt_data_eth_bridge == NULL)
@@ -5973,7 +6013,6 @@ void IPACM_Lan::eth_bridge_post_event(ipa_cm_event_id evt, ipa_ip_type iptype, u
 		}
 		eth_bridge_evt.evt_data = (void*)evt_data_eth_bridge;
 	}
-
 	IPACMDBG_H("Posting event %s\n",
 		IPACM_Iface::ipacmcfg->getEventName(evt));
 	IPACM_EvtDispatcher::PostEvt(&eth_bridge_evt);
@@ -6317,6 +6356,7 @@ int IPACM_Lan::eth_bridge_del_hdr_proc_ctx(uint32_t hdr_proc_ctx_hdl)
 	return IPACM_SUCCESS;
 }
 
+#ifdef FEATURE_L2TP
 /* check if the event is associated with vlan interface */
 bool IPACM_Lan::is_vlan_event(char *event_iface_name)
 {
@@ -7136,6 +7176,7 @@ bool IPACM_Lan::is_unique_local_ipv6_addr(uint32_t* ipv6_addr)
 	}
 	return false;
 }
+#endif
 
 /* add tcp syn flt rule */
 int IPACM_Lan::add_tcp_syn_flt_rule(ipa_ip_type iptype)

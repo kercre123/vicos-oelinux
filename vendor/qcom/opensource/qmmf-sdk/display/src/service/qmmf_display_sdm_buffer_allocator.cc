@@ -26,17 +26,21 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#define TAG "DisplayBufferAllocator"
+#define LOG_TAG "DisplayBufferAllocator"
 
-#include "libgralloc/gralloc_priv.h"
-#include "libgralloc/memalloc.h"
-#include "libgralloc/gr.h"
-#include "libgralloc/alloc_controller.h"
-#include "sdm/include/utils/constants.h"
-#include "sdm/include/utils/debug.h"
+#include <stdint.h>
+
+#include <memalloc.h>
+#include <alloc_controller.h>
+#include <qcom/display/gr.h>
+#include <qcom/display/gralloc_priv.h>
+#include <sdm/utils/constants.h>
+#include <sdm/utils/debug.h>
+
 #include "display/src/service/qmmf_display_sdm_debugger.h"
 #include "display/src/service/qmmf_display_sdm_buffer_allocator.h"
 #include "display/src/service/qmmf_display_common.h"
+
 namespace qmmf {
 
 namespace display {
@@ -56,8 +60,7 @@ DisplayError DisplayBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     return kErrorMemory;
   }
 
-  int alloc_flags = INT(GRALLOC_USAGE_PRIVATE_IOMMU_HEAP|
-      GRALLOC_USAGE_SW_WRITE_OFTEN|GRALLOC_USAGE_SW_READ_OFTEN);
+  int alloc_flags = INT(GRALLOC_USAGE_PRIVATE_IOMMU_HEAP);
   int error = 0;
 
   int width = INT(buffer_config.width);
@@ -88,6 +91,8 @@ DisplayError DisplayBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
       alloc_flags, aligned_width, aligned_height);
 
   buffer_size = ROUND_UP(buffer_size, data.align) * buffer_config.buffer_count;
+
+  QMMF_DEBUG("%s: buffer size is = %u",__func__, buffer_size);
 
   data.base = 0;
   data.fd = -1;
@@ -224,6 +229,7 @@ DisplayError DisplayBufferAllocator::GetBufferInfo(BufferInfo *buffer_info,
 
 int DisplayBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target,
     int *flags) {
+
   switch (format) {
   case kFormatRGBA8888:                 *target = HAL_PIXEL_FORMAT_RGBA_8888;             break;
   case kFormatRGBX8888:                 *target = HAL_PIXEL_FORMAT_RGBX_8888;             break;

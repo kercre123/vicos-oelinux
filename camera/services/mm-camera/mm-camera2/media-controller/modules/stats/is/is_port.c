@@ -397,6 +397,38 @@ static boolean is_port_handle_gyro_stats_event(is_port_private_t *private, mct_e
   return rc;
 }
 
+/** is_port_handle_imu_stats_event:
+ *    @private: private port data
+ *    @event: event
+ *
+ *  Returns TRUE if event was successfully handled.
+ **/
+static boolean is_port_handle_imu_stats_event(is_port_private_t *private, mct_event_t *event)
+{
+  boolean rc = TRUE;
+  mct_event_imu_stats_t *imu_stats_event =
+    (mct_event_imu_stats_t *)event->u.module_event.module_event_data;
+
+  is_thread_msg_t *msg = (is_thread_msg_t *)
+    malloc(sizeof(is_thread_msg_t));
+
+  if (msg != NULL ) {
+    STATS_MEMSET(msg, 0, sizeof(is_thread_msg_t));
+    msg->type = MSG_IS_PROCESS;
+    msg->u.is_process_parm.type = IS_PROCESS_IMU_STATS;
+    msg->u.is_process_parm.u.imu_data.frame_id =
+      imu_stats_event->frame_id;
+    msg->u.is_process_parm.u.imu_data.is_info = &private->is_info;
+    STATS_MEMCPY(&msg->u.is_process_parm.u.imu_data.imu_data, sizeof(mct_event_imu_stats_t),
+      imu_stats_event, sizeof(mct_event_imu_stats_t));
+    is_thread_en_q_msg(private->thread_data, msg);
+  } else {
+    IS_ERR("malloc failed!");
+    rc = FALSE;
+  }
+
+  return rc;
+}
 
 /** is_port_handle_dis_config_event:
  *    @private: private port data
@@ -438,6 +470,17 @@ static boolean is_port_handle_dis_config_event(is_port_private_t *private,
     msg->u.is_set_parm.u.is_config_info.stream_type = stream_type;
     msg->u.is_set_parm.u.is_config_info.width = dis_config->width;
     msg->u.is_set_parm.u.is_config_info.height = dis_config->height;
+    if (stream_type == CAM_STREAM_TYPE_VIDEO) {
+      msg->u.is_set_parm.u.is_config_info.stride =
+        private->stream_info[IS_VIDEO]->buf_planes.plane_info.mp[0].stride;
+      msg->u.is_set_parm.u.is_config_info.scanline =
+        private->stream_info[IS_VIDEO]->buf_planes.plane_info.mp[0].scanline;
+    } else if (stream_type == CAM_STREAM_TYPE_PREVIEW) {
+      msg->u.is_set_parm.u.is_config_info.stride =
+        private->stream_info[IS_PREVIEW]->buf_planes.plane_info.mp[0].stride;
+      msg->u.is_set_parm.u.is_config_info.scanline =
+        private->stream_info[IS_PREVIEW]->buf_planes.plane_info.mp[0].scanline;
+    }
     is_thread_en_q_msg(private->thread_data, msg);
   } else {
     IS_ERR("malloc failed!");
@@ -480,6 +523,11 @@ void is_port_config_margins(is_port_private_t *private, mct_event_t *event) {
   sensor_isp_stream_sizes_t *isp_size_req =
     (sensor_isp_stream_sizes_t *)event->u.module_event.module_event_data;
   int i;
+
+  char value[PROPERTY_VALUE_MAX];
+  property_get("persist.camera.dg.p2l", value, "0");
+  bool dg_p2l_enabled = (bool) atoi(value);
+
   /*Find the video index*/
   for(i =0; i < MAX_NUM_STREAMS; i++) {
     switch(isp_size_req->type[i]) {
@@ -494,8 +542,26 @@ void is_port_config_margins(is_port_private_t *private, mct_event_t *event) {
           isp_size_req->stream_sz_plus_margin[i].height =
             (int32_t)FLOOR2((int32_t)((1.0 + private->is_info.margin)
               *((float)isp_size_req->stream_sizes[i].height) + 0.5));
-          IS_LOW(" Video Width- %d, Height- %d", isp_size_req->stream_sz_plus_margin[i].width,
-            isp_size_req->stream_sz_plus_margin[i].height);
+
+          //If DG P2L is enabled or margin size exceeds max size, need to reset margin size
+          if ((isp_size_req->stream_sz_plus_margin[i].width > isp_size_req->stream_max_size.width)
+              || (isp_size_req->stream_sz_plus_margin[i].height > isp_size_req->stream_max_size.height)
+              || dg_p2l_enabled) {
+            isp_size_req->stream_sz_plus_margin[i].width = isp_size_req->stream_max_size.width;
+            isp_size_req->margins[i].widthMargins =
+              (float)isp_size_req->stream_max_size.width / (float)isp_size_req->stream_sizes[i].width - 1.0;
+            isp_size_req->stream_sz_plus_margin[i].height = isp_size_req->stream_max_size.height;
+            isp_size_req->margins[i].heightMargins =
+              (float)isp_size_req->stream_max_size.height / (float)isp_size_req->stream_sizes[i].height - 1.0;
+          }
+
+          IS_HIGH("P2L %d, Video Width- %d, Height- %d, widthMargins %f, heightMargins %f, original margin %f",
+            dg_p2l_enabled,
+            isp_size_req->stream_sz_plus_margin[i].width,
+            isp_size_req->stream_sz_plus_margin[i].height,
+            isp_size_req->margins[i].widthMargins,
+            isp_size_req->margins[i].heightMargins,
+            private->is_info.margin);
         }
       }
       break;
@@ -510,8 +576,26 @@ void is_port_config_margins(is_port_private_t *private, mct_event_t *event) {
           isp_size_req->stream_sz_plus_margin[i].height =
             (int32_t)FLOOR2((int32_t)((1.0 + private->is_info.margin)
               *((float)isp_size_req->stream_sizes[i].height) + 0.5));
-          IS_LOW("Preview Width- %d, Height- %d", isp_size_req->stream_sz_plus_margin[i].width,
-            isp_size_req->stream_sz_plus_margin[i].height);
+
+          //If DG P2L is enabled or margin size exceeds max size, need to reset margin size
+          if ((isp_size_req->stream_sz_plus_margin[i].width > isp_size_req->stream_max_size.width)
+              || (isp_size_req->stream_sz_plus_margin[i].height > isp_size_req->stream_max_size.height)
+              || dg_p2l_enabled) {
+            isp_size_req->stream_sz_plus_margin[i].width = isp_size_req->stream_max_size.width;
+            isp_size_req->margins[i].widthMargins =
+              (float)isp_size_req->stream_max_size.width / (float)isp_size_req->stream_sizes[i].width - 1.0;
+            isp_size_req->stream_sz_plus_margin[i].height = isp_size_req->stream_max_size.height;
+            isp_size_req->margins[i].heightMargins =
+              (float)isp_size_req->stream_max_size.height / (float)isp_size_req->stream_sizes[i].height - 1.0;
+          }
+
+          IS_HIGH("P2L %d, Preview Width- %d, Height- %d, widthMargins %f, heightMargins %f, original margin %f",
+            dg_p2l_enabled,
+            isp_size_req->stream_sz_plus_margin[i].width,
+            isp_size_req->stream_sz_plus_margin[i].height,
+            isp_size_req->margins[i].widthMargins,
+            isp_size_req->margins[i].heightMargins,
+            private->is_info.margin);
         }
       }
       break;
@@ -554,6 +638,13 @@ static void is_port_send_is_event(mct_port_t *port, is_port_private_t *private,
     is_update.transform_type = private->is_info.transform_type;
     num_mat_print = is_update.num_matrices;
   } else if (private->is_info.is_type[stream_type] == IS_TYPE_EIS_DG) {
+    is_update.use_3d = 1;
+    is_update.num_matrices = (private->is_info.num_mesh_y + 1) *
+      (private->is_info.num_mesh_x + 1);
+    is_update.transform_matrix = is_output->transform_matrix;
+    is_update.transform_type = 0;
+    num_mat_print = EIS_DG_MAT_PRNT;
+  } else if (private->is_info.is_type[stream_type] == IS_TYPE_DIG_GIMB) {
     is_update.use_3d = 1;
     is_update.num_matrices = (private->is_info.num_mesh_y + 1) *
       (private->is_info.num_mesh_x + 1);
@@ -636,6 +727,61 @@ static void is_port_send_dewarp_event(mct_port_t *port, is_port_private_t *priva
 }
 
 
+/** is_port_handle_isp_config_event:
+ *    @private: private port data
+ *    @mod_event: module event
+ **/
+static boolean is_port_handle_isp_config_event(is_port_private_t *private,
+  mct_event_module_t *mod_event)
+{
+  boolean rc = TRUE;
+  mct_bus_msg_isp_config_t *isp_config;
+
+  isp_config = (mct_bus_msg_isp_config_t *)mod_event->module_event_data;
+  if (!isp_config) {
+    AF_ERR("failed");
+    return FALSE;
+  }
+
+  IS_LOW("camif_w %d h %d scaler_output %d %d",isp_config->camif_w,isp_config->camif_h,isp_config->scaler_output_w,isp_config->scaler_output_h);
+  IS_LOW("fov_output %d %d %d %d",isp_config->fov_output_x,isp_config->fov_output_y,isp_config->fov_output_w,isp_config->fov_output_h);
+
+  if ((private->is_info.vfe_win.vfe_start_x == isp_config->fov_output_x) &&
+    (private->is_info.vfe_win.vfe_start_y == isp_config->fov_output_y) &&
+    (private->is_info.vfe_win.vfe_end_x == isp_config->fov_output_w) &&
+    (private->is_info.vfe_win.vfe_end_y == isp_config->fov_output_h) &&
+    (private->is_info.vfe_win.scaler_output_w == isp_config->scaler_output_w) &&
+    (private->is_info.vfe_win.scaler_output_h == isp_config->scaler_output_h)) {
+    //VFE window same as previous one. No need to update
+    return rc;
+  }
+  private->is_info.vfe_win.vfe_start_x = isp_config->fov_output_x;
+  private->is_info.vfe_win.vfe_start_y = isp_config->fov_output_y;
+  private->is_info.vfe_win.vfe_end_x = isp_config->fov_output_w;
+  private->is_info.vfe_win.vfe_end_y = isp_config->fov_output_h;
+
+  private->is_info.vfe_win.scaler_output_w = isp_config->scaler_output_w;
+  private->is_info.vfe_win.scaler_output_h = isp_config->scaler_output_h;
+
+  is_thread_msg_t *msg = (is_thread_msg_t *)
+    malloc(sizeof(is_thread_msg_t));
+
+  IS_LOW("isp_config frame id = %u", isp_config->frame_id);
+  if (msg != NULL ) {
+    STATS_MEMSET(msg, 0, sizeof(is_thread_msg_t));
+    msg->type = MSG_IS_PROCESS;
+    msg->u.is_process_parm.type = IS_PROCESS_ISP_CONFIG_EVENT;
+    msg->u.is_process_parm.u.isp_data.frame_id =
+      isp_config->frame_id;
+    msg->u.is_process_parm.u.isp_data.is_info = &private->is_info;
+    is_thread_en_q_msg(private->thread_data, msg);
+  } else {
+    IS_ERR("malloc failed!");
+    rc = FALSE;
+  }
+
+  return rc;
+}
 
 /** is_port_handle_output_dim_event:
  *    @private: private port data
@@ -656,26 +802,36 @@ static boolean is_port_handle_output_dim_event(is_port_private_t *private,
   if (stream_info->stream_type == CAM_STREAM_TYPE_VIDEO) {
     private->is_info.vfe_width[IS_VIDEO] = stream_info->dim.width;
     private->is_info.vfe_height[IS_VIDEO] = stream_info->dim.height;
+    private->is_info.vfe_stride[IS_VIDEO] = stream_info->buf_planes.plane_info.mp[0].stride;
+    private->is_info.vfe_scanline[IS_VIDEO] = stream_info->buf_planes.plane_info.mp[0].scanline;
     if (stream_info->is_type != IS_TYPE_NONE &&
       stream_info->is_type != IS_TYPE_CROP) {
       private->is_info.run_is[IS_VIDEO] = TRUE;
     }
-    if(private->is_info.width[IS_VIDEO] == 0 ||
-      private->is_info.height[IS_VIDEO] == 0) {
+    //for multiple video streams, select the higher one
+    if(private->is_info.width[IS_VIDEO] < stream_info->dim.width ||
+      private->is_info.height[IS_VIDEO] < stream_info->dim.height) {
       private->is_info.width[IS_VIDEO] = stream_info->dim.width;
       private->is_info.height[IS_VIDEO] = stream_info->dim.height;
+      private->is_info.stride[IS_VIDEO] = stream_info->buf_planes.plane_info.mp[0].stride;
+      private->is_info.scanline[IS_VIDEO] = stream_info->buf_planes.plane_info.mp[0].scanline;
     }
   } else if (stream_info->stream_type == CAM_STREAM_TYPE_PREVIEW) {
     private->is_info.vfe_width[IS_PREVIEW] = stream_info->dim.width;
     private->is_info.vfe_height[IS_PREVIEW] = stream_info->dim.height;
+    private->is_info.vfe_stride[IS_PREVIEW] = stream_info->buf_planes.plane_info.mp[0].stride;
+    private->is_info.vfe_scanline[IS_PREVIEW] = stream_info->buf_planes.plane_info.mp[0].scanline;
     if (stream_info->is_type != IS_TYPE_NONE &&
       stream_info->is_type != IS_TYPE_CROP) {
       private->is_info.run_is[IS_PREVIEW] = TRUE;
     }
-    if(private->is_info.width[IS_PREVIEW] == 0 ||
-      private->is_info.height[IS_PREVIEW] == 0) {
+    //for multiple preview streams, select the higher one
+    if(private->is_info.width[IS_PREVIEW] < stream_info->dim.width ||
+      private->is_info.height[IS_PREVIEW] < stream_info->dim.height) {
       private->is_info.width[IS_PREVIEW] = stream_info->dim.width;
       private->is_info.height[IS_PREVIEW] = stream_info->dim.height;
+      private->is_info.stride[IS_PREVIEW] = stream_info->buf_planes.plane_info.mp[0].stride;
+      private->is_info.scanline[IS_PREVIEW] = stream_info->buf_planes.plane_info.mp[0].scanline;
     }
   } else {
     rc = FALSE;
@@ -833,6 +989,16 @@ static void is_port_process_callback(mct_port_t *port, is_process_output_t *outp
     }
     break;
 
+  case IS_PROCESS_OUTPUT_IMU_STATS:
+    is_port_send_is_update(port, private);
+    if (private->is_info.sof_countdown > 0) {
+      private->is_info.sof_countdown--;
+      if (private->is_info.sof_countdown == 0) {
+        is_port_send_lpm_update(port, FALSE);
+      }
+    }
+    break;
+
   case IS_PROCESS_OUTPUT_FLUSH_MODE: {
     int i;
 
@@ -878,6 +1044,8 @@ static void is_port_process_callback(mct_port_t *port, is_process_output_t *outp
       }
       output->num_output = 0;
       private->is_info.stream_on[IS_VIDEO] = FALSE;
+      private->is_info.width[IS_VIDEO] = 0;
+      private->is_info.height[IS_VIDEO] = 0;
       private->is_output[IS_VIDEO].has_output = 0;
       stream_type = IS_VIDEO;
       is_port_send_lpm_update(port, FALSE);
@@ -886,6 +1054,8 @@ static void is_port_process_callback(mct_port_t *port, is_process_output_t *outp
 
     case IS_PREVIEW_STREAM_OFF:
       private->is_info.stream_on[IS_PREVIEW] = FALSE;
+      private->is_info.width[IS_PREVIEW] = 0;
+      private->is_info.height[IS_PREVIEW] = 0;
       private->is_output[IS_PREVIEW].has_output = 0;
       stream_type = IS_PREVIEW;
       is_port_send_lpm_update(port, FALSE);
@@ -1067,6 +1237,16 @@ static boolean is_port_event(mct_port_t *port, mct_event_t *event)
         }
         MCT_OBJECT_UNLOCK(port);
         break;
+      case MCT_EVENT_MODULE_STATS_IMU_STATS:
+        MCT_OBJECT_LOCK(port);
+        if (private->thread_data &&
+          ((private->is_info.is_inited[IS_VIDEO] && private->is_info.is_type[IS_VIDEO] != IS_TYPE_DIS) ||
+           (private->is_info.is_inited[IS_PREVIEW] && private->is_info.is_type[IS_PREVIEW] != IS_TYPE_DIS)) &&
+          (IS_VIDEO_STREAM_RUNNING)) {
+          rc = is_port_handle_imu_stats_event(private, event);
+        }
+        MCT_OBJECT_UNLOCK(port);
+        break;
 
       case MCT_EVENT_MODULE_SET_STREAM_CONFIG:
         if (private->thread_data) {
@@ -1094,7 +1274,7 @@ static boolean is_port_event(mct_port_t *port, mct_event_t *event)
         is_config->num_buffers = private->is_info.buffer_delay;
         is_config->num_mesh_x = private->is_info.num_mesh_x;
         is_config->num_mesh_y = private->is_info.num_mesh_y;
-        IS_HIGH("MCT_EVENT_MODULE_IS_CONFIG, m = %f, nb = %u, "
+        IS_INFO("MCT_EVENT_MODULE_IS_CONFIG, m = %f, nb = %u, "
           "nmx = %d, nmy = %u", is_config->margin_value, is_config->num_buffers,
           is_config->num_mesh_x, is_config->num_mesh_y);
       }
@@ -1119,6 +1299,14 @@ static boolean is_port_event(mct_port_t *port, mct_event_t *event)
           if (private->thread_data) {
             is_thread_stop(private->thread_data);
           }
+        }
+      }
+        break;
+
+	  /* Event on every frame containing the isp config info */
+      case MCT_EVENT_MODULE_ISP_CONFIG: {
+        if (private->thread_data) {
+          is_port_handle_isp_config_event(private, mod_event);
         }
       }
         break;
@@ -1425,6 +1613,7 @@ static boolean is_port_check_caps_reserve(mct_port_t *port, void *caps,
       private->reserved_id[IS_VIDEO] = strm_info->identity;
       private->is_info.is_type[IS_VIDEO] = strm_info->is_type;
       private->is_info.dewarp_type[IS_VIDEO] = strm_info->dewarp_type;
+      private->stream_info[IS_VIDEO] = strm_info;
       /*Disable DIS bias correction for EIS_DG type*/
       if(private->is_info.is_type[IS_VIDEO] == IS_TYPE_EIS_DG){
         private->is_info.dis_bias_correction = 0;
@@ -1441,6 +1630,7 @@ static boolean is_port_check_caps_reserve(mct_port_t *port, void *caps,
     } else if (strm_info->stream_type == CAM_STREAM_TYPE_PREVIEW) {
       private->reserved_id[IS_PREVIEW] = strm_info->identity;
       private->is_info.is_type[IS_PREVIEW] = strm_info->is_type;
+      private->stream_info[IS_PREVIEW] = strm_info;
       IS_HIGH("preview id = 0x%x, is_type = %d, w = %d, h = %d",
         private->reserved_id[IS_PREVIEW], strm_info->is_type, strm_info->dim.width,
         strm_info->dim.height);

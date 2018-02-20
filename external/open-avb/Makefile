@@ -130,8 +130,8 @@ examples_all: simple_talker simple_listener mrp_client live_stream jackd-talker 
 examples_all_clean: simple_talker_clean simple_listener_clean mrp_client_clean \
 	jackd-talker_clean jackd-listener_clean live_stream_clean
 
-all: igb lib ntn daemons_all examples_all avtp_pipeline
+all: daemons_all avtp_pipeline
 
-clean: igb_clean lib_clean ntn_clean daemons_all_clean examples_all_clean avtp_pipeline_clean
+clean: daemons_all_clean avtp_pipeline_clean
 
 .PHONY: FORCE

@@ -2,8 +2,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
   ---------------------------------------------------------------------------
 ******************************************************************************/
 
@@ -75,6 +76,24 @@ void cri_dms_utils_get_current_operating_mode(dms_operating_mode_enum_v01 *opr_m
     uint32_t - true if cache is valid otherwise false.
 ***************************************************************************************************/
 uint32_t cri_dms_utils_is_valid_operating_mode(void);
+
+/***************************************************************************************************
+    @function
+    cri_dms_utils_clear_operating_mode
+
+    @brief
+    clear DMS cache
+
+    @param[in]
+        none
+
+    @param[out]
+        none
+
+    @retval
+    void -
+***************************************************************************************************/
+void cri_dms_utils_clear_operating_mode(void);
 
 #endif
 

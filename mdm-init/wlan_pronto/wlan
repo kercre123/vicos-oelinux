@@ -32,14 +32,17 @@ export RETRY_LIMIT=3
 HELP="Usage $0 {start | stop | restart} <sta>"
 DUMP_TO_KMSG=/dev/kmsg
 serialno=`cat /sys/devices/virtual/android_usb/android0/iSerial`
-
+target_name=`cat /sys/devices/soc0/machine`
+if [ "$target_name" == "APQ8053" ]; then
+ user="-c system"
+fi
 do_ctrl_cld_ll () {
     case "$1" in
     start)
         echo "Starting Pronto WLAN... $@" > $DUMP_TO_KMSG
         shift
         start_sta=0
-        if [ "$1" == "sta" ]; then
+        if [ "$1" == "sta" ] || [ "$1" == "ap" ]; then
             start_sta=1
         fi
 	if [ -f /persist/wlan_mac ]; then
@@ -55,17 +58,29 @@ do_ctrl_cld_ll () {
         fi
 
         echo "Starting PTT Socket App... $@" > $DUMP_TO_KMSG
-        /usr/bin/ptt_socket_app -d &
+        ptt_arg=" -d"
+        start-stop-daemon $user -S -b -a /usr/bin/ptt_socket_app --$ptt_arg
 
         set -e
         insmod $MODULE_BASE/extra/wlan.ko $@
         set +e
 
-        if [ $start_sta -ne 1 ]; then
-		echo "Starting wpa supplicant and dhcp client $@" > $DUMP_TO_KMSG
-		wpa_supplicant -Dnl80211 -iwlan0 -c /data/misc/wifi/wpa_supplicant.conf &
-		/usr/sbin/dhcpcd wlan0 -t 0 -o domain_name_servers --noipv4ll -h -b
+	if [ "$1" == "ap" ]; then
+		iwpriv wlan0 initAP
 	fi
+
+	if [ $start_sta -ne 1 ]; then
+		echo "Starting wpa supplicant and dhcp client $@" > $DUMP_TO_KMSG
+                if [ "$user" == "-c system" ]; then
+                 touch /var/run/dhcpcd /var/run/dhcpcd-wlan0.pid
+                 mkdir -p /var/run/wpa_supplicant
+                 chown -R 1000:0 /var/run/dhcpcd /var/run/dhcpcd-wlan0.pid  /var/run/wpa_supplicant /var/run/resolv.conf /etc/resolv.conf
+                fi
+                wpa_args=" -Dnl80211 -iwlan0 -c /data/misc/wifi/wpa_supplicant.conf &"
+                dhcpcd_args=" wlan0 -t 0 -o domain_name_servers --noipv4ll -h -b"
+                start-stop-daemon $user -S -b -a /usr/sbin/wpa_supplicant --$wpa_args
+                start-stop-daemon $user -S -b -a /usr/sbin/dhcpcd --$dhcpcd_args
+        fi
 
         c=1
         ifconfig wlan0 up 2>  /dev/null
@@ -111,7 +126,9 @@ do_ctrl_cld_ll () {
 }
 echo "Starting cnss_diag by default" > $DUMP_TO_KMSG
 
-/usr/bin/cnss_diag -q -f &
+
+ cnss_diag_arg=" -q -f"
+ start-stop-daemon $user -S -b -a /usr/bin/cnss_diag --$cnss_diag_arg
 
 do_ctrl_cld_ll $@
 if [ $? -ne 0 ]; then

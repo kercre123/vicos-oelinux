@@ -44,7 +44,7 @@ static boolean port_ispif_free_mem_func(void *data, void *user_data)
   mct_port_t *port = (mct_port_t *)data;
   mct_module_t *module = (mct_module_t *)user_data;
   assert(port != NULL);
-  assert(port->private != NULL);
+  assert(port->port_private != NULL);
 
   mct_object_unparent(MCT_OBJECT_CAST(port), MCT_OBJECT_CAST(module));
   if (port->port_private){

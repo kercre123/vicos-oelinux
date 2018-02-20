@@ -30,6 +30,9 @@
 #pragma once
 
 #include <camera/CameraMetadata.h>
+#ifdef USE_VENDOR_TAG_DESC
+#include <camera/VendorTagDescriptor.h>
+#endif
 
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
@@ -182,7 +185,7 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t GetDefaultCaptureParam(const uint32_t client_id,
                                   const uint32_t camera_id,
-                                  CameraMetadata &meta);
+                                  CameraMetadata &meta) override;
 
   status_t CreateOverlayObject(const uint32_t client_id,
                                const uint32_t track_id, OverlayParam *param,
@@ -226,11 +229,15 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t DisconnectInternal(const uint32_t client_id);
 
+#ifdef USE_VENDOR_TAG_DESC
+  status_t GetVendorTagDescriptor(sp<VendorTagDescriptor> &desc) override;
+#endif
+
   RecorderImpl*       recorder_;
   // Map of client ids and their death notifiers.
-  DefaultKeyedVector<uint32_t, sp<DeathNotifier> > death_notifier_list_;
+  std::map<uint32_t, sp<DeathNotifier> > death_notifier_list_;
   // Map of client ids and their callback handlers.
-  DefaultKeyedVector<uint32_t, sp<RemoteCallBack> > remote_cb_list_;
+  std::map<uint32_t, sp<RemoteCallBack> > remote_cb_list_;
   uint32_t    unique_client_id_;
   std::mutex  lock_;
 };

@@ -58,6 +58,7 @@ Tonemapper::~Tonemapper()
   }
 
   engine_shutdown(engineContext);
+  engine_egl_terminate(engineContext);
   // restore the caller context
   engine_bind(caller_context);
   engine_free_backup(caller_context);

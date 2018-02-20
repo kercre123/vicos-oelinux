@@ -265,6 +265,14 @@ void IzatPassiveLocationListener::ulpLocationFromIzatLocation
             locExtended->bodyFrameData.yawRate = izatLoc->mYawRate;
             locExtended->bodyFrameData.pitch = izatLoc->mPitch;
         }
+        if (izatLoc->mHasExtDOP) {
+            locExtended->flags |= GPS_LOCATION_EXTENDED_HAS_EXT_DOP;
+            locExtended->extDOP.PDOP = izatLoc->mExtPdop;
+            locExtended->extDOP.HDOP = izatLoc->mExtHdop;
+            locExtended->extDOP.VDOP = izatLoc->mExtVdop;
+            locExtended->extDOP.GDOP = izatLoc->mExtGdop;
+            locExtended->extDOP.TDOP = izatLoc->mExtTdop;
+        }
     }
 }
 

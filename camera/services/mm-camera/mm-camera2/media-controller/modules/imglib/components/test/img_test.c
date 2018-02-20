@@ -1,5 +1,5 @@
 /**********************************************************************
-*  Copyright (c) 2013-2016 Qualcomm Technologies, Inc.
+*  Copyright (c) 2013-2017 Qualcomm Technologies, Inc.
 *  All Rights Reserved.
 *  Confidential and Proprietary - Qualcomm Technologies, Inc.
 **********************************************************************/
@@ -981,6 +981,7 @@ int main(int argc, char* argv[])
   frameproc_test_t frameproc_test;
   dual_frameproc_test_t dual_frameproc_test;
   uint32_t img_util = 0;
+  pthread_condattr_t cond_attr;
 
   /* Initialize the structures */
   memset(&img_test, 0x0, sizeof(img_test));
@@ -990,10 +991,20 @@ int main(int argc, char* argv[])
   memset(&faceproc_test, 0x0, sizeof(faceproc_test));
   memset(&cac_test, 0x0, sizeof(cac_test));
   memset(&frameproc_test, 0x0, sizeof(frameproc_test));
+
+  rc = pthread_condattr_init(&cond_attr);
+  if (rc) {
+    fprintf(stderr, "%s: pthread_condattr_init failed", __func__);
+  }
+  rc = pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+  if (rc) {
+    fprintf(stderr, "%s: pthread_condattr_setclock failed!!!", __func__);
+  }
+
   pthread_mutex_init(&img_test.mutex, NULL);
-  pthread_cond_init(&img_test.cond, NULL);
+  pthread_cond_init(&img_test.cond, &cond_attr);
   pthread_mutex_init(&img_test1.mutex, NULL);
-  pthread_cond_init(&img_test1.cond, NULL);
+  pthread_cond_init(&img_test1.cond, &cond_attr);
 
   IMG_INIT_LOGGING();
 

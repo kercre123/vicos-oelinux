@@ -15,7 +15,7 @@ GENERAL DESCRIPTION
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7
-   It was generated on: Tue Aug 22 2017 (Spin 0)
+   It was generated on: Wed Dec 27 2017 (Spin 0)
    From IDL File: qualcomm_mobile_access_point_msgr_v01.idl */
 
 #include "stdint.h"
@@ -4128,6 +4128,76 @@ static const uint8_t qcmap_msgr_set_wwan_profile_preference_resp_msg_data_v01[] 
   QMI_IDL_TYPE88(1, 0)
 };
 
+static const uint8_t qcmap_msgr_set_dun_dongle_mode_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(qcmap_msgr_set_dun_dongle_mode_req_msg_v01, mobile_ap_handle),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qcmap_msgr_set_dun_dongle_mode_req_msg_v01, enable_dun_dongle_mode)
+};
+
+static const uint8_t qcmap_msgr_set_dun_dongle_mode_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(qcmap_msgr_set_dun_dongle_mode_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+/*
+ * qcmap_msgr_get_dun_dongle_mode_req_msg is empty
+ * static const uint8_t qcmap_msgr_get_dun_dongle_mode_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t qcmap_msgr_get_dun_dongle_mode_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(qcmap_msgr_get_dun_dongle_mode_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qcmap_msgr_get_dun_dongle_mode_resp_msg_v01, dun_dongle_mode) - QMI_IDL_OFFSET8(qcmap_msgr_get_dun_dongle_mode_resp_msg_v01, dun_dongle_mode_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qcmap_msgr_get_dun_dongle_mode_resp_msg_v01, dun_dongle_mode)
+};
+
+static const uint8_t qcmap_msgr_set_data_path_opt_status_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(qcmap_msgr_set_data_path_opt_status_req_msg_v01, mobile_ap_handle),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qcmap_msgr_set_data_path_opt_status_req_msg_v01, data_path_opt_status)
+};
+
+static const uint8_t qcmap_msgr_set_data_path_opt_status_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(qcmap_msgr_set_data_path_opt_status_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+/*
+ * qcmap_msgr_get_data_path_opt_status_req_msg is empty
+ * static const uint8_t qcmap_msgr_get_data_path_opt_status_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t qcmap_msgr_get_data_path_opt_status_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(qcmap_msgr_get_data_path_opt_status_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qcmap_msgr_get_data_path_opt_status_resp_msg_v01, data_path_opt_status) - QMI_IDL_OFFSET8(qcmap_msgr_get_data_path_opt_status_resp_msg_v01, data_path_opt_status_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qcmap_msgr_get_data_path_opt_status_resp_msg_v01, data_path_opt_status)
+};
+
 /* Type Table */
 static const qmi_idl_type_table_entry  qcmap_msgr_type_table_v01[] = {
   {sizeof(qcmap_msgr_snat_entry_config_v01), qcmap_msgr_snat_entry_config_data_v01},
@@ -4511,7 +4581,15 @@ static const qmi_idl_message_table_entry qcmap_msgr_message_table_v01[] = {
   {sizeof(qcmap_msgr_delete_gsb_config_req_msg_v01), qcmap_msgr_delete_gsb_config_req_msg_data_v01},
   {sizeof(qcmap_msgr_delete_gsb_config_resp_msg_v01), qcmap_msgr_delete_gsb_config_resp_msg_data_v01},
   {sizeof(qcmap_msgr_set_wwan_profile_preference_req_msg_v01), qcmap_msgr_set_wwan_profile_preference_req_msg_data_v01},
-  {sizeof(qcmap_msgr_set_wwan_profile_preference_resp_msg_v01), qcmap_msgr_set_wwan_profile_preference_resp_msg_data_v01}
+  {sizeof(qcmap_msgr_set_wwan_profile_preference_resp_msg_v01), qcmap_msgr_set_wwan_profile_preference_resp_msg_data_v01},
+  {sizeof(qcmap_msgr_set_dun_dongle_mode_req_msg_v01), qcmap_msgr_set_dun_dongle_mode_req_msg_data_v01},
+  {sizeof(qcmap_msgr_set_dun_dongle_mode_resp_msg_v01), qcmap_msgr_set_dun_dongle_mode_resp_msg_data_v01},
+  {sizeof(qcmap_msgr_get_dun_dongle_mode_req_msg_v01), 0},
+  {sizeof(qcmap_msgr_get_dun_dongle_mode_resp_msg_v01), qcmap_msgr_get_dun_dongle_mode_resp_msg_data_v01},
+  {sizeof(qcmap_msgr_set_data_path_opt_status_req_msg_v01), qcmap_msgr_set_data_path_opt_status_req_msg_data_v01},
+  {sizeof(qcmap_msgr_set_data_path_opt_status_resp_msg_v01), qcmap_msgr_set_data_path_opt_status_resp_msg_data_v01},
+  {sizeof(qcmap_msgr_get_data_path_opt_status_req_msg_v01), 0},
+  {sizeof(qcmap_msgr_get_data_path_opt_status_resp_msg_v01), qcmap_msgr_get_data_path_opt_status_resp_msg_data_v01}
 };
 
 /* Range Table */
@@ -4700,7 +4778,11 @@ static const qmi_idl_service_message_table_entry qcmap_msgr_service_command_mess
   {QMI_QCMAP_MSGR_DISABLE_GSB_REQ_V01, QMI_IDL_TYPE16(0, 329), 7},
   {QMI_QCMAP_MSGR_GET_GSB_CONFIG_REQ_V01, QMI_IDL_TYPE16(0, 331), 7},
   {QMI_QCMAP_MSGR_SET_GSB_CONFIG_REQ_V01, QMI_IDL_TYPE16(0, 333), 38},
-  {QMI_QCMAP_MSGR_DELETE_GSB_CONFIG_REQ_V01, QMI_IDL_TYPE16(0, 335), 26}
+  {QMI_QCMAP_MSGR_DELETE_GSB_CONFIG_REQ_V01, QMI_IDL_TYPE16(0, 335), 26},
+  {QMI_QCMAP_MSGR_SET_DUN_DONGLE_MODE_REQ_V01, QMI_IDL_TYPE16(0, 339), 11},
+  {QMI_QCMAP_MSGR_GET_DUN_DONGLE_MODE_REQ_V01, QMI_IDL_TYPE16(0, 341), 0},
+  {QMI_QCMAP_MSGR_GET_DATA_PATH_OPT_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 345), 0},
+  {QMI_QCMAP_MSGR_SET_DATA_PATH_OPT_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 343), 11}
 };
 
 static const qmi_idl_service_message_table_entry qcmap_msgr_service_response_messages_v01[] = {
@@ -4867,7 +4949,11 @@ static const qmi_idl_service_message_table_entry qcmap_msgr_service_response_mes
   {QMI_QCMAP_MSGR_DISABLE_GSB_RESP_V01, QMI_IDL_TYPE16(0, 330), 7},
   {QMI_QCMAP_MSGR_GET_GSB_CONFIG_RESP_V01, QMI_IDL_TYPE16(0, 332), 907},
   {QMI_QCMAP_MSGR_SET_GSB_CONFIG_RESP_V01, QMI_IDL_TYPE16(0, 334), 7},
-  {QMI_QCMAP_MSGR_DELETE_GSB_CONFIG_RESP_V01, QMI_IDL_TYPE16(0, 336), 7}
+  {QMI_QCMAP_MSGR_DELETE_GSB_CONFIG_RESP_V01, QMI_IDL_TYPE16(0, 336), 7},
+  {QMI_QCMAP_MSGR_SET_DUN_DONGLE_MODE_RESP_V01, QMI_IDL_TYPE16(0, 340), 7},
+  {QMI_QCMAP_MSGR_GET_DUN_DONGLE_MODE_RESP_V01, QMI_IDL_TYPE16(0, 342), 11},
+  {QMI_QCMAP_MSGR_GET_DATA_PATH_OPT_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 346), 11},
+  {QMI_QCMAP_MSGR_SET_DATA_PATH_OPT_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 344), 7}
 };
 
 static const qmi_idl_service_message_table_entry qcmap_msgr_service_indication_messages_v01[] = {
@@ -4895,7 +4981,7 @@ struct qmi_idl_service_object qcmap_msgr_qmi_idl_service_object_v01 = {
     sizeof(qcmap_msgr_service_indication_messages_v01)/sizeof(qmi_idl_service_message_table_entry) },
   { qcmap_msgr_service_command_messages_v01, qcmap_msgr_service_response_messages_v01, qcmap_msgr_service_indication_messages_v01},
   &qcmap_msgr_qmi_idl_type_table_object_v01,
-  0x37,
+  0x39,
   NULL
 };
 
@@ -4909,4 +4995,3 @@ qmi_idl_service_object_type qcmap_msgr_get_service_object_internal_v01
   }
   return (qmi_idl_service_object_type)&qcmap_msgr_qmi_idl_service_object_v01;
 }
-

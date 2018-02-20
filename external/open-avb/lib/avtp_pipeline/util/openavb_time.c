@@ -34,8 +34,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 
 #include "openavb_time.h"
 
-OPENAVB_CODE_MODULE_PRI
-
 U64 openavbTimeTimespecToNSec(struct timespec *pTime)
 {
 	if (!pTime) {

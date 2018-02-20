@@ -140,6 +140,9 @@ case `source /sbin/usb/target` in
 	*9x25* )
 		run_9x25 &
 		;;
+	*8017* )
+		run_9x25 &
+		;;
 	*9x35* )
 		run_9x35 &
 		;;

@@ -35,6 +35,7 @@ typedef struct {
 static Path* canned_data = NULL;
 static int canned_alloc = 0;
 static int canned_used = 0;
+static Path default_config_data = {NULL, UINT_MAX, UINT_MAX, 0, 0};
 
 static int path_compare(const void* a, const void* b) {
 	return strcmp(((Path*)a)->path, ((Path*)b)->path);
@@ -87,13 +88,16 @@ void canned_fs_config(const char* path, int dir, const char* target_out_path,
 	Path* p = (Path*) bsearch(&key, canned_data, canned_used, sizeof(Path), path_compare);
 	if (p == NULL) {
 		fprintf(stderr, "failed to find [%s] in canned fs_config\n", path);
-		exit(1);
+		*uid = default_config_data.uid;
+		*gid = default_config_data.gid;
+		return;
 	}
 	*uid = p->uid;
 	*gid = p->gid;
 	*mode = p->mode;
 	*capabilities = p->capabilities;
-
+	printf("[%s] found in canned fs_config, applied uid=%d, gid=%d, mode=%o, capabilities=%x\n",
+		p->path, *uid, *gid, *mode, *capabilities);
 #if 0
 	// for debugging, run the built-in fs_config and compare the results.
 

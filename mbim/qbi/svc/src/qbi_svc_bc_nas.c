@@ -7002,6 +7002,10 @@ static uint32 qbi_svc_bc_nas_packet_service_data_class_best_available
     if (available_data_class & QBI_SVC_BC_DATA_CLASS_HSUPA)
     {
       best_data_class |= QBI_SVC_BC_DATA_CLASS_HSUPA;
+      if (available_data_class & QBI_SVC_BC_DATA_CLASS_CUSTOM)
+      {
+        best_data_class |= QBI_SVC_BC_DATA_CLASS_CUSTOM;
+      }
     }
   }
   else if (available_data_class & QBI_SVC_BC_DATA_CLASS_1XEVDO_REVB)

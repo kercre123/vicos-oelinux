@@ -1,8 +1,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
   ---------------------------------------------------------------------------
 ******************************************************************************/
 
@@ -707,6 +708,8 @@ cri_core_error_type cri_voice_request_cancel_ussd(cri_core_context_type         
 
 typedef voice_ussd_ind_msg_v02 cri_ussd_ind_type;
 
-
+void cri_voice_release_client(
+    int qmi_service_client_id
+);
 
 #endif

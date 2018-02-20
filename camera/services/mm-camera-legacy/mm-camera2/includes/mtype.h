@@ -58,6 +58,7 @@ typedef int   boolean;
 #define CEILING4(X)  (((X) + 0x0003) & 0xFFFC)
 #define CEILING2(X)  (((X) + 0x0001) & 0xFFFE)
 
+#if 0
 #undef __FD_SET
 #define __FD_SET(fd, fdsetp) \
   (((fd_set *)(fdsetp))->fds_bits[(fd) >> 5] |= (1<<((fd) & 31)))
@@ -73,7 +74,7 @@ typedef int   boolean;
 #undef  __FD_ZERO
 #define __FD_ZERO(fdsetp) \
   (memset (fdsetp, 0, sizeof (*(fd_set *)(fdsetp))))
-
+#endif
 
 typedef enum {
   M_BAYER_8_BITS,

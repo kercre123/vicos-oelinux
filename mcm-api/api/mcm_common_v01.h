@@ -243,6 +243,7 @@ typedef enum {
   MCM_ERROR_SIM_SERVICE_NOT_SUPPORTED_V01 = 122, /**<  SIM service is not supported. */
   MCM_ERROR_SIM_AUTH_FAIL_V01 = 123, /**<  SIM authorization failure. */
   MCM_ERROR_SIM_PIN_PERM_BLOCKED_V01 = 124, /**<  SIM PIN is permanently blocked. */
+  MCM_ERROR_RADIO_RESET_V01 = 125, /**<  SSR happen, device not in proper state. */
   MCM_ERROR_T_MAX_ENUM_VAL_V01 = 2147483647 /* To force a 32 bit signed enum.  Do not change or use*/
 }mcm_error_t_v01;
 /**

@@ -53,6 +53,13 @@
 #define PHY_DELAY_MB_TX_I20 1044//100M delay
 #define PHY_DELAY_MB_RX_I20 2133//100M delay
 
+#define PDELAY_LOGINTERVAL_MIN -5
+#define PDELAY_LOGINTERVAL_MAX 5
+#define SYNC_LOGINTERVAL_MIN -5
+#define SYNC_LOGINTERVAL_MAX 5
+#define ANNOUNCE_LOGINTERVAL_MIN -5
+#define ANNOUNCE_LOGINTERVAL_MAX 5
+
 void print_usage( char *arg0 ) {
   fprintf( stderr,
 	   "%s <network interface> [-S] [-P] [-M <filename>] "
@@ -66,7 +73,11 @@ void print_usage( char *arg0 ) {
 		"\t-A <count> initial accelerated sync count\n"
 		"\t-G <group> group id for shared memory\n"
 		"\t-R <priority 1> priority 1 value\n"
-		"\t-T force master\n\t-L force slave\n" );
+		"\t-T force master\n\t-L force slave\n"
+		"\t-C <announce interval>  interval value for announce messages, in log base 2 seconds (range -5 to 5, default is -3)\n"
+		"\t-Y <pdelay interval> interval value for pdelay messages, in log base 2 seconds (range -5 to 5, default is 0)\n"
+		"\t-N <sync interval> interval value for sync messages, in log base 2 seconds (range -5 to 5, default is 0)\n"
+		"\t-B <0|1> Enable BMCA(1 is by default).Expects pre-configured network if disabled (for 0).\n");
 }
 
 int main(int argc, char **argv)
@@ -76,6 +87,7 @@ int main(int argc, char **argv)
 	int sig;
 
 	bool syntonize = true;
+	bool bmca = true;
 	int i;
 	bool pps = false;
 	uint8_t priority1 = 248;
@@ -83,6 +95,7 @@ int main(int argc, char **argv)
 	PortState port_state = (PortState) 0;
 
 	int restorefd = -1;
+	int8_t interval = 0;
 	void *restoredata = ((void *) -1);
 	char *restoredataptr = NULL;
 	off_t restoredatalength = 0;
@@ -91,6 +104,10 @@ int main(int argc, char **argv)
 	LinuxIPCArg *ipc_arg = NULL;
 
 	int accelerated_sync_count = 0;
+	LogMessageInterval_t  intervals;
+	intervals.sync_req_interval = -3;
+	intervals.pdelay_req_interval = 0;
+	intervals.announce_req_interval = 0;
 
 	// Block SIGUSR1
 	{
@@ -138,6 +155,16 @@ int main(int argc, char **argv)
 					syntonize = true;
 				}
 			}
+			else if( toupper( argv[i][1] ) == 'B' ) {
+				// Get bmc directive from command line
+				// 1 is to start bmc.
+				// 0 is to not start bmc.
+				if (i + 1 < argc && isdigit(argv[i + 1][0])) {
+					bmca = (atoi(argv[++i]) != 0);
+				} else {
+					bmca = true;
+				}
+			}
 			else if( toupper( argv[i][1] ) == 'T' ) {
 				override_portstate = true;
 				port_state = PTP_MASTER;
@@ -164,6 +191,45 @@ int main(int argc, char **argv)
 				} else {
 					printf( "Accelerated sync count must be specified on the "
 							"command line with A option\n" );
+				}
+			}
+			else if( toupper( argv[i][1] ) == 'Y' ) {
+				// Get pdelay directive from command line
+				if (i + 1 < argc ) {
+					interval = atoi( argv[++i]);
+					if ((interval >= PDELAY_LOGINTERVAL_MIN) &&
+						(interval <= PDELAY_LOGINTERVAL_MAX)) {
+						intervals.pdelay_req_interval = interval;
+					} else {
+						printf( "Invalid pdelay interval timer, using "
+								"default value\n" );
+					}
+				}
+			}
+			else if( toupper( argv[i][1] ) == 'N' ) {
+				// Get sync delay directive from command line
+				if (i + 1 < argc ) {
+					interval = atoi( argv[++i]);
+					if ((interval >= SYNC_LOGINTERVAL_MIN) &&
+						(interval <= SYNC_LOGINTERVAL_MAX)) {
+						intervals.sync_req_interval = interval;
+					} else {
+						printf( "Invalid sync interval, using "
+								"default value\n" );
+					}
+				}
+			}
+			else if( toupper( argv[i][1] ) == 'C' ) {
+				// Get announce delay directive from command line
+				if (i + 1 < argc ) {
+					interval = atoi( argv[++i]);
+					if ((interval >= ANNOUNCE_LOGINTERVAL_MIN) &&
+						(interval <= ANNOUNCE_LOGINTERVAL_MAX)) {
+						intervals.announce_req_interval = interval;
+					} else {
+						printf( "Invalid announce interval, using "
+								"default value\n" );
+					}
 				}
 			}
 			else if( toupper( argv[i][1] ) == 'G' ) {
@@ -290,7 +356,7 @@ int main(int argc, char **argv)
 
     IEEE1588Port *port =
       new IEEE1588Port
-      ( clock, 1, false, accelerated_sync_count, timestamper, 0, ifname,
+      ( clock, 1, bmca, false, accelerated_sync_count, &intervals, timestamper, 0, ifname,
 	condition_factory, thread_factory, timer_factory, lock_factory );
 	if (!port->init_port(phy_delay)) {
 		printf("failed to initialize port \n");

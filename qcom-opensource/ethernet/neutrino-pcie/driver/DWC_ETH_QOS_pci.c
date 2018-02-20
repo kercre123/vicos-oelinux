@@ -331,6 +331,7 @@ static void parse_config_file(USHORT mdio_bus_id)
 	if(IS_ERR(filep)) {
 		NMSGPR_ALERT( "Mac configuration file not found\n");
 		NMSGPR_ALERT( "Using Default MAC Address\n");
+		kfree(data);
 		return;
 	}
 	else  {
@@ -524,11 +525,6 @@ static int DWC_ETH_QOS_pci_resume(struct pci_dev *pdev)
 		goto exit;
 	}
 
-	ret = msm_pcie_recover_config(pdev);
-	if (ret) {
-		NMSGPR_ALERT("%s: Failed to restore PCI config\n", __func__);
-		goto exit;
-	}
 
 
 exit:
@@ -721,6 +717,10 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 #ifdef NTN_DECLARE_MEM_FOR_DMAAPI
 	ULONG phy_mem_adrs;
 #endif
+	struct ip_params *pparams;
+	unsigned char mac_addr[17] = {0};
+	int speed = 0;
+	unsigned int is_mac_addr_valid = 0;
 
 	NDBGPR_L1("Debug version\n");
 
@@ -793,7 +793,7 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 		ret = -EIO;
 		goto err_out_map_failed;
 	}
-	/*
+#ifndef DWC_ETH_QOS_BUILTIN
 	{
 	unsigned int rd_val;
 
@@ -807,7 +807,7 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 	NDBGPR_L1( "HFR1 Val = 0x%08x \n", *(unsigned int*)(dwc_eth_ntn_reg_pci_base_addr + 0xA120));
 	NDBGPR_L1( "HFR2 Val = 0x%08x \n", *(unsigned int*)(dwc_eth_ntn_reg_pci_base_addr + 0xA124));
 	}
-	*/
+#endif
 	/* queue count */
 	tx_q_count = get_tx_queue_count(dwc_eth_ntn_reg_pci_base_addr);
 	rx_q_count = get_rx_queue_count(dwc_eth_ntn_reg_pci_base_addr);
@@ -825,23 +825,6 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 		goto err_out_dev_failed;
 	}
 	++mdio_bus_id;
-
-#ifndef DWC_ETH_QOS_BUILTIN
-	/* Read mac address from mac.ini file */
-	parse_config_file(mdio_bus_id);
-#endif
-	if(!is_valid_ether_addr(dev_addr)) {
-		NMSGPR_ALERT( "Not found valid mac address\n");
-		NMSGPR_ALERT( "Using Default MAC Address\n");
-	}
-	NMSGPR_INFO( "MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n",
-		dev_addr[0], dev_addr[1], dev_addr[2], dev_addr[3], dev_addr[4], dev_addr[5]);
-	dev->dev_addr[0] = dev_addr[0];
-	dev->dev_addr[1] = dev_addr[1];
-	dev->dev_addr[2] = dev_addr[2];
-	dev->dev_addr[3] = dev_addr[3];
-	dev->dev_addr[4] = dev_addr[4];
-	dev->dev_addr[5] = dev_addr[5];
 
 	dev->base_addr = dwc_eth_ntn_reg_pci_base_addr;
 	SET_NETDEV_DEV(dev, &pdev->dev);
@@ -944,7 +927,10 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 			NDBGPR_L1("%s: fw_load_delay = %d msec\n", __func__, pdata->fw_load_delay);
 		}
 
+		pdata->pcierst_resx = 0;
+#ifndef DWC_ETH_QOS_BUILTIN
 		pdata->pcierst_resx = of_property_read_bool(pldev->dev.of_node, "qcom,ntn-pcierst-resx");
+#endif
 		NDBGPR_L1("%s: pcierst_resx = %d\n", __func__, pdata->pcierst_resx);
 
 		pdata->enable_phy = !of_property_read_bool(pldev->dev.of_node, "qcom,ntn-disable-phy");
@@ -996,20 +982,34 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 			NDBGPR_L1("%s: Failed to find ntn-mdio-bus-id value, hardcoding to 1\n", __func__);
 			pdata->mdio_bus_id = mdio_bus_id;
 		} else {
-			NDBGPR_L1("%s: ntn-mdio-bus-id = %d msec\n", __func__, pdata->mdio_bus_id);
+			NDBGPR_L1("%s: ntn-mdio-bus-id = %d \n", __func__, pdata->mdio_bus_id);
 		}
 
 		ret = of_property_read_u32(pldev->dev.of_node, "qcom,ntn-phy-addr", &pdata->phyaddr);
 
 		if (ret) {
-			NDBGPR_L1("%s: Failed to find ntn-phy-addr value\n", __func__);
+			NDBGPR_L1("%s: Failed to find ntn-phy-addr value, need find phy id\n", __func__);
 			pdata->phyaddr = NTN_INVALID_PHY_ADDR;
 		} else {
 			NDBGPR_L1("%s: ntn-phy-addr = %d \n", __func__, pdata->phyaddr);
 		}
+		ret = of_property_read_u32(pldev->dev.of_node, "qcom,ntn-phy-speed-mode", (u32*)&pdata->phy_speed_mode);
+		if (ret) {
+			NDBGPR_L1("%s: Failed to find ntn-phy-speed-mode value\n", __func__);
+			if (pdata->rmii_mode) {
+				pdata->phy_speed_mode = DWC_ETH_QOS_PHY_SPEED_100M;
+			} else {
+				pdata->phy_speed_mode = DWC_ETH_QOS_PHY_SPEED_AUTO;
+			}
+		} else {
+			NDBGPR_L1("%s: ntn-phy-speed-mode = %d \n", __func__, pdata->phy_speed_mode);
+		}
 	} else {
 		NMSGPR_ALERT( "%s: Failed to get platform data for the device\n",__func__);
 	}
+
+	pdata->phy_wol_enable = of_property_read_bool(pldev->dev.of_node, "qcom,ntn-phy-wol-enable");
+	NDBGPR_L1("%s: phy_wol_enable = %d\n", __func__, pdata->phy_wol_enable);
 
 #ifdef NTN_ENABLE_PCIE_MEM_ACCESS
 	DWC_ETH_QOS_config_tamap(pdev);
@@ -1017,6 +1017,8 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 
 	/* PHY Mode (MII/RMII or default RGMII)
 	 * should be configured prior to GMAC clock enable/reset. */
+	hw_if->ntn_set_phy_intf(pdata);
+
 	/* issue clock enable to GMAC device */
 	hw_if->ntn_mac_clock_config(0x1, pdata);
 	/* issue software reset to GMAC device */
@@ -1073,6 +1075,60 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 	NMSGPR_ALERT("DBG Resvd area: 0x%x\n", pdata->fw_ver_cap);
 	NMSGPR_ALERT("NTN FW Version: %d.%d\n", (pdata->fw_ver_cap >> 12),
 				((pdata->fw_ver_cap >> 8) & 0xF));
+
+	//read ip parameters from neutrino SRAM
+	pparams = (struct ip_params *)(dwc_eth_ntn_SRAM_pci_base_addr_virt + NTN_M3_IP_PARAM_START);
+	NDBGPR_L1("pparams->magic_cookie = %s",pparams->magic_cookie);
+	if(0 == strncmp(NTN_MR_IP_PARAMS_MAGIC_COOKIE,pparams->magic_cookie,strlen(NTN_MR_IP_PARAMS_MAGIC_COOKIE)))
+	{
+		NDBGPR_L1("mac_addr = %s\n", pparams->mac_addr);
+		NDBGPR_L1("link_speed = %s\n", pparams->link_speed);
+		NDBGPR_L1("ip_addr = %s\n", pparams->ip_addr);
+		memcpy(&mac_addr,pparams->mac_addr,sizeof(mac_addr));
+		if(mac_addr[0] < 0xff){
+			is_mac_addr_valid = 1;
+			NMSGPR_ALERT( "default MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+			dev_addr[0], dev_addr[1], dev_addr[2], dev_addr[3], dev_addr[4], dev_addr[5]);
+			extract_macid((char *)&mac_addr);
+			NMSGPR_ALERT( "New MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+			dev_addr[0], dev_addr[1], dev_addr[2], dev_addr[3], dev_addr[4], dev_addr[5]);
+		}
+		sscanf((char *)&pparams->link_speed, "%d", &speed);
+		NDBGPR_L1("%s link_speed = %d, \n",__func__, speed);
+		switch(speed) {
+			case 10:
+				NDBGPR_L1("%s: setting link speed to %d", __func__, DWC_ETH_QOS_PHY_SPEED_10M);
+				pdata->phy_speed_mode = DWC_ETH_QOS_PHY_SPEED_10M;
+				break;
+			case 100:
+				NDBGPR_L1("%s: setting link speed to %d", __func__, DWC_ETH_QOS_PHY_SPEED_100M);
+				pdata->phy_speed_mode = DWC_ETH_QOS_PHY_SPEED_100M;
+				break;
+			case 1000:
+			default:
+				NDBGPR_L1("%s: setting link speed to %d", __func__, DWC_ETH_QOS_PHY_SPEED_AUTO);
+				pdata->phy_speed_mode = DWC_ETH_QOS_PHY_SPEED_AUTO;
+				break;
+		}
+	}
+#ifndef DWC_ETH_QOS_BUILTIN
+	if(0 == is_mac_addr_valid) {
+		/* Read mac address from ntn_config.ini file */
+		parse_config_file(mdio_bus_id);
+		if(!is_valid_ether_addr(dev_addr)) {
+			NMSGPR_ALERT( "Not found valid mac address\n");
+			NMSGPR_ALERT( "Using Default MAC Address\n");
+		}
+		NMSGPR_INFO( "MAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+			dev_addr[0], dev_addr[1], dev_addr[2], dev_addr[3], dev_addr[4], dev_addr[5]);
+	}
+#endif
+	dev->dev_addr[0] = dev_addr[0];
+	dev->dev_addr[1] = dev_addr[1];
+	dev->dev_addr[2] = dev_addr[2];
+	dev->dev_addr[3] = dev_addr[3];
+	dev->dev_addr[4] = dev_addr[4];
+	dev->dev_addr[5] = dev_addr[5];
 
 	/* Verify if IPA is supported in firmware */
 	pdata->ipa_enabled =
@@ -1207,6 +1263,7 @@ static int DWC_ETH_QOS_probe(struct pci_dev *pdev,
 			pr_err("Unable to register bus client\n");
 	} else
 		pr_err("msm_bus_cl_get_pdata() failed\n");
+	device_disable_async_suspend(&pdev->dev);
 	return 0;
 
  err_out_netdev_failed:
@@ -1485,8 +1542,11 @@ static INT DWC_ETH_QOS_suspend(struct pci_dev *pdev, pm_message_t state)
 #ifdef CONFIG_PCI_MSM
 	msm_pcie_shadow_control(pdev, false);
 #endif
+	pci_disable_device(pdev);
 	pci_save_state(pdev);
+	pdata->saved_state = pci_store_saved_state(pdev);
 	pci_set_power_state(pdev, pci_choose_state(pdev, state));
+	DWC_ETH_QOS_pci_suspend(pdev);
 
 	DBGPR("<--DWC_ETH_QOS_suspend\n");
 
@@ -1521,6 +1581,7 @@ static INT DWC_ETH_QOS_resume(struct pci_dev *pdev)
 	INT ret;
 	struct DWC_ETH_QOS_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
+	UINT rd_val;
 
 	DBGPR("-->DWC_ETH_QOS_resume\n");
 
@@ -1529,30 +1590,47 @@ static INT DWC_ETH_QOS_resume(struct pci_dev *pdev)
 		return -EINVAL;
 	}
 
+	DWC_ETH_QOS_pci_resume(pdev);
 	pci_set_power_state(pdev, PCI_D0);
+	pci_load_and_free_saved_state(pdev,&pdata->saved_state);
 	pci_restore_state(pdev);
+	ret = pci_enable_device(pdev);
+	if (ret) {
+		NMSGPR_ALERT( "%s:Unable to enable device\n", DEV_NAME);
+		return -EPERM;
+	}
 #ifdef CONFIG_PCI_MSM
 	msm_pcie_shadow_control(pdev, true);
 #endif
+	pci_set_master(pdev);
 
-	/* Recover NTN in case whole chip was in reset */
-	if (pdata->pcierst_resx) {
-		if (hw_if->ntn_boot_host_initiated(pdata)) {
-			DWC_ETH_QOS_load_fw(pdev);
-			if (pdata->ipa_enabled)
-				hw_if->enable_offload(pdata);
+	/* Read MAC configuration register to check if neutrino reset
+	 * during suspend.
+	 * If reset the default value is 0.
+	 */
+	MAC_MCR_RgRd(rd_val);
+	if(0 == rd_val) {
+		/* Recover NTN in case whole chip was in reset */
+		if (pdata->pcierst_resx) {
+			if (hw_if->ntn_boot_host_initiated(pdata)) {
+				DWC_ETH_QOS_load_fw(pdev);
+				if (pdata->ipa_enabled)
+					hw_if->enable_offload(pdata);
+			}
 		}
 	}
-
 #ifdef NTN_ENABLE_PCIE_MEM_ACCESS
 	DWC_ETH_QOS_config_tamap(pdev);
+	if (pdata->ipa_enabled){
+		DWC_ETH_QOS_config_ipareg_map(pdev);
+	}
 #endif
-
 	pci_enable_msi(pdev);
+	pci_write_config_dword(pdev, pdev->msi_cap + PCI_MSI_MASK_64, 0);
 	ret = DWC_ETH_QOS_powerup(dev, DWC_ETH_QOS_DRIVER_CONTEXT);
-	if (pdata->prv_ipa.ipa_offload_susp)
+	if ((pdata->ipa_enabled)&&(pdata->prv_ipa.ipa_offload_susp)){
 		DWC_ETH_QOS_ipa_offload_resume(pdata);
-
+	}
 	/* Hold the wake lock for 5sec to ensure any traffic*/
 	pm_wakeup_event(&pdev->dev, 5000);
 

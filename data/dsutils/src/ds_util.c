@@ -1926,6 +1926,7 @@ static ds_target_t ds_get_target_from_soc_id()
             target = DS_TARGET_TABASCO;
             break;
           case DS_TARGET_SOC_ID_MSM8953:
+          case DS_TARGET_SOC_ID_JACALA_LITE:
             target = DS_TARGET_JACALA;
             break;
           case DS_TARGET_SOC_ID_MSM8976:

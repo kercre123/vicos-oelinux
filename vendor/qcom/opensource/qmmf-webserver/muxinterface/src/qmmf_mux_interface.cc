@@ -86,6 +86,7 @@ MuxInterface::MuxInterface(MUX_brand_type brand, const char *file_name) :
     brand_type_(brand),
     file_name_(file_name),
     video_start_time_(-1),
+    audio_first_frame_(-1),
     first_timestamp_(-1),
     video_previous_time_(-1),
     video_track_id_(0),
@@ -272,6 +273,7 @@ int32_t MuxInterface::WriteAudioBuffer(uint32_t track_id, uint32_t session_id,
   qmmf_muxer_client_data *client_data;
   size_t length = buffer.size;
   uint64_t ts = buffer.timestamp;
+  bool first_frame = false;
 
   client_data = (qmmf_muxer_client_data *) malloc(sizeof(*client_data));
   if (NULL == client_data) {
@@ -279,39 +281,53 @@ int32_t MuxInterface::WriteAudioBuffer(uint32_t track_id, uint32_t session_id,
     return NO_MEMORY;
   }
   memset(client_data, 0, sizeof(*client_data));
-
-  sample_info = (MUX_sample_info_type *) malloc(sizeof(*sample_info));
-  if (NULL == sample_info) {
-    ALOGE("%s: Unable to allocate sample info!", __func__);
-    if (NULL != client_data) {
-      free(client_data);
-    }
-    return NO_MEMORY;
-  }
-  memset(sample_info, 0, sizeof(*sample_info));
-
   client_data->track_id = track_id;
   client_data->session_id = session_id;
   client_data->buffer = buffer;
 
-  sample_info->time = (uint32)
-                       GET_SAMPLE_DELTA(ts, first_timestamp_,
+  if (0 > audio_first_frame_) {
+    first_frame = true;
+    audio_first_frame_ = 0;
+  }
+
+  if (first_frame) {
+    status = mux_->MUX_write_header(idx, true, buffer.size,
+                                    (uint8_t *)buffer.data, client_data);
+    if (MUX_SUCCESS != status) {
+      ALOGE("%s: Failed to writer header : %d\n", __func__, status);
+      free(client_data);
+
+    }
+  } else {
+    sample_info = (MUX_sample_info_type *) malloc(sizeof(*sample_info));
+    if (NULL == sample_info) {
+      ALOGE("%s: Unable to allocate sample info!", __func__);
+      if (NULL != client_data) {
+        free(client_data);
+      }
+      return NO_MEMORY;
+    }
+    memset(sample_info, 0, sizeof(*sample_info));
+
+    sample_info->time = (uint32)
+                        GET_SAMPLE_DELTA(ts, first_timestamp_,
                                         streams_[idx].media_timescale);
 
-  sample_info->delta = (uint32) streams_[idx].sample_delta;
+    sample_info->delta = (uint32) streams_[idx].sample_delta;
 
-  sample_info->is_time_valid = true;
-  sample_info->size = length;
+    sample_info->is_time_valid = true;
+    sample_info->size = length;
 
-  uint8_t *data_ptr = reinterpret_cast<uint8_t *>(buffer.data);
+    uint8_t *data_ptr = reinterpret_cast<uint8_t *>(buffer.data);
 
-  status = mux_->MUX_Process_Sample(idx, 1, sample_info,
+    status = mux_->MUX_Process_Sample(idx, 1, sample_info,
                                     data_ptr, client_data);
-  if (MUX_SUCCESS != status) {
-    ALOGE("%s: Failed to process audio buffer: %d\n", __func__, status);
-    free(sample_info);
-    free(client_data);
-    return ConvertStatus(status);
+    if (MUX_SUCCESS != status) {
+      ALOGE("%s: Failed to process audio buffer: %d\n", __func__, status);
+      free(sample_info);
+      free(client_data);
+      return ConvertStatus(status);
+    }
   }
 
   return ConvertStatus(status);

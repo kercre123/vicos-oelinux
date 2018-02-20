@@ -32,16 +32,6 @@ AC_ARG_WITH(sanitized-headers,
          [Specify the location of the sanitized Linux headers]),
       [CPPFLAGS="$CPPFLAGS -idirafter $withval"])
 
-AC_ARG_WITH([gralloc_library],
-      AC_HELP_STRING([--with-gralloc-library=@<:@dir@:>@],
-         [Specify the location of the Gralloc library]),
-      [gralloc_libdir=$withval],
-      with_gralloc_library=no)
-
-if test "x$with_gralloc_library" != "xno"; then
-   AC_SUBST([LIBGRALLOC], "${gralloc_libdir}")
-fi
-
 AC_ARG_WITH([mm_core],
       AC_HELP_STRING([with-mm-core=@<:@dir@:>@],
          [Specify the location of the mm-core library]),
@@ -118,6 +108,16 @@ AC_ARG_WITH([basemachine],
         [multicam_enable=false])
 AM_CONDITIONAL([ENABLE_360], [test x$multicam_enable = xtrue])
 
+AC_ARG_WITH([basemachine],
+        AC_HELP_STRING([with-basemachine=@<:@machine name@:>@],
+        [Specify the Machine name]),
+        [case "${withval}" in
+                apq8053) jpeg_turbo_enable=true ;;
+                *) jpeg_turbo_enable=false ;;
+        esac],
+        [jpeg_turbo_enable=false])
+AM_CONDITIONAL([ENABLE_JPEG_TURBO], [test x$jpeg_turbo_enable = xtrue])
+
 AC_ARG_WITH([camcommon],
       AC_HELP_STRING([with-camcommon=@<:@dir@:>@],
          [Specify the location of Camera stack common headers]),
@@ -143,11 +143,17 @@ AC_ARG_WITH([openmax],
          [Specify the location of OpenMAX headers]),
       [openmax_incdir=$withval])
 
+AC_ARG_WITH([displaysync],
+      AC_HELP_STRING([with-displaysync=@<:@dir@:>@],
+         [Specify the location of Display Sync headers]),
+      [displaysync_incdir=$withval])
+
 AC_SUBST([CAMERASTACKCOMMON_CFLAGS], "${camcommon_incdir}")
 AC_SUBST([CAMERAINTERFACE_CFLAGS], "${camiface_incdir}")
 AC_SUBST([EXIF_CFLAGS], "${exif_incdir}")
 AC_SUBST([OMXCORE_CFLAGS], "${omxcore_incdir}")
 AC_SUBST([OPENMAX_CFLAGS], "${openmax_incdir}")
+AC_SUBST([DISPLAYSYNC_CFLAGS], "${displaysync_incdir}")
 
 AC_SUBST([CFLAGS])
 AC_SUBST([CPPFLAGS])
@@ -161,6 +167,7 @@ AC_SUBST([OPENMAX_CFLAGS], "${openmax_incdir}")
 
 AC_CONFIG_FILES([ \
     Makefile \
+    common/utils/Makefile \
     common/overlay/Makefile \
     common/cameraadaptor/Makefile \
     common/audio/src/client/Makefile \
@@ -174,7 +181,7 @@ AC_CONFIG_FILES([ \
     display/src/service/Makefile \
     recorder/src/client/Makefile \
     recorder/src/service/post-process/modules/test/Makefile \
-    recorder/src/service/post-process/modules/camera-hal-jpeg/Makefile \
+    recorder/src/service/post-process/modules/frame-skip/Makefile \
     recorder/src/service/post-process/modules/camera-hal-reproc/Makefile \
     recorder/src/service/post-process/modules/jpeg-encoder/Makefile \
     recorder/src/service/post-process/modules/algo/Makefile \

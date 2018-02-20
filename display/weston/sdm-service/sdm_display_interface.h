@@ -63,6 +63,7 @@ enum {
        SDM_BUFFER_FORMAT_NV12_ENCODEABLE,
        SDM_BUFFER_FORMAT_YCbCr_420_TP10_UBWC,
        SDM_BUFFER_FORMAT_YCbCr_420_P010_UBWC,
+       SDM_BUFFER_FORMAT_P010,
        SDM_BUFFER_FORMAT_YCbCr_420_SP_VENUS,
        SDM_BUFFER_FORMAT_YCbCr_420_SP_VENUS_UBWC,
        SDM_BUFFER_FORMAT_YCbCr_422_SP,
@@ -86,6 +87,7 @@ enum {
 enum {
        SDM_BLENDING_NONE = 0,
        SDM_BLENDING_PREMULTIPLIED,
+       SDM_BLENDING_COVERAGE,
 };
 
 /* Rotation type*/
@@ -195,6 +197,14 @@ struct DisplayHdrInfo{
   uint32_t max_luminance; //!< From Panel's peak luminance
   uint32_t average_luminance; //!< From Panel's average luminance
   uint32_t min_luminance; //!< From Panel's blackness level
+};
+
+/**
+ * List of HDCP capabilities of display
+ */
+struct DisplayHdcpProtocol{
+  uint32_t hdcp_version; //!< HDCP version number
+  uint32_t hdcp_interface_type; //!< HDCP phycical-layer interface
 };
 
 struct DisplayConfigInfo {

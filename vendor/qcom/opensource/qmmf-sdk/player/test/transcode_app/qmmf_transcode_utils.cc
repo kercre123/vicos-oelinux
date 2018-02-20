@@ -29,7 +29,8 @@
 
 #include "qmmf_transcode_params.h"
 
-#define TAG "TranscodeBuffer"
+#undef LOG_TAG
+#define LOG_TAG "TranscodeBuffer"
 
 namespace qmmf {
 namespace transcode {
@@ -89,12 +90,12 @@ TranscodeBuffer::TranscodeBuffer(const BufferOwner owner,
   if (num_instances_.value() == 0 && ion_device_ < 0) {
     ion_device_ = open("/dev/ion", O_RDONLY);
     if (ion_device_ < 0) {
-      QMMF_ERROR("%s:%s Ion dev open failed %s", TAG, __func__,
+      QMMF_ERROR("%s Ion dev open failed %s", __func__,
                  strerror(errno));
       ion_device_ = -1;
       assert(0);
     } else {
-      QMMF_INFO("%s:%s Ion dev open success %d", TAG, __func__, ion_device_);
+      QMMF_INFO("%s Ion dev open success %d", __func__, ion_device_);
     }
   }
   num_instances_++;
@@ -105,16 +106,16 @@ TranscodeBuffer::~TranscodeBuffer() {
   if (num_instances_.value() <= 0) {
     close(ion_device_);
     ion_device_ = -1;
-    QMMF_INFO("%s:%s Ion Device Closed", TAG, __func__);
+    QMMF_INFO("%s Ion Device Closed", __func__);
   }
 }
 
 status_t TranscodeBuffer::Allocate(const uint32_t size) {
-  QMMF_DEBUG("%s:%s Enter", TAG, __func__);
+  QMMF_DEBUG("%s Enter", __func__);
 
   status_t ret = 0;
   if (size <= 0) {
-    QMMF_ERROR("%s:%s Undefined size(%u)", TAG, __func__, size);
+    QMMF_ERROR("%s Undefined size(%u)", __func__, size);
     return -1;
   }
 
@@ -135,21 +136,21 @@ status_t TranscodeBuffer::Allocate(const uint32_t size) {
 
   ret = ioctl(ion_device_, ION_IOC_ALLOC, &alloc);
   if (ret < 0) {
-    QMMF_ERROR("%s:%s ION allocation failed", TAG, __func__);
+    QMMF_ERROR("%s ION allocation failed", __func__);
     goto ION_ALLOC_FAILED;
   }
 
   ionFdData.handle = alloc.handle;
   ret = ioctl(ion_device_, ION_IOC_SHARE, &ionFdData);
   if (ret < 0) {
-    QMMF_ERROR("%s:%s ION map failed %s", TAG, __func__, strerror(errno));
+    QMMF_ERROR("%s ION map failed %s", __func__, strerror(errno));
     goto ION_MAP_FAILED;
   }
 
   data = mmap(nullptr, alloc.len, PROT_READ | PROT_WRITE, MAP_SHARED,
               ionFdData.fd, 0);
   if (data == MAP_FAILED) {
-    QMMF_ERROR("%s:%s  ION mmap failed: %s (%d)", TAG, __func__,
+    QMMF_ERROR("%s  ION mmap failed: %s (%d)", __func__,
                strerror(errno), errno);
     goto ION_MAP_FAILED;
   }
@@ -165,7 +166,7 @@ status_t TranscodeBuffer::Allocate(const uint32_t size) {
 
   meta_handle_ = (native_handle_create(1, 16));
   if (meta_handle_ == nullptr) {
-    QMMF_ERROR("%s:%s Failed to allocate metabuffer handle", TAG, __func__);
+    QMMF_ERROR("%s Failed to allocate metabuffer handle", __func__);
     goto NATIVE_HANDLE_CREATION_FAILED;
   }
 
@@ -178,7 +179,7 @@ status_t TranscodeBuffer::Allocate(const uint32_t size) {
   meta_handle_->data[3] = 0x200000;
   meta_handle_->data[4] = alloc.len;
 
-  QMMF_DEBUG("%s:%s Exit", TAG, __func__);
+  QMMF_DEBUG("%s Exit", __func__);
   return ret;
 
 NATIVE_HANDLE_CREATION_FAILED:
@@ -189,20 +190,20 @@ ION_MAP_FAILED:
   ioctl(ion_device_, ION_IOC_FREE, &ionHandleData);
 
 ION_ALLOC_FAILED:
-  QMMF_ERROR("%s:%s ION Buffer allocation failed!", TAG, __func__);
-  QMMF_DEBUG("%s:%s Exit", TAG, __func__);
+  QMMF_ERROR("%s ION Buffer allocation failed!", __func__);
+  QMMF_DEBUG("%s Exit", __func__);
   return -1;
 }
 
 void TranscodeBuffer::Release() {
-  QMMF_DEBUG("%s:%s Enter", TAG, __func__);
+  QMMF_DEBUG("%s Enter", __func__);
 
   if (buf_info_.vaddr) {
     munmap(buf_info_.vaddr, buf_info_.buf_size);
     buf_info_.vaddr = nullptr;
   }
 
-  QMMF_DEBUG("%s:%s Releasing buffer with fd(%d)", TAG, __func__, buf_info_.fd);
+  QMMF_DEBUG("%s Releasing buffer with fd(%d)", __func__, buf_info_.fd);
 
   if (buf_info_.fd) {
     ioctl(ion_device_, ION_IOC_FREE, &(buf_info_.ion_handle));
@@ -217,59 +218,66 @@ void TranscodeBuffer::Release() {
     meta_handle_ = nullptr;
   }
 
-  QMMF_DEBUG("%s:%s Exit", TAG, __func__);
+  QMMF_DEBUG("%s Exit", __func__);
 }
 
 status_t TranscodeBuffer::CreateTranscodeBuffersVector(
     const shared_ptr<IAVCodec>& avcodec,
     const BufferOwner owner, const uint32_t port_index,
     vector<TranscodeBuffer>* buffer_list) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   if (buffer_list == nullptr) {
-    QMMF_ERROR("%s:%s Invalid Parameters : buffer_list = nullptr",
-               TAG, __func__);
+    QMMF_ERROR("%s Invalid Parameters : buffer_list = nullptr",
+               __func__);
     return -1;
   }
 
   if (!buffer_list->empty()) {
-    QMMF_ERROR("%s:%s buffer_list_ is not Empty", TAG, __func__);
+    QMMF_ERROR("%s buffer_list_ is not Empty", __func__);
     return -1;
   }
 
   uint32_t count, size;
   ret = avcodec->GetBufferRequirements(port_index, &count, &size);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to get Buffer Requirements", TAG, __func__);
+    QMMF_ERROR("%s Failed to get Buffer Requirements", __func__);
     return ret;
+  }
+
+  // Harcoding the number of output buffers for video encoder
+  // because of hardcoding present in the avcodec for output port
+  // for video encoder
+  if (owner == BufferOwner::kTranscoderSink) {
+    count = OUTPUT_MAX_COUNT;
   }
 
   for (uint32_t i = 0; i < count; i++) {
     TranscodeBuffer buffer(owner, OwnerIndex(owner) | i);
     ret = buffer.Allocate(size);
     if (ret != 0) {
-      QMMF_ERROR("%s:%s Failed to allocate %uth buffer", TAG, __func__, i + 1);
+      QMMF_ERROR("%s Failed to allocate %uth buffer", __func__, i + 1);
       goto release_buffer;
     }
-    QMMF_INFO("%s:%s Buffer allocated with fd(%d)",
-              TAG, __func__, buffer.GetFd());
+    QMMF_INFO("%s Buffer allocated with fd(%d)",
+              __func__, buffer.GetFd());
     buffer_list->push_back(buffer);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 
 release_buffer:
   TranscodeBuffer::FreeTranscodeBuffersVector(buffer_list);
   assert(buffer_list->empty());
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 void TranscodeBuffer::FreeTranscodeBuffersVector(
     vector<TranscodeBuffer>* buffer_list) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   if (buffer_list == nullptr)
     return;
@@ -281,7 +289,7 @@ void TranscodeBuffer::FreeTranscodeBuffersVector(
     buffer_list->erase(buffer_list->begin());
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 FramerateCalculator::FramerateCalculator(uint64_t period, string str)
@@ -422,7 +430,7 @@ status_t VQZipInfoExtractor::ExtractVQZipInfo(VQZipInfo* vqzip_info) {
   QMMF_INFO("VQZipInfoExtractor:%s VQZip parameters extracted, vqzip_info[%s]",
             __func__, vqzip_info->ToString().c_str());
 
-  ret = avcodec_->StopCodec();
+  ret = avcodec_->StopCodec(true);
   if (ret != 0) {
     QMMF_ERROR("VQZipInfoExtractor:%s Failed to Stop Codec", __func__);
     return ret;

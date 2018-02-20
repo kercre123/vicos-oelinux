@@ -289,8 +289,10 @@ QCMAP_Backhaul_WLAN::~QCMAP_Backhaul_WLAN()
   flag=false;
   object=NULL;
   LOG_MSG_INFO1("Destroying Object: BACKHAUL_WLAN",0,0,0);
-  if(!QcMapBackhaulCradleMgr && !QcMapBackhaulWWANMgr && !QcMapBackhaulEthMgr)
-    delete QcMapBackhaulMgr;
+
+  //Default Backhaul manager object should not be deleted
+  //if(!QcMapBackhaulCradleMgr && !QcMapBackhaulWWANMgr && !QcMapBackhaulEthMgr)
+ //   delete QcMapBackhaulMgr;
 }
 
 /*===========================================================================
@@ -805,7 +807,7 @@ FUNCTION IsAPSTABridgeActivated
   void
 
 @return
-  true	- on Success
+  true  - on Success
   false - on Failure
 @note
 
@@ -1808,6 +1810,16 @@ void QCMAP_Backhaul_WLAN::ProcessStaDHCPIPFail(void *cb_user_data)
     {
       QcMapBackhaulMgr->EnableIPV6Forwarding();
       QcMapFirewall->EnableIPV6Firewall();
+      if(QCMAPLANMgr &&
+        (QCMAP_MSGR_DHCPV6_MODE_UP_V01 !=
+         QcMapBackhaulMgr->QcMapBackhaulWWAN->dhcpv6_dns_conf.dhcpv6_enable_state) &&
+        (QcMapBackhaulMgr->QcMapBackhaulWWAN->GetProfileHandle() ==
+         QCMAP_Backhaul::GetDefaultProfileHandle()) &&
+        (QcMapBackhaulMgr->QcMapBackhaulWWAN->GetProfileHandle() != 0))
+      {
+        QCMAPLANMgr->AddDNSNameServers(QcMapBackhaulMgr->QcMapBackhaulWWAN->pri_dns_ipv6_addr,
+                                       QcMapBackhaulMgr->QcMapBackhaulWWAN->sec_dns_ipv6_addr);
+      }
     }
   }
   else /* If Static IP is configured then configure Bridge with static IP */

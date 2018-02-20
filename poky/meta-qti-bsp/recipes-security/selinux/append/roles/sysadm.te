@@ -27,3 +27,5 @@
 
 #============= sysadm_t ==============
 systemd_start_power_units(sysadm_t)
+
+allow sysadm_t init_t:unix_stream_socket { read write };

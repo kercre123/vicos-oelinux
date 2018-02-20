@@ -741,7 +741,6 @@ int32_t iface_ispif_streamoff(iface_t *iface, iface_session_t *session,
 
       } else {
         CDBG_ERROR("%s: ISPIF_CFG error = %d\n", __func__, rc);
-        assert(fd == 0);
 
         pthread_mutex_unlock(&ispif->mutex);
         return rc;

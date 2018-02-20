@@ -31,11 +31,11 @@
 
 set -o xtrace
 
-if [ "$#" -ne 3 ]; then
-    echo "Usage  : $0 target_files_zipfile rootfs_path ext4_or_ubi"
+if [ "$#" -lt 3 ]; then
+    echo "Usage  : $0 target_files_zipfile rootfs_path ext4_or_ubi [-c fsconfig_file [-p prefix]]"
     echo "------------------------------------------------------------------"
     echo "example: $0 target_files_ubi.zip  machine_image/1.0-r0/rootfs ubi"
-    echo "example: $0 target_files_ext4.zip machine_image/1.0-r0/rootfs ext4"
+    echo "example: $0 target_files_ext4.zip machine_image/1.0-r0/rootfs ext4 -p system/ -c fsconfig.conf"
     exit 1
 fi
 
@@ -45,24 +45,34 @@ export LD_LIBRARY_PATH=${STAGING_LIBDIR_NATIVE}
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
+export FSCONFIGFOPTS=" "
+
+if [ "$#" -gt 3 ]; then
+    IFS=' ' read -a allopts <<< "$@"
+    i=4
+    for i in $(seq 3 $#); do
+        FSCONFIGFOPTS=$FSCONFIGFOPTS${allopts[${i}]}" "
+    done
+fi
 
 # Specify MMC or MTD type device. MTD by default
 [[ $3 = "ext4" ]] && device_type="MMC" || device_type="MTD"
 
-rm -rf target_files
-unzip -qo $1 -d target_files
-mkdir -p target_files/META
-mkdir -p target_files/SYSTEM
+target_files=target_files_$3
+rm -rf $target_files
+unzip -qo $1 -d $target_files
+mkdir -p $target_files/META
+mkdir -p $target_files/SYSTEM
 
 # Generate selabel rules only if file_contexts is packed in target-files
-if grep "selinux_fc" target_files/META/misc_info.txt
+if grep "selinux_fc" $target_files/META/misc_info.txt
 then
-    zipinfo -1 $1 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config -C -S target_files/BOOT/RAMDISK/file_contexts -D ${2} > target_files/META/filesystem_config.txt
+    zipinfo -1 $1 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config ${FSCONFIGFOPTS} -C -S $target_files/BOOT/RAMDISK/file_contexts -D ${2} > $target_files/META/filesystem_config.txt
 else
-    zipinfo -1 $1 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config -D ${2} > target_files/META/filesystem_config.txt
+    zipinfo -1 $1 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config ${FSCONFIGFOPTS} -D ${2} > $target_files/META/filesystem_config.txt
 fi
 
-cd target_files && zip -q ../$1 META/*filesystem_config.txt SYSTEM/build.prop && cd ..
+cd $target_files && zip -q ../$1 META/*filesystem_config.txt SYSTEM/build.prop && cd ..
 
 python3 ./ota_from_target_files -n -v -d $device_type -p . -s "${WORKSPACE}/android_compat/device/qcom/common" --no_signing  $1 update_$3.zip > ota_debug.txt 2>&1
 

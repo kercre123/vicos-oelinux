@@ -5,8 +5,9 @@
     @brief
     Implements functions supported in cri_event_lookup.h.
 
-    Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved.
-    Qualcomm Technologies Proprietary and Confidential.
+    Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
+    All Rights Reserved.
+    Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #include "cri_event_lookup.h"
@@ -27,9 +28,11 @@ core_event_lookup_map_type cri_control_map[] =
 
 };
 
-
-
-
+core_event_lookup_map_type cri_srv_status_map[] =
+{
+    {SRV_DOWN, cri_core_service_down_event_hdlr},
+    {SRV_UP, cri_core_service_up_event_hdlr},
+};
 
 /***************************************************************************************************
     @function
@@ -96,3 +99,68 @@ void* cri_event_lookup_control_handler(control_core_control_event_data_type
     return event_handler;
 }
 
+/***************************************************************************************************
+    @function
+    cri_core_lookup_service_down_handler
+
+    @implementation detail
+    None.
+***************************************************************************************************/
+void* cri_core_lookup_service_down_handler(cri_core_service_down_event_data_type
+                                       *cri_core_service_down_event_data)
+{
+    void *event_handler;
+    unsigned long event_id;
+    core_event_lookup_map_type *event_map;
+    int event_map_len;
+
+    event_handler = NULL;
+    event_id = NIL;
+    event_map = NULL;
+    event_map_len = NIL;
+
+    if(cri_core_service_down_event_data)
+    {
+        event_id = cri_core_service_down_event_data->event_id;
+        event_map = cri_srv_status_map;
+        event_map_len = UTIL_ARR_SIZE(cri_srv_status_map);
+        event_handler = core_event_lookup_map_checker(event_id,
+                                                      event_map,
+                                                      event_map_len);
+    }
+
+    return event_handler;
+}
+
+/***************************************************************************************************
+    @function
+    cri_core_lookup_service_up_handler
+
+    @implementation detail
+    None.
+***************************************************************************************************/
+void* cri_core_lookup_service_up_handler(cri_core_service_up_event_data_type
+                                       *cri_core_service_up_event_data)
+{
+    void *event_handler;
+    unsigned long event_id;
+    core_event_lookup_map_type *event_map;
+    int event_map_len;
+
+    event_handler = NULL;
+    event_id = NIL;
+    event_map = NULL;
+    event_map_len = NIL;
+
+    if(cri_core_service_up_event_data)
+    {
+        event_id = cri_core_service_up_event_data->event_id;
+        event_map = cri_srv_status_map;
+        event_map_len = UTIL_ARR_SIZE(cri_srv_status_map);
+        event_handler = core_event_lookup_map_checker(event_id,
+                                                      event_map,
+                                                      event_map_len);
+    }
+
+    return event_handler;
+}

@@ -20,6 +20,12 @@ SERIAL_CONSOLE ?= "115200 ttyHSL0"
 
 DISTRO ?= "msm"
 
+# Change default jpeg provider to turbo jpeg
+PREFERRED_PROVIDER_jpeg = "libjpeg-turbo"
+
+# iproute2 bump version to 4.1.1
+PREFERRED_VERSION_iproute2 = "4.1.1"
+
 DISTRO_FEATURES += "persist-image"
 
 MACHINE_FEATURES += "kernel26 keyboard"
@@ -46,3 +52,6 @@ RECOVERY_IMAGE ?= "1"
 
 # Formats of root filesystem images.
 IMAGE_FSTYPES += "ext4"
+
+#Extra fsconfig related options for ota package generator scripts.
+OTA_EXTRA_OPTS ?= "1"

@@ -228,3 +228,4 @@ Camera.no_navigation_bar=true
 persist.camera.af.infinity=1
 persist.camera.swtnr.preview=1
 persist.camera.analysis.enable=1
+persist.camera.lpm.preview=1

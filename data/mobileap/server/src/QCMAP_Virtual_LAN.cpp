@@ -248,9 +248,19 @@ boolean QCMAP_Virtual_LAN::DeleteVLANConfig
   QCMAP_Virtual_LAN* QcMapVLANMgr=
                                   QCMAP_Virtual_LAN::Get_Instance(false);
   QCMAP_L2TP* QcMapL2TPMgr= QCMAP_L2TP::Get_Instance(false);
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
   qcmap_vlan_id_list_t* vlan_id_list;
   ds_dll_el_t * node = NULL;
   /*------------------------------------------------------------------------*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("VLAN is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   /* VLAN manager cannot be NULL as VLAN object will be created at MobileAP
   enable. So returning, error if VLAN object is NULL*/
   if (!QcMapVLANMgr)
@@ -497,7 +507,17 @@ boolean QCMAP_Virtual_LAN::GetVLANConfig
   qcmap_vlan_info_list_t  *vlan_list;
   int num_vlan_config = 0;
   *qmi_err_num= QMI_ERR_NONE_V01;
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
   /*------------------------------------------------------------------------*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("VLAN is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   if (NULL == vlan_config || NULL == length)
   {
     LOG_MSG_ERROR("GetVLANConfig(),Invalid parameters passedt\n",0,0,0);
@@ -827,9 +847,20 @@ boolean QCMAP_Virtual_LAN::SetVLANConfig
   *qmi_err_num= QMI_ERR_NONE_V01;
   uint16     *vlan_id_node = NULL;
   QCMAP_L2TP* QcMapL2TPMgr= QCMAP_L2TP::Get_Instance(false);
-/*------------------------------------------------------------------------*/
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
   phy_iface_type = QCMAP_Virtual_LAN::GetIfaceTypeFromIface(
                                                      vlan_config.local_iface);
+/*------------------------------------------------------------------------*/
+
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("VLAN is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   if (QCMAP_TETH_MIN == phy_iface_type)
   {
     LOG_MSG_ERROR("SetVLANConfig(),Unsupported iface-name:%s passed"\
@@ -1052,8 +1083,17 @@ QCMAP_Virtual_LAN::QCMAP_Virtual_LAN()
 {
   char v6add_str[INET6_ADDRSTRLEN] = {0};
   QCMAP_LAN* QCMAPLANMgr=QCMAP_LAN::Get_Instance(false);
-
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("VLAN is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    return;
+  }
+
   memset(this->physical_iface,0,\
          QCMAP_MAX_PHY_LAN_IFACE*sizeof(phy_iface_type_t));
 

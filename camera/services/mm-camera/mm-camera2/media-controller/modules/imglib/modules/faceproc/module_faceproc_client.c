@@ -842,7 +842,7 @@ int module_faceproc_client_req_divert(faceproc_stream_t *p_stream,
  *
  * Notes: none
  **/
-inline int module_faceproc_client_get_buf(faceproc_client_t *p_client)
+static inline int module_faceproc_client_get_buf(faceproc_client_t *p_client)
 {
   int32_t idx = p_client->buf_idx;
   p_client->buf_idx = (p_client->buf_idx + 1) % MAX_NUM_FD_FRAMES;
@@ -2036,7 +2036,7 @@ void module_faceproc_post_bus_msg(mct_module_t *p_mct_mod,
  *
  * Notes: none
  **/
-inline boolean module_faceproc_client_check_fd_boundary(
+static inline boolean module_faceproc_client_check_fd_boundary(
   cam_face_detection_info_t *p_faces,
   int width,
   int height)
@@ -4159,7 +4159,8 @@ int module_faceproc_client_create(mct_module_t *p_mct_mod, mct_port_t *p_port,
 
   int rc = IMG_SUCCESS;
   faceproc_client_t *p_client = NULL;
-
+  pthread_condattr_t cond_attr;
+  
   module_faceproc_t *p_mod = (module_faceproc_t *)p_mct_mod->module_private;
   int fd_feature_mask = 0;
   uint32_t total_delay;
@@ -4183,7 +4184,15 @@ int module_faceproc_client_create(mct_module_t *p_mct_mod, mct_port_t *p_port,
   /* initialize the variables */
   memset(p_client, 0x0, sizeof(faceproc_client_t));
   pthread_mutex_init(&p_client->mutex, &attr);
-  pthread_cond_init(&p_client->cond, NULL);
+  rc = pthread_condattr_init(&cond_attr);
+  if (rc) {
+    IDBG_ERROR("%s: pthread_condattr_init failed", __func__);
+  }
+  rc = pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+  if (rc) {
+    IDBG_ERROR("%s: pthread_condattr_setclock failed!!!", __func__);
+  }
+  pthread_cond_init(&p_client->cond, &cond_attr);  
   pthread_mutex_init(&p_client->result_mutex, NULL);
   p_client->threadid = -1;
   p_client->state = IMGLIB_STATE_IDLE;

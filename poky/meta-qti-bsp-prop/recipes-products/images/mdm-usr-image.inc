@@ -102,7 +102,7 @@ create_archive_usr_img() {
 
 create_usr_ext4_img() {
    if [ "${BASEMACHINE}" != "mdm9607" ]; then
-   make_ext4fs -s -l ${USERDATA_SIZE_EXT4} ${OUTPUT_FILE_EXT4} ${USR_IMAGE_ROOTFS}
+   make_ext4fs ${USRFS_FSCONFIG} ${MAKEEXT4_MOUNT_OPT} -s -l ${USERDATA_SIZE_EXT4} ${OUTPUT_FILE_EXT4} ${USR_IMAGE_ROOTFS}
    chmod 644 ${OUTPUT_FILE_EXT4}
    fi
 }

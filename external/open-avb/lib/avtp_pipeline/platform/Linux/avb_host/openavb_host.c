@@ -48,47 +48,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 
 bool bRunning = TRUE;
 
-// Platform indendent mapping modules
-extern bool openavbMapPipeInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapAVTPAudioInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapCtrlInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapH264Initialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapMjpegInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapMpeg2tsInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapNullInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapUncmpAudioInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-
-// Platform indendent interface modules
-extern bool openavbIntfEchoInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfCtrlInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfLoggerInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfNullInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfToneGenInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfViewerInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-
-// Linux interface modules
-#ifdef ANDROID
-extern bool openavbIntfMpeg2tsFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfWavFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfMjpegFileInitialize(media_q_t * pMediaQ,openavb_intf_cb_t * pIntfCB);
-extern bool openavbIntfMjpegOpenglInitialize(media_q_t * pMediaQ,openavb_intf_cb_t * pIntfCB);
-extern bool openavbIntfTinyalsaInitialize(media_q_t * pMediaQ,openavb_intf_cb_t * pIntfCB);
-extern bool openavbIntfH264RtpFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfH264StreamInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfMpeg2tsStreamInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-#else
-extern bool openavbIntfAlsaInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-#ifdef AVB_FEATURE_INTF_ALSA2
-extern bool openavbIntfAlsa2Initialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfAlsa2DualInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-#endif
-extern bool openavbIntfMjpegGstInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfMpeg2tsFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfMpeg2tsGstInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfWavFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfH264RtpGstInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-#endif
-
 /***********************************************
  * Signal handler - used to respond to signals.
  * Allows graceful cleanup.
@@ -211,48 +170,6 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	registerStaticMapModule(openavbMapPipeInitialize);
-	registerStaticMapModule(openavbMapAVTPAudioInitialize);
-	registerStaticMapModule(openavbMapCtrlInitialize);
-	registerStaticMapModule(openavbMapH264Initialize);
-	registerStaticMapModule(openavbMapMjpegInitialize);
-	registerStaticMapModule(openavbMapMpeg2tsInitialize);
-	registerStaticMapModule(openavbMapNullInitialize);
-	registerStaticMapModule(openavbMapUncmpAudioInitialize);
-
-	registerStaticIntfModule(openavbIntfEchoInitialize);
-	registerStaticIntfModule(openavbIntfCtrlInitialize);
-	registerStaticIntfModule(openavbIntfLoggerInitialize);
-	registerStaticIntfModule(openavbIntfNullInitialize);
-	//registerStaticIntfModule(openavbIntfToneGenInitialize);
-	registerStaticIntfModule(openavbIntfViewerInitialize);
-#ifdef ANDROID
-	registerStaticIntfModule(openavbIntfMpeg2tsFileInitialize);
-	registerStaticIntfModule(openavbIntfWavFileInitialize);
-	registerStaticIntfModule(openavbIntfMjpegFileInitialize);
-	registerStaticIntfModule(openavbIntfTinyalsaInitialize);
-	registerStaticIntfModule(openavbIntfMjpegOpenglInitialize);
-	registerStaticIntfModule(openavbIntfH264RtpFileInitialize);
-	registerStaticIntfModule(openavbIntfH264StreamInitialize);
-	registerStaticIntfModule(openavbIntfMpeg2tsStreamInitialize);
-#else
-	registerStaticIntfModule(openavbIntfAlsaInitialize);
-#ifdef AVB_FEATURE_INTF_ALSA2
-	registerStaticIntfModule(openavbIntfAlsa2Initialize);
-	registerStaticIntfModule(openavbIntfAlsa2DualInitialize);
-#endif
-#ifdef AVB_FEATURE_GSTREAMER
-	registerStaticIntfModule(openavbIntfMjpegGstInitialize);
-#endif
-	registerStaticIntfModule(openavbIntfMpeg2tsFileInitialize);
-#ifdef AVB_FEATURE_GSTREAMER
-	registerStaticIntfModule(openavbIntfMpeg2tsGstInitialize);
-#endif
-	registerStaticIntfModule(openavbIntfWavFileInitialize);
-#ifdef AVB_FEATURE_GSTREAMER
-	registerStaticIntfModule(openavbIntfH264RtpGstInitialize);
-#endif
-#endif
 	tlHandleList = calloc(1, sizeof(tl_handle_t) * tlCount);
 	if (tlHandleList == NULL) {
 		AVB_LOG_ERROR("Out of memory");

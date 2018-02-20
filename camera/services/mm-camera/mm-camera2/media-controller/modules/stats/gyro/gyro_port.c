@@ -10,13 +10,21 @@
 #include "modules.h"
 #include "stats_module.h"
 #include "stats_event.h"
-#include "dsps_hw_interface.h"
-#include "dsps_hw.h"
 #include "aec.h"
 #include "camera_dbg.h"
 #include "sensor_intf.h"
 #include "sensor_laser.h"
+#include "dsps_hw_interface.h"
+#ifdef FEATURE_GYRO_DSPS
+ #include "dsps_hw.h"
+#endif
+#ifdef FEATURE_GYRO_IMU
+ #include "imu_driver.h"
+#endif
 
+#ifndef USEC_PER_SEC
+#define USEC_PER_SEC        1000000
+#endif
 #define Q8              (0x00000100)
 #define BUF_SIZE        (4)
 #ifndef MAX
@@ -117,6 +125,7 @@ typedef struct _gyro_port_private {
   cam_sync_type_t      dual_cam_sensor_info;
   uint32_t             intra_peer_id;
   sensor_android_fmwk_mask sensor_intf_mask;
+  void *imu_handle;
 } gyro_port_private_t;
 
 /** initCallbackRegisters:
@@ -380,6 +389,21 @@ inline static boolean gyro_port_use_dsps_iface(unsigned int mask)
   return rc;
 }
 
+inline static boolean gyro_port_use_imu_iface()
+{
+  boolean rc = TRUE;
+
+  /*Use android interface as default as per make file*/
+#ifndef FEATURE_GYRO_IMU
+    rc = FALSE;
+    IS_HIGH("Native sensor interface is default");
+#else
+    IS_HIGH("Use IMU interface");
+    rc = TRUE;
+#endif
+  return rc;
+}
+
 /** gyro_port_handle_sof_event:
  *    @port: gyro port
  *    @event: event object
@@ -461,6 +485,15 @@ static void gyro_port_handle_sof_event(mct_event_t *event, gyro_port_private_t *
     sensor_set.u.data_range.t_end = t_end;
     sensor_set_params(private->and_sens_handle, sensor_set);
   }
+#ifdef FEATURE_GYRO_IMU
+   else if (private->imu_handle != NULL) {
+    stats_request_type request;
+    request.frame_id = sof_event->frame_id;
+    request.t_start = t_start;
+    request.t_end = t_end;
+    imu_driver_request(private->imu_handle, &request);
+  }
+#endif
 }
 
 /** dsps_port_callback_gyro
@@ -814,6 +847,60 @@ static void sensor_event_callback(
   UnLockCallbackRegister();
 }
 
+#ifdef FEATURE_GYRO_IMU
+static void imu_event_callback(
+  void *port,
+  imu_cb_struct_type *cb_event_data)
+{
+  callbackPtr *cbPtr = port;
+  void *gyroPort = cbPtr ->ptr;;
+  gyro_port_private_t *private = ((mct_port_t *)gyroPort)->port_private;
+  unsigned int i, j, k;
+
+  if (cb_event_data->type == TYPE_START) {
+    private->dsps_sensor_list |= GYRO_TYPE;
+  }
+
+  if (cb_event_data->type == TYPE_DATA) {
+    i = cb_event_data->frame_id % BUF_SIZE;
+    if (private->frame_id[i] == cb_event_data->frame_id) {
+      mct_event_imu_stats_t imu_stats;
+      mct_event_t gyro_stats_event;
+      unsigned int j;
+
+      imu_stats.sof = private->sof[i];
+      imu_stats.frame_time = private->frame_time;
+      imu_stats.exposure_time = private->exposure_time[i];
+
+      imu_stats.frame_id = private->frame_id[i];
+
+      /* Verify that IMU API struct sizes match size used by gyro port */
+      if (STATS_GYRO_MAX_SAMPLE_BUFFER_SIZE < cb_event_data->sample_len) {
+        IS_ERR("error: sample_len mismatch");
+        return;
+      }
+      imu_stats.sample_len = cb_event_data->sample_len;
+      for (j = 0; j < cb_event_data->sample_len; j++) {
+        imu_stats.sample[j].timestamp = cb_event_data->samples[j].timestamp;
+        for (k = 0; k < 9; k++) {
+          imu_stats.sample[j].rotation_matrix[k] =
+            cb_event_data->samples[j].sample[k];
+        }
+      }
+
+      gyro_stats_event.type = MCT_EVENT_MODULE_EVENT;
+      gyro_stats_event.identity = private->sof_event_identity;
+      gyro_stats_event.direction = MCT_EVENT_UPSTREAM;
+      gyro_stats_event.u.module_event.type = MCT_EVENT_MODULE_STATS_IMU_STATS;
+      gyro_stats_event.u.module_event.module_event_data = &imu_stats;
+      mct_port_send_event_to_peer(gyroPort, &gyro_stats_event);
+    } else {
+       IS_ERR("gyro_port queue overflow");
+    }
+  }
+}
+#endif
+
 /** gyro_port_init_sensors:
  *    @port: gyro port
  *
@@ -837,14 +924,30 @@ boolean gyro_port_init_sensors(mct_port_t *port)
       IS_ERR("DSPS fail to init");
     }
   }
+#ifdef FEATURE_GYRO_IMU
+  LOGE("Try to initialize IMU");
+  /* Init IMU interface */
+  if(gyro_port_use_imu_iface()) {
+    private->imu_handle = imu_driver_init(private->cbPtr, imu_event_callback);
+    if(private->imu_handle == NULL) {
+      IS_ERR("Error initializing IMU sensor");
+      rc = FALSE;
+    } else {
+      rc = TRUE;
+    }
+  }
+#else
+  private->imu_handle = NULL;
+#endif
 
   /* Try using Android Sensor Interface if
      - dsps interface isn't enabled, or
+     - IMU interface isn't enabled, or
      - android sensor interface is enabled through setprop
    */
   if ((SENSOR_ANDROID_FMWK_DISABLE != private->sensor_intf_mask) ||
-    (NULL == private->dsps_handle)) {
-    /* DSPS not available, try using Android sensor interface */
+    ((NULL == private->dsps_handle) && !gyro_port_use_imu_iface())) {
+    /* DSPS not available and IMU is not available, try using Android sensor interface */
     /* Initialization done here to make sure sensors start before requesting
            to enable at dsps_port_enable_disable_request() */
     IS_HIGH("Init Android sensor intf");
@@ -890,6 +993,13 @@ static void gyro_port_deinit_sensors(gyro_port_private_t *private)
     sensor_laser_deinit(private->laser_sns_hndl);
     private->laser_sns_hndl = NULL;
   }
+
+#ifdef FEATURE_GYRO_IMU
+  if (NULL != private->imu_handle) {
+    imu_driver_deinit(private->imu_handle);
+    private->imu_handle = NULL;
+  }
+#endif
 }
 
 /** dsps_port_handle_set_is_enable
@@ -934,8 +1044,11 @@ int dsps_port_handle_set_is_enable(gyro_port_private_t *private,
       new_gyro_sample_rate = private->gyro_sample_rate_eis;
     }
 
-    if(private->is_type[SENSORS_VIDEO] == IS_TYPE_EIS_DG)
+    if(private->is_type[SENSORS_VIDEO] == IS_TYPE_EIS_DG) {
       new_gyro_sample_rate = GYRO_SAMPLE_RATE_DG;
+    } else if(private->is_type[SENSORS_VIDEO] == IS_TYPE_DIG_GIMB) {
+      new_gyro_sample_rate = GYRO_SAMPLE_RATE_DG;
+    }
   } else {
     if (private->gyro_sample_rate == private->gyro_sample_rate_eis ||
         private->gyro_sample_rate == GYRO_SAMPLE_RATE_DG) {
@@ -1428,7 +1541,8 @@ static boolean gyro_port_event(mct_port_t *port, mct_event_t *event)
           if (common_param->u.stream_on) {
             /* Initialize sensor framework if it's not been done before */
             if ((NULL == private->dsps_handle) &&
-              (NULL == private->and_sens_handle)) {
+              (NULL == private->and_sens_handle) &&
+              (NULL == private->imu_handle)) {
               IS_HIGH("Initializing Motion Sensor Framework!!!");
               gyro_port_init_sensors(port);
             }
@@ -1558,10 +1672,15 @@ static boolean gyro_port_ext_link(unsigned int identity,
   MCT_OBJECT_LOCK(port);
   switch (private->state) {
   case GYRO_PORT_STATE_RESERVED:
-  case GYRO_PORT_STATE_UNLINKED:
-    if ((private->reserved_id & 0xFFFF0000) != (identity & 0xFFFF0000)) {
-      break;
+    if ((private->reserved_id & 0xFFFF0000) == (identity & 0xFFFF0000)) {
+      rc = TRUE;
     }
+    break;
+  case GYRO_PORT_STATE_UNLINKED:
+    if ((private->reserved_id & 0xFFFF0000) == (identity & 0xFFFF0000)) {
+      rc = TRUE;
+    }
+    break;
   case GYRO_PORT_STATE_CREATED:
     /* If gyro module requires a thread, indicate here. */
     rc = TRUE;
@@ -1571,6 +1690,11 @@ static boolean gyro_port_ext_link(unsigned int identity,
     if ((private->reserved_id & 0xFFFF0000) == (identity & 0xFFFF0000)) {
       rc = TRUE;
     }
+    #ifdef FEATURE_GYRO_IMU
+    if(private->is_type[SENSORS_VIDEO] == IS_TYPE_DIG_GIMB) {
+      imu_driver_start_session(private->imu_handle);
+    }
+    #endif
     break;
 
   default:
@@ -1615,9 +1739,16 @@ static void gyro_port_unlink(unsigned int identity,
   MCT_OBJECT_LOCK(port);
   if (private->state == GYRO_PORT_STATE_LINKED &&
       (private->reserved_id & 0xFFFF0000) == (identity & 0xFFFF0000)) {
+
     MCT_OBJECT_REFCOUNT(port) -= 1;
-    if (!MCT_OBJECT_REFCOUNT(port))
+    if (!MCT_OBJECT_REFCOUNT(port)) {
       private->state = GYRO_PORT_STATE_UNLINKED;
+      #ifdef FEATURE_GYRO_IMU
+      if(private->is_type[SENSORS_VIDEO] == IS_TYPE_DIG_GIMB) {
+        imu_driver_stop_session(private->imu_handle);
+      }
+      #endif
+    }
   }
   MCT_OBJECT_UNLOCK(port);
   mct_port_remove_child(identity, port);

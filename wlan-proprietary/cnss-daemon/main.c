@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
 #ifdef ANDROID
 	if (cnss_gw_update_init()) {
 		wsvc_printf_err("Failed to init gw update loop");
-		goto register_fail;
+		goto gw_init_fail;
 	}
 #endif
 

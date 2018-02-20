@@ -110,6 +110,7 @@ extern btav_interface_t *btif_av_get_src_interface();
 #endif
 #if (defined BTA_AV_SINK_INCLUDED && BTA_AV_SINK_INCLUDED == TRUE)
 extern btav_interface_t *btif_avk_get_sink_interface();
+extern btav_sink_vendor_interface_t *btif_avk_get_sink_vendor_interface();
 #endif
 /*rfc l2cap*/
 extern btsock_interface_t *btif_sock_get_interface();
@@ -149,7 +150,8 @@ extern bthf_vendor_interface_t *btif_hf_vendor_get_interface();
 /* vendor avrc target */
 extern btrc_vendor_interface_t *btif_rc_vendor_get_interface();
 /* vendor avrc controller */
-extern btrc_ctrl_vendor_interface_t *btif_rc_ctrl_vendor_get_interface();
+extern btrc_ctrl_vendor_interface_t *btif_avk_rc_ctrl_vendor_get_interface();
+extern btav_vendor_interface_t *btif_av_get_src_vendor_interface();
 
 #if TEST_APP_INTERFACE == TRUE
 extern const btl2cap_interface_t *btif_l2cap_get_interface(void);

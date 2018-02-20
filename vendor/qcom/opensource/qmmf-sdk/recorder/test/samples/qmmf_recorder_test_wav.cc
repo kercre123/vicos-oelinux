@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderTestWav"
+#define LOG_TAG "RecorderTestWav"
 
 #include "recorder/test/samples/qmmf_recorder_test_wav.h"
 
@@ -40,8 +40,11 @@
 #include <mutex>
 #include <string>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "include/qmmf-sdk/qmmf_recorder_params.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 using ::qmmf::AudioFormat;
 using ::qmmf::BufferDescriptor;
@@ -70,32 +73,35 @@ static const char *kFilenameSuffix = ".wav";
 RecorderTestWav::RecorderTestWav()
     : current_data_size_(0),
       close_requested_(false) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 RecorderTestWav::~RecorderTestWav() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 int32_t RecorderTestWav::Configure(const string& filename_prefix,
                                    const uint32_t track_id,
                                    const AudioTrackCreateParam& params) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: filename_prefix[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: filename_prefix[%s]", __func__,
                filename_prefix.c_str());
-  QMMF_VERBOSE("%s: %s() INPARAM: track_id[%u]", TAG, __func__, track_id);
-  QMMF_VERBOSE("%s: %s() INPARAM: params[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() INPARAM: track_id[%u]", __func__, track_id);
+  QMMF_VERBOSE("%s() INPARAM: params[%s]", __func__,
                params.ToString().c_str());
   lock_guard<mutex> lock(lock_);
 
   if (params.format != AudioFormat::kPCM &&
       params.format != AudioFormat::kG711) {
-    QMMF_ERROR("%s: %s() non-WAV format given: %d", TAG, __func__,
+    QMMF_ERROR("%s() non-WAV format given: %d", __func__,
                static_cast<int>(params.format));
     return -EINVAL;
   }
 
   filename_ = filename_prefix;
+  filename_.append("_");
+  filename_.append(to_string(getpid()));
+  filename_.append("_");
   filename_.append(to_string(track_id));
   filename_.append(kFilenameSuffix);
 
@@ -105,17 +111,17 @@ int32_t RecorderTestWav::Configure(const string& filename_prefix,
 }
 
 int32_t RecorderTestWav::Open() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   lock_guard<mutex> lock(lock_);
 
   if (filename_.empty()) {
-    QMMF_ERROR("%s: %s() called in unconfigured state", TAG, __func__);
+    QMMF_ERROR("%s() called in unconfigured state", __func__);
     return -EPERM;
   }
 
   output_.open(filename_.c_str(), ios::out | ios::binary | ios::trunc);
   if (!output_.is_open()) {
-    QMMF_ERROR("%s: %s() error opening file[%s]", TAG, __func__,
+    QMMF_ERROR("%s() error opening file[%s]", __func__,
                filename_.c_str());
     return -EBADF;
   }
@@ -132,7 +138,7 @@ int32_t RecorderTestWav::Open() {
 }
 
 void RecorderTestWav::Close() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   lock_guard<mutex> lock(lock_);
 
   if (output_.is_open())
@@ -140,13 +146,13 @@ void RecorderTestWav::Close() {
 }
 
 int32_t RecorderTestWav::Write(const BufferDescriptor& buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer.ToString().c_str());
   lock_guard<mutex> lock(lock_);
 
   if (!output_.is_open()) {
-    QMMF_WARN("%s: %s() handle is not open, skipping", TAG, __func__);
+    QMMF_WARN("%s() handle is not open, skipping", __func__);
     return 0;
   }
 
@@ -155,8 +161,8 @@ int32_t RecorderTestWav::Write(const BufferDescriptor& buffer) {
     output_.write(reinterpret_cast<const char *>(buffer.data), buffer.size);
     streampos after = output_.tellp();
     if (after - before != buffer.size)
-      QMMF_WARN("%s: %s() failed to write AAC data: size[%u] written[%llu]",
-                TAG, __func__, buffer.size, after - before);
+      QMMF_WARN("%s() failed to write AAC data: size[%u] written[%llu]",
+                __func__, buffer.size, after - before);
 
     current_data_size_ += after - before;
   }
@@ -176,11 +182,10 @@ int32_t RecorderTestWav::Write(const BufferDescriptor& buffer) {
 }
 
 void RecorderTestWav::WritePCMHeader() {
-  WavPCMHeader header;
-  memset(&header, 0x0, sizeof header);
+  WavPCMHeader header{};
 
   int frames = current_data_size_ / (params_.channels * params_.bit_depth / 8);
-  QMMF_INFO("%s: %s() captured %d frames", TAG, __func__, frames);
+  QMMF_INFO("%s() captured %d frames", __func__, frames);
 
   header.riff_header.riff_id = kIdRiff;
   header.riff_header.wave_id = kIdWave;
@@ -201,23 +206,22 @@ void RecorderTestWav::WritePCMHeader() {
   header.riff_header.riff_size = header.data_header.data_size +
                                  sizeof(header) - 8;
 
-  QMMF_VERBOSE("%s: %s() writing PCM riff_header[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing PCM riff_header[%s]", __func__,
                header.riff_header.ToString().c_str());
-  QMMF_VERBOSE("%s: %s() writing PCM chunk_header[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing PCM chunk_header[%s]", __func__,
                header.chunk_header.ToString().c_str());
-  QMMF_VERBOSE("%s: %s() writing PCM chunk_format[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing PCM chunk_format[%s]", __func__,
                header.chunk_format.ToString().c_str());
-  QMMF_VERBOSE("%s: %s() writing PCM data_header[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing PCM data_header[%s]", __func__,
                header.data_header.ToString().c_str());
   output_.write(reinterpret_cast<const char*>(&header), sizeof header);
 }
 
 void RecorderTestWav::WriteG711Header() {
-  WavG711Header header;
-  memset(&header, 0x0, sizeof header);
+  WavG711Header header{};
 
   int frames = current_data_size_ / params_.channels;
-  QMMF_INFO("%s: %s() captured %d frames", TAG, __func__, frames);
+  QMMF_INFO("%s() captured %d frames", __func__, frames);
 
   header.riff_header.riff_id = kIdRiff;
   header.riff_header.wave_id = kIdWave;
@@ -244,15 +248,15 @@ void RecorderTestWav::WriteG711Header() {
   header.riff_header.riff_size = header.data_header.data_size +
                                  sizeof(header) - 8;
 
-  QMMF_VERBOSE("%s: %s() writing G711 riff_header[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing G711 riff_header[%s]", __func__,
                header.riff_header.ToString().c_str());
-  QMMF_VERBOSE("%s: %s() writing G711 chunk_header[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing G711 chunk_header[%s]", __func__,
                header.chunk_header.ToString().c_str());
-  QMMF_VERBOSE("%s: %s() writing G711 chunk_format[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing G711 chunk_format[%s]", __func__,
                header.chunk_format.ToString().c_str());
-  QMMF_VERBOSE("%s: %s() writing G711 fact_header[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing G711 fact_header[%s]", __func__,
                header.fact_header.ToString().c_str());
-  QMMF_VERBOSE("%s: %s() writing G711 data_header[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() writing G711 data_header[%s]", __func__,
                header.data_header.ToString().c_str());
   output_.write(reinterpret_cast<const char*>(&header), sizeof header);
 }

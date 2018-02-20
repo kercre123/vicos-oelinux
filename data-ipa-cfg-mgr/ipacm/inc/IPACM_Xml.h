@@ -46,6 +46,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <netinet/ether.h>
 #include <stdint.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -185,6 +186,7 @@ if (!(a)) {                                                 \
 
 #define IP_PassthroughFlag_TAG               "IPPassthroughFlag"
 #define IP_PassthroughMode_TAG               "IPPassthroughMode"
+#define IP_PassthroughMacAddr_TAG            "IPPassthroughMacAddr"
 
 #ifdef FEATURE_IPACM_PER_CLIENT_STATS
 #define LAN_Stats_TAG                        "LANStats"
@@ -301,6 +303,7 @@ typedef struct  _IPACM_conf_t
 	bool odu_embms_enable;
 	int num_wlan_guest_ap;
 	bool ip_passthrough_mode;
+	struct ether_addr ip_passthrough_mac;
 #ifdef FEATURE_IPACM_PER_CLIENT_STATS
 	bool lan_stats_enable;
 #endif

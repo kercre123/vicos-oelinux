@@ -870,7 +870,7 @@ bool add_iot_device(const char *filename, char* header,
     char *header_end = NULL;
     int index = 0, i, len = 0;
 
-    if((header == NULL) || (device_details == NULL)) {
+    if ((header == NULL) || (device_details == NULL) || (strlen(header) > MAX_LINE)) {
         ALOGE("Error adding device to the list: Invalid input data");
         return false;
     }
@@ -893,7 +893,7 @@ bool add_iot_device(const char *filename, char* header,
 
     line_start[index++] = '=';
     /* then copy the device addr/device name */
-    if(method_type == METHOD_BD) {
+    if (method_type == METHOD_BD && ((index + 3* sizeof(char) + 1) < MAX_LINE)) {
         /* for addr take first 3 bytes */
         for(i = 0; i < 3; i++) {
             if(i < 2) {
@@ -907,10 +907,17 @@ bool add_iot_device(const char *filename, char* header,
             index += len;
         }
     }
-    else if(method_type == METHOD_NAME) {
+    else if (method_type == METHOD_NAME && ((index + strlen((const char*)device_details)
+                                                                       + 1) < MAX_LINE)) {
         len = strlcpy(&line_start[index], (const char*) device_details,
                         strlen((const char*)device_details) + 1);
         index += len;
+    }
+    else {
+        ALOGE("Error adding device to the list: Invalid input data");
+        fclose(iot_devlist_fp);
+        pthread_mutex_unlock(&iot_mutex_lock);
+        return false;
     }
     /* append the new line characer at the end */
     line_start[index++] = '\n';

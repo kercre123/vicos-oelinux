@@ -7,10 +7,10 @@ PR = "r0"
 SRC_DIR = "${WORKSPACE}/neutrino-noship/"
 S = "${WORKDIR}/neutrino-noship"
 
-FILES_${PN} = "/lib/firmware/DWC_ETH_QOS_fw.bin"
+FILES_${PN} = "/lib/firmware/*.bin"
 
 do_install() {
     install -d ${D}/lib/firmware
-    install -m 0644 ${S}/firmware_mdm/DWC_ETH_QOS_fw.bin ${D}/lib/firmware/
+    install -m 0644 ${S}/firmware_mdm/*.bin ${D}/lib/firmware/
     install -m 0644 ${S}/NOTICE ${D}/
 }

@@ -39,6 +39,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 #define CDBG_ERROR ALOGE
 #undef CDBG_HIGH
 #define CDBG_HIGH ALOGE
+#define PROPERTY_VALUE_MAX 32
 
 #define PAD_TO_SIZE(size, padding)  ((size + padding - 1) & ~(padding - 1))
 #define ALL_ONES_16(x) (x ? (((uint16_t)~0) << (16-x)) : 0)

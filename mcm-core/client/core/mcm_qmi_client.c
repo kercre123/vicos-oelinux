@@ -1,7 +1,8 @@
 
 /*************************************************************************************
- Copyright (c) 2013-2014 Qualcomm Technologies, Inc.  All Rights Reserved.
- Qualcomm Technologies Proprietary and Confidential.
+ Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+ All Rights Reserved.
+ Confidential and Proprietary - Qualcomm Technologies, Inc.
 **************************************************************************************/
 
 #include "mcm_utils.h"
@@ -86,6 +87,7 @@ void mcm_qmi_ind_cb
     int                              ind_data_len = 0;
     mcm_client_handle_type           mcm_clnt_hndl = 0;
     uint32                           ret_val = MCM_SUCCESS_V01;
+    mcm_dm_radio_mode_changed_event_ind_msg_v01 *mcm_radio_status = NULL;
 
     LOG_MSG_INFO("mcm_qmi_ind_cb ENTER msg_id:%x", msg_id);
 
@@ -273,6 +275,23 @@ void mcm_qmi_ind_cb
             (*ind_cb)(mcm_clnt_hndl, msg_id, ind_data, ind_data_len);
         }
     }
+
+    if(msg_id == MCM_DM_RADIO_MODE_CHANGED_EVENT_IND_V01)
+    {
+        mcm_radio_status = (mcm_dm_radio_mode_changed_event_ind_msg_v01*)ind_data;
+        if((NULL != mcm_radio_status) && (mcm_radio_status->radio_mode_valid))
+        {
+            if(MCM_DM_RADIO_MODE_UNAVAILABLE_V01 == mcm_radio_status->radio_mode)
+            {
+                mcm_update_ssr_status(TRUE);
+            }
+            else
+            {
+                mcm_update_ssr_status(FALSE);
+            }
+        }
+    }
+
     if (NULL != ind_data)
     {
         mcm_util_memory_free(&ind_data);
@@ -541,7 +560,7 @@ qmi_client_error_type server_execute_sync
                                         resp_c_struct,
                                         resp_c_struct_len,
                                         timeout_msecs);
-
+    qmi_util_log("ret_val:%d", ret_val);
 #endif
 
     return ret_val;
@@ -590,7 +609,7 @@ qmi_client_error_type server_execute_async
                                         resp_cb,
                                         resp_cb_data,
                                         txn_handle);
-
+    qmi_util_log("ret_val:%d", ret_val);
 #endif
 
     return ret_val;

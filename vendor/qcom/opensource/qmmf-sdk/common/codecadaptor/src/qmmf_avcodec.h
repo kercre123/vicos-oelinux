@@ -38,12 +38,12 @@
 #include <utils/Mutex.h>
 #include <utils/RefBase.h>
 #include <utils/Vector.h>
-#include <utils/Condition.h>
+#include <cutils/properties.h>
 
 #include <libstagefrighthw/QComOMXMetadata.h>
 #include <media/hardware/HardwareAPI.h>
 
-#include "common/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils.h"
 #include "qmmf-sdk/qmmf_avcodec_params.h"
 #include "qmmf-sdk/qmmf_avcodec.h"
 #include "qmmf_avcodec_common.h"
@@ -97,7 +97,9 @@ class AVCodec : public IAVCodec {
   status_t GetParameters(const CodecParamType param_type, void *codec_param,
                          size_t *param_size) override;
   status_t StartCodec() override;
-  status_t StopCodec() override;
+  void setPowerHint();
+  void endPowerHint();
+  status_t StopCodec(bool do_flush) override;
   status_t PauseCodec() override;
   status_t ResumeCodec() override;
   status_t RegisterOutputBuffers(
@@ -107,6 +109,7 @@ class AVCodec : public IAVCodec {
   status_t Flush(uint32_t port_type) override;
 
  private:
+  std::mutex power_mtx_;
   // create OMX handle
   status_t CreateHandle(char *component_Name);
   status_t DeleteHandle();
@@ -225,6 +228,7 @@ class AVCodec : public IAVCodec {
   uint32_t                        out_buff_hdr_size_;
   SignalQueue<CodecCmdType>       signal_queue_;
   static OMX_CALLBACKTYPE  callbacks_;
+  static uint32_t power_hint_;
   CodecType                format_type_;
   // to handle the two EOS callbacks from Audio OMX component
   bool                     isEOSonOutput_;
@@ -236,9 +240,10 @@ class AVCodec : public IAVCodec {
   // For Port Reconfig
   bool                      bPortReconfig_;
   ::android::Mutex          port_reconfig_lock_;
-  ::android::Mutex          threadrun_port_reconfig_lock_;
-  ::android::Condition      wait_for_threadrun;
+  std::mutex                threadrun_port_reconfig_lock_;
+  QCondition                wait_for_threadrun;
   CodecParam                codec_params_;
+  bool                      slice_mode_encoding_;
 };
 
 };  // namespace avcodec

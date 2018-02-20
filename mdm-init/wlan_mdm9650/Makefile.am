@@ -22,9 +22,14 @@ if NEED_SDIO_INI
 firmware_qca9377dir = ${base_libdir}/firmware/wlan/qca_cld/qca9377
 dist_firmware_qca9377_DATA = WCNSS_qcom_cfg.sdio.ini
 
+firmware_qca6574dir = ${base_libdir}/firmware/wlan/qca_cld/qca6574
+dist_firmware_qca6574_DATA = WCNSS_qcom_cfg.sdio.rome.ini
+
 # Rename WCNSS_qcom_cfg.sdio.ini to WCNSS_qcom_cfg.ini
 install-data-hook:$(DESTDIR)$(firmware_qca9377dir)/WCNSS_qcom_cfg.sdio.ini
 	cd $(DESTDIR)$(firmware_qca9377dir) && \
-		mv -f WCNSS_qcom_cfg.sdio.ini WCNSS_qcom_cfg.ini
+		mv -f WCNSS_qcom_cfg.sdio.ini WCNSS_qcom_cfg.ini && \
+	cd $(DESTDIR)$(firmware_qca6574dir) && \
+		mv -f WCNSS_qcom_cfg.sdio.rome.ini WCNSS_qcom_cfg.ini
 
 endif

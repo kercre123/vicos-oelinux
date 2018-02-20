@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "AudioTestWav"
+#define LOG_TAG "AudioTestWav"
 
 #include "common/audio/test/samples/qmmf_audio_test_wav.h"
 
@@ -39,7 +39,7 @@
 #include <string>
 
 #include "common/audio/inc/qmmf_audio_definitions.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 namespace qmmf_test {
 namespace common {
@@ -68,27 +68,27 @@ static const char *kFilenameSuffix = ".wav";
 const int AudioTestWav::kEOF = 1;
 
 AudioTestWav::AudioTestWav() : input_data_size_(0), current_data_size_(0) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 AudioTestWav::~AudioTestWav() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 int32_t AudioTestWav::Configure(const string& filename_prefix,
                                 const AudioEndPointType type,
                                 AudioMetadata* metadata) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: filename_prefix[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: filename_prefix[%s]", __func__,
                filename_prefix.c_str());
-  QMMF_VERBOSE("%s: %s() INPARAM: type[%d]", TAG, __func__,
+  QMMF_VERBOSE("%s() INPARAM: type[%d]", __func__,
                static_cast<int>(type));
 
   type_ = type;
 
   switch (type_) {
     case AudioEndPointType::kSource:
-      QMMF_VERBOSE("%s: %s() INPARAM: metadata[%s]", TAG, __func__,
+      QMMF_VERBOSE("%s() INPARAM: metadata[%s]", __func__,
                    metadata->ToString().c_str());
       filename_ = filename_prefix;
       filename_.append(kFilenameOutput);
@@ -121,7 +121,7 @@ int32_t AudioTestWav::Configure(const string& filename_prefix,
 
       input_.open(filename_.c_str(), ios::in | ios::binary);
       if (!input_.is_open()) {
-        QMMF_ERROR("%s: %s() error opening file[%s]", TAG, __func__,
+        QMMF_ERROR("%s() error opening file[%s]", __func__,
                    filename_.c_str());
         return -EBADF;
       }
@@ -131,7 +131,7 @@ int32_t AudioTestWav::Configure(const string& filename_prefix,
       if (header_.riff_header.riff_id != kIdRiff ||
           header_.riff_header.wave_id != kIdWave) {
         input_.close();
-        QMMF_ERROR("%s: %s() file[%s] is not WAV format", TAG, __func__,
+        QMMF_ERROR("%s() file[%s] is not WAV format", __func__,
                    filename_.c_str());
         return -EDOM;
       }
@@ -167,13 +167,13 @@ int32_t AudioTestWav::Configure(const string& filename_prefix,
         metadata->sample_rate = header_.chunk_format.sample_rate;
         metadata->sample_size = header_.chunk_format.bits_per_sample;
       } else {
-        QMMF_ERROR("%s: %s() WAV file[%s] is not PCM format", TAG, __func__,
+        QMMF_ERROR("%s() WAV file[%s] is not PCM format", __func__,
                    filename_.c_str());
         return -EDOM;
       }
 
       input_.close();
-      QMMF_VERBOSE("%s: %s() OUTPARAM: metadata[%s]", TAG, __func__,
+      QMMF_VERBOSE("%s() OUTPARAM: metadata[%s]", __func__,
                    metadata->ToString().c_str());
       break;
   }
@@ -181,10 +181,10 @@ int32_t AudioTestWav::Configure(const string& filename_prefix,
 }
 
 int32_t AudioTestWav::Open() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   if (filename_.empty()) {
-    QMMF_ERROR("%s: %s() called in unconfigured state", TAG, __func__);
+    QMMF_ERROR("%s() called in unconfigured state", __func__);
     return -EPERM;
   }
 
@@ -192,7 +192,7 @@ int32_t AudioTestWav::Open() {
     case AudioEndPointType::kSource:
       output_.open(filename_.c_str(), ios::out | ios::binary | ios::trunc);
       if (!output_.is_open()) {
-        QMMF_ERROR("%s: %s() error opening file[%s]", TAG, __func__,
+        QMMF_ERROR("%s() error opening file[%s]", __func__,
                    filename_.c_str());
         return -EBADF;
       }
@@ -204,7 +204,7 @@ int32_t AudioTestWav::Open() {
     case AudioEndPointType::kSink:
       input_.open(filename_.c_str(), ios::in | ios::binary);
       if (!input_.is_open()) {
-        QMMF_ERROR("%s: %s() error opening file[%s]", TAG, __func__,
+        QMMF_ERROR("%s() error opening file[%s]", __func__,
                    filename_.c_str());
         return -EBADF;
       }
@@ -217,7 +217,7 @@ int32_t AudioTestWav::Open() {
 }
 
 void AudioTestWav::Close() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   switch (type_) {
     case AudioEndPointType::kSource:
@@ -225,7 +225,7 @@ void AudioTestWav::Close() {
         int frames = current_data_size_ / (header_.chunk_format.num_channels *
                                            header_.chunk_format.bits_per_sample
                                            / 8);
-        QMMF_INFO("%s: %s() captured %d frames", TAG, __func__, frames);
+        QMMF_INFO("%s() captured %d frames", __func__, frames);
 
         // finalize the file
         header_.data_header.data_size = frames *
@@ -246,8 +246,8 @@ void AudioTestWav::Close() {
 }
 
 int32_t AudioTestWav::Read(AudioBuffer* buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer->ToString().c_str());
 
   input_.read(reinterpret_cast<char*>(buffer->data), buffer->capacity);
@@ -260,8 +260,8 @@ int32_t AudioTestWav::Read(AudioBuffer* buffer) {
 }
 
 int32_t AudioTestWav::Write(const AudioBuffer& buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer.ToString().c_str());
 
   streampos before = output_.tellp();

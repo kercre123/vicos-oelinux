@@ -176,13 +176,22 @@ static int32_t module_ppeiscore_client_streamon(imgbase_client_t * p_client)
   IDBG_LOW("%s:%d: E", __func__, __LINE__);
   int rc = IMG_ERR_GENERAL;
   p_client->processing_disabled = FALSE;
-   /*Use the deault framproc callback*/
-  rc = IMG_COMP_SET_PARAM(&p_client->comp, QIMG_PARAM_SET_LIB_CALLBACK,
-       NULL);
-  if (IMG_ERROR(rc)) {
-    IDBG_ERROR("Fail to set callback");
-    return IMG_ERR_INVALID_OPERATION;
+
+  module_imgbase_t *p_mod = (module_imgbase_t *)p_client->p_mod;
+
+  IDBG_MED(" p_client %p stream_cnt %d processing_disabled %d stream_on %d",
+    p_client, p_client->stream_cnt, p_client->processing_disabled,
+    p_client->stream_on);
+
+  if (p_client->stream_on == 1) {
+    /*Use the deault framproc callback*/
+    rc = IMG_COMP_SET_PARAM(&p_client->comp, QIMG_PARAM_SET_LIB_CALLBACK, NULL);
+    if (IMG_ERROR(rc)) {
+      IDBG_ERROR("Fail to set callback");
+      return IMG_ERR_INVALID_OPERATION;
+    }
   }
+
   return IMG_SUCCESS;
 }
 
@@ -529,6 +538,7 @@ mct_event_module_t *p_mod_event,
   imgbase_stream_t *p_stream = NULL;
   int stream_idx = 0;
   *is_evt_handled = FALSE;
+  mct_stream_info_t *stream_info = NULL;
 
   if (!p_mod_event || !p_client || !p_core_ops) {
     IDBG_ERROR("Error input");
@@ -546,6 +556,17 @@ mct_event_module_t *p_mod_event,
 
   IDBG_LOW("dewarp_type %d and is_type %d",
     p_stream->stream_info->dewarp_type,p_stream->stream_info->is_type);
+
+  if(p_stream->stream_info->dewarp_type > 0) {
+
+    stream_info =
+        (mct_stream_info_t *)(p_mod_event->module_event_data);
+
+    p_client->isp_output_dim_stream_info = *stream_info;
+    *(p_stream->stream_info) = *stream_info;
+    IDBG_LOW("updated identity %x pe w x h = %d x %d", identity,
+      p_stream->stream_info->dim.width ,p_stream->stream_info->dim.height);
+  }
 
   if(p_stream->stream_info->dewarp_type > 0 &&
     p_stream->stream_info->is_type != IS_TYPE_EIS_3_0 &&
@@ -1069,7 +1090,13 @@ boolean module_ppeiscore_handle_iface_request_pp_divert_event(
   IDBG_LOW("Got IS input %f %d %d %d", is_config.margin_value,
         is_config.num_buffers, is_config.num_mesh_x, is_config.num_mesh_y);
   //Update the number of extra native bufs needed.
-  p_client->isp_extra_native_buf += is_config.num_buffers;
+
+  if((p_stream->stream_info->is_type == IS_TYPE_EIS_3_0 ||
+    p_stream->stream_info->is_type == IS_TYPE_EIS_DG) &&
+    p_stream->stream_info->dewarp_type == 0) {
+      p_client->isp_extra_native_buf += is_config.num_buffers;
+  }
+  IDBG_LOW("isp_extra_native_buf %d",p_client->isp_extra_native_buf);
 
   pp_buf_divert_request_t *divert_request;
   divert_request =

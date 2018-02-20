@@ -13,6 +13,7 @@ AM_CFLAGS = \
     $(ULP2_CFLAGS)\
     $(LOCGLUE_CFLAGS) \
     $(LOCFLP_CFLAGS) \
+    $(PM_CFLAGS) \
     -DTEST_ULP
 
 required_libs = \
@@ -24,7 +25,8 @@ required_libs = \
     $(ULP2_LIBS) \
     $(LOCGLUE_LIBS) \
     $(IZATCORE_LIBS) \
-    $(LOCFLP_LIBS)
+    $(LOCFLP_LIBS) \
+    $(PM_LIBS)
 
 garden_h_sources = \
      test_android_gps.h

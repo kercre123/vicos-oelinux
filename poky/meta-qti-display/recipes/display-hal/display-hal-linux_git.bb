@@ -32,6 +32,7 @@ CPPFLAGS += "-DTARGET_HEADLESS"
 CPPFLAGS += "-DVENUS_COLOR_FORMAT"
 CPPFLAGS += "-DPAGE_SIZE=4096"
 CPPFLAGS_append_apq8098 += "-I${WORKSPACE}/display/display-hal/libdrmutils"
+CPPFLAGS += "-I${WORKSPACE}/display/display-hal/gpu_tonemapper"
 CPPFLAGS += "-I${WORKSPACE}/display/display-hal/libqdutils"
 CPPFLAGS += "-I${WORKSPACE}/display/display-hal/libqservice"
 CPPFLAGS += "-I${WORKSPACE}/display/display-hal/sdm/include"
@@ -45,6 +46,7 @@ do_install_append () {
     install -d ${D}${libdir}/hw
     ln -s ${libdir}/libgralloc.so ${D}${libdir}/hw/gralloc.default.so
     cp -fR ${WORKSPACE}/display/display-hal/include/* ${STAGING_INCDIR}/
+    cp -fR ${WORKSPACE}/display/display-hal/gpu_tonemapper/*.h ${STAGING_INCDIR}
 }
 
 FILES_${PN} = "${libdir}/*.so"

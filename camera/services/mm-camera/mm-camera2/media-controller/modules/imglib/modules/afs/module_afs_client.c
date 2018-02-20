@@ -85,7 +85,7 @@ static afs_lib_info_t g_afs_lib;
  *
  * Notes: none
  **/
-inline int module_afs_client_get_buf(afs_client_t *p_client)
+static inline int module_afs_client_get_buf(afs_client_t *p_client)
 {
   int32_t idx = p_client->buf_idx;
   p_client->buf_idx = (p_client->buf_idx + 1) % MAX_NUM_AFS_FRAMES;

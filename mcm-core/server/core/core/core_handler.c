@@ -5,8 +5,9 @@
     @brief
     Implements functions supported in core_handler.h.
 
-    Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved.
-    Qualcomm Technologies Proprietary and Confidential.
+    Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
+    All Rights Reserved.
+    Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #include "core_handler.h"
@@ -327,11 +328,15 @@ void core_queue_enumerate_helper(core_handler_data_type *core_handler_data)
     cri_core_cri_message_data_type *cri_core_cri_message_data;
     control_core_control_event_data_type *control_core_control_event_data;
     timer_event_data_type *timer_event_data;
+    cri_core_service_down_event_data_type *cri_core_service_down_event_data;
+    cri_core_service_up_event_data_type *cri_core_service_up_event_data;
 
     hlos_core_hlos_request_data = NULL;
     cri_core_cri_message_data = NULL;
     control_core_control_event_data = NULL;
     timer_event_data = NULL;
+    cri_core_service_down_event_data = NULL;
+    cri_core_service_up_event_data = NULL;
 
     switch(core_handler_data->event_category)
     {
@@ -390,6 +395,22 @@ void core_queue_enumerate_helper(core_handler_data_type *core_handler_data)
                          timer_event_data->timer_expiry_cb,
                          timer_event_data->data,
                          timer_event_data->data_len);
+            break;
+
+        case CORE_HANDLER_SERVICE_DOWN:
+            cri_core_service_down_event_data = (cri_core_service_down_event_data_type*)core_handler_data->event_data;
+            UTIL_LOG_MSG("is_processed %d srv event id %d, srv_index %d",
+                         core_handler_data->is_processed,
+                         cri_core_service_down_event_data->event_id,
+                         (int)cri_core_service_down_event_data->cb_data);
+            break;
+
+        case CORE_HANDLER_SERVICE_UP:
+            cri_core_service_up_event_data = (cri_core_service_up_event_data_type*)core_handler_data->event_data;
+            UTIL_LOG_MSG("is_processed %d srv event id %d, srv_index %d",
+                         core_handler_data->is_processed,
+                         cri_core_service_up_event_data->event_id,
+                         (int)cri_core_service_up_event_data->cb_data);
             break;
 
         default:

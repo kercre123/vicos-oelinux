@@ -30,14 +30,25 @@
 #pragma once
 
 #include <mutex>
+#include <vector>
 #include <utils/Log.h>
-#include <utils/KeyedVector.h>
 
-#include "qmmf-sdk/qmmf_codec.h"
+#include <qmmf-sdk/qmmf_codec.h>
 
 namespace qmmf {
 
 namespace jpegencoder {
+
+struct jpeg_thumbnail {
+  // thumbnail dimension
+  uint32_t width;
+  uint32_t height;
+  // jpeg thumbnail quality: range 0~100
+  uint32_t thumb_quality;
+
+  jpeg_thumbnail(uint32_t width, uint32_t height, uint32_t thumb_quality) :
+      width(width), height(height), thumb_quality(thumb_quality) {}
+};
 
 struct snapshot_info
 {
@@ -46,12 +57,15 @@ struct snapshot_info
   CameraBufferMetaData source_info;
   uint32_t exif_size;
   void*    exif_data;
+  std::vector<jpeg_thumbnail> thumbnails;
 };
 
 class JpegEncoder {
 
 private:
   void FillImgData(const CameraBufferMetaData& source_info);
+
+  void UpdateThumbnailData(const snapshot_info& snapshot);
 
   void *cfg_;
   void *job_result_ptr_;

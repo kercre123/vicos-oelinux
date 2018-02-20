@@ -29,7 +29,8 @@
 
 #include "qmmf_transcode_pipe.h"
 
-#define TAG "TranscoderPipe"
+#undef LOG_TAG
+#define LOG_TAG "TranscoderPipe"
 
 // Uncomment to print the logs for FPS through Pipe
 // #define DEBUG_PIPE_SPEED
@@ -62,17 +63,17 @@ TranscoderPipe::TranscoderPipe(const TranscodeType track_type)
     : track_type_(track_type),
       transport_thread_(nullptr),
       stop_transport_(false) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 TranscoderPipe::~TranscoderPipe() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t TranscoderPipe::PreparePipeline() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   CodecType pipe_in_codec_type;
@@ -86,7 +87,7 @@ status_t TranscoderPipe::PreparePipeline() {
     case TranscodeType::kVideoEncodeVideoDecode:
     case TranscodeType::kImageDecodeVideoEncode:
     default:
-      QMMF_ERROR("%s:%s Unsupported TranscodeType", TAG, __func__);
+      QMMF_ERROR("%s Unsupported TranscodeType", __func__);
       return -1;
   }
 
@@ -100,31 +101,31 @@ status_t TranscoderPipe::PreparePipeline() {
 
   ret = pipe_in_->PreparePipeline();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to prepare pipeline for Pipe input",
-               TAG, __func__);
+    QMMF_ERROR("%s Failed to prepare pipeline for Pipe input",
+               __func__);
     return ret;
   }
 
   ret = pipe_out_->PreparePipeline();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to prepare pipeline for Pipe output",
-               TAG, __func__);
+    QMMF_ERROR("%s Failed to prepare pipeline for Pipe output",
+               __func__);
     return ret;
   }
 
   transport_thread_ = new thread(TranscoderPipe::Transport,
                                  reinterpret_cast<void*>(this));
   if (transport_thread_ == nullptr) {
-    QMMF_ERROR("%s:%s Unable to allocate thread", TAG, __func__);
+    QMMF_ERROR("%s Unable to allocate thread", __func__);
     return -ENOMEM;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderPipe::RemovePipe() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   stop_transport_ = true;
   wait_frame_fwqueue_.notify_one();
@@ -133,19 +134,19 @@ status_t TranscoderPipe::RemovePipe() {
   transport_thread_->join();
   delete transport_thread_;
   transport_thread_ = nullptr;
-  QMMF_INFO("%s:%s Decoder and Encoder got disconnected", TAG, __func__);
+  QMMF_INFO("%s Decoder and Encoder got disconnected", __func__);
 
   pipe_in_->ReleaseResources();
   pipe_out_->ReleaseResources();
 
   if (in_avcodec_.expired() && out_avcodec_.expired()) {
-    QMMF_INFO("%s:%s Both the CodecAdaptors has been released", TAG, __func__);
+    QMMF_INFO("%s Both the CodecAdaptors has been released", __func__);
   } else {
-    QMMF_ERROR("%s:%s CodecAdaptors are not relased", TAG, __func__);
+    QMMF_ERROR("%s CodecAdaptors are not relased", __func__);
     return -1;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
@@ -162,41 +163,41 @@ void TranscoderPipe::Sendbackward(const TranscodeBuffer& buffer) {
 }
 
 void* TranscoderPipe::Transport(void* arg) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   TranscoderPipe* ptr = reinterpret_cast<TranscoderPipe*>(arg);
 
   while (1) {
-    QMMF_DEBUG("%s:%s %s ForwardQueueSize[%d] BackwardQueueSize[%d] %s",
-               TAG, __func__,
+    QMMF_DEBUG("%s %s ForwardQueueSize[%d] BackwardQueueSize[%d] %s",
+               __func__,
                ptr->pipe_in_->QueueSizes().c_str(),
                ptr->forward_dir_queue_.Size(),
                ptr->backward_dir_queue_.Size(),
                ptr->pipe_out_->QueueSizes().c_str());
 
     if (ptr->forward_dir_queue_.Size() <= 0) {
-      QMMF_DEBUG("%s:%s No buffer available in forward Queue", TAG, __func__);
+      QMMF_DEBUG("%s No buffer available in forward Queue", __func__);
       unique_lock<mutex> ul(ptr->wait_frame_fwqueue_mutex_);
       if (ptr->forward_dir_queue_.Size() <= 0)
         ptr->wait_frame_fwqueue_.wait(ul, [=] {
           return !(ptr->forward_dir_queue_.Empty()) || ptr->stop_transport_;
         });
       if (ptr->stop_transport_) {
-        QMMF_INFO("%s:%s Transporting is Aborted in midway", TAG, __func__);
+        QMMF_INFO("%s Transporting is Aborted in midway", __func__);
         break;
       }
     }
     TranscodeBuffer iter_forward = *(ptr->forward_dir_queue_.Begin());
 
     if (ptr->backward_dir_queue_.Size() <= 0) {
-      QMMF_DEBUG("%s:%s No buffer available in backward Queue", TAG, __func__);
+      QMMF_DEBUG("%s No buffer available in backward Queue", __func__);
       unique_lock<mutex> ul(ptr->wait_frame_bwqueue_mutex_);
       if (ptr->backward_dir_queue_.Size() <= 0)
         ptr->wait_frame_bwqueue_.wait(ul, [=] {
           return !(ptr->backward_dir_queue_.Empty()) || ptr->stop_transport_;
         });
       if (ptr->stop_transport_) {
-        QMMF_INFO("%s:%s Transporting is Aborted in midway", TAG, __func__);
+        QMMF_INFO("%s Transporting is Aborted in midway", __func__);
         break;
       }
     }
@@ -216,13 +217,13 @@ void* TranscoderPipe::Transport(void* arg) {
       ptr->backward_dir_queue_.Erase(ptr->backward_dir_queue_.Begin());
       if (iter_forward.GetFlag() &
           static_cast<uint32_t>(BufferFlags::kFlagEOS)) {
-        QMMF_INFO("%s:%s Transporting Last Buffer", TAG, __func__);
+        QMMF_INFO("%s Transporting Last Buffer", __func__);
         break;
       }
     }
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return nullptr;
 }
 
@@ -236,24 +237,24 @@ TranscoderPipe::TranscoderPipeIn::TranscoderPipeIn(
       codec_type_(type),
       fps_clr_input_side_(nullptr),
       fps_clr_output_side_(nullptr) {
-  QMMF_INFO("%s:(pipe_input)%s Enter", TAG, __func__);
-  QMMF_INFO("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_input)%s Enter", __func__);
+  QMMF_INFO("(pipe_input)%s Exit", __func__);
 }
 
 TranscoderPipe::TranscoderPipeIn::~TranscoderPipeIn() {
-  QMMF_INFO("%s:(pipe_input)%s Enter", TAG, __func__);
-  QMMF_INFO("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_input)%s Enter", __func__);
+  QMMF_INFO("(pipe_input)%s Exit", __func__);
 }
 
 status_t TranscoderPipe::TranscoderPipeIn::PreparePipeline() {
-  QMMF_INFO("%s:(pipe_input)%s Enter", TAG, __func__);
+  QMMF_INFO("(pipe_input)%s Enter", __func__);
 
   status_t ret = 0;
   ret = TranscodeBuffer::CreateTranscodeBuffersVector(
       avcodec_, BufferOwner::kTranscoderPipeIn, port_index_, &buffer_list_);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_input)%s Failed to allocate PipeIn buffers",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_input)%s Failed to allocate PipeIn buffers",
+               __func__);
     return ret;
   }
 
@@ -268,8 +269,8 @@ status_t TranscoderPipe::TranscoderPipeIn::PreparePipeline() {
 
   ret = avcodec_->RegisterOutputBuffers(temp_pipe_in);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_input)%s Failed to register PipeIn buffers",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_input)%s Failed to register PipeIn buffers",
+               __func__);
     goto release_resources;
   }
 
@@ -278,22 +279,22 @@ status_t TranscoderPipe::TranscoderPipeIn::PreparePipeline() {
       static_pointer_cast<ICodecSource>(shared_from_this()),
       temp_pipe_in);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_input)%s Failed to call allocate buffer on PipeIn side",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_input)%s Failed to call allocate buffer on PipeIn side",
+               __func__);
     goto release_resources;
   }
 
   ret = AddBufferList(buffer_list_);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_input)%s Buffer queue failed", TAG, __func__);
+    QMMF_ERROR("(pipe_input)%s Buffer queue failed", __func__);
     goto release_resources;
   }
 
   fps_clr_input_side_ = new FramerateCalculator(
       kPipeFrameRatePeriod, "TranscoderPipe::(pipe_input)GetBuffer fps");
   if (fps_clr_input_side_ == nullptr) {
-     QMMF_ERROR("%s:(pipe_input)%s Unable to allocate FramerateCalculator",
-                TAG, __func__);
+     QMMF_ERROR("(pipe_input)%s Unable to allocate FramerateCalculator",
+                __func__);
      ret = -ENOMEM;
      goto release_resources;
   }
@@ -301,22 +302,22 @@ status_t TranscoderPipe::TranscoderPipeIn::PreparePipeline() {
   fps_clr_output_side_ = new FramerateCalculator(
       kPipeFrameRatePeriod, "TranscoderPipe::(pipe_input) ReturnBuffer fps");
   if (fps_clr_output_side_ == nullptr) {
-    QMMF_ERROR("%s:(pipe_input)%s Unable to allocate FramerateCalculator",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_input)%s Unable to allocate FramerateCalculator",
+               __func__);
     goto release_resources;
   }
 
-  QMMF_INFO("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_input)%s Exit", __func__);
   return ret;
 
 release_resources:
   ReleaseResources();
-  QMMF_INFO("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_input)%s Exit", __func__);
   return ret;
 }
 
 void TranscoderPipe::TranscoderPipeIn::ReleaseResources() {
-  QMMF_DEBUG("%s:(pipe_input)%s Enter", TAG, __func__);
+  QMMF_DEBUG("(pipe_input)%s Enter", __func__);
 
   status_t ret = 0;
 
@@ -326,8 +327,8 @@ void TranscoderPipe::TranscoderPipeIn::ReleaseResources() {
   if (avcodec_ != nullptr) {
     ret = avcodec_->ReleaseBuffer();
     if (ret != 0) {
-      QMMF_ERROR("%s:(pipe_input)%s Failed to release buffers of source side AVCodec",
-                 TAG, __func__);
+      QMMF_ERROR("(pipe_input)%s Failed to release buffers of source side AVCodec",
+                 __func__);
     }
     avcodec_.reset();
   }
@@ -342,19 +343,19 @@ void TranscoderPipe::TranscoderPipeIn::ReleaseResources() {
     fps_clr_output_side_ = nullptr;
   }
 
-  QMMF_DEBUG("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_DEBUG("(pipe_input)%s Exit", __func__);
 }
 
 status_t TranscoderPipe::TranscoderPipeIn::AddBufferList(
     const vector<TranscodeBuffer>& list) {
-  QMMF_DEBUG("%s:(pipe_input)%s Enter", TAG, __func__);
+  QMMF_DEBUG("(pipe_input)%s Enter", __func__);
 
   free_buffer_queue_.Clear();
   occupy_buffer_queue_.Clear();
   for (auto& iter : list)
     free_buffer_queue_.PushBack(iter);
 
-  QMMF_DEBUG("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_DEBUG("(pipe_input)%s Exit", __func__);
   return 0;
 }
 
@@ -376,12 +377,12 @@ void TranscoderPipe::TranscoderPipeIn::ReceiveBuffer(
 
 status_t TranscoderPipe::TranscoderPipeIn::GetBuffer(
     BufferDescriptor& buffer_descriptor, void* client_data) {
-  QMMF_VERBOSE("%s:(pipe_input)%s Enter", TAG, __func__);
+  QMMF_VERBOSE("(pipe_input)%s Enter", __func__);
 
   status_t ret = 0;
   if (free_buffer_queue_.Size() <= 0) {
-    QMMF_DEBUG("%s:(pipe_input)%s No buffer available to notify Wait for new buffer",
-               TAG, __func__);
+    QMMF_DEBUG("(pipe_input)%s No buffer available to notify Wait for new buffer",
+               __func__);
     unique_lock<mutex> ul(wait_for_frame_mutex_);
     if (free_buffer_queue_.Size() <= 0)
       wait_for_frame_.wait(ul);
@@ -397,13 +398,13 @@ status_t TranscoderPipe::TranscoderPipeIn::GetBuffer(
   fps_clr_input_side_->Trigger();
 #endif
 
-  QMMF_VERBOSE("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_VERBOSE("(pipe_input)%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderPipe::TranscoderPipeIn::ReturnBuffer(
     BufferDescriptor& buffer_descriptor, void* client_data) {
-  QMMF_VERBOSE("%s:(pipe_input)%s Enter", TAG, __func__);
+  QMMF_VERBOSE("(pipe_input)%s Enter", __func__);
 
   status_t ret = 0;
   bool found = false;
@@ -417,7 +418,7 @@ status_t TranscoderPipe::TranscoderPipeIn::ReturnBuffer(
   for (; it != occupy_buffer_queue_.End(); ++it) {
     // TODO: to use BufId instead of Fd
     if (it->GetFd() == buffer_descriptor.fd) {
-      QMMF_VERBOSE("%s:(pipe_input)%s Buffer found", TAG, __func__);
+      QMMF_VERBOSE("(pipe_input)%s Buffer found", __func__);
       if (codec_type_ == CodecType::kVideoDecoder)
         buffer_descriptor.size =
             (buffer_descriptor.size == 0 ? buffer_descriptor.size
@@ -427,8 +428,8 @@ status_t TranscoderPipe::TranscoderPipeIn::ReturnBuffer(
       if (sp_pipe) {
         sp_pipe->Sendforward(*it);
       } else {
-        QMMF_ERROR("%s:(pipe_input)%s Could not find pipe to send the buffer forward",
-                   TAG, __func__);
+        QMMF_ERROR("(pipe_input)%s Could not find pipe to send the buffer forward",
+                   __func__);
         assert(0);
       }
       occupy_buffer_queue_.Erase(it);
@@ -439,13 +440,13 @@ status_t TranscoderPipe::TranscoderPipeIn::ReturnBuffer(
 
   assert(found == true);
 
-  QMMF_VERBOSE("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_VERBOSE("(pipe_input)%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderPipe::TranscoderPipeIn::NotifyPortEvent(
     PortEventType event_type, void* event_data) {
-  QMMF_INFO("%s:(pipe_input)%s Enter", TAG, __func__);
+  QMMF_INFO("(pipe_input)%s Enter", __func__);
 
   status_t ret = 0;
   TSQueue<TranscodeBuffer>::iterator it;
@@ -458,18 +459,18 @@ status_t TranscoderPipe::TranscoderPipeIn::NotifyPortEvent(
         case PortreconfigData::PortReconfigType::kCropParametersChanged:
           break;
         case PortreconfigData::PortReconfigType::kBufferRequirementsChanged:
-          QMMF_INFO("%s:(pipe_input)%s Releasing pipeIn buffer_list_",
-                    TAG, __func__);
+          QMMF_INFO("(pipe_input)%s Releasing pipeIn buffer_list_",
+                    __func__);
           TranscodeBuffer::FreeTranscodeBuffersVector(&buffer_list_);
           assert(buffer_list_.empty());
-          QMMF_INFO("%s:(pipe_input)%s Allocating New set of Buffers",
-                    TAG, __func__);
+          QMMF_INFO("(pipe_input)%s Allocating New set of Buffers",
+                    __func__);
           ret = TranscodeBuffer::CreateTranscodeBuffersVector(
               avcodec_, BufferOwner::kTranscoderPipeIn, port_index_,
               &buffer_list_);
           if (ret != 0) {
-            QMMF_ERROR("%s:(pipe_input)%s Failed to allocate PipeIn buffers",
-                       TAG, __func__);
+            QMMF_ERROR("(pipe_input)%s Failed to allocate PipeIn buffers",
+                       __func__);
             return ret;
           }
           for (auto& iter : buffer_list_) {
@@ -482,22 +483,14 @@ status_t TranscoderPipe::TranscoderPipeIn::NotifyPortEvent(
           }
           ret = avcodec_->RegisterOutputBuffers(temp_pipe_in);
           if (ret != 0) {
-            QMMF_ERROR("%s:(pipe_input)%s Buffer Registration Failed",
-                       TAG, __func__);
+            QMMF_ERROR("(pipe_input)%s Buffer Registration Failed",
+                       __func__);
             return ret;
           }
-          it = free_buffer_queue_.Begin();
-          for (; it != free_buffer_queue_.End(); ++it) {
-            if (it->GetOwner() == BufferOwner::kTranscoderPipeIn) {
-              free_buffer_queue_.Erase(it);
-            }
-          }
-          it = occupy_buffer_queue_.Begin();
-          for (; it != occupy_buffer_queue_.End(); ++it) {
-            if (it->GetOwner() == BufferOwner::kTranscoderPipeIn) {
-              occupy_buffer_queue_.Erase(it);
-            }
-          }
+
+          free_buffer_queue_.Clear();
+          occupy_buffer_queue_.Clear();
+
           for (auto& iter : buffer_list_) {
             free_buffer_queue_.PushBack(iter);
           }
@@ -511,7 +504,7 @@ status_t TranscoderPipe::TranscoderPipeIn::NotifyPortEvent(
       return -1;
   }
 
-  QMMF_INFO("%s:(pipe_input)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_input)%s Exit", __func__);
   return 0;
 }
 
@@ -525,24 +518,24 @@ TranscoderPipe::TranscoderPipeOut::TranscoderPipeOut(
       codec_type_(type),
       fps_clr_input_side_(nullptr),
       fps_clr_output_side_(nullptr) {
-  QMMF_INFO("%s:(pipe_output)%s Enter", TAG, __func__);
-  QMMF_INFO("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_output)%s Enter", __func__);
+  QMMF_INFO("(pipe_output)%s Exit", __func__);
 }
 
 TranscoderPipe::TranscoderPipeOut::~TranscoderPipeOut() {
-  QMMF_INFO("%s:(pipe_output)%s Enter", TAG, __func__);
-  QMMF_INFO("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_output)%s Enter", __func__);
+  QMMF_INFO("(pipe_output)%s Exit", __func__);
 }
 
 status_t TranscoderPipe::TranscoderPipeOut::PreparePipeline() {
-  QMMF_INFO("%s:(pipe_output)%s Enter", TAG, __func__);
+  QMMF_INFO("(pipe_output)%s Enter", __func__);
   status_t ret = 0;
 
   ret = TranscodeBuffer::CreateTranscodeBuffersVector(
       avcodec_, BufferOwner::kTranscoderPipeOut, port_index_, &buffer_list_);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_output)%s Failed to allocate PipeOut buffers",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_output)%s Failed to allocate PipeOut buffers",
+               __func__);
     return ret;
   }
 
@@ -557,8 +550,8 @@ status_t TranscoderPipe::TranscoderPipeOut::PreparePipeline() {
 
   ret = avcodec_->RegisterInputBuffers(temp_pipe_out);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_output)%s Failed to register PipeOut buffers",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_output)%s Failed to register PipeOut buffers",
+               __func__);
     goto release_resources;
   }
 
@@ -567,22 +560,22 @@ status_t TranscoderPipe::TranscoderPipeOut::PreparePipeline() {
       static_pointer_cast<ICodecSource>(shared_from_this()),
       temp_pipe_out);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_output)%s Failed to call allocate buffer on PipeIn side",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_output)%s Failed to call allocate buffer on PipeIn side",
+               __func__);
     goto release_resources;
   }
 
   ret = AddBufferList(buffer_list_);
   if (ret != 0) {
-    QMMF_ERROR("%s:(pipe_output)%s Buffer queue failed", TAG, __func__);
+    QMMF_ERROR("(pipe_output)%s Buffer queue failed", __func__);
     goto release_resources;
   }
 
   fps_clr_input_side_ = new FramerateCalculator(
       kPipeFrameRatePeriod, "TranscoderPipe::(pipe_output)GetBuffer fps");
   if (fps_clr_input_side_ == nullptr) {
-    QMMF_ERROR("%s:(pipe_output)%s Unable to allocate FramerateCalculator",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_output)%s Unable to allocate FramerateCalculator",
+               __func__);
     ret = -ENOMEM;
     goto release_resources;
   }
@@ -590,23 +583,23 @@ status_t TranscoderPipe::TranscoderPipeOut::PreparePipeline() {
   fps_clr_output_side_ = new FramerateCalculator(
       kPipeFrameRatePeriod, "TranscoderPipe::(pipe_output)ReturnBuffer fps");
   if (fps_clr_output_side_ == nullptr) {
-    QMMF_ERROR("%s:(pipe_output)%s Unable to allocate FramerateCalculator",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_output)%s Unable to allocate FramerateCalculator",
+               __func__);
     ret = -ENOMEM;
     goto release_resources;
   }
 
-  QMMF_INFO("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_output)%s Exit", __func__);
   return ret;
 
 release_resources:
   ReleaseResources();
-  QMMF_INFO("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_output)%s Exit", __func__);
   return ret;
 }
 
 void TranscoderPipe::TranscoderPipeOut::ReleaseResources() {
-  QMMF_DEBUG("%s:(pipe_output)%s Enter", TAG, __func__);
+  QMMF_DEBUG("(pipe_output)%s Enter", __func__);
 
   status_t ret = 0;
 
@@ -616,8 +609,8 @@ void TranscoderPipe::TranscoderPipeOut::ReleaseResources() {
   if (avcodec_ != nullptr) {
     ret = avcodec_->ReleaseBuffer();
     if (ret != 0) {
-      QMMF_ERROR("%s:(pipe_output)%s Failed to release buffers of source side AVCodec",
-                 TAG, __func__);
+      QMMF_ERROR("(pipe_output)%s Failed to release buffers of source side AVCodec",
+                 __func__);
     }
     avcodec_.reset();
   }
@@ -632,12 +625,12 @@ void TranscoderPipe::TranscoderPipeOut::ReleaseResources() {
     fps_clr_output_side_ = nullptr;
   }
 
-  QMMF_DEBUG("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_DEBUG("(pipe_output)%s Exit", __func__);
 }
 
 status_t TranscoderPipe::TranscoderPipeOut::AddBufferList(
     const vector<TranscodeBuffer>& list) {
-  QMMF_DEBUG("%s:(pipe_output)%s Enter", TAG, __func__);
+  QMMF_DEBUG("(pipe_output)%s Enter", __func__);
 
   status_t ret = 0;
   free_buffer_queue_.Clear();
@@ -647,12 +640,12 @@ status_t TranscoderPipe::TranscoderPipeOut::AddBufferList(
     for (auto& iter : list)
       sp_pipe->Sendbackward(iter);
   } else {
-    QMMF_ERROR("%s:(pipe_output)%s Pipe doesn't exist, sp_pipe = nullptr",
-               TAG, __func__);
+    QMMF_ERROR("(pipe_output)%s Pipe doesn't exist, sp_pipe = nullptr",
+               __func__);
     ret = -1;
   }
 
-  QMMF_DEBUG("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_DEBUG("(pipe_output)%s Exit", __func__);
   return ret;
 }
 
@@ -674,12 +667,12 @@ void TranscoderPipe::TranscoderPipeOut::ReceiveBuffer(
 
 status_t TranscoderPipe::TranscoderPipeOut::GetBuffer(
     BufferDescriptor& buffer_descriptor, void* client_data) {
-  QMMF_VERBOSE("%s:(pipe_output)%s Enter", TAG, __func__);
+  QMMF_VERBOSE("(pipe_output)%s Enter", __func__);
 
   status_t ret = 0;
   if (free_buffer_queue_.Size() <= 0) {
-    QMMF_DEBUG("%s:(pipe_output)%s No buffer available to notify Wait for new buffer",
-               TAG, __func__);
+    QMMF_DEBUG("(pipe_output)%s No buffer available to notify Wait for new buffer",
+               __func__);
     unique_lock<mutex> ul(wait_for_frame_mutex_);
     if (free_buffer_queue_.Size() <= 0)
       wait_for_frame_.wait(ul);
@@ -693,7 +686,7 @@ status_t TranscoderPipe::TranscoderPipeOut::GetBuffer(
   free_buffer_queue_.Erase(free_buffer_queue_.Begin());
 
   if (buffer_descriptor.flag & static_cast<uint32_t>(BufferFlags::kFlagEOS)) {
-    QMMF_INFO("%s:(pipe_output)%s Last Buffer", TAG, __func__);
+    QMMF_INFO("(pipe_output)%s Last Buffer", __func__);
     // return value of -1 signifies the end of stream on input of AVCodec
     ret = -1;
   }
@@ -702,13 +695,13 @@ status_t TranscoderPipe::TranscoderPipeOut::GetBuffer(
   fps_clr_input_side_->Trigger();
 #endif
 
-  QMMF_VERBOSE("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_VERBOSE("(pipe_output)%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderPipe::TranscoderPipeOut::ReturnBuffer(
     BufferDescriptor& buffer_descriptor, void* client_data) {
-  QMMF_VERBOSE("%s:(pipe_output)%s Enter", TAG, __func__);
+  QMMF_VERBOSE("(pipe_output)%s Enter", __func__);
 
   status_t ret = 0;
   bool found = false;
@@ -722,13 +715,13 @@ status_t TranscoderPipe::TranscoderPipeOut::ReturnBuffer(
   for (; it != occupy_buffer_queue_.End(); ++it) {
     // TODO: to use BufId instead of MetaHandle
     if (it->GetMetaHandle() == buffer_descriptor.data) {
-      QMMF_VERBOSE("%s:(pipe_output)%s Buffer found", TAG, __func__);
+      QMMF_VERBOSE("(pipe_output)%s Buffer found", __func__);
       shared_ptr<TranscoderPipe> sp_pipe = pipe_.lock();
       if (sp_pipe) {
         sp_pipe->Sendbackward(*it);
       } else {
-        QMMF_ERROR("%s:(pipe_output)%s Could not find pipe to send the buffer forward",
-                   TAG, __func__);
+        QMMF_ERROR("(pipe_output)%s Could not find pipe to send the buffer forward",
+                   __func__);
         assert(0);
       }
       occupy_buffer_queue_.Erase(it);
@@ -739,14 +732,14 @@ status_t TranscoderPipe::TranscoderPipeOut::ReturnBuffer(
 
   assert(found == true);
 
-  QMMF_VERBOSE("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_VERBOSE("(pipe_output)%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderPipe::TranscoderPipeOut::NotifyPortEvent(
     PortEventType event_type, void* event_data) {
-  QMMF_INFO("%s:(pipe_output)%s Enter", TAG, __func__);
-  QMMF_INFO("%s:(pipe_output)%s Exit", TAG, __func__);
+  QMMF_INFO("(pipe_output)%s Enter", __func__);
+  QMMF_INFO("(pipe_output)%s Exit", __func__);
   return 0;
 }
 

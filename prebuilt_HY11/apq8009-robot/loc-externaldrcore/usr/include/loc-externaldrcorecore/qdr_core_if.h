@@ -109,6 +109,7 @@ typedef enum _qdr_timeSourcet
    QDR_TIME_SET_GLO,
    QDR_TIME_SET_GAL,
    QDR_TIME_SET_BDS,
+   QDR_TIME_SET_QZSS,
    QDR_TIME_SET_EXT
 }qdr_timeSourcet;
 

@@ -256,7 +256,11 @@ is_thread_data_t* is_thread_init(void)
    IS_LOW("Initialize the IS queue! ");
   pthread_mutex_init(&is_thread_data->msg_q_lock, NULL);
   mct_queue_init(is_thread_data->msg_q);
-  pthread_cond_init(&is_thread_data->thread_cond, NULL);
+
+  pthread_condattr_init(&is_thread_data->thread_condattr);
+  pthread_condattr_setclock(&is_thread_data->thread_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&(is_thread_data->thread_cond), &is_thread_data->thread_condattr);
+
   pthread_mutex_init(&is_thread_data->thread_mutex, NULL);
   sem_init(&is_thread_data->sem_launch, 0, 0);
 
@@ -275,6 +279,7 @@ void is_thread_deinit(is_thread_data_t *thread_data)
 {
   IS_LOW("called");
   pthread_mutex_destroy(&thread_data->thread_mutex);
+  pthread_condattr_destroy(&thread_data->thread_condattr);
   pthread_cond_destroy(&thread_data->thread_cond);
   mct_queue_free(thread_data->msg_q);
   pthread_mutex_destroy(&thread_data->msg_q_lock);

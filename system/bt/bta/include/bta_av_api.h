@@ -72,6 +72,7 @@ typedef UINT8 tBTA_AV_STATUS;
 #define BTA_AV_FEAT_DELAY_RPT   0x0400  /* allow delay reporting */
 #define BTA_AV_FEAT_ACP_START   0x0800  /* start stream when 2nd SNK was accepted   */
 #define BTA_AV_FEAT_APP_SETTING 0x2000  /* Player app setting support */
+#define BTA_AV_FEAT_ENCODED_DATA 0x4000 /* Send encoded data from APP layer support*/
 
 /* Internal features */
 #define BTA_AV_FEAT_AVRC_UI_UPDATE 0x4000 /* Update UI to show notification for browsing capable remote*/
@@ -277,9 +278,10 @@ typedef UINT8 tBTA_AV_ERR;
 #define BTA_AV_ROLE_CHANGED_EVT     24
 #define BTA_AV_DELAY_REPORT_EVT     25  /* update delay report */
 #define BTA_AV_MEDIA_SRC_CFG_EVT    26 /* command to configure codec */
+#define BTA_AV_MTU_CONFIG_EVT    27     /*Update mtu value to btapp*/
 
 /* Max BTA event */
-#define BTA_AV_MAX_EVT          27
+#define BTA_AV_MAX_EVT          28
 
 typedef UINT8 tBTA_AV_EVT;
 
@@ -480,6 +482,14 @@ typedef struct
     UINT16   delay_rpt;
 } tBTA_AV_DELAY_REPORT;
 
+/* data associated with MTU callback*/
+typedef struct
+{
+    UINT16          mtu;
+    UINT8         packet_type;
+    tBTA_AV_HNDL    hndl;    /* Handle associated with the stream. */
+} tBTA_AV_MTU_CONFIG;
+
 /* union of data associated with AV callback */
 typedef union
 {
@@ -507,6 +517,7 @@ typedef union
     tBTA_AV_STATUS      status;
     tBTA_AV_ROLE_CHANGED role_changed;
     tBTA_AV_DELAY_REPORT delay_report;
+    tBTA_AV_MTU_CONFIG  mtu_config;
 } tBTA_AV;
 
 typedef struct

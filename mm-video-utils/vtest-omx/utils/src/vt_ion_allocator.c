@@ -8,6 +8,7 @@ Qualcomm Technologies Proprietary and Confidential
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
 
 #undef LOG_TAG
 #define LOG_TAG "VTEST_ION_ALLOCATOR"

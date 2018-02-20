@@ -1,6 +1,6 @@
 /*===========================================================================
 
-  Copyright (c) 2012-2016 Qualcomm Technologies, Inc.  All Rights Reserved.
+  Copyright (c) 2012-2017 Qualcomm Technologies, Inc.  All Rights Reserved.
   Qualcomm Technologies Proprietary and Confidential.
 
 ===========================================================================*/
@@ -61,6 +61,7 @@ static int profile_switch_action(struct devices_manager_dev *dev_mgr);
 static int modem_proc_action(struct devices_manager_dev *dev_mgr);
 static int modem_proc_current_action(struct devices_manager_dev *dev_mgr);
 static int modem_bw_action(struct devices_manager_dev *dev_mgr);
+static int modem_skin_action(struct devices_manager_dev *dev_mgr);
 static int cpu_current_op(struct devices_manager_dev *dev_mgr, int *lvl);
 static int cpu_all_current_op(struct devices_manager_dev *dev_mgr, int *lvl);
 static int cluster_current_op(struct devices_manager_dev *dev_mgr, int *lvl);
@@ -115,17 +116,17 @@ static struct tmd_generic_dev_info_t gen_dev_list[] = {
 		.action = report_rule_action,
 	},
 	{
-		.name = "modem",
+		.name = MODEM_DEV_NAME,
 		.num_of_lvls = 4,
 		.action = modem_action,
 	},
 	{
-		.name = "fusion",
+		.name = FUSION_DEV_NAME,
 		.num_of_lvls = 4,
 		.action = fusion_modem_action,
 	},
 	{
-		.name = "vdd_restriction",
+		.name = VDD_RESTRICT_DEV_NAME,
 		.num_of_lvls = 2,
 		.action = vdd_restriction_action,
 	},
@@ -165,29 +166,34 @@ static struct tmd_generic_dev_info_t gen_dev_list[] = {
 		.action = venus_action,
 	},
 	{
-		.name = "modem_cx",
+		.name = MODEM_CX_DEV_NAME,
 		.num_of_lvls = 4,
 		.action = modem_cx_limit_action,
 	},
 	{
-		.name = "modem_proc",
+		.name = MODEM_PROC_DEV_NAME,
 		.num_of_lvls = 4,
 		.action = modem_proc_action,
 	},
 	{
-		.name = "modem_proc_current",
+		.name = MODEM_PROC_CURRENT_DEV_NAME,
 		.num_of_lvls = 4,
 		.action = modem_proc_current_action,
 	},
 	{
-		.name = "cpr_band",
+		.name = CPR_BAND_DEV_NAME,
 		.num_of_lvls = MAX_CPR_TEMPERATURE_BAND,
 		.action = cpr_band_action,
 	},
 	{
-		.name = "modem_bw",
+		.name = MODEM_BW_DEV_NAME,
 		.num_of_lvls = 3,
 		.action = modem_bw_action,
+	},
+	{
+		.name = MODEM_SKIN_DEV_NAME,
+		.num_of_lvls = 4,
+		.action = modem_skin_action,
 	},
 };
 
@@ -1288,6 +1294,11 @@ static int modem_proc_current_action(struct devices_manager_dev *dev_mgr)
 static int modem_bw_action(struct devices_manager_dev *dev_mgr)
 {
 	return modem_bw_request(dev_mgr->active_req.value);
+}
+
+static int modem_skin_action(struct devices_manager_dev *dev_mgr)
+{
+	return modem_skin_request(dev_mgr->active_req.value);
 }
 
 static int cpu_current_op(struct devices_manager_dev *dev_mgr,

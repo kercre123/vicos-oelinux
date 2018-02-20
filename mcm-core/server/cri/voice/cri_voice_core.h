@@ -1,8 +1,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
   ---------------------------------------------------------------------------
 ******************************************************************************/
 
@@ -39,5 +40,6 @@ void cri_voice_core_timer_expiry_for_e911_call_ended
 );
 
 void cri_voice_core_start_timer_e911_call_ended();
+cri_core_error_type cri_voice_reset(void);
 
 #endif

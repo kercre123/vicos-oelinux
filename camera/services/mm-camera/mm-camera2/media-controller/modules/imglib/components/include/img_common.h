@@ -1,5 +1,5 @@
 /**********************************************************************
-*  Copyright (c) 2013-2017 Qualcomm Technologies, Inc.
+*  Copyright (c) 2013-2018 Qualcomm Technologies, Inc.
 *  All Rights Reserved.
 *  Confidential and Proprietary - Qualcomm Technologies, Inc.
 **********************************************************************/
@@ -42,6 +42,9 @@
 #define MAX_MULTICAM_SESSIONS 4
 #define MAX_IMGLIB_SESSION 2
 
+#define MAX_SHDR_BG_STATS_SIZE 1024
+#define MAX_SHDR_BHIST_STATS_SIZE 256
+
 #undef TRUE
 #undef FALSE
 #undef MIN
@@ -63,6 +66,8 @@
 #define CLIP(x, lower, upper)  {x = ((x < lower) ? lower : \
                                ((x > upper) ? upper : x)); }
 #define CEILING8(X)  (((X) + 0x0007) & 0xFFF8)
+
+#define SEC_TO_NS_FACTOR 1000000000
 
 /** BILINEAR_INTERPOLATION
  *
@@ -1013,6 +1018,9 @@ typedef struct {
   unsigned int start_y;
   unsigned int width;
   unsigned int height;
+  unsigned int lef_byte_offset;
+  unsigned int sef_byte_offset;
+  unsigned int sensor_layout;
 } img_sensor_custom_t;
 
 /** img_frame_info_t
@@ -1170,11 +1178,19 @@ typedef struct {
 *    @bayer_gtm_gamma: GTM gamma
 *    @hdr_dark_n1: Normalization factor
 *    @hdr_dark_n2_minus_n1_normalization_factor: Algorithm tuning param
+*    @HDR_DARK_N2:To support multi frame SHDR
+*    @HDR_DARK_N3_MINUS_N2_NORMALIZATION_FACTOR:Algorithm tuning param
+*    @HDR_DARK_N3:To support multi frame SHDR
+*    HDR_DARK_N4_MINUS_N3_NORMALIZATION_FACTOR:Algorithm tuning param
 *    @hdr_max_weight: HDR max weight
 *    @tm_gain: Tone mapping gain
 *    @perf_hint: GPU performance mode
 *    @num_gpu_passes: number of GPU passes
 *    @hdr_ratio: HDR exp ratio
+*    @gpu_ltm_en: Flag to enable ltm or not
+*    @ltm_max_gain:Local tone mapping max gain.[0.0, 1.0], default 0.5
+*    @ltm_comp_target:Local tone mapping curve knobs.[0.0, 1.0], default 0.125
+*    @ltm_inverse_tone_perc:Inv tone prevention tuning [0.0, 4.0], default 1.0
 *
 *    Represents prepare to start info.
 **/
@@ -1202,11 +1218,19 @@ typedef struct {
   float bayer_gtm_gamma;
   int hdr_dark_n1;
   float hdr_dark_n2_minus_n1_normalization_factor;
+  int HDR_DARK_N2;
+  float HDR_DARK_N3_MINUS_N2_NORMALIZATION_FACTOR;
+  int HDR_DARK_N3;
+  float HDR_DARK_N4_MINUS_N3_NORMALIZATION_FACTOR;
   int hdr_max_weight;
   float tm_gain;
   int perf_hint;
   int num_gpu_passes;
   float hdr_ratio;
+  int  gpu_ltm_en;
+  float        ltm_max_gain;
+  float        ltm_comp_target;
+  float        ltm_inverse_tone_perc;
 } bayerproc_prepare_info_t;
 
 /** bc_prestart_info_t
@@ -1639,6 +1663,18 @@ typedef struct {
   uint32_t num_of_sessions;
 } img_multicam_init_params_t;
 
+/** img_shdr_stats_info_t
+ *  Includes information related to BG and BHIST stat
+ **/
+typedef struct
+{
+  int frame_id;
+  int num_grid_w;
+  int num_grid_h;
+  float y_avg[MAX_SHDR_BG_STATS_SIZE];
+  float bin[MAX_SHDR_BHIST_STATS_SIZE];
+} img_shdr_stats_info_t;
+
 /** img_frame_ops_t
  *    @get_frame: The function pointer to get the frame
  *    @release_frame: The function pointer to release the frame
@@ -1663,6 +1699,7 @@ typedef struct {
   int (*image_scale)(void *p_src, uint32_t src_width, uint32_t src_height,
     uint32_t src_stride, void *p_dst, uint32_t dst_stride);
   void *p_appdata;
+  void (*get_aec_stat)(void *p_appdata, void* stats_info);
 } img_frame_ops_t;
 
 /** img_base_ops_t

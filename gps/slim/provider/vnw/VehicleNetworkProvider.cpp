@@ -121,11 +121,30 @@ void VehicleNetworkProvider::cbOnNewCanFrame(CwFrame* pFrame, void *userData,
 {
   VehicleNetworkProvider *pzVNWProvider =
       reinterpret_cast<VehicleNetworkProvider*>(userData);
-  SLIM_LOGD("New frame received. id:%u, if:%d", (unsigned int )pFrame->getId(),
-      ifNo);
+
+  SLIM_LOGV("New frame received. id:%u, if:%d Time:%d", (unsigned int )pFrame->getId(),
+             ifNo, (unsigned int )pFrame->getTimestamp());
 
   /* create new message data */
   CanFrameEvent* pzNewEvent = new CanFrameEvent(pFrame, ifNo);
+
+  /* send message to event processing loop */
+  if (!slim_IpcSendData(THREAD_ID_VNW, eIPC_MSG_NEW_FRAME_EVENT,
+                        &pzNewEvent, sizeof(pzNewEvent)))
+  {
+    SLIM_LOGE("Error sending IPC message to event processing loop");
+  }
+}
+
+void VehicleNetworkProvider::cbOnNewBufferedCanFrame(CwFrame* pFrame, void *userData,
+    int ifNo)
+{
+  SLIM_LOGV("New Buffer frame received. id:%u, if:%d Time:%d",
+             (unsigned int )pFrame->getId(),
+             ifNo, (unsigned int )pFrame->getTimestamp());
+  /* create new message data */
+  CanFrameEvent* pzNewEvent = new CanFrameEvent(pFrame, ifNo);
+  pzNewEvent->mIsBuffFrame = true;
 
   /* send message to event processing loop */
   if (!slim_IpcSendData(THREAD_ID_VNW, eIPC_MSG_NEW_FRAME_EVENT, &pzNewEvent,
@@ -139,6 +158,7 @@ void VehicleNetworkProvider::runEventLoop()
 {
   SLIM_LOGD("Starting event loop");
   int earIdAccel = 0, earIdGyro = 0, earIdOdo = 0, earIdSpeed = 0, earIdDws = 0, earIdGear = 0;
+  int mearIdAccel = 0, mearIdGyro = 0, mearIdOdo = 0, mearIdSpeed =0, mearIdDws =0, mearIdGear = 0;
 
   //slim_TimerStart(m_pzTimer, 500, 0);
   m_pzVehicleNetworkCfg = new VehicleNetworkConfiguration();
@@ -167,15 +187,30 @@ void VehicleNetworkProvider::runEventLoop()
         if (VehicleNetworkConfiguration::eACCEL_CONFIG_CONF1 ==
                m_pzVehicleNetworkCfg->GetAccelConfig()->GetVersion())
         {
-            AccelCONF1Config *accelConfig = static_cast<AccelCONF1Config*>(m_pzVehicleNetworkCfg->GetAccelConfig());
-            /* Register callback to CanWrapper */
-            /* Configure listener to get only this frame on all interfaces*/
-            earIdAccel = m_pzCanWrapper->registerListener(accelConfig->m_iFrameId, CwBase::MASK11, cbOnNewCanFrame,
-                    (void *)(this), CwBase::IFACE_ANY);
-            if(earIdAccel == 0)
-            {
-              SLIM_LOGE("Error registering CanWrapper listener for Accel");
-            }
+          AccelCONF1Config *accelConfig =
+               static_cast<AccelCONF1Config*>(m_pzVehicleNetworkCfg->GetAccelConfig());
+          /* Register callback to CanWrapper */
+          /* Configure listener to get only this frame on all interfaces*/
+          earIdAccel = m_pzCanWrapper->registerListener(accelConfig->m_iFrameId,
+                                                        CwBase::MASK11,
+                                                        cbOnNewCanFrame,
+                                                        (void *)(this),
+                                                        CwBase::IFACE_ANY);
+
+          mearIdAccel = m_pzCanWrapper->registerBufferedDataListener(accelConfig->m_iFrameId,
+                                                                     CwBase::MASK11,
+                                                                     cbOnNewBufferedCanFrame,
+                                                                     (void *)(this),
+                                                                     CwBase::IFACE_ANY);
+
+          m_pzCanWrapper->enableBuffering(CwBase::IFACE_ANY,
+                                          accelConfig->m_iFrameId,
+                                          CwBase::MASK11);
+
+          if (earIdAccel == 0 || mearIdAccel == 0)
+          {
+            SLIM_LOGE("Error registering CanWrapper listener for Accel");
+          }
         }
       }
       else
@@ -208,15 +243,30 @@ void VehicleNetworkProvider::runEventLoop()
         if (VehicleNetworkConfiguration::eGYRO_CONFIG_CONF1 ==
             m_pzVehicleNetworkCfg->GetGyroConfig()->GetVersion())
         {
-            GyroCONF1Config *gyroConfig = static_cast<GyroCONF1Config*>(m_pzVehicleNetworkCfg->GetGyroConfig());
-            /* Register callback to CanWrapper */
-            /* Configure listener to get only this frame on all interfaces*/
-            earIdGyro = m_pzCanWrapper->registerListener(gyroConfig->m_iFrameId, CwBase::MASK11, cbOnNewCanFrame,
-                   (void *)(this), CwBase::IFACE_ANY);
-            if(earIdGyro == 0)
-            {
-                SLIM_LOGE("Error registering CanWrapper listener for Gyro");
-            }
+          GyroCONF1Config *gyroConfig =
+                  static_cast<GyroCONF1Config*>(m_pzVehicleNetworkCfg->GetGyroConfig());
+          /* Register callback to CanWrapper */
+          /* Configure listener to get only this frame on all interfaces*/
+          earIdGyro = m_pzCanWrapper->registerListener(gyroConfig->m_iFrameId,
+                                                       CwBase::MASK11,
+                                                       cbOnNewCanFrame,
+                                                       (void *)(this),
+                                                       CwBase::IFACE_ANY);
+
+          mearIdGyro = m_pzCanWrapper->registerBufferedDataListener(gyroConfig->m_iFrameId,
+                                                                    CwBase::MASK11,
+                                                                    cbOnNewBufferedCanFrame,
+                                                                    (void *)(this),
+                                                                    CwBase::IFACE_ANY);
+
+          m_pzCanWrapper->enableBuffering(CwBase::IFACE_ANY,
+                                          gyroConfig->m_iFrameId,
+                                          CwBase::MASK11);
+
+          if (earIdGyro == 0 || mearIdGyro == 0)
+          {
+              SLIM_LOGE("Error registering CanWrapper listener for Gyro");
+          }
         }
       }
       else
@@ -249,15 +299,30 @@ void VehicleNetworkProvider::runEventLoop()
         if (VehicleNetworkConfiguration::eODOMETRY_CONFIG_CONF1 ==
                m_pzVehicleNetworkCfg->GetOdometryConfig()->GetVersion())
         {
-            OdometryCONF1Config *odoConfig = static_cast<OdometryCONF1Config*>(m_pzVehicleNetworkCfg->GetOdometryConfig());
-            /* Register callback to CanWrapper */
-            /* Configure listener to get only this frame on all interfaces*/
-            earIdOdo = m_pzCanWrapper->registerListener(odoConfig->m_iFrameId, CwBase::MASK11, cbOnNewCanFrame,
-                        (void *)(this), CwBase::IFACE_ANY);
-            if(earIdOdo == 0)
-            {
-                SLIM_LOGE("Error registering CanWrapper listener for Odometry");
-            }
+          OdometryCONF1Config *odoConfig =
+               static_cast<OdometryCONF1Config*>(m_pzVehicleNetworkCfg->GetOdometryConfig());
+          /* Register callback to CanWrapper */
+          /* Configure listener to get only this frame on all interfaces*/
+          earIdOdo = m_pzCanWrapper->registerListener(odoConfig->m_iFrameId,
+                                                      CwBase::MASK11,
+                                                      cbOnNewCanFrame,
+                                                      (void *)(this),
+                                                      CwBase::IFACE_ANY);
+
+          mearIdOdo = m_pzCanWrapper->registerBufferedDataListener(odoConfig->m_iFrameId,
+                                                                   CwBase::MASK11,
+                                                                   cbOnNewBufferedCanFrame,
+                                                                   (void *)(this),
+                                                                   CwBase::IFACE_ANY);
+
+          m_pzCanWrapper->enableBuffering(CwBase::IFACE_ANY,
+                                          odoConfig->m_iFrameId,
+                                          CwBase::MASK11);
+
+          if (earIdOdo == 0 || mearIdOdo ==  0)
+          {
+              SLIM_LOGE("Error registering CanWrapper listener for Odometry");
+          }
         }
       }
       else
@@ -290,15 +355,30 @@ void VehicleNetworkProvider::runEventLoop()
         if (VehicleNetworkConfiguration::eSPEED_CONFIG_CONF1 ==
                m_pzVehicleNetworkCfg->GetSpeedConfig()->GetVersion())
         {
-            SpeedCONF1Config *speedConfig = static_cast<SpeedCONF1Config *>(m_pzVehicleNetworkCfg->GetSpeedConfig());
-            /* Register callback to CanWrapper */
-            /* Configure listener to get only this frame on all interfaces*/
-            earIdSpeed = m_pzCanWrapper->registerListener(speedConfig->m_iFrameId, CwBase::MASK11, cbOnNewCanFrame,
-                        (void *)(this), CwBase::IFACE_ANY);
-            if(earIdSpeed == 0)
-            {
-                SLIM_LOGE("Error registering CanWrapper listener for Speed");
-            }
+          SpeedCONF1Config *speedConfig =
+               static_cast<SpeedCONF1Config *>(m_pzVehicleNetworkCfg->GetSpeedConfig());
+          /* Register callback to CanWrapper */
+          /* Configure listener to get only this frame on all interfaces*/
+          earIdSpeed = m_pzCanWrapper->registerListener(speedConfig->m_iFrameId,
+                                                        CwBase::MASK11,
+                                                        cbOnNewCanFrame,
+                                                        (void *)(this),
+                                                        CwBase::IFACE_ANY);
+
+          mearIdSpeed = m_pzCanWrapper->registerBufferedDataListener(speedConfig->m_iFrameId,
+                                                                     CwBase::MASK11,
+                                                                     cbOnNewBufferedCanFrame,
+                                                                     (void *)(this),
+                                                                     CwBase::IFACE_ANY);
+
+          m_pzCanWrapper->enableBuffering(CwBase::IFACE_ANY,
+                                          speedConfig->m_iFrameId,
+                                          CwBase::MASK11);
+
+          if (earIdSpeed == 0 || mearIdSpeed ==  0)
+          {
+              SLIM_LOGE("Error registering CanWrapper listener for Speed");
+          }
         }
       }
       else
@@ -330,15 +410,30 @@ void VehicleNetworkProvider::runEventLoop()
         if (VehicleNetworkConfiguration::eDWS_CONFIG_CONF1 ==
                m_pzVehicleNetworkCfg->GetDwsConfig()->GetVersion())
         {
-            DwsCONF1Config *dwsConfig = static_cast<DwsCONF1Config *>(m_pzVehicleNetworkCfg->GetDwsConfig());
-            /* Register callback to CanWrapper */
-            /* Configure listener to get only this frame on all interfaces*/
-            earIdDws = m_pzCanWrapper->registerListener(dwsConfig->m_iFrameId, CwBase::MASK11, cbOnNewCanFrame,
-                        (void *)(this), CwBase::IFACE_ANY);
-            if(earIdDws == 0)
-            {
-                SLIM_LOGE("Error registering CanWrapper listener for Speed");
-            }
+          DwsCONF1Config *dwsConfig =
+               static_cast<DwsCONF1Config *>(m_pzVehicleNetworkCfg->GetDwsConfig());
+          /* Register callback to CanWrapper */
+          /* Configure listener to get only this frame on all interfaces*/
+          earIdDws = m_pzCanWrapper->registerListener(dwsConfig->m_iFrameId,
+                                                      CwBase::MASK11,
+                                                      cbOnNewCanFrame,
+                                                      (void *)(this),
+                                                      CwBase::IFACE_ANY);
+
+          mearIdDws = m_pzCanWrapper->registerBufferedDataListener(dwsConfig->m_iFrameId,
+                                                                   CwBase::MASK11,
+                                                                   cbOnNewBufferedCanFrame,
+                                                                   (void *)(this),
+                                                                   CwBase::IFACE_ANY);
+
+          m_pzCanWrapper->enableBuffering(CwBase::IFACE_ANY,
+                                          dwsConfig->m_iFrameId,
+                                          CwBase::MASK11);
+
+          if (earIdDws == 0 || mearIdDws ==  0)
+          {
+              SLIM_LOGE("Error registering CanWrapper listener for Speed");
+          }
         }
       }
       else
@@ -371,15 +466,30 @@ void VehicleNetworkProvider::runEventLoop()
         if (VehicleNetworkConfiguration::eGEAR_CONFIG_CONF1 ==
                m_pzVehicleNetworkCfg->GetGearConfig()->GetVersion())
         {
-            GearCONF1Config *gearConfig = static_cast<GearCONF1Config *>(m_pzVehicleNetworkCfg->GetGearConfig());
-            /* Register callback to CanWrapper */
-            /* Configure listener to get only this frame on all interfaces*/
-            earIdGear = m_pzCanWrapper->registerListener(gearConfig->m_iFrameId, CwBase::MASK11, cbOnNewCanFrame,
-                        (void *)(this), CwBase::IFACE_ANY);
-            if(earIdGear == 0)
-            {
-                SLIM_LOGE("Error registering CanWrapper listener for Speed");
-            }
+          GearCONF1Config *gearConfig =
+               static_cast<GearCONF1Config *>(m_pzVehicleNetworkCfg->GetGearConfig());
+          /* Register callback to CanWrapper */
+          /* Configure listener to get only this frame on all interfaces*/
+          earIdGear = m_pzCanWrapper->registerListener(gearConfig->m_iFrameId,
+                                                       CwBase::MASK11,
+                                                       cbOnNewCanFrame,
+                                                       (void *)(this),
+                                                       CwBase::IFACE_ANY);
+
+          mearIdGear = m_pzCanWrapper->registerBufferedDataListener(gearConfig->m_iFrameId,
+                                                                    CwBase::MASK11,
+                                                                    cbOnNewBufferedCanFrame,
+                                                                    (void *)(this),
+                                                                    CwBase::IFACE_ANY);
+
+          m_pzCanWrapper->enableBuffering(CwBase::IFACE_ANY,
+                                          gearConfig->m_iFrameId,
+                                          CwBase::MASK11);
+
+          if (earIdGear == 0 || mearIdGear ==  0)
+          {
+              SLIM_LOGE("Error registering CanWrapper listener for Gear");
+          }
         }
       }
       else
@@ -415,17 +525,17 @@ void VehicleNetworkProvider::runEventLoop()
       slim_Memscpy(&pzNewEvent, sizeof(pzNewEvent), pz_Msg->p_Data,
           pz_Msg->q_Size);
       MutexLock _l(m_zMutex);
-      if ((m_pzAccelProc) && (earIdAccel))
+      if ((m_pzAccelProc) && (earIdAccel) && (mearIdAccel))
         m_pzAccelProc->OnNewCanFrameEvent(pzNewEvent);
-      if ((m_pzGyroProc) && (earIdGyro))
+      if ((m_pzGyroProc) && (earIdGyro) && (mearIdGyro))
         m_pzGyroProc->OnNewCanFrameEvent(pzNewEvent);
-      if ((m_pzOdometryProc) && (earIdOdo))
+      if ((m_pzOdometryProc) && (earIdOdo) && (mearIdOdo))
         m_pzOdometryProc->OnNewCanFrameEvent(pzNewEvent);
-      if (m_pzSpeedProc && earIdSpeed)
+      if ((m_pzSpeedProc) && (earIdSpeed) && (mearIdSpeed))
         m_pzSpeedProc->OnNewCanFrameEvent(pzNewEvent);
-      if (m_pzDwsProc && earIdDws)
+      if ((m_pzDwsProc) && (earIdDws) && (mearIdDws))
         m_pzDwsProc->OnNewCanFrameEvent(pzNewEvent);
-      if (m_pzGearProc && earIdGear)
+      if ((m_pzGearProc) && (earIdGear) && (mearIdGear))
         m_pzGearProc->OnNewCanFrameEvent(pzNewEvent);
       delete pzNewEvent;
     }
@@ -495,6 +605,11 @@ bool uEnable, slimServiceEnumT eService)
   if (uEnable)
   {
     SLIM_MASK_SET(m_qEnabledServices, eService);
+    if (eSLIM_SERVICE_VEHICLE_SPEED == eService) {
+      uint64_t tProviderTimeMs = slim_TimeTickGetMilliseconds();
+      SLIM_LOGV("Calling releaseBufferedData at %"PRId32 "msec from boot up", tProviderTimeMs);
+      m_pzCanWrapper->releaseBufferedData(CwBase::IFACE_ANY);
+    }
   }
   else
   {

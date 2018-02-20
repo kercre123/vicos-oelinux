@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Qualcomm Technologies, Inc.
+ * Copyright (c) 2017-2018 Qualcomm Technologies, Inc.
  * All Rights Reserved.
  * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
@@ -572,18 +572,23 @@ int sensor_calculate_exposure(float real_gain,
   if (!exp_info) {
     return -1;
   }
+  exp_info->line_count = line_count;
 
+  /* (1) sensor analog gain */
   exp_info->reg_gain = imx477_real_to_register_gain(real_gain);
   exp_info->sensor_real_gain =
     imx477_register_to_real_gain(exp_info->reg_gain);
+  /* (2) sensor digital gain */
   exp_info->sensor_digital_gain =
     imx477_digital_gain_calc(real_gain, exp_info->sensor_real_gain);
   exp_info->sensor_real_dig_gain =
     (float)exp_info->sensor_digital_gain / IMX477_MAX_DGAIN_DECIMATOR;
+  /* (3) isp gain */
   exp_info->digital_gain =
     real_gain /(exp_info->sensor_real_gain * exp_info->sensor_real_dig_gain);
-  exp_info->line_count = line_count;
+  /* (4) sensor short analog gain */
   exp_info->s_reg_gain = imx477_real_to_register_gain(s_real_gain);
+  /* (5) sensor short digital gain */
 
   return 0;
 }
@@ -645,71 +650,158 @@ int sensor_fill_exposure_array(unsigned int gain,
   reg_setting->reg_setting[reg_count].delay = 0;
   reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info.coarse_int_time_addr;
-  reg_setting->reg_setting[reg_count].reg_data = (line & 0x0000FF00) >> 8;
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+  if(SENSOR_HDR_RAW == is_hdr_enabled) {
+    if (line & 0x1) {
+      line = line - 1;
+    }
+    if (line < DOL_MIN_EXPOSURE_LINE) {
+      line = DOL_MIN_EXPOSURE_LINE;
+    }
+    if (s_linecount & 0x1) {
+      s_linecount = s_linecount - 1;
+    }
+    if (s_linecount < DOL_MIN_EXPOSURE_LINE) {
+      s_linecount = DOL_MIN_EXPOSURE_LINE;
+    }
+    if (gain > DOL_MAX_ANALOG_GAIN) {
+      gain = DOL_MAX_ANALOG_GAIN;
+    }
+    if (digital_gain < DOL_MIN_DIGITAL_GAIN) {
+      digital_gain = DOL_MIN_DIGITAL_GAIN;
+    } else if (digital_gain > DOL_MAX_DIGITAL_GAIN) {
+      digital_gain = DOL_MAX_DIGITAL_GAIN;
+    }
 
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info.coarse_int_time_addr + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (line & 0x000000FF);
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    /* EXPOSURE LEF 1st frame, LONG_COARSE_INT_TIME */
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DOL_CIT_1ST;
+    reg_setting->reg_setting[reg_count].reg_data = (line & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info.global_gain_addr;
-  reg_setting->reg_setting[reg_count].reg_data = (gain & 0x0000FF00) >> 8;
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DOL_CIT_1ST + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (line & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr =
-    sensor_lib_ptr.exp_gain_info.global_gain_addr + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (gain & 0x000000FF);
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    /* EXPOSURE SEF 2nd frame, SHORT_COARSE_INT_TIME */
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DOL_CIT_2ND;
+    reg_setting->reg_setting[reg_count].reg_data=(s_linecount & 0x0000FF00)>>8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GR_ADDR;
-  reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DOL_CIT_2ND + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (s_linecount & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GR_ADDR + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    /* GAIN ANALOG LEF 1st frame, LONG_ANALOG_GAIN */
+    reg_setting->reg_setting[reg_count].reg_addr = REG_ANALOG_GAIN_1ST_FRAME;
+    reg_setting->reg_setting[reg_count].reg_data = (gain & 0x00003F00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_R_ADDR;
-  reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    reg_setting->reg_setting[reg_count].reg_addr = REG_ANALOG_GAIN_1ST_FRAME + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_R_ADDR + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    /* GAIN ANALOG SEF 2nd frame, SHORT_ANALOG_GAIN */
+    reg_setting->reg_setting[reg_count].reg_addr = REG_ANALOG_GAIN_2ND_FRAME;
+    reg_setting->reg_setting[reg_count].reg_data = (gain & 0x00003F00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_B_ADDR;
-  reg_setting->reg_setting[reg_count].reg_data =
-    (digital_gain & 0x0000FF00) >> 8;
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    reg_setting->reg_setting[reg_count].reg_addr = REG_ANALOG_GAIN_2ND_FRAME + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_B_ADDR + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    /* GAIN DIGITAL LEF 1st frame, LONG_DIGITAL_GAIN */
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DIGITAL_GAIN_1ST_FRAME;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GB_ADDR;
-  reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DIGITAL_GAIN_1ST_FRAME + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
-  reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GB_ADDR + 1;
-  reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
-  reg_setting->reg_setting[reg_count].delay = 0;
-  reg_count = reg_count + 1;
+    /* GAIN DIGITAL SEF 2nd frame, SHORT_DIGITAL_GAIN */
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DIGITAL_GAIN_2ND_FRAME;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
 
+    reg_setting->reg_setting[reg_count].reg_addr = REG_DIGITAL_GAIN_2ND_FRAME + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+  } else {
+    reg_setting->reg_setting[reg_count].reg_addr =
+      sensor_lib_ptr.exp_gain_info.coarse_int_time_addr;
+    reg_setting->reg_setting[reg_count].reg_data = (line & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr =
+      sensor_lib_ptr.exp_gain_info.coarse_int_time_addr + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (line & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr =
+      sensor_lib_ptr.exp_gain_info.global_gain_addr;
+    reg_setting->reg_setting[reg_count].reg_data = (gain & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr =
+      sensor_lib_ptr.exp_gain_info.global_gain_addr + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GR_ADDR;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GR_ADDR + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_R_ADDR;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_R_ADDR + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_B_ADDR;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_B_ADDR + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GB_ADDR;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x0000FF00) >> 8;
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+
+    reg_setting->reg_setting[reg_count].reg_addr = IMX477_DIG_GAIN_GB_ADDR + 1;
+    reg_setting->reg_setting[reg_count].reg_data = (digital_gain & 0x000000FF);
+    reg_setting->reg_setting[reg_count].delay = 0;
+    reg_count = reg_count + 1;
+  }
   for (i = 0; i < sensor_lib_ptr.groupoff_settings.size; i++) {
     reg_setting->reg_setting[reg_count].reg_addr =
       sensor_lib_ptr.groupoff_settings.reg_setting_a[i].reg_addr;

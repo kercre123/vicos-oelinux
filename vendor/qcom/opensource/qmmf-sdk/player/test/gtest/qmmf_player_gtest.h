@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -72,7 +72,7 @@ struct Event {
 
 class PlayerGtest : public ::testing::Test {
  public:
-  PlayerGtest() : player_() {};
+  PlayerGtest();
 
   ~PlayerGtest() {};
 
@@ -92,10 +92,10 @@ class PlayerGtest : public ::testing::Test {
   void playercb(EventType event_type, void *event_data,
                 size_t event_data_size);
 
-  void audiotrackcb(EventType event_type, void *event_data,
+  void audiotrackcb(uint32_t track_id, EventType event_type, void *event_data,
                     size_t event_data_size);
 
-  void videotrackcb(EventType event_type, void *event_data,
+  void videotrackcb(uint32_t track_id, EventType event_type, void *event_data,
                     size_t event_data_size);
 
   int32_t ParseFile(AudioTrackCreateParam& audio_track_param_);

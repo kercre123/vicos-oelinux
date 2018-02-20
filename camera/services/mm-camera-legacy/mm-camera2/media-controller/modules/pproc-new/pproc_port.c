@@ -19,6 +19,7 @@
 #ifdef _ANDROID_
 #include <cutils/properties.h>
 #endif
+#define PROPERTY_VALUE_MAX 32
 
 #if 0
 #define DEBUG_PPROC_PORT

@@ -50,6 +50,7 @@
 #include "presentation_timing-server-protocol.h"
 
 #define WINDOW_TITLE "Weston Compositor"
+#define WL_BACKEND_OUTPUT_VERSION 1
 
 struct wayland_backend {
 	struct weston_backend base;
@@ -1766,7 +1767,7 @@ wayland_backend_register_output(struct wayland_backend *b, uint32_t id)
 
 	output->id = id;
 	output->global = wl_registry_bind(b->parent.registry, id,
-					  &wl_output_interface, 1);
+					  &wl_output_interface, WL_BACKEND_OUTPUT_VERSION);
 	if (!output->global) {
 		free(output);
 		return;

@@ -25,6 +25,7 @@ $Header: $
 
 when      who  what, where, why
 --------  ---  ---------------------------------------------------------------
+10/09/17  nk   Fixed KW p1 issues and warnings
 08/17/17  rv   Added logic for MBN Loading
 08/08/17  vk   Initial release
 =============================================================================*/
@@ -38,6 +39,7 @@ when      who  what, where, why
 #include "qbi_svc_bc_mbim.h"
 #include "qbi_svc_bc_ext_mbim.h"
 #include "qbi_svc_bc_spdp.h"
+#include "qbi_svc_bc_nas.h"
 #include "qbi_svc_bc_ext.h"
 
 #include "qbi_common.h"
@@ -74,12 +76,7 @@ static uint8_t MBN_DESC[PDC_CONFIG_ID_SIZE_MAX_V01] =
 0x5B, 0x30, 0xA9, 0x89, 0x42, 0x77, 0x99, 0xAF, 0x9E, 
 0xC2, 0x5C};
 
-#define MAX_BYTES_FOR_RANGE_COMPARISION 8
 #define SPDP_IND_TOKEN                  0x1234
-
-/* Stores Current Loaded MBN Configuration */
-static uint32_t current_config_id_len;
-static uint8_t current_config_id[PDC_CONFIG_ID_SIZE_MAX_V01] = {0,};
 
 /* YM Access String */
 const char YM_ACCESS_STRING[24] = {0x70,0x00,0x6C,0x00,0x75,0x00,0x73,0x00,0x2E,0x00,0x61,0x00,0x63,0x00,0x73,0x00,0x2E,0x00,0x6A,0x00,0x70,0x00,0x00,0x00};
@@ -108,11 +105,6 @@ typedef boolean (qbi_svc_bc_spdp_prepare_req_f)
   struct qbi_txn_struct *notifier_txn
 );
 
-qbi_svc_action_e qbi_svc_bc_spdp_wds_event_report_ind_cb
-(
-  const qbi_svc_qmi_ind_data_s *ind
-);
-
 /*=============================================================================
 
   Private Function Prototypes
@@ -127,6 +119,11 @@ static qbi_svc_action_e qbi_svc_bc_spdp_get_lte_attach_config
 static qbi_svc_action_e qbi_svc_bc_spdp_set_lte_attach_config
 (
   qbi_txn_s *txn
+);
+
+qbi_svc_action_e qbi_svc_bc_spdp_wds_event_report_ind_cb
+(
+  const qbi_svc_qmi_ind_data_s *ind
 );
 
 /*=============================================================================
@@ -268,23 +265,28 @@ void *qbi_svc_bc_spdp_databuf_add_field
   return databuf;
 } /* qbi_svc_bc_spdp_databuf_add_field() */
 
-  /*===========================================================================
-  FUNCTION: qbi_svc_bc_spdp_get_lte_attach_status_evt_cb
-  ===========================================================================*/
-  /*!
-  @brief Notify callback used to track the result of sub ready status event
-  sent at the end of the deactivation stage
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_spdp_compare_string
+===========================================================================*/
+/*!
+    @brief Compares APN, username, pasword strings of listener and notifier.
 
-  @details
+    @details
 
-  @param listener_txn Slot mapping set request transaction
-  @param notifier_txn Forced subcriber ready status event transaction
-  */
-  /*=========================================================================*/
+    @param listener_txn Listener transaction
+    @param notifier_txn Notifier transaction
+    @param listener_txn Listener field descriptor
+    @param notifier_txn Notifier field descriptor
+    @param listener_txn Listener initial offset
+    @param notifier_txn Notifier initial offset
+
+    @return boolean
+*/
+/*=========================================================================*/
 static boolean qbi_svc_bc_spdp_compare_string
 (
   qbi_txn_s                   *listener_txn,
-  const qbi_txn_s             *notifier_txn,
+  qbi_txn_s                   *notifier_txn,
   qbi_mbim_offset_size_pair_s *listener_fd,
   qbi_mbim_offset_size_pair_s *notifier_fd,
   uint32                      listener_initial_offset,
@@ -302,19 +304,52 @@ static boolean qbi_svc_bc_spdp_compare_string
 
   if (listener_fd->size == notifier_fd->size)
   {
-    listener_str = qbi_txn_req_databuf_get_field(listener_txn,
+    listener_str = (uint8 *) qbi_txn_req_databuf_get_field(listener_txn,
       listener_fd, listener_initial_offset, listener_fd->size);
+    QBI_CHECK_NULL_PTR_RET_FALSE(listener_str);
 
-    notifier_str = qbi_txn_rsp_databuf_get_field(notifier_txn,
+    notifier_str = (uint8 *) qbi_txn_rsp_databuf_get_field(notifier_txn,
       notifier_fd, notifier_initial_offset, notifier_fd->size);
+    QBI_CHECK_NULL_PTR_RET_FALSE(notifier_str);
 
-      QBI_CHECK_NULL_PTR_RET_FALSE(listener_str);
-      QBI_CHECK_NULL_PTR_RET_FALSE(notifier_str);
-      match_found = !QBI_MEMCMP(listener_str, notifier_str, notifier_fd->size);
+    match_found = !QBI_MEMCMP(listener_str, notifier_str, notifier_fd->size);
   }
 
   return match_found;
 } /* qbi_svc_bc_spdp_compare_string() */
+
+/*===========================================================================
+  FUNCTION: qbi_svc_bc_spdp_compare_ip_type
+===========================================================================*/
+/*!
+    @brief Compares IP type of listener and notifier.
+
+    @details
+
+    @param listener_txn Listener IP type
+    @param notifier_txn Notifier IP type
+
+    @return boolean
+*/
+/*=========================================================================*/
+static boolean qbi_svc_bc_spdp_compare_ip_type
+(
+  uint32 listener_ip_type,
+  uint32 notifier_ip_type
+)
+{
+/*-------------------------------------------------------------------------*/
+  if (listener_ip_type == notifier_ip_type ||
+    (QBI_SVC_BC_IP_TYPE_DEFAULT == listener_ip_type &&
+      QBI_SVC_BC_IP_TYPE_IPV4V6 == notifier_ip_type) ||
+      (QBI_SVC_BC_IP_TYPE_IPV4V6 == listener_ip_type &&
+        QBI_SVC_BC_IP_TYPE_DEFAULT == notifier_ip_type))
+  {
+    return TRUE;
+  }
+
+  return FALSE;
+} /* qbi_svc_bc_spdp_compare_ip_type() */
 
 /*===========================================================================
   FUNCTION: qbi_svc_bc_spdp_prepare_lte_attach_config_req
@@ -406,7 +441,6 @@ static boolean qbi_svc_bc_spdp_prepare_lte_attach_config_req
       qbi_svc_bc_spdp_databuf_add_field(notifier_txn, field_desc,
         &buf_offset, 0, ctxt_len, NULL);
     QBI_CHECK_NULL_PTR_RET_FALSE(ctxt);
-
     ctxt->roaming = roam_type;
 
     buf_offset -= (ctxt_len - sizeof(qbi_svc_bc_ext_lte_attach_context_s));
@@ -555,7 +589,7 @@ qbi_svc_action_e qbi_svc_bc_spdp_create_notifier_txn
 static void qbi_svc_bc_spdp_configure_single_pdp_evt_cb
 (
   qbi_txn_s       *listener_txn,
-  const qbi_txn_s *notifier_txn
+  qbi_txn_s       *notifier_txn
 )
 {
   qbi_svc_bc_spdp_info_s *info = NULL;
@@ -578,8 +612,13 @@ static void qbi_svc_bc_spdp_configure_single_pdp_evt_cb
   {
     if (info->wait_for_ind != TRUE)
     {
-      QBI_LOG_D_0("SPDP: LTE attach config skipped Proceed to Connect.");
-      qbi_svc_dispatch(listener_txn);
+      info = (qbi_svc_bc_spdp_info_s *)notifier_txn->info;
+      info->spdp_cfg_complete = TRUE;
+
+      QBI_LOG_D_0("SPDP: LTE attach config was either skipped or returned error. "
+        "Proceed/attempt to Connect.");
+      (void)qbi_svc_proc_action(notifier_txn,
+        qbi_svc_bc_connect_s_req(notifier_txn));
     }
     else
     {
@@ -621,6 +660,7 @@ static void qbi_svc_bc_spdp_get_lte_attach_config_evt_cb
   QBI_CHECK_NULL_PTR_RET(notifier_txn->rsp.data);
 
   QBI_LOG_D_1("SPDP: status %d.", notifier_txn->status);
+  info = (qbi_svc_bc_spdp_info_s *)listener_txn->info;
   if (QBI_MBIM_STATUS_SUCCESS == notifier_txn->status)
   {
     connect_req = (qbi_svc_bc_connect_s_req_s *)listener_txn->req.data;
@@ -634,10 +674,10 @@ static void qbi_svc_bc_spdp_get_lte_attach_config_evt_cb
 
     lte_attach_ctxt = qbi_txn_rsp_databuf_get_field(
       notifier_txn, field_desc, 0, field_desc->size);
-
     QBI_CHECK_NULL_PTR_RET(lte_attach_ctxt);
 
-    if (lte_attach_ctxt->ip_type == connect_req->ip_type &&
+
+    if (qbi_svc_bc_spdp_compare_ip_type(connect_req->ip_type, lte_attach_ctxt->ip_type) &&
       lte_attach_ctxt->compression == connect_req->compression &&
       lte_attach_ctxt->auth_protocol == connect_req->auth_protocol &&
       qbi_svc_bc_spdp_compare_string(listener_txn, notifier_txn,
@@ -647,9 +687,8 @@ static void qbi_svc_bc_spdp_get_lte_attach_config_evt_cb
       qbi_svc_bc_spdp_compare_string(listener_txn, notifier_txn,
         &lte_attach_ctxt->password, &connect_req->password, 0, initial_offset))
     {
-      info = (qbi_svc_bc_spdp_info_s *)listener_txn->info;
       info->spdp_cfg_complete = TRUE;
-      qbi_svc_dispatch(listener_txn);
+      qbi_svc_proc_action(listener_txn, qbi_svc_bc_connect_s_req(listener_txn));
     }
     else
     {
@@ -658,10 +697,8 @@ static void qbi_svc_bc_spdp_get_lte_attach_config_evt_cb
   }
   else
   {
-    // TODO: Should we continue with connect if request fails.
-    info = (qbi_svc_bc_spdp_info_s *)listener_txn->info;
     info->spdp_cfg_complete = TRUE;
-    qbi_svc_dispatch(listener_txn);
+    qbi_svc_proc_action(listener_txn, qbi_svc_bc_connect_s_req(listener_txn));
   }
 } /* qbi_svc_bc_spdp_get_lte_attach_config_evt_cb() */
 
@@ -681,7 +718,7 @@ static void qbi_svc_bc_spdp_get_lte_attach_config_evt_cb
 static void qbi_svc_bc_spdp_get_lte_attach_status_evt_cb
 (
   qbi_txn_s       *listener_txn,
-  const qbi_txn_s *notifier_txn
+  qbi_txn_s       *notifier_txn
 )
 {
   qbi_svc_bc_connect_s_req_s *connect_req = NULL;
@@ -693,35 +730,44 @@ static void qbi_svc_bc_spdp_get_lte_attach_status_evt_cb
   QBI_CHECK_NULL_PTR_RET(listener_txn->info);
   QBI_CHECK_NULL_PTR_RET(notifier_txn);
 
+  info = (qbi_svc_bc_spdp_info_s *)listener_txn->info;
+
   if (QBI_MBIM_STATUS_SUCCESS == notifier_txn->status)
   {
     QBI_CHECK_NULL_PTR_RET(notifier_txn->rsp.data);
     connect_req = (qbi_svc_bc_connect_s_req_s *)listener_txn->req.data;
     lte_attach_status_rsp = 
       (qbi_svc_bc_ext_lte_attach_status_rsp_s *)notifier_txn->rsp.data;
-    
-    if (QBI_SVC_MBIM_MS_LTE_ATTACH_STATE_ATTACHED == 
+
+    if (QBI_SVC_MBIM_MS_LTE_ATTACH_STATE_ATTACHED ==
       lte_attach_status_rsp->lte_attach_state &&
-      lte_attach_status_rsp->ip_type == connect_req->ip_type &&
+      qbi_svc_bc_spdp_compare_ip_type(
+        connect_req->ip_type, lte_attach_status_rsp->ip_type) &&
       qbi_svc_bc_spdp_compare_string(listener_txn, notifier_txn,
-        &connect_req->access_string, &lte_attach_status_rsp->access_string, 0, 0))
+        &connect_req->access_string, &lte_attach_status_rsp->access_string, 0, 0) &&
+      qbi_svc_bc_spdp_compare_string(listener_txn, notifier_txn,
+        &connect_req->username, &lte_attach_status_rsp->username, 0, 0) && 
+      qbi_svc_bc_spdp_compare_string(listener_txn, notifier_txn,
+        &connect_req->password, &lte_attach_status_rsp->password, 0, 0) &&
+      connect_req->compression == lte_attach_status_rsp->compression &&
+      connect_req->auth_protocol == lte_attach_status_rsp->auth_protocol)
     {
-      QBI_LOG_D_0("SPDP:: APN and IP match with attached LTE APN and IP. " 
-        "Get profile data and validate other parameters.");
-      qbi_svc_bc_spdp_get_lte_attach_config(listener_txn);
+      QBI_LOG_D_0("SPDP:: Device attached on LTE and attach parameters match. "
+        "Proceed to connect.");
+      info->spdp_cfg_complete = TRUE;
+      qbi_svc_proc_action(listener_txn, qbi_svc_bc_connect_s_req(listener_txn));
     }
     else
     {
-      QBI_LOG_D_0("SPDP:: Device is not attached on LTE or LTE attach params "
-        "did not match. Proceed to configure LTE attach parameters.");
-      qbi_svc_bc_spdp_set_lte_attach_config(listener_txn);
+      QBI_LOG_D_0("SPDP:: Device is not attached on LTE, compare configured "
+        "LTE attach params with connect param.");
+      qbi_svc_bc_spdp_get_lte_attach_config(listener_txn);
     }
   }
   else
   {
-    info = (qbi_svc_bc_spdp_info_s *)listener_txn->info;
     info->spdp_cfg_complete = TRUE;
-    qbi_svc_dispatch(listener_txn);
+    qbi_svc_proc_action(listener_txn, qbi_svc_bc_connect_s_req(listener_txn));
   }
 } /* qbi_svc_bc_spdp_get_lte_attach_status_evt_cb() */
 
@@ -749,7 +795,7 @@ static qbi_svc_action_e qbi_svc_bc_spdp_get_lte_attach_config
   QBI_LOG_D_0("SPDP:: Get LTE attach config.");
   return qbi_svc_bc_spdp_create_notifier_txn(txn, QBI_SVC_ID_BC_EXT,
     QBI_SVC_BC_EXT_MBIM_CID_MS_LTE_ATTACH_CONFIG, NULL,
-    qbi_svc_bc_spdp_get_lte_attach_config_evt_cb,
+    (qbi_txn_notify_cb_f *)qbi_svc_bc_spdp_get_lte_attach_config_evt_cb,
     qbi_svc_bc_ext_lte_attach_config_q_req);
 } /* qbi_svc_bc_spdp_get_lte_attach_config() */
 
@@ -795,7 +841,7 @@ static qbi_svc_action_e qbi_svc_bc_spdp_set_lte_attach_config
   return qbi_svc_bc_spdp_create_notifier_txn(txn, QBI_SVC_ID_BC_EXT,
     QBI_SVC_BC_EXT_MBIM_CID_MS_LTE_ATTACH_CONFIG,
     qbi_svc_bc_spdp_prepare_lte_attach_config_req,
-    qbi_svc_bc_spdp_configure_single_pdp_evt_cb,
+    (qbi_txn_notify_cb_f *)qbi_svc_bc_spdp_configure_single_pdp_evt_cb,
     qbi_svc_bc_ext_lte_attach_config_s_req);
 } /* qbi_svc_bc_spdp_set_lte_attach_config() */
 
@@ -823,7 +869,7 @@ static qbi_svc_action_e qbi_svc_bc_spdp_get_lte_attach_status
   QBI_LOG_D_0("SPDP:: Get LTE attach status.");
   return qbi_svc_bc_spdp_create_notifier_txn(txn, QBI_SVC_ID_BC_EXT,
     QBI_SVC_BC_EXT_MBIM_CID_MS_LTE_ATTACH_STATUS, NULL, 
-    qbi_svc_bc_spdp_get_lte_attach_status_evt_cb,
+    (qbi_txn_notify_cb_f *) qbi_svc_bc_spdp_get_lte_attach_status_evt_cb,
     qbi_svc_bc_ext_lte_attach_status_q_req);
 } /* qbi_svc_bc_spdp_get_lte_attach_status() */
 
@@ -848,9 +894,7 @@ qbi_svc_action_e qbi_svc_bc_spdp_wds_event_report_ind_cb
 )
 {
   qbi_svc_action_e action = QBI_SVC_ACTION_WAIT_ASYNC_RSP;
-  const wds_event_report_ind_msg_v01 *qmi_ind = NULL;
   qbi_svc_bc_spdp_info_s *info = NULL;
-  uint32 i = 0;
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_ABORT(ind);
   QBI_CHECK_NULL_PTR_RET_ABORT(ind->txn);
@@ -889,6 +933,8 @@ static qbi_svc_action_e qbi_svc_bc_spdp_set_config_pdc2a_ind_cb
 {
   qbi_svc_action_e action = QBI_SVC_ACTION_SEND_RSP;
   const pdc_get_selected_config_ind_msg_v01 *qmi_ind;
+  uint32_t current_config_id_len;
+  uint8_t current_config_id[PDC_CONFIG_ID_SIZE_MAX_V01] = { 0, };
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_ABORT(ind->buf->data);
   QBI_CHECK_NULL_PTR_RET_ABORT(ind->txn->info);
@@ -1023,35 +1069,6 @@ static qbi_svc_action_e qbi_svc_bc_spdp_extract_default_mbn
 
   return QBI_SVC_ACTION_SEND_QMI_REQ;
 }/* qbi_svc_bc_spdp_extract_default_mbn */
-
-/*===========================================================================
-FUNCTION: qbi_svc_bc_spdp_imsi_char_to_int
-===========================================================================*/
-/*!
-    @brief Handles a imsi 1 byte char convertion to 32 bit int
-
-    @details
-
-    @param qmi_txn
-
-    @return none
-*/
-/*=========================================================================*/
-static uint32_t qbi_svc_bc_spdp_imsi_char_to_int
-(
-  char imsi_char
-)
-{
-  uint32_t imsi_int = 0;
-/*-------------------------------------------------------------------------*/
-  if ((imsi_char >= 48) && (imsi_char <= 57))
-  {
-   /* characters 0 to 9 conversion to integer*/
-    imsi_int |= (imsi_char - 48);
-  }
-
-  return imsi_int;
-}/* qbi_svc_bc_spdp_imsi_char_to_int */
 
 /*===========================================================================
 FUNCTION: qbi_svc_bc_spdp_extract_imsi

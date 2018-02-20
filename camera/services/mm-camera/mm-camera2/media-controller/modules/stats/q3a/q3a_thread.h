@@ -76,6 +76,7 @@ typedef struct {
   mct_queue_t     *msg_q;
   mct_queue_t     *p_msg_q;
   pthread_cond_t  thread_cond;
+  pthread_condattr_t thread_condattr;
   pthread_mutex_t thread_mutex;
   sem_t           sem_launch; /* semaphore to sync thread create */
   pthread_t       thread_id;
@@ -267,6 +268,7 @@ typedef enum {
   MSG_BE_AEC_STATS,
   MSG_HDR_BE_AEC_STATS,
   MSG_AEC_STATS_HDR,
+  MSG_AEC_STATS_SVHDR,
 
   MSG_AWB_SET,
   MSG_AWB_GET,

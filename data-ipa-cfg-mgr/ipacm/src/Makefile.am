@@ -3,7 +3,11 @@ AM_CPPFLAGS = -I./../inc \
 	      ${LIBXML_CFLAGS} \
 	      $(CFLAGS)
 AM_CPPFLAGS += -Wall -Wundef -Wno-trigraphs
+if IS_SDx20
+AM_CPPFLAGS	+= -DDEBUG -g -DFEATURE_ETH_BRIDGE_LE
+else
 AM_CPPFLAGS	+= -DDEBUG -g -DFEATURE_ETH_BRIDGE_LE -DFEATURE_L2TP
+endif
 AM_CPPFLAGS += -DFEATURE_IPA_V3
 
 ipacm_SOURCES =	IPACM_Main.cpp \

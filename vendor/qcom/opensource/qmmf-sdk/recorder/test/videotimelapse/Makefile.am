@@ -12,4 +12,5 @@ recorder_video_timelapse_LDFLAGS  = -lutils -lcutils -llog
 recorder_video_timelapse_LDFLAGS  += -lcamera_client -lcamera_metadata
 
 recorder_video_timelapse_LDADD    = ../../src/client/libqmmf_recorder_client.la
+recorder_video_timelapse_LDADD    += ../../../common/utils/libqmmf_utils.la
 recorder_video_timelapse_LDADD    += ../../../avcodec/libav_codec.la

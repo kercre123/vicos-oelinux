@@ -1,7 +1,7 @@
-/* stats_port.c
- *
- * Copyright (c) 2013-2016 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
+/*
+Copyright (c) 2013-2017 Qualcomm Technologies, Inc.
+All Rights Reserved.
+Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
 
 #include "modules.h"
@@ -2199,6 +2199,14 @@ static boolean stats_port_event(mct_port_t *port, mct_event_t *event)
 
     case MCT_EVENT_MODULE_STATS_GYRO_STATS: {
       /* GRYO STATS should be redirected downstream to both Q3A
+       * and EIS modules */
+      port_event.cap_flag = MCT_PORT_CAP_STATS_GYRO;
+      redirect = MCT_EVENT_DOWNSTREAM;
+    }
+      break;
+
+    case MCT_EVENT_MODULE_STATS_IMU_STATS: {
+      /* IMU STATS should be redirected downstream to both Q3A
        * and EIS modules */
       port_event.cap_flag = MCT_PORT_CAP_STATS_GYRO;
       redirect = MCT_EVENT_DOWNSTREAM;

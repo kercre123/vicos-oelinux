@@ -42,14 +42,20 @@ volatile uint32_t camera_mode_;
 
 uint32_t camera_mode() {
   char prop[PROPERTY_VALUE_MAX];
-  property_get("persist.qmmf.ipcweb.camtype", prop, 0);
+  property_get("persist.qmmf.ipcweb.camtype", prop, "0");
   camera_mode_ = atoi (prop);
   return camera_mode_;
 }
 
 int32_t get_wifi_mode(void) {
     char prop[2];
-    property_get("persist.qmmf.ws.wifi.ap.mode", prop, 0);
+    property_get("persist.qmmf.ws.wifi.ap.mode", prop, "0");
+    return atoi(prop);
+}
+
+int32_t get_audio_player_mode(void) {
+    char prop[PROPERTY_VALUE_MAX];
+    property_get("persist.qmmf.ipcweb.audioplayer", prop, "0");
     return atoi(prop);
 }
 */
@@ -90,11 +96,16 @@ const (
     __stop_camera_URL        string = "http://127.0.0.1:4000/stopcamera"
     __delete_session_URL     string = "http://127.0.0.1:4000/deletesession"
     __create_multicamera_URL string = "http://127.0.0.1:4000/createmulticamera"
+    __audio_player_connect_URL string = "http://127.0.0.1:4000/audioplayerconnect"
+    __audio_player_prepare_URL string = "http://127.0.0.1:4000/audioplayerprepare"
+    __audio_player_start_URL   string = "http://127.0.0.1:4000/audioplayerstart"
 
     // cmd
     __GET_SSID_CMD   string = "cat /data/misc/wifi/hostapd.conf | grep \"^ssid=\" | sed 's/^.*ssid=//g'"
     __GET_PASSWD_CMD string = "cat /data/misc/wifi/hostapd.conf | grep \"^wpa_passphrase=\" | sed 's/^.*wpa_passphrase=//g'"
 )
+
+var trackid int = 0
 
 func __connect() bool {
     respCnn := Http_post(__connect_URL, nil)
@@ -178,12 +189,14 @@ func __get_resp_vcid(resp *http.Response) int {
 
 func __parse_device_config() {
     var file_name string
+    var resType string
     if (Is360Cam()) {
         file_name = Webserver_dir + cam360_conf
     } else {
         file_name = Webserver_dir + camIP_conf
     }
 
+    ClearResolutionData()
     if Exist(file_name) {
         body, err := ioutil.ReadFile(file_name)
 
@@ -207,14 +220,24 @@ func __parse_device_config() {
             w, _ := strconv.Atoi(stringSlice[0])
             h, _ := strconv.Atoi(stringSlice[1])
 
-            AddResolutionConf(w*h)
-            AddResolutionOption(w,h)
-            AddResolutionList(v)
+            if w == 3840 {
+                resType = "4K"
+            } else if w == 1920 {
+                resType = "1080P"
+            } else if h == 720 {
+                resType = "720P"
+            } else if h == 480 {
+                resType = "480P"
+            }
+
+            AddResolutionConf(w * h)
+            AddResolutionOption(w, h)
+            AddResolutionList(resType)
         }
             stringSlice := strings.Split(DeviceConfig.VAMResolutionVal, "x")
-            w, _ := strconv.Atoi(stringSlice[0])
-            h, _ := strconv.Atoi(stringSlice[1])
-            SetVAMResolution(w,h)
+            width, _ := strconv.Atoi(stringSlice[0])
+            height, _ := strconv.Atoi(stringSlice[1])
+            SetVAMResolution(width,height)
     }
 }
 
@@ -231,11 +254,12 @@ func __sync_camera_config() {
     }
 }
 
-func __set_video_default_conf(index int, preview_sid int, recording_sid int, vam_sid int) {
+func __set_video_default_conf(index int, preview_sid int, recording_sid int, vam_sid int,
+              preview_tid int, recording_tid int, vam_tid int, pre_audio_tid int, rec_audio_tid int) {
     CMap.ChMap_Set(ChConfList[index].Ch, Channel{index, Sess_id{preview_sid, recording_sid, vam_sid},
         0, 0, [5]VamConf{{0, false, ""}, {0, false, ""}, {0, false, ""}, {0, false, ""}, {0, false,""}}, Normal, VConf{1, 0, 6, 1}, // 1080P 4Mbps
-        Track_Id{index + 1, index + 3, index + 5, index + 7},
-        "", false, 0, [3]OvConf{{0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0},
+        Track_Id{preview_tid, recording_tid, vam_tid, pre_audio_tid, rec_audio_tid},
+        "", "", false, 0, [3]OvConf{{0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0},
             {0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0},
             {0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0}}, -1})
 }
@@ -249,6 +273,12 @@ func __sync_channel_config() {
         recording_sid := Create_session()
         vam_sid := Create_session()
 
+        preview_tid := __create_trackid()
+        recording_tid := __create_trackid()
+        vam_tid := __create_trackid()
+        pre_audio_tid := __create_trackid()
+        rec_audio_tid := __create_trackid()
+
         if Exist(ChConfList[index].Video_Conf) {
             body, err := ioutil.ReadFile(ChConfList[index].Video_Conf)
 
@@ -261,7 +291,8 @@ func __sync_channel_config() {
             if len(body) == 0 {
                 log.Printf("Error video config is null\n")
                 // default 4K HEVC
-                __set_video_default_conf(index, preview_sid, recording_sid, vam_sid)
+                __set_video_default_conf(index, preview_sid, recording_sid, vam_sid, preview_tid,
+                recording_tid, vam_tid, pre_audio_tid, rec_audio_tid)
                 return
             }
 
@@ -275,13 +306,14 @@ func __sync_channel_config() {
             CMap.ChMap_Set(ChConfList[index].Ch, Channel{index, Sess_id{preview_sid, recording_sid,
                 vam_sid}, 0, 0, [5]VamConf{{0, false, ""}, {0, false, ""}, {0, false, ""}, {0, false, ""}, {0, false,""}},
                 Normal, VConf{resolution, encode, bitrate, fps},
-                Track_Id{index + 1, index + 3, index + 5, index + 7},
-                "", false, 0, [3]OvConf{{0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0},
+                Track_Id{preview_tid, recording_tid, vam_tid, pre_audio_tid, rec_audio_tid},
+                "", "", false, 0, [3]OvConf{{0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0},
                     {0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0},
                     {0, "869007615", 0, "Snapdragon 625 IPCamera", 0, 0, 0, 0, 0, "Snapdragon 625 IPCamera", 0, 0}}, -1})
         } else {
             // default 4K HEVC
-            __set_video_default_conf(index, preview_sid, recording_sid, vam_sid)
+                __set_video_default_conf(index, preview_sid, recording_sid, vam_sid, preview_tid,
+                recording_tid, vam_tid, pre_audio_tid, rec_audio_tid)
         }
     }
 }
@@ -369,6 +401,7 @@ func __sync_network_config() {
 
         if NetConf.Mode == 1 {
             NetConf.Ip, _ = js.Get("ip").String()
+            CameraIp = NetConf.Ip
             NetConf.Mask, _ = js.Get("mask").String()
             NetConf.RangeStart, _ = js.Get("range_start").String()
             NetConf.RangeEnd, _ = js.Get("range_end").String()
@@ -485,27 +518,6 @@ func __sync_media_conf() {
     }
 }
 
-func __sync_enroll_id() {
-    if Exist(ENROLL_ID_FILE) {
-        body, err := ioutil.ReadFile(ENROLL_ID_FILE)
-
-        if err != nil {
-            panic(err)
-        }
-
-        if len(body) == 0 {
-            log.Printf("Error enroll id file is null\n")
-            return
-        }
-
-        js, err := simplejson.NewJson(body)
-
-        EnrollId, _ = js.Get("enroll_id").Int()
-
-        log.Printf("EnrollId is %v\n", EnrollId)
-    }
-}
-
 func __sync_image_id() {
     if Exist(IMAGE_ID_FILE) {
         body, err := ioutil.ReadFile(IMAGE_ID_FILE)
@@ -591,6 +603,54 @@ func __initWifiAPMode() {
     IsWifiAPMode = (C.get_wifi_mode() == 1)
 }
 
+func IsAudioPlayerEnabled() bool {
+    var audio_player_mode = C.get_audio_player_mode()
+    log.Printf("Audio Player Enabled:%v", audio_player_mode)
+    if audio_player_mode == 1 {
+        return true
+    } else {
+        return false
+    }
+}
+func __audio_connect() bool {
+    respCnn := Http_post(__audio_player_connect_URL, nil)
+
+    return Get_resp_ret(respCnn)
+}
+
+func __audio_prepare() bool {
+    respCnn := Http_post(__audio_player_prepare_URL, nil)
+
+    return Get_resp_ret(respCnn)
+}
+
+func __audio_start() bool {
+    respCnn := Http_post(__audio_player_start_URL, nil)
+
+    return Get_resp_ret(respCnn)
+}
+
+func __start_audio_player() bool {
+    if !__audio_connect() {
+        return false
+    }
+
+    if !__audio_prepare() {
+        return false
+    }
+
+    if !__audio_start() {
+        return false
+    }
+
+    return true
+}
+
+func __create_trackid() int {
+    trackid++
+    return trackid
+}
+
 func InitCamera() {
     log.Printf("Server init\n")
 
@@ -606,8 +666,6 @@ func InitCamera() {
     __sync_wifi_config()
     // sync media conf
     __sync_media_conf()
-    // sync vam enroll id
-    __sync_enroll_id()
     // sync image id
     __sync_image_id()
     // sync video id
@@ -616,6 +674,11 @@ func InitCamera() {
     __sync_onvif()
     // sync audio config
     __sync_audio_config()
+    // start audio player
+    if IsAudioPlayerEnabled() {
+        ret := __start_audio_player()
+        log.Printf("Audio player start:%v\n", ret)
+    }
 }
 
 func InitConnection() {

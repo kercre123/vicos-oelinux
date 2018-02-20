@@ -315,6 +315,17 @@ bool is_supported_qcci(void)
     return true;
 }
 
+/*==========================================================================
+  FUNCTION is_supported_idl
+
+  For new targets ATFWD Daemon will use IDL encoding/decoding.
+
+==========================================================================*/
+bool is_supported_idl(void)
+{
+    return true;
+}
+
 /*===========================================================================
   FUNCTION  sendSuccessResponse
 ===========================================================================*/
@@ -365,12 +376,14 @@ void sendResponse(AtCmdResponse *response)
     int resp_msg_len = 0;
     int qmi_msg_resp_buf_len =0;
     qmi_client_error_type qmi_err = QMI_NO_ERR;
+    at_fwd_resp_at_cmd_req_v01 at_fwd_resp_at_cmd_req;
+    at_fwd_resp_at_cmd_resp_v01* at_fwd_resp_at_cmd_resp_ptr = NULL;
+    size_t len = 0;
 
     //responseStatus = QMI_ATCOP_SUCCESS;
     responseResult = QMI_ATCOP_RESULT_OK;
     responseType = QMI_ATCOP_RESP_COMPLETE;
     atCmdResponse.at_hndl = commandHandle;
-    //atCmdResponse.status = responseStatus;
     atCmdResponse.result = responseResult;
     atCmdResponse.response = responseType;
     if ((response->result != QMI_ATCOP_RESULT_OK) && (request.cmee_val == 0)) {
@@ -386,26 +399,58 @@ void sendResponse(AtCmdResponse *response)
         if (qmi_atcop_fwd_at_cmd_resp(userHandle, &atCmdResponse, &qmiErrorCode) < 0) {
             LOGI("QMI response error: %d\n", qmiErrorCode);
         }
-    }
-    else
-    {
-        memset(resp_msg, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
-        memset(qmi_msg_resp_buf, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
-        qmi_atcop_fwd_at_cmd_resp_helper(&atCmdResponse, &qmiErrorCode, resp_msg, &resp_msg_len);
+    } else {
+        // modem service doesn't use IDL encoding for targets older than 8998
+        // use pre-IDL encoding
+        if (!is_supported_idl())
+        {
+            memset(resp_msg, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
+            memset(qmi_msg_resp_buf, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
+            qmi_atcop_fwd_at_cmd_resp_helper(
+                            &atCmdResponse, &qmiErrorCode, resp_msg, &resp_msg_len);
+            LOGI("sending QMI_AT_FWD_RESP_AT_CMD_RESP_V01 message\n");
+            qmi_err = qmi_client_send_raw_msg_sync(qmi_at_svc_client,
+                                QMI_AT_FWD_RESP_AT_CMD_RESP_V01,
+                                resp_msg,
+                                sizeof(resp_msg)-resp_msg_len,
+                                qmi_msg_resp_buf,
+                                sizeof(qmi_msg_resp_buf),
+                                &qmi_msg_resp_buf_len,
+                                QMI_ATFWD_SYNC_MSG_TIMEOUT);
 
-        LOGI("sending QMI_AT_FWD_RESP_AT_CMD_RESP_V01 message\n");
-        qmi_err = qmi_client_send_raw_msg_sync(qmi_at_svc_client,
-                            QMI_AT_FWD_RESP_AT_CMD_RESP_V01,
-                            resp_msg,
-                            sizeof(resp_msg)-resp_msg_len,
-                            qmi_msg_resp_buf,
-                            sizeof(qmi_msg_resp_buf),
-                            &qmi_msg_resp_buf_len,
-                            QMI_ATFWD_SYNC_MSG_TIMEOUT);
+            LOGI("qmi_client_send_raw_msg_sync returned: %d\n", qmi_err);
+        } else {
+            memset(&at_fwd_resp_at_cmd_req, 0, sizeof(at_fwd_resp_at_cmd_req));
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_handle = commandHandle;
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.result = QMI_ATCOP_RESULT_OK;
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.response_type = QMI_ATCOP_RESP_COMPLETE;
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_resp_len = len;
+            if (atCmdResponse.at_resp != NULL) {
+                memcpy(at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_resp, atCmdResponse.at_resp,
+                                len + 1);
+            } else {
+                at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_resp_len = 0;
+            }
+            at_fwd_resp_at_cmd_resp_ptr = calloc(1, sizeof(*at_fwd_resp_at_cmd_resp_ptr));
 
-        LOGI("qmi_client_send_raw_msg_sync returned: %d\n", qmi_err);
+            if (at_fwd_resp_at_cmd_resp_ptr == NULL) {
+                LOGI("calloc failed");
+            } else {
+                LOGI("sending QMI_AT_FWD_RESP_AT_CMD_REQ_V01 message\n");
+                qmi_err = qmi_client_send_msg_sync(qmi_at_svc_client,
+                                    QMI_AT_FWD_RESP_AT_CMD_REQ_V01,
+                                    &at_fwd_resp_at_cmd_req,
+                                    sizeof(at_fwd_resp_at_cmd_req),
+                                    at_fwd_resp_at_cmd_resp_ptr,
+                                    sizeof(*at_fwd_resp_at_cmd_resp_ptr),
+                                    QMI_ATFWD_SYNC_MSG_TIMEOUT);
+                LOGI("qmi_client_send_msg_sync returned: %d\n", qmi_err);
+            }
+
+            free(at_fwd_resp_at_cmd_resp_ptr);
+        }
     }
-    if(NULL != atCmdResponse.at_resp) {
+    if (NULL != atCmdResponse.at_resp) {
         free(atCmdResponse.at_resp);
         atCmdResponse.at_resp = NULL;
     }
@@ -432,6 +477,9 @@ void sendInvalidCommandResponse()
     int resp_msg_len = 0;
     int qmi_msg_resp_buf_len =0;
     qmi_client_error_type qmi_err = QMI_NO_ERR;
+    at_fwd_resp_at_cmd_req_v01 at_fwd_resp_at_cmd_req;
+    at_fwd_resp_at_cmd_resp_v01* at_fwd_resp_at_cmd_resp_ptr = NULL;
+    size_t respLen = 0;
     responseResult = QMI_ATCOP_RESULT_ERROR;
     responseType   = QMI_ATCOP_RESP_COMPLETE;
 
@@ -449,7 +497,7 @@ void sendInvalidCommandResponse()
         snprintf(s3Val, MAX_DIGITS, "%c", (char) request.s3_val);
         snprintf(s4Val, MAX_DIGITS, "%c", (char) request.s4_val);
 
-        size_t respLen  = ((strlen(s3Val) * 2) + (strlen(s4Val) * 2) + 13 + 1) * sizeof(char);
+        respLen  = ((strlen(s3Val) * 2) + (strlen(s4Val) * 2) + 13 + 1) * sizeof(char);
         response = (char *)malloc(respLen);
         if (!response) {
             LOGI("No memory for generating invalid command response\n");
@@ -465,23 +513,54 @@ void sendInvalidCommandResponse()
         if (qmi_atcop_fwd_at_cmd_resp(userHandle, &atCmdResponse, &qmiErrorCode) < 0) {
             LOGI("QMI response error: %d\n", qmiErrorCode);
         }
-    }
-    else
-    {
-        memset(resp_msg, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
-        memset(qmi_msg_resp_buf, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
-        qmi_atcop_fwd_at_cmd_resp_helper(&atCmdResponse, &qmiErrorCode, resp_msg, &resp_msg_len);
+    } else {
+        if (!is_supported_idl())
+        {
+            memset(resp_msg, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
+            memset(qmi_msg_resp_buf, 0x00, QMI_AT_MAX_RESP_MSG_SIZE);
+            qmi_atcop_fwd_at_cmd_resp_helper(
+                        &atCmdResponse, &qmiErrorCode, resp_msg, &resp_msg_len);
 
-        LOGI("sending QMI_AT_FWD_RESP_AT_CMD_RESP_V01 message\n");
-        qmi_err = qmi_client_send_raw_msg_sync(qmi_at_svc_client,
-                            QMI_AT_FWD_RESP_AT_CMD_RESP_V01,
-                            resp_msg,
-                            sizeof(resp_msg)-resp_msg_len,
-                            qmi_msg_resp_buf,
-                            sizeof(qmi_msg_resp_buf),
-                            &qmi_msg_resp_buf_len,
-                            QMI_ATFWD_SYNC_MSG_TIMEOUT);
-        LOGI("qmi_client_send_raw_msg_sync returned: %d\n", qmi_err);
+            LOGI("sending QMI_AT_FWD_RESP_AT_CMD_RESP_V01 message\n");
+            qmi_err = qmi_client_send_raw_msg_sync(qmi_at_svc_client,
+                                QMI_AT_FWD_RESP_AT_CMD_RESP_V01,
+                                resp_msg,
+                                sizeof(resp_msg)-resp_msg_len,
+                                qmi_msg_resp_buf,
+                                sizeof(qmi_msg_resp_buf),
+                                &qmi_msg_resp_buf_len,
+                                QMI_ATFWD_SYNC_MSG_TIMEOUT);
+            LOGI("qmi_client_send_raw_msg_sync returned: %d\n", qmi_err);
+        } else {
+            memset(&at_fwd_resp_at_cmd_req, 0, sizeof(at_fwd_resp_at_cmd_req));
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_handle = commandHandle;
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.result = AT_RESULT_ERROR_V01;
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.response_type = QMI_ATCOP_RESP_COMPLETE;
+            at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_resp_len = respLen;
+            if (atCmdResponse.at_resp != NULL) {
+                memcpy(at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_resp,
+                            atCmdResponse.at_resp, respLen + 1);
+            } else {
+                at_fwd_resp_at_cmd_req.resp_at_cmd_req.at_resp_len = 0;
+            }
+            at_fwd_resp_at_cmd_resp_ptr = calloc(1, sizeof(*at_fwd_resp_at_cmd_resp_ptr));
+
+            if (at_fwd_resp_at_cmd_resp_ptr == NULL) {
+                LOGI("calloc failed");
+            } else {
+                LOGI("sending QMI_AT_FWD_RESP_AT_CMD_REQ_V01 message\n");
+                qmi_err = qmi_client_send_msg_sync(qmi_at_svc_client,
+                                    QMI_AT_FWD_RESP_AT_CMD_REQ_V01,
+                                    &at_fwd_resp_at_cmd_req,
+                                    sizeof(at_fwd_resp_at_cmd_req),
+                                    at_fwd_resp_at_cmd_resp_ptr,
+                                    sizeof(*at_fwd_resp_at_cmd_resp_ptr),
+                                    QMI_ATFWD_SYNC_MSG_TIMEOUT);
+                LOGI("qmi_client_send_msg_sync returned: %d\n", qmi_err);
+            }
+
+            free(at_fwd_resp_at_cmd_resp_ptr);
+        }
     }
 
     if (atCmdResponse.at_resp) {
@@ -1104,15 +1183,18 @@ int main (int argc, char **argv)
                 sendResponse(response);
                 LOGI("Send response complete.");
 
-                if(!strncasecmp(fwdcmd.name, "+CFUN", strlen("+CFUN"))) {
-                    system("reboot");
-                } else if (!strncasecmp(fwdcmd.name, "$QCPWRDN", strlen("$QCPWRDN"))) {
-                    LOGI("QCPWRDN has been detected");
-                    /* Halt the UE/APPS */
-                    system("halt");
+                if (fwdcmd.name) {
+                    if(!strncasecmp(fwdcmd.name, "+CFUN", strlen("+CFUN"))) {
+                        system("reboot");
+                    } else if (!strncasecmp(fwdcmd.name, "$QCPWRDN", strlen("$QCPWRDN"))) {
+                        LOGI("QCPWRDN has been detected");
+                        /* Halt the UE/APPS */
+                        system("halt");
+                    }
+
+                    free(fwdcmd.name);
                 }
 
-                if (fwdcmd.name) free(fwdcmd.name);
                 if (fwdcmd.tokens) {
                     for (i = 0; i < fwdcmd.ntokens; i++) {
                         free(fwdcmd.tokens[i]);

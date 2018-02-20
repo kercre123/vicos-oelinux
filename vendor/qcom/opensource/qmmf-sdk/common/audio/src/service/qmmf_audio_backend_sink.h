@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -50,15 +50,17 @@ class AudioBackendSink : public IAudioBackend {
  public:
   AudioBackendSink(const AudioHandle audio_handle,
                    const AudioErrorHandler& error_handler,
-                   const AudioBufferHandler& buffer_handler);
+                   const AudioBufferHandler& buffer_handler,
+                   const AudioStoppedHandler& stopped_handler);
   ~AudioBackendSink();
 
-  int32_t Open(const ::std::vector<DeviceId>& devices,
+  int32_t Open(const qahw_module_handle_t * const modules[],
+               const ::std::vector<DeviceId>& devices,
                const AudioMetadata& metadata);
   int32_t Close();
 
   int32_t Start();
-  int32_t Stop(const bool flush);
+  int32_t Stop();
   int32_t Pause();
   int32_t Resume();
 
@@ -77,12 +79,13 @@ class AudioBackendSink : public IAudioBackend {
     kMessagePause,
     kMessageResume,
     kMessageBuffer,
+    kMessageWriteDone,
+    kMessageFlushDone,
   };
 
   struct AudioMessage {
     AudioMessageType type;
     ::std::vector<AudioBuffer> buffers;
-    bool flush;
   };
 
   static const audio_io_handle_t kIOHandleMin;
@@ -91,16 +94,24 @@ class AudioBackendSink : public IAudioBackend {
   static void ThreadEntry(AudioBackendSink* backend);
   void Thread();
 
+  static int CallbackEntry(qahw_stream_callback_event_t event,
+                           void* param,
+                           void* cookie);
+  int Callback(qahw_stream_callback_event_t event, void* param);
+
   AudioHandle audio_handle_;
   AudioState state_;
 
   AudioErrorHandler error_handler_;
   AudioBufferHandler buffer_handler_;
+  AudioStoppedHandler stopped_handler_;
 
   ::std::thread* thread_;
   ::std::mutex message_lock_;
   ::std::queue<AudioMessage> messages_;
   ::std::condition_variable signal_;
+
+  bool using_offload_;
 
   qahw_module_handle_t* qahw_module_;
   qahw_stream_handle_t* qahw_stream_;

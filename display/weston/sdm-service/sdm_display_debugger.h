@@ -40,7 +40,8 @@ enum {
        WARNING,
        INFO,
        DEBUG,
-       VERBOSE
+       VERBOSE,
+       SET_GET_PROP
 };
 
 #define WLOG(tag, method, format, ...) SdmDisplayDebugger::Get()->method(tag, \
@@ -64,6 +65,7 @@ namespace sdm {
 class SdmDisplayDebugger : public DebugHandler {
  public:
   static inline SdmDisplayDebugger* Get() { return &debug_handler_; }
+  void config_debug_level(void);
 
   // DebugHandler methods
   virtual void Error(DebugTag tag, const char *format, ...);
@@ -80,6 +82,9 @@ class SdmDisplayDebugger : public DebugHandler {
 
   int debug_level_ = INFO;
 
+  SdmDisplayDebugger() {
+    config_debug_level();
+  }
  private:
   static SdmDisplayDebugger debug_handler_;
 };

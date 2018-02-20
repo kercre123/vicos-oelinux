@@ -21,7 +21,8 @@
 * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
+#include <stdio.h>
+#include <stdlib.h>
 #include "sdm_display_debugger.h"
 #include <cutils/properties.h>
 
@@ -34,6 +35,17 @@ SdmDisplayDebugger SdmDisplayDebugger::debug_handler_;
 static void Log(const char *prefix, const char *format, va_list list) {
   vprintf(format, list);
   printf("\n");
+}
+
+void SdmDisplayDebugger::config_debug_level(void) {
+  FILE *fp = NULL;
+  //file to configure debug level
+  fp = fopen("/data/misc/display/sdm_dbg_cfg.txt", "r");
+  if (fp) {
+      fscanf(fp, "%d", &debug_level_);
+      printf("\n sdm debug level configured to %d\n", debug_level_);
+      fclose(fp);
+  }
 }
 
 void SdmDisplayDebugger::Error(DebugTag tag, const char *format, ...) {
@@ -84,25 +96,31 @@ void SdmDisplayDebugger::Verbose(DebugTag tag, const char *format, ...) {
 DisplayError SdmDisplayDebugger::GetProperty(const char *property_name, int *value) {
   char property[PROPERTY_VALUE_MAX];
 
-  if (property_get(property_name, property, NULL) > 0) {
-    *value = atoi(property);
-    return kErrorNone;
+  if (debug_level_ > VERBOSE) {
+      if (property_get(property_name, property, NULL) > 0) {
+        *value = atoi(property);
+        return kErrorNone;
+      }
   }
 
   return kErrorNotSupported;
 }
 
 DisplayError SdmDisplayDebugger::GetProperty(const char *property_name, char *value) {
-  if (property_get(property_name, value, NULL) > 0) {
-    return kErrorNone;
+  if (debug_level_ > VERBOSE) {
+      if (property_get(property_name, value, NULL) > 0) {
+        return kErrorNone;
+      }
   }
 
   return kErrorNotSupported;
 }
 
 DisplayError SdmDisplayDebugger::SetProperty(const char *property_name, const char *value) {
-  if (property_set(property_name, value) == 0) {
-    return kErrorNone;
+  if (debug_level_ > VERBOSE) {
+      if (property_set(property_name, value) == 0) {
+        return kErrorNone;
+      }
   }
 
   return kErrorNotSupported;

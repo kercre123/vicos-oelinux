@@ -78,6 +78,7 @@ int32_t Camera3RequestHandler::Initialize(camera3_device_t *device,
   if (0 > monitor_id_) {
     QMMF_ERROR("%s: Unable to acquire monitor: %d\n", __func__, monitor_id_);
   }
+  smooth_zoom_.Enable();
   pthread_mutex_unlock(&lock_);
 
   return monitor_id_;
@@ -193,8 +194,10 @@ bool Camera3RequestHandler::ThreadLoop() {
   request.frame_number = nextRequest.resultExtras.frameNumber;
   Vector<camera3_stream_buffer_t> outputBuffers;
 
-  if (old_request_.resultExtras.requestId !=
-      nextRequest.resultExtras.requestId) {
+  if ((old_request_.resultExtras.requestId !=
+      nextRequest.resultExtras.requestId) ||
+      smooth_zoom_.IsGoing())
+  {
     nextRequest.metadata.sort();
     request.settings = nextRequest.metadata.getAndLock();
     old_request_ = nextRequest;
@@ -343,7 +346,13 @@ int32_t Camera3RequestHandler::GetRequest(CaptureRequest &request) {
 
   while (requests_.empty()) {
     if (!streaming_requests_.empty()) {
-      const RequestList &requests = streaming_requests_;
+      RequestList request_list;
+      RequestList::iterator it = streaming_requests_.begin();
+      for (; it != streaming_requests_.end(); ++it) {
+        smooth_zoom_.Update(*it);
+        request_list.push_back(*it);
+      }
+      const RequestList &requests = request_list;
       RequestList::const_iterator firstRequest = requests.begin();
       nextRequest = *firstRequest;
       requests_.insert(requests_.end(), ++firstRequest, requests.end());

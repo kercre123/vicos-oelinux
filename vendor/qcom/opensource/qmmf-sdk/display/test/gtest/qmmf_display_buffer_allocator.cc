@@ -26,14 +26,17 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#define TAG "DisplayBufferAllocator"
+#define LOG_TAG "DisplayBufferAllocator"
 
-#include "libgralloc/gralloc_priv.h"
-#include "libgralloc/memalloc.h"
-#include "libgralloc/gr.h"
-#include "libgralloc/alloc_controller.h"
-#include "sdm/include/utils/constants.h"
-#include "sdm/include/utils/debug.h"
+#include <stdint.h>
+
+#include <memalloc.h>
+#include <alloc_controller.h>
+#include <qcom/display/gr.h>
+#include <qcom/display/gralloc_priv.h>
+#include <sdm/utils/constants.h>
+#include <sdm/utils/debug.h>
+
 #include "display/test/gtest/qmmf_display_buffer_allocator.h"
 #include "display/src/service/qmmf_display_common.h"
 
@@ -56,8 +59,7 @@ DisplayError DisplayBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     return kErrorMemory;
   }
 
-  int alloc_flags = INT(GRALLOC_USAGE_PRIVATE_IOMMU_HEAP|
-      GRALLOC_USAGE_SW_WRITE_OFTEN|GRALLOC_USAGE_SW_READ_OFTEN);
+  int alloc_flags = INT(GRALLOC_USAGE_PRIVATE_IOMMU_HEAP);
   int error = 0;
 
   int width = INT(buffer_config.width);

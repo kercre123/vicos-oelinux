@@ -1359,6 +1359,7 @@ boolean isp_trigger_thread_apply_shared_trigger_params(
   isp_saved_events_t          *new_events = NULL;
   isp_trigger_update_params_t *trigger_update_params = NULL;
   uint32_t                     evt_frame_id;
+  mct_event_control_parm_t *   control_parm = NULL;
 
   if (!session_param) {
     ISP_ERR("failed: %p", session_param);
@@ -1400,6 +1401,8 @@ boolean isp_trigger_thread_apply_shared_trigger_params(
         if (ret == FALSE) {
           ISP_ERR("failed");
         }
+        control_parm = (mct_event_control_parm_t *)new_events->set_params[i]->u.ctrl_event.control_event_data;
+        free(control_parm->parm_data);
         free(new_events->set_params[i]->u.ctrl_event.control_event_data);
         free(new_events->set_params[i]);
       }

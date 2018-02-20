@@ -155,6 +155,8 @@ class QCMAP_LAN
 
     /* Enable DNS */
     boolean EnableDNS(void);
+    void AddDNSNameServers(char* pri_dns_addr, char* sec_dns_addr);
+    void DeleteDNSNameServers(char* pri_dns_addr, char* sec_dns_addr);
 
     boolean CheckforAddrConflict( qcmap_msgr_lan_config_v01 *lan_config,
                                          qcmap_msgr_station_mode_config_v01 *station_config );

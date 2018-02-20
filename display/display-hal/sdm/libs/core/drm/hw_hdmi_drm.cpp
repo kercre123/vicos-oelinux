@@ -123,7 +123,7 @@ void HWHDMIDRM::PopulateHWPanelInfo() {
 }
 
 DisplayError HWHDMIDRM::GetNumDisplayAttributes(uint32_t *count) {
-  *count = connector_info_.num_modes;
+  *count = UINT32(connector_info_.modes.size());
   if (*count <= 0) {
     return kErrorHardware;
   }
@@ -195,7 +195,7 @@ DisplayError HWHDMIDRM::GetDisplayAttributes(uint32_t index,
 
 DisplayError HWHDMIDRM::SetDisplayAttributes(uint32_t index) {
   // TODO check if index will start from 0? then >=
-  if (index >= connector_info_.num_modes) {
+  if (index >= connector_info_.modes.size()) {
     return kErrorNotSupported;
   }
 
@@ -241,7 +241,7 @@ DisplayError HWHDMIDRM::GetConfigIndex(char *mode, uint32_t *index) {
     std::string str4 = str3.substr(str3.find(':') + 1);
     format = UINT32(stoi(str4.substr(str4.find(':') + 1)));
   }
-  for (size_t idex = 0; idex < connector_info_.num_modes; idex ++) {
+  for (size_t idex = 0; idex < connector_info_.modes.size(); idex ++) {
     if ((height == connector_info_.modes[idex].vdisplay) &&
         (width == connector_info_.modes[idex].hdisplay) &&
         (fps == connector_info_.modes[idex].vrefresh)) {

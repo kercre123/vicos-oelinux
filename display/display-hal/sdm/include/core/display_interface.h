@@ -147,6 +147,8 @@ struct DisplayConfigFixedInfo {
   uint32_t max_luminance = 0;  //!< From Panel's peak luminance
   uint32_t average_luminance = 0;  //!< From Panel's average luminance
   uint32_t min_luminance = 0;  //!< From Panel's blackness level
+  uint32_t hdcp_version = 0;  //!< hdcp protocol version
+  uint32_t hdcp_interface_type = 0;  //!< hdcp interface type
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.

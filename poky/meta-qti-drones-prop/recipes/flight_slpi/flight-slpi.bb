@@ -6,8 +6,9 @@ PR = "r1"
 PV = "1.0"
 
 
-SRC_URI  = "file://flight_slpi.zip"
-SRC_URI  += "file://slpi_firmware_change.sh"
+FILESPATH =+ "${WORKSPACE}/:"
+SRC_URI  = "file://vendor/qcom/proprietary/drones/dronePlugin/flight-slpi/flight_slpi.zip"
+SRC_URI  += "file://vendor/qcom/proprietary/drones/dronePlugin/flight-slpi/slpi_firmware_change.sh"
 
 FILES_${PN} += "/lib/firmware/drones_image/*"
 
@@ -26,7 +27,7 @@ INITSCRIPT_PARAMS = "start 38 S ."
 do_install_append() {
    install -d ${FIRMWARE_PATH}
    install -m 0644 ${WORKDIR}/slpi*.* -D ${FIRMWARE_PATH}/
-   install -m 0755 ${WORKDIR}/slpi_firmware_change.sh  -D ${D}${sysconfdir}/init.d/slpi_firmware_change.sh
+   install -m 0755 ${WORKDIR}/vendor/qcom/proprietary/drones/dronePlugin/flight-slpi/slpi_firmware_change.sh  -D ${D}${sysconfdir}/init.d/slpi_firmware_change.sh
 }
 
 INSANE_SKIP_${PN} += "arch"

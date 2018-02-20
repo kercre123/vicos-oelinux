@@ -36,6 +36,8 @@
 #include "shared/os-compatibility.h"
 #include "presentation_timing-client-protocol.h"
 
+#define CLIENT_WL_OUTPUT_VERSION 3
+
 typedef void (*print_info_t)(void *info);
 typedef void (*destroy_info_t)(void *info);
 
@@ -73,6 +75,15 @@ struct output_info {
 	} geometry;
 
 	struct wl_list modes;
+
+	struct {
+		uint32_t version;
+		uint32_t interface_type;
+	} hdcp_protocol;
+
+	struct {
+		uint32_t hdr_supported;
+	} hdr_info;
 };
 
 struct shm_format {
@@ -172,6 +183,8 @@ print_output_info(void *data)
 	struct output_mode *mode;
 	const char *subpixel_orientation;
 	const char *transform;
+	const char *hdcp_version;
+	const char *hdcp_interface_type;
 
 	print_global_info(data);
 
@@ -233,6 +246,55 @@ print_output_info(void *data)
 		break;
 	}
 
+	switch (output->hdcp_protocol.version) {
+	case WL_OUTPUT_HDCP_VERSION_UNKNOWN:
+		hdcp_version = "unknown";
+		break;
+	case WL_OUTPUT_HDCP_VERSION_NONE:
+		hdcp_version = "none";
+		break;
+	case WL_OUTPUT_HDCP_VERSION_1_4:
+		hdcp_version = "1.4";
+		break;
+	case WL_OUTPUT_HDCP_VERSION_2_2:
+		hdcp_version = "2.2";
+		break;
+	default:
+		fprintf(stderr, "unknown hdcp protocol version %u\n",
+			output->hdcp_protocol.version);
+		hdcp_version = "unexpected value";
+		break;
+	}
+
+	switch (output->hdcp_protocol.interface_type) {
+	case WL_OUTPUT_HDCP_INTERFACE_TYPE_UNKNOWN:
+		hdcp_interface_type = "unknown";
+		break;
+	case WL_OUTPUT_HDCP_INTERFACE_TYPE_NONE:
+		hdcp_interface_type = "none";
+		break;
+	case WL_OUTPUT_HDCP_INTERFACE_TYPE_INDEPENDENT:
+		hdcp_interface_type = "independent";
+		break;
+	case WL_OUTPUT_HDCP_INTERFACE_TYPE_HDMI:
+		hdcp_interface_type = "HDMI";
+		break;
+	case WL_OUTPUT_HDCP_INTERFACE_TYPE_MHL:
+		hdcp_interface_type = "MHL";
+		break;
+	case WL_OUTPUT_HDCP_INTERFACE_TYPE_DVI:
+		hdcp_interface_type = "DVI";
+		break;
+	case WL_OUTPUT_HDCP_INTERFACE_TYPE_DP:
+		hdcp_interface_type = "DP";
+		break;
+	default:
+		fprintf(stderr, "unknown hdcp interface type %u\n",
+			output->hdcp_protocol.interface_type);
+		hdcp_interface_type = "unexpected value";
+		break;
+	}
+
 	printf("\tx: %d, y: %d,\n",
 	       output->geometry.x, output->geometry.y);
 	printf("\tphysical_width: %d mm, physical_height: %d mm,\n",
@@ -257,6 +319,13 @@ print_output_info(void *data)
 			printf(" preferred");
 		printf("\n");
 	}
+
+	printf("\thdcp_type: %s, hdcp_interface: %s,\n",
+	       hdcp_version, hdcp_interface_type);
+
+	printf("\thdr_supported: %s\n",
+	       (output->hdr_info.hdr_supported ==
+	            WL_OUTPUT_HDR_SUPPORTED_TRUE) ? "Yes" : "No");
 }
 
 static void
@@ -519,9 +588,43 @@ output_handle_mode(void *data, struct wl_output *wl_output,
 	wl_list_insert(output->modes.prev, &mode->link);
 }
 
+static void
+output_handle_done(void *data,      struct wl_output *wl_output)
+{
+}
+
+static void
+output_handle_scale(void *data,      struct wl_output *wl_output,
+                    int32_t scale)
+{
+}
+
+static void
+output_handle_hdcp(void *data, struct wl_output *wl_output,
+		   uint32_t version, uint32_t interface_type)
+{
+	struct output_info *output = (struct output_info *)data;
+
+	output->hdcp_protocol.version = version;
+	output->hdcp_protocol.interface_type = interface_type;
+}
+
+static void
+output_handle_hdr(void *data, struct wl_output *wl_output,
+		 uint32_t is_supported)
+{
+	struct output_info *output = (struct output_info *)data;
+
+	output->hdr_info.hdr_supported = is_supported;
+}
+
 static const struct wl_output_listener output_listener = {
 	output_handle_geometry,
 	output_handle_mode,
+	output_handle_done,
+	output_handle_scale,
+	output_handle_hdcp,
+	output_handle_hdr
 };
 
 static void
@@ -555,7 +658,7 @@ add_output_info(struct weston_info *info, uint32_t id, uint32_t version)
 	wl_list_init(&output->modes);
 
 	output->output = wl_registry_bind(info->registry, id,
-					  &wl_output_interface, 1);
+					  &wl_output_interface, CLIENT_WL_OUTPUT_VERSION);
 	wl_output_add_listener(output->output, &output_listener,
 			       output);
 

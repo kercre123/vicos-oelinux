@@ -50,5 +50,9 @@ files_get_etc_unit_status(init_t)
 allow init_t systemd_unit_t:service { start status stop reload };
 allow init_t init_var_run_t:service { start status stop reload };
 
-init_stop_generic_units(init_t)
 init_reload_generic_units(init_t)
+init_start_generic_units(init_t)
+init_stop_generic_units(init_t)
+init_get_generic_units_status(init_t)
+
+allow init_t bin_t:service { status start stop };

@@ -18,6 +18,8 @@ public:
    inline virtual const std::string& getXtraMccmnc() = 0;
    inline virtual void updateXtraTac(const std::string& tac) = 0;
    inline virtual const std::string& getXtraTac() = 0;
+   inline virtual void setConnectionStatusIsKnown() = 0;
+   inline virtual bool getConnectionStatusIsKnown() = 0;
    inline virtual ~IXtraInfoCache() { /*noop*/ };
 };
 

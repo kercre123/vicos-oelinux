@@ -10,7 +10,7 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/GPL-2.0;md5=80
 PR = "r2"
 
 SRC_URI = "\
-    http://downloads.sourceforge.net/project/${PN}/${PV}/${PN}-${PV}.tar.gz \
+    http://downloads.sourceforge.net/project/${BPN}/${PV}/${BPN}-${PV}.tar.gz \
 "
 
 SRC_URI[md5sum] = "f61e60ff01381ece4d2fe65eeb52669e"

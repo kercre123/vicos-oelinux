@@ -47,6 +47,32 @@ LOCAL_PROPRIETARY_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
 
+# ---------------------------------------------------------------------------------
+#             Make the apps-test (mm-adec-omxamr-test)
+# ---------------------------------------------------------------------------------
+
+include $(CLEAR_VARS)
+
+mm-amr-dec-test-inc     := $(LOCAL_PATH)/inc
+mm-amr-dec-test-inc     += $(LOCAL_PATH)/test
+mm-amr-dec-test-inc     += $(TARGET_OUT_HEADERS)/mm-core/omxcore
+mm-amr-dec-test-inc     += $(TARGET_OUT_HEADERS)/common/inc
+mm-amr-dec-test-inc     += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+mm-amr-dec-test-inc     += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
+
+LOCAL_MODULE            := mm-adec-omxamr-test
+LOCAL_MODULE_TAGS       := optional
+LOCAL_CFLAGS            := $(libOmxAmrDec-def)
+LOCAL_C_INCLUDES        := $(mm-amr-dec-test-inc)
+LOCAL_PRELINK_MODULE    := false
+LOCAL_SHARED_LIBRARIES  := libmm-omxcore
+LOCAL_SHARED_LIBRARIES  += libOmxAmrDec
+
+LOCAL_SRC_FILES         := test/omx_amr_dec_test.c
+
+LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+include $(BUILD_EXECUTABLE)
+
 endif #BUILD_TINY_ANDROID
 endif #TARGET_BOARD_PLATFORM
 # ---------------------------------------------------------------------------------

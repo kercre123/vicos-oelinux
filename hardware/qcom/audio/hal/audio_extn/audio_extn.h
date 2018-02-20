@@ -116,7 +116,7 @@
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_INTERACTIVE
-#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x80000000
+#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x4000000
 #endif
 
 #ifndef COMPRESS_METADATA_NEEDED
@@ -613,6 +613,9 @@ void audio_extn_utils_update_stream_app_type_cfg_for_usecase(
                                   struct audio_device *adev,
                                   struct audio_usecase *usecase);
 bool audio_extn_utils_is_dolby_format(audio_format_t format);
+int audio_extn_utils_get_bit_width_from_string(char *);
+int audio_extn_utils_get_sample_rate_from_string(char *);
+int audio_extn_utils_get_channels_from_string(char *);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"
@@ -925,5 +928,47 @@ void audio_extn_hw_loopback_deinit(struct audio_device *adev);
 #define audio_extn_hw_loopback_get_audio_port(dev, port_in) (0)
 #define audio_extn_hw_loopback_init(adev) (0)
 #define audio_extn_hw_loopback_deinit(adev) (0)
+#endif
+
+#ifndef FFV_ENABLED
+#define audio_extn_ffv_init(adev) (0)
+#define audio_extn_ffv_deinit() (0)
+#define audio_extn_ffv_check_usecase(in) (0)
+#define audio_extn_ffv_set_usecase(in) (0)
+#define audio_extn_ffv_stream_init(in) (0)
+#define audio_extn_ffv_stream_deinit() (0)
+#define audio_extn_ffv_update_enabled() (0)
+#define audio_extn_ffv_get_enabled() (0)
+#define audio_extn_ffv_read(stream, buffer, bytes) (0)
+#define audio_extn_ffv_set_parameters(adev, parms) (0)
+#define audio_extn_ffv_get_stream() (0)
+#define audio_extn_ffv_update_pcm_config(config) (0)
+#define audio_extn_ffv_init_ec_ref_loopback(adev, snd_device) (0)
+#define audio_extn_ffv_deinit_ec_ref_loopback(adev, snd_device) (0)
+#define audio_extn_ffv_check_and_append_ec_ref_dev(device_name) (0)
+#define audio_extn_ffv_get_capture_snd_device() (0)
+#define audio_extn_ffv_append_ec_ref_dev_name(device_name) (0)
+#else
+int32_t audio_extn_ffv_init(struct audio_device *adev);
+int32_t audio_extn_ffv_deinit();
+bool audio_extn_ffv_check_usecase(struct stream_in *in);
+int audio_extn_ffv_set_usecase(struct stream_in *in);
+int32_t audio_extn_ffv_stream_init(struct stream_in *in);
+int32_t audio_extn_ffv_stream_deinit();
+void audio_extn_ffv_update_enabled();
+bool audio_extn_ffv_get_enabled();
+int32_t audio_extn_ffv_read(struct audio_stream_in *stream,
+                       void *buffer, size_t bytes);
+void audio_extn_ffv_set_parameters(struct audio_device *adev,
+                                   struct str_parms *parms);
+struct stream_in *audio_extn_ffv_get_stream();
+void audio_extn_ffv_update_pcm_config(struct pcm_config *config);
+int audio_extn_ffv_init_ec_ref_loopback(struct audio_device *adev,
+                                        snd_device_t snd_device);
+int audio_extn_ffv_deinit_ec_ref_loopback(struct audio_device *adev,
+                                          snd_device_t snd_device);
+void audio_extn_ffv_check_and_append_ec_ref_dev(char *device_name);
+snd_device_t audio_extn_ffv_get_capture_snd_device();
+void audio_extn_ffv_append_ec_ref_dev_name(char *device_name);
 #endif
 #endif /* AUDIO_EXTN_H */

@@ -5,7 +5,7 @@ PR = "r5"
 SRC_DIR = "${WORKSPACE}/gps/garden-app/"
 S = "${WORKDIR}/gps/garden-app"
 DEPENDS = "qmi qmi-framework loc-pla loc-vzw loc-hal loc-hal-test-shim garden-test-interfaces \
-location-service loc-glue ulp2 event-observer izat-core location-flp gps-utils"
+location-service loc-glue ulp2 event-observer izat-core location-flp gps-utils powermanager-lib"
 
 EXTRA_OECONF = "--with-core-includes=${STAGING_INCDIR} \
                 --with-glib"

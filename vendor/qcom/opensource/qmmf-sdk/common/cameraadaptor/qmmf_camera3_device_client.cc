@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  */
 
@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-#define TAG "CameraAdaptor"
+#define LOG_TAG "CameraAdaptor"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +31,11 @@
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "qmmf_camera3_utils.h"
 #include "qmmf_camera3_device_client.h"
+#ifdef ANDROID_O_OR_ABOVE
+#include "common/utils/qmmf_common_utils.h"
+#else
 #include <QCamera3VendorTags.h>
+#endif
 
 // Convenience macros for transitioning to the error state
 #define SET_ERR(fmt, ...) \
@@ -39,9 +43,14 @@
 #define SET_ERR_L(fmt, ...) \
   SetErrorStateLocked("%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
 using namespace qcamera;
+
+#ifndef USE_VENDOR_TAG_DESC
 extern "C" {
 extern int set_camera_metadata_vendor_ops(const vendor_tag_ops_t *query_ops);
 }
+#endif
+
+uint32_t qmmf_log_level;
 
 namespace qmmf {
 
@@ -56,7 +65,7 @@ Camera3DeviceClient::Camera3DeviceClient(CameraClientCallbacks clientCb)
       camera_module_(NULL),
       device_(NULL),
       number_of_cameras_(0),
-      gralloc_device_(NULL),
+      alloc_device_interface_(NULL),
       next_request_id_(0),
       frame_number_(0),
       next_shutter_frame_number_(0),
@@ -73,6 +82,7 @@ Camera3DeviceClient::Camera3DeviceClient(CameraClientCallbacks clientCb)
       is_raw_only_(false),
       hfr_mode_enabled_(false),
       prepare_handler_() {
+  QMMF_GET_LOG_LEVEL();
   camera3_callback_ops::notify = &notifyFromHal;
   camera3_callback_ops::process_capture_result = &processCaptureResult;
   camera_module_callbacks_t::camera_device_status_change = &deviceStatusChange;
@@ -118,12 +128,18 @@ Camera3DeviceClient::~Camera3DeviceClient() {
     monitor_.RequestExit();
   }
 
-  if (NULL != gralloc_device_) {
-    gralloc_device_->common.close(&gralloc_device_->common);
+  if (nullptr != alloc_device_interface_) {
+    delete alloc_device_interface_;
+    alloc_device_interface_ = nullptr;
   }
+
+#ifndef USE_VENDOR_TAG_DESC
   if (camera_module_->get_vendor_tag_ops) {
     set_camera_metadata_vendor_ops(nullptr);
   }
+#else
+  VendorTagDescriptor::clearGlobalVendorTagDescriptor();
+#endif
 
   pthread_mutex_destroy(&lock_);
   pthread_mutex_destroy(&pending_requests_lock_);
@@ -133,6 +149,7 @@ Camera3DeviceClient::~Camera3DeviceClient() {
 int32_t Camera3DeviceClient::Initialize() {
   int32_t res = 0;
   hw_module_t const *module = NULL;
+  mem_alloc_device alloc_device = nullptr;
 
   pthread_mutex_lock(&lock_);
 
@@ -169,7 +186,23 @@ int32_t Camera3DeviceClient::Initialize() {
     vendor_tag_ops_ = vendor_tag_ops_t();
     camera_module_->get_vendor_tag_ops(&vendor_tag_ops_);
 
+#ifndef USE_VENDOR_TAG_DESC
     res = set_camera_metadata_vendor_ops(&vendor_tag_ops_);
+#else
+    sp<VendorTagDescriptor> vendor_tag_desc;
+    res = VendorTagDescriptor::createDescriptorFromOps(&vendor_tag_ops_,
+                                                       vendor_tag_desc);
+
+    if (0 != res) {
+      QMMF_ERROR("%s: Could not generate descriptor from vendor tag operations,"
+          "received error %s (%d). Camera clients will not be able to use"
+          "vendor tags", __FUNCTION__, strerror(res), res);
+      goto exit;
+    }
+
+    // Set the global descriptor to use with camera metadata
+    res = VendorTagDescriptor::setAsGlobalVendorTagDescriptor(vendor_tag_desc);
+#endif
     if (0 != res) {
       QMMF_ERROR(
           "%s: Could not set vendor tag descriptor, "
@@ -187,18 +220,16 @@ int32_t Camera3DeviceClient::Initialize() {
     goto exit;
   }
 
-  module->methods->open(module, GRALLOC_HARDWARE_GPU0,
-                        (struct hw_device_t **)&gralloc_device_);
-  if (0 != res) {
-    QMMF_ERROR("%s: Could not open Gralloc module: %s (%d) \n", __func__,
-               strerror(-res), res);
+  alloc_device_interface_ = IAllocDevice::CreateAllocDevice(module);
+  alloc_device = alloc_device_interface_->GetDevice();
+  if (!alloc_device) {
+    QMMF_ERROR("%s: Error in opening allocator device \n", __func__);
     goto exit;
   }
-
   QMMF_INFO("%s: Gralloc Module author: %s, version: %d name: %s\n", __func__,
-            gralloc_device_->common.module->author,
-            gralloc_device_->common.module->hal_api_version,
-            gralloc_device_->common.module->name);
+            alloc_device->common.module->author,
+            alloc_device->common.module->hal_api_version,
+            alloc_device->common.module->name);
 
   state_ = STATE_CLOSED;
   next_stream_id_ = 0;
@@ -209,6 +240,15 @@ int32_t Camera3DeviceClient::Initialize() {
   return res;
 
 exit:
+
+  if (nullptr != alloc_device_interface_) {
+    delete alloc_device_interface_;
+    alloc_device_interface_ = nullptr;
+  }
+
+#ifdef USE_VENDOR_TAG_DESC
+  VendorTagDescriptor::clearGlobalVendorTagDescriptor();
+#endif
 
   if (NULL != camera_module_) {
     dlclose(camera_module_->common.dso);
@@ -387,17 +427,21 @@ int32_t Camera3DeviceClient::ConfigureStreamsLocked(bool is_pp_enabled) {
 
   camera3_stream_configuration config;
   memset(&config, 0, sizeof(config));
-  if (hfr_mode_enabled_) {
+#ifndef DISABLE_OP_MODES
+  if (is_raw_only_) {
+    config.operation_mode = QCAMERA3_VENDOR_STREAM_CONFIGURATION_RAW_ONLY_MODE;
+  } else if (hfr_mode_enabled_) {
     config.operation_mode =
         CAMERA3_STREAM_CONFIGURATION_CONSTRAINED_HIGH_SPEED_MODE;
-  } else if (is_raw_only_) {
-    config.operation_mode = QCAMERA3_VENDOR_STREAM_CONFIGURATION_RAW_ONLY_MODE;
   } else if (!is_pp_enabled) {
     config.operation_mode =
         QCAMERA3_VENDOR_STREAM_CONFIGURATION_PP_DISABLED_MODE;
   } else {
     config.operation_mode = CAMERA3_STREAM_CONFIGURATION_NORMAL_MODE;
   }
+#else
+  config.operation_mode = CAMERA3_STREAM_CONFIGURATION_NORMAL_MODE;
+#endif
   Vector<camera3_stream_t *> streams;
   for (size_t i = 0; i < streams_.size(); i++) {
     camera3_stream_t *outputStream;
@@ -493,7 +537,7 @@ int32_t Camera3DeviceClient::DeleteStream(int streamId, bool cache) {
     case STATE_CONFIGURED:
     case STATE_RUNNING:
       if (!cache) {
-        QMMF_INFO("%s:%s: Stream is not cached, Issue internal reconfig!", TAG,
+        QMMF_INFO("%s: Stream is not cached, Issue internal reconfig!",
             __func__);
         res = InternalPauseAndWaitLocked();
         if (0 != res) {
@@ -536,7 +580,7 @@ int32_t Camera3DeviceClient::DeleteStream(int streamId, bool cache) {
       reconfig_ = true;
       res = ConfigureStreamsLocked();
       if (0 != res) {
-        QMMF_ERROR("%s:Can't reconfigure device for new stream %d: %s (%d)",
+        QMMF_ERROR("%s: Can't reconfigure device for new stream %d: %s (%d)",
                  __func__, next_stream_id_, strerror(-res), res);
         goto exit;
       }
@@ -626,7 +670,7 @@ int32_t Camera3DeviceClient::CreateInputStream(
   if (wasActive) {
     res = ConfigureStreamsLocked();
     if (0 != res) {
-      QMMF_ERROR("%s:Can't reconfigure device for new stream %d: %s (%d)",
+      QMMF_ERROR("%s: Can't reconfigure device for new stream %d: %s (%d)",
                  __func__, next_stream_id_, strerror(-res), res);
       goto exit;
     }
@@ -648,6 +692,7 @@ int32_t Camera3DeviceClient::CreateStream(
   Camera3Stream *newStream = NULL;
   int32_t blobBufferSize = 0;
   bool wasActive = false;
+  mem_alloc_device alloc_device = nullptr;
   pthread_mutex_lock(&lock_);
 
   if (nullptr == outputConfiguration.cb) {
@@ -694,8 +739,14 @@ int32_t Camera3DeviceClient::CreateStream(
       goto exit;
     }
   }
+
+  alloc_device = alloc_device_interface_->GetDevice();
+  if (!alloc_device) {
+    QMMF_ERROR("%s: Error in opening allocator device \n", __func__);
+    goto exit;
+  }
   newStream = new Camera3Stream(next_stream_id_, blobBufferSize,
-                                outputConfiguration, gralloc_device_, monitor_);
+                                outputConfiguration, alloc_device, monitor_);
   if (NULL == newStream) {
     res = -ENOMEM;
     goto exit;
@@ -712,9 +763,9 @@ int32_t Camera3DeviceClient::CreateStream(
 
   // Continue captures if active at start
   if (wasActive) {
-    res = ConfigureStreamsLocked();
+    res = ConfigureStreamsLocked(outputConfiguration.is_pp_enabled);
     if (0 != res) {
-      QMMF_ERROR("%s:Can't reconfigure device for new stream %d: %s (%d)",
+      QMMF_ERROR("%s: Can't reconfigure device for new stream %d: %s (%d)",
                  __func__, next_stream_id_, strerror(-res), res);
       goto exit;
     }
@@ -862,29 +913,10 @@ bool Camera3DeviceClient::HandlePartialResult(
     uint32_t frameNumber, const CameraMetadata &partial,
     const CaptureResultExtras &resultExtras) {
 
-  bool completeResult = true;
-
-  uint8_t afMode, afState, aeState, awbState, awbMode;
-
-  completeResult &=
-      QueryPartialTag(partial, ANDROID_CONTROL_AWB_MODE, &awbMode, frameNumber);
-  completeResult &=
-      QueryPartialTag(partial, ANDROID_CONTROL_AF_MODE, &afMode, frameNumber);
-  completeResult &=
-      QueryPartialTag(partial, ANDROID_CONTROL_AE_STATE, &aeState, frameNumber);
-  completeResult &= QueryPartialTag(partial, ANDROID_CONTROL_AWB_STATE,
-                                    &awbState, frameNumber);
-  completeResult &=
-      QueryPartialTag(partial, ANDROID_CONTROL_AF_STATE, &afState, frameNumber);
-
-  if (!completeResult) {
-    return false;
-  }
-
   if (nullptr != client_cb_.resultCb) {
     CaptureResult captureResult;
     captureResult.resultExtras = resultExtras;
-    captureResult.metadata = CameraMetadata(10, 0);
+    captureResult.metadata = partial;
 
     if (!UpdatePartialTag(captureResult.metadata, ANDROID_REQUEST_FRAME_COUNT,
                           reinterpret_cast<int32_t *>(&frameNumber),
@@ -906,27 +938,6 @@ bool Camera3DeviceClient::HandlePartialResult(
                             frameNumber)) {
         return false;
       }
-    }
-
-    if (!UpdatePartialTag(captureResult.metadata, ANDROID_CONTROL_AWB_STATE,
-                          &awbState, frameNumber)) {
-      return false;
-    }
-    if (!UpdatePartialTag(captureResult.metadata, ANDROID_CONTROL_AF_MODE,
-                          &afMode, frameNumber)) {
-      return false;
-    }
-    if (!UpdatePartialTag(captureResult.metadata, ANDROID_CONTROL_AWB_MODE,
-                          &awbMode, frameNumber)) {
-      return false;
-    }
-    if (!UpdatePartialTag(captureResult.metadata, ANDROID_CONTROL_AF_STATE,
-                          &afState, frameNumber)) {
-      return false;
-    }
-    if (!UpdatePartialTag(captureResult.metadata, ANDROID_CONTROL_AE_STATE,
-                          &aeState, frameNumber)) {
-      return false;
     }
 
     client_cb_.resultCb(captureResult);
@@ -1082,11 +1093,9 @@ void Camera3DeviceClient::HandleCaptureResult(
     }
 
     if (isPartialResult) {
-      if (!request.partialResult.partial3AReceived) {
-        request.partialResult.partial3AReceived = HandlePartialResult(
-            frameNumber, request.partialResult.composedResult,
-            request.resultExtras);
-      }
+      request.partialResult.partial3AReceived = HandlePartialResult(
+          frameNumber, request.partialResult.composedResult,
+          request.resultExtras);
     }
   }
 
@@ -1460,12 +1469,12 @@ int32_t Camera3DeviceClient::GetCameraInfo(uint32_t idx, CameraMetadata *info) {
 int32_t Camera3DeviceClient::SubmitRequest(Camera3Request request,
                                            bool streaming,
                                            int64_t *lastFrameNumber) {
-  List<Camera3Request> requestList;
+  std::list<Camera3Request> requestList;
   requestList.push_back(request);
   return SubmitRequestList(requestList, streaming, lastFrameNumber);
 }
 
-int32_t Camera3DeviceClient::SubmitRequestList(List<Camera3Request> requests,
+int32_t Camera3DeviceClient::SubmitRequestList(std::list<Camera3Request> requests,
                                                bool streaming,
                                                int64_t *lastFrameNumber) {
   int32_t res = 0;
@@ -1501,7 +1510,7 @@ int32_t Camera3DeviceClient::SubmitRequestList(List<Camera3Request> requests,
       goto exit;
   }
 
-  for (List<Camera3Request>::iterator it = requests.begin();
+  for (std::list<Camera3Request>::iterator it = requests.begin();
        it != requests.end(); ++it) {
     Camera3Request request = *it;
     CameraMetadata metadata(request.metadata);
@@ -2017,6 +2026,47 @@ void Camera3DeviceClient::torchModeStatusChange(
   // TODO: No implementation yet
 }
 
+#ifdef TARGET_USES_GRALLOC1
+Gralloc1Device::Gralloc1Device(hw_module_t const * module) {
+  mem_alloc_device alloc_device;
+  int32_t res = gralloc1_open(module, &alloc_device);
+  if ((0 != res) || (nullptr == alloc_device)) {
+    QMMF_ERROR("%s: Could not open Gralloc module: %s (%d) \n", __func__,
+               strerror(-res), res);
+  } else {
+    SetDevice(alloc_device);
+  }
+}
+
+Gralloc1Device::~Gralloc1Device() {
+  mem_alloc_device alloc_device = GetDevice();
+  gralloc1_close(alloc_device);
+}
+
+IAllocDevice* IAllocDevice::CreateAllocDevice(hw_module_t const* module) {
+  return (new Gralloc1Device(module));
+}
+#else
+GrallocDevice::GrallocDevice(hw_module_t const * module) {
+  mem_alloc_device alloc_device;
+  module->methods->open(module, GRALLOC_HARDWARE_GPU0,
+                        (struct hw_device_t **)&alloc_device);
+  if (nullptr == alloc_device) {
+    QMMF_ERROR("%s: Could not open Gralloc module.\n", __func__);
+  } else {
+    SetDevice(alloc_device);
+  }
+}
+
+GrallocDevice::~GrallocDevice() {
+  mem_alloc_device alloc_device = GetDevice();
+  alloc_device->common.close(&alloc_device->common);
+}
+
+IAllocDevice* IAllocDevice::CreateAllocDevice(hw_module_t const* module) {
+  return (new GrallocDevice(module));
+}
+#endif  // TARGET_USES_GRALLOC1
 }  // namespace cameraadaptor ends here
 
 }  // namespace qmmf ends here

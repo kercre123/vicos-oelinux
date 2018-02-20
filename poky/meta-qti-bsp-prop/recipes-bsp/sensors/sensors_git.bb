@@ -35,7 +35,6 @@ do_install_append_aarch64() {
 do_install_append() {
     install -d ${D}${sysconfdir}/sensors
     install -m 0644 ${S}/dsps/reg_defaults/sensor_def_qcomdevl.conf -D ${D}${sysconfdir}/sensors/sensor_def_qcomdev.conf
-    chmod 0755 ${D}/usr/bin/sensors.qcom
     if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
         install -d ${D}${systemd_unitdir}/system/
         install -m 0644 ${WORKDIR}/sensors-daemon.service -D ${D}${systemd_unitdir}/system/sensors-daemon.service

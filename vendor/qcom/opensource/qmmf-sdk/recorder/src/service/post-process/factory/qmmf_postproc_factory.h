@@ -42,11 +42,15 @@ namespace qmmf {
 
 namespace recorder {
 
-class PostProcFactory : public RefBase {
+class PostProcFactory {
 
  public:
 
-   static sp<PostProcFactory> getInstance();
+   PostProcFactory();
+
+   ~PostProcFactory();
+
+   static std::shared_ptr<PostProcFactory> getInstance();
 
    static void releaseInstance();
    status_t GetSupportedPlugins(SupportedPlugins *plugins);
@@ -57,23 +61,20 @@ class PostProcFactory : public RefBase {
 
    status_t ConfigPlugin(const uint32_t &uid, const std::string &config);
 
-   sp<PostProcNode> GetProcNode(const uint32_t &uid);
+   std::shared_ptr<PostProcNode> GetProcNode(const uint32_t &uid);
 
-   sp<PostProcNode> GetProcNode(const std::string &name, IPostProc* context);
+   std::shared_ptr<PostProcNode> GetProcNode(const std::string &name,
+                                             IPostProc* context = nullptr);
 
    status_t ReturnProcNode(const uint32_t &uid);
 
  private:
 
-   PostProcFactory();
-
-   ~PostProcFactory();
-
    int32_t GetUniqueId();
 
    bool IsPlugin(std::string entry);
 
-   static sp<PostProcFactory>    instance_;
+   static std::shared_ptr<PostProcFactory>    instance_;
    static int32_t                ids_;
 
    static const std::string      plugin_prefix;
@@ -82,10 +83,10 @@ class PostProcFactory : public RefBase {
    SupportedPlugins supported_plugins_;
    std::map<std::string, std::string> plugin_libraries_;
 
-   std::map<uint32_t, sp<PostProcNode> > plugin_nodes_;
+   std::map<uint32_t, std::shared_ptr<PostProcNode> > plugin_nodes_;
    std::set<uint32_t> plugin_nodes_in_use_;
 
-   std::map<uint32_t, sp<PostProcNode> > internal_nodes_;
+   std::map<uint32_t, std::shared_ptr<PostProcNode> > internal_nodes_;
 };
 
 }; //namespace recorder

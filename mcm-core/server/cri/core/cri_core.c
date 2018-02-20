@@ -5,8 +5,9 @@
     @brief
     Implements functions supported in cri_core.h.
 
-    Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-    Qualcomm Technologies Proprietary and Confidential.
+    Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+    All Rights Reserved.
+    Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 //qmi headers
@@ -44,6 +45,21 @@
 
 #define CRI_QMI_CLIENT_SERVICE_REGISTRATION_TIMEOUT (4) //4 seconds
 
+typedef enum
+{
+    CRI_CORE_QMI_SERVICE_NOT_CONNECTED,
+    CRI_CORE_QMI_SERVICE_CONNECTED,
+    CRI_CORE_QMI_SERVICE_NOT_AVAILABLE,
+    CRI_CORE_QMI_SERVICE_AVAILABLE,
+    CRI_CORE_QMI_SERVICE_MAX
+} cri_core_qmi_service_conection_state;
+
+typedef struct cri_core_qmi_client_list
+{
+    int num_of_active_clients;
+    int max_active_clients;
+}cri_core_qmi_client_list;
+
 typedef struct cri_core_qmi_client_info_type
 {
     int is_valid;
@@ -59,15 +75,19 @@ typedef struct cri_core_qmi_service_client_info_type
     qmi_service_id_type service_id;
     cri_core_subscription_id_type subscription_id;
     hlos_ind_cb_type hlos_ind_cb;
+    cri_core_qmi_service_conection_state client_state;
+    qmi_client_type notifier;
 }cri_core_qmi_service_client_info_type;
 
-
+static cri_core_gen_operational_status_type cri_core_op_status;
+static cri_core_qmi_client_list client_info;
 static cri_core_qmi_client_info_type qmi_client_info;
 static cri_core_qmi_service_client_info_type qmi_service_client_info[CRI_CORE_MAX_CLIENTS];
 static cri_core_token_id_type cri_core_token_id;
 static char cri_core_log_context_buffer[CRI_CORE_MAX_LOG_CONTEXT_BUFFER_SIZE];
 
-
+ssr_srv_down_cb srv_down_cb = NULL;
+ssr_srv_up_cb srv_up_cb = NULL;
 
 
 
@@ -444,6 +464,18 @@ void cri_core_cri_client_release()
                                  qmi_service_client_info[iter_client_release].service_id);
                     break;
 
+                case QMI_CRI_VOICE_SERVICE:
+                    cri_voice_release_client(iter_client_release);
+                    UTIL_LOG_MSG("service release, service id %d",
+                                 qmi_service_client_info[iter_client_release].service_id);
+                    break;
+
+                case QMI_CRI_SIM_SERVICE:
+                    cri_uim_release_client(iter_client_release);
+                    UTIL_LOG_MSG("service release, service id %d",
+                                 qmi_service_client_info[iter_client_release].service_id);
+                    break;
+
                 default:
                     UTIL_LOG_MSG("service to be released unhandled, service id %d",
                                  qmi_service_client_info[iter_client_release].service_id);
@@ -570,6 +602,7 @@ int cri_core_create_qmi_service_client(qmi_service_id_type service_id,
             break;
         }
 
+        qmi_service_client_info[iter_client].client_state = CRI_CORE_QMI_SERVICE_NOT_CONNECTED;
         qmi_service_client_info[iter_client].hlos_ind_cb = hlos_ind_cb;
         switch(service_id)
         {
@@ -620,6 +653,7 @@ int cri_core_create_qmi_service_client(qmi_service_id_type service_id,
                                                 qmi_service_client_info[iter_client].service_obj,
                                                 &qmi_service_client_info[iter_client].user_handle );
                                                 */
+        UTIL_LOG_MSG("Trying to connect, service id %d,cri core client id %d", service_id, iter_client);
         client_allocation_err = qmi_client_init_instance(qmi_service_client_info[iter_client].service_obj,
                                                          QMI_CLIENT_INSTANCE_ANY,
                                                          cri_core_qmi_service_unsol_ind_cb,
@@ -642,6 +676,7 @@ int cri_core_create_qmi_service_client(qmi_service_id_type service_id,
                      service_id,
                      iter_client,
                      qmi_service_client_info[iter_client].user_handle);
+        qmi_service_client_info[iter_client].client_state = CRI_CORE_QMI_SERVICE_CONNECTED;
         qmi_service_client_info[iter_client].is_valid = TRUE;
     }while(0);
 
@@ -1555,3 +1590,242 @@ qmi_error_type_v01 cri_core_retrieve_err_code(qmi_error_type_v01 transport_error
     return err_code;
 }
 
+void cri_core_register_for_service_down(ssr_srv_down_cb cb)
+{
+    int iter_client;
+    qmi_client_error_type client_err = QMI_NO_ERR;
+
+    do
+    {
+        if(NULL == cb)
+        {
+            break;
+        }
+
+        srv_down_cb = cb;
+        client_info.num_of_active_clients = 0;
+        for ( iter_client = 0; iter_client < CRI_CORE_MAX_CLIENTS; iter_client ++ )
+        {
+            //Do not register down events for services which are not included for SSR.
+            if ( (qmi_service_client_info[iter_client].client_state == CRI_CORE_QMI_SERVICE_CONNECTED) &&
+                 (qmi_service_client_info[iter_client].is_valid))
+            {
+                client_err = qmi_client_register_error_cb(qmi_service_client_info[iter_client].user_handle,
+                                                          cri_core_service_down_event,
+                                                          (void*)(intptr_t)iter_client);
+
+                UTIL_LOG_MSG("error call back registration res - %d index - %d", client_err, iter_client);
+                if( client_err == QMI_NO_ERR )
+                {
+                    client_info.num_of_active_clients++;
+                }
+            }
+        }
+
+        client_info.max_active_clients       = client_info.num_of_active_clients;
+        UTIL_LOG_MSG("Max active clients - %d", client_info.max_active_clients);
+    }while(FALSE);
+}
+
+void cri_core_service_down_event
+(
+  qmi_client_type       clnt,
+  qmi_client_error_type error,
+  void                 *cb_data
+)
+{
+    int srv_index;
+    cri_core_service_down_event_data_type *cri_core_service_down_event_data = NULL;
+
+    cri_core_service_down_event_data = util_memory_alloc(sizeof(*cri_core_service_down_event_data));
+
+    if(cri_core_service_down_event_data)
+    {
+        srv_index = (intptr_t)cb_data;
+        UTIL_LOG_MSG("cri_core_service_down_event %d", (int) srv_index);
+        cri_core_service_down_event_data->event_id = SRV_DOWN;
+        cri_core_service_down_event_data->clnt = clnt;
+        cri_core_service_down_event_data->error = error;
+        cri_core_service_down_event_data->cb_data = cb_data;
+        core_handler_add_event(CORE_HANDLER_SERVICE_DOWN,
+                               cri_core_service_down_event_data);
+    }
+}
+
+void cri_core_service_down_event_hdlr(void *event_data)
+{
+    cri_core_service_down_event_data_type *cri_core_service_down_event_data = NULL;
+    int srv_index;
+
+    do
+    {
+        if(NULL == event_data)
+        {
+            break;
+        }
+
+        cri_core_service_down_event_data = (cri_core_service_down_event_data_type *)event_data;
+        srv_index = (intptr_t) cri_core_service_down_event_data->cb_data;
+
+        UTIL_LOG_MSG("cri_core_service_down_event_hdlr %d", (int) srv_index);
+
+        if (client_info.num_of_active_clients)
+        {
+            if (qmi_service_client_info[srv_index].client_state == CRI_CORE_QMI_SERVICE_CONNECTED)
+            {
+                qmi_service_client_info[srv_index].client_state = CRI_CORE_QMI_SERVICE_NOT_AVAILABLE;
+                client_info.num_of_active_clients--;
+            }
+
+            UTIL_LOG_MSG("number of active clients %d", client_info.num_of_active_clients);
+            if (!client_info.num_of_active_clients)
+            {
+                cri_core_cri_client_release();
+                UTIL_LOG_MSG( "SUSPENDED" );
+                cri_core_set_operational_status( CRI_CORE_GEN_OPERATIONAL_STATUS_SUSPENDED );
+                cri_dms_utils_clear_operating_mode();
+                if(srv_down_cb)
+                {
+                    srv_down_cb();
+                }
+            }
+        }
+    }while(FALSE);
+}
+
+void cri_core_register_for_service_up(ssr_srv_up_cb cb)
+{
+    int iter_client;
+    int rc = 0;
+
+    do
+    {
+        if(NULL == cb)
+        {
+            break;
+        }
+
+        srv_up_cb = cb;
+        for (iter_client = 0; iter_client < CRI_CORE_MAX_CLIENTS; iter_client++)
+        {
+            //Do not register up events for services which are not included for SSR.
+            if (qmi_service_client_info[iter_client].client_state == CRI_CORE_QMI_SERVICE_NOT_AVAILABLE)
+            {
+                if (!qmi_service_client_info[iter_client].notifier)
+                {
+                    rc = qmi_client_notifier_init(qmi_service_client_info[iter_client].service_obj,
+                                              NIL,
+                                              &qmi_service_client_info[iter_client].notifier);
+                    UTIL_LOG_MSG("qmi_client_notifier_init return %d", (int) rc);
+                }
+
+                if (!rc)
+                {
+                    rc = qmi_client_register_notify_cb(qmi_service_client_info[iter_client].notifier,
+                                              cri_core_service_up_event,
+                                              (void*)(intptr_t)iter_client);
+                    UTIL_LOG_MSG("qmi_client_register_notify_cb %d", (int) rc);
+                }
+            }
+        }
+    }while(FALSE);
+}
+
+void cri_core_service_up_event
+(
+  qmi_client_type  clnt,
+  qmi_idl_service_object_type   svc_obj,
+  qmi_client_notify_event_type  service_event,
+  void                         *cb_data
+)
+{
+    int srv_index;
+    cri_core_service_up_event_data_type *cri_core_service_up_event_data = NULL;
+
+    cri_core_service_up_event_data = util_memory_alloc(sizeof(*cri_core_service_up_event_data));
+
+    if(cri_core_service_up_event_data)
+    {
+        srv_index = (intptr_t)cb_data;
+        UTIL_LOG_MSG("cri_core_service_up_event %d", (int) srv_index);
+        cri_core_service_up_event_data->event_id = SRV_UP;
+        cri_core_service_up_event_data->clnt = clnt;
+        cri_core_service_up_event_data->svc_obj = svc_obj;
+        cri_core_service_up_event_data->service_event = service_event;
+        cri_core_service_up_event_data->cb_data = cb_data;
+        core_handler_add_event(CORE_HANDLER_SERVICE_UP,
+                               cri_core_service_up_event_data);
+    }
+}
+
+void cri_core_service_up_event_hdlr(void *event_data)
+{
+    cri_core_service_up_event_data_type *cri_core_service_up_event_data = NULL;
+    int rc;
+    qmi_service_info info;
+
+    do
+    {
+        if(NULL == event_data)
+        {
+            break;
+        }
+
+        cri_core_service_up_event_data = (cri_core_service_up_event_data_type *)event_data;
+        UTIL_LOG_MSG("cri_core_service_up_event_hdlr %"PRIdPTR" %d",
+                             (intptr_t) cri_core_service_up_event_data->cb_data, cri_core_service_up_event_data->service_event);
+
+        if (cri_core_service_up_event_data->service_event == QMI_CLIENT_SERVICE_COUNT_INC)
+        {
+            if (qmi_service_client_info[(intptr_t)cri_core_service_up_event_data->cb_data].client_state == CRI_CORE_QMI_SERVICE_NOT_AVAILABLE)
+            {
+                UTIL_LOG_MSG("Before: number of active clients %d", client_info.num_of_active_clients);
+                if (QMI_NO_ERR == (rc = qmi_client_get_service_instance(cri_core_service_up_event_data->svc_obj,
+                                                          QMI_CLIENT_INSTANCE_ANY,
+                                                          &info)))
+                {
+                    qmi_service_client_info[(intptr_t)cri_core_service_up_event_data->cb_data].client_state = CRI_CORE_QMI_SERVICE_AVAILABLE;
+                    qmi_client_release(qmi_service_client_info[(intptr_t)cri_core_service_up_event_data->cb_data].notifier);
+                    qmi_service_client_info[(intptr_t)cri_core_service_up_event_data->cb_data].notifier = NULL;
+                    client_info.num_of_active_clients++;
+                }
+                else
+                {
+                    UTIL_LOG_MSG("qmi_client_get_service_instance return  %x %d", cri_core_service_up_event_data->svc_obj, rc);
+                }
+
+                UTIL_LOG_MSG("After: number of active clients %d", client_info.num_of_active_clients);
+                UTIL_LOG_MSG("max_active_clients %d", client_info.max_active_clients);
+                if (client_info.num_of_active_clients == client_info.max_active_clients)
+                {
+                    if(srv_up_cb)
+                    {
+                        srv_up_cb();
+                    }
+                }
+            }
+        }
+    }while(FALSE);
+}
+
+void cri_core_set_operational_status( cri_core_gen_operational_status_type status )
+{
+    cri_core_op_status = status;
+}
+
+cri_core_gen_operational_status_type cri_core_get_operational_status(void)
+{
+    return cri_core_op_status;
+}
+
+uint8_t cri_core_mcm_ssr_resume(void)
+{
+    uint8_t status = FALSE;
+
+    if(CRI_CORE_GEN_OPERATIONAL_STATUS_RESUMED == cri_core_get_operational_status())
+    {
+        status = TRUE;
+    }
+
+    return status;
+}

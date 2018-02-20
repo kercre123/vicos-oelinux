@@ -56,6 +56,7 @@ Qualcomm Technologies Proprietary and Confidential.
 #define IFACE_MIN_NATIVE_BUF_NUM 2
 #define NUM_AXI_WM 7
 #define IFACE_UTIL_INPUT_Q_SIZE 1
+#define IFACE_UTIL_FRAME_REQ_Q_SIZE 20
 
 #define IFACE_FRAME_CTRL_SIZE 6
 #define IFACE_APPLY_DELAY 1
@@ -401,8 +402,12 @@ typedef struct {
 typedef struct {
   pthread_mutex_t mutex;
   uint32_t num;
+  uint32_t req_num;
   uint32_t next_free_entry;
+  uint32_t next_free_frame_entry;
   mct_queue_t *frame_q;
+  mct_queue_t *req_frame_q;
+  iface_param_frame_request_t req_q_data[IFACE_UTIL_FRAME_REQ_Q_SIZE];
   iface_util_fe_input_buf_t q_data[IFACE_UTIL_INPUT_Q_SIZE];
   boolean busy;
 } iface_fe_data_t;
@@ -467,6 +472,7 @@ typedef struct {
   isp_preferred_streams preferred_mapping;
   iface_batch_info_t batch_info;
   uint8_t initial_frame_skip;
+  boolean frame_id_initialized;
   int create_axi_count[VFE_MAX];
 
   iface_hvx_t hvx;

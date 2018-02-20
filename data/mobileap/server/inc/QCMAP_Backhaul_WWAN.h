@@ -392,6 +392,11 @@ class QCMAP_Backhaul_WWAN
                          qcmap_msgr_ipv6_sip_server_info_v01 *network_v6_sip_info,
                          int *count_network_v6_sip_info,qmi_error_type_v01 *qmi_err_num);
 
+    static int SendDeleteDelegatedPrefix (
+                         boolean prefix_valid,/*Boolean to flush single or all*/
+                         uint8_t *ipv6_addr,/*Prefix to delete*/
+                         qmi_error_type_v01 *qmi_err_num /*QMI error number*/);
+
     static boolean DeleteDelegatedPrefix(void*, qmi_error_type_v01*);
 
     /* Prefix Delegation Config */

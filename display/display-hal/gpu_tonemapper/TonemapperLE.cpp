@@ -65,7 +65,7 @@ Tonemapper::~Tonemapper()
 
 //-----------------------------------------------------------------------------
 Tonemapper *Tonemapper::build(int type, void *colorMap, int colorMapSize, void *lutXform,
-                              int lutXformSize)
+                              int lutXformSize, bool isSecure)
 //-----------------------------------------------------------------------------
 {
   if (colorMapSize <= 0) {
@@ -75,7 +75,7 @@ Tonemapper *Tonemapper::build(int type, void *colorMap, int colorMapSize, void *
 
   // build new tonemapper
   Tonemapper *tonemapper = new Tonemapper();
-  tonemapper->engineContext = engine_initialize();
+  tonemapper->engineContext = engine_initialize(isSecure);
 
   void* caller_context = engine_backup();
   engine_bind(tonemapper->engineContext);
@@ -124,7 +124,7 @@ Tonemapper *Tonemapper::build(int type, void *colorMap, int colorMapSize, void *
 }
 
 //-----------------------------------------------------------------------------
-int Tonemapper::blit(void *dst, void *src, int srcFenceFd)
+int Tonemapper::blit(void *dst, void *src, int srcFenceFd, void *userdata, void *userdata2)
 //-----------------------------------------------------------------------------
 {
   void* caller_context = engine_backup();
@@ -132,8 +132,8 @@ int Tonemapper::blit(void *dst, void *src, int srcFenceFd)
   engine_bind(engineContext);
 
   // create eglimages if required
-  EGLImageBufferLE *dst_buffer = eglImageWrapperLE->wrap(dst);
-  EGLImageBufferLE *src_buffer = eglImageWrapperLE->wrap(src);
+  EGLImageBufferLE *dst_buffer = eglImageWrapperLE->wrap(dst, userdata, userdata2);
+  EGLImageBufferLE *src_buffer = eglImageWrapperLE->wrap(src, userdata, userdata2);
 
   // bind the program
   engine_setProgram(programID);

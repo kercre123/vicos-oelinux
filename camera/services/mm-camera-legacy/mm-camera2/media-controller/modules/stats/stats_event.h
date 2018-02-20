@@ -6,9 +6,9 @@
 
 #ifndef __STATS_EVENT_H__
 #define __STATS_EVENT_H__
-#ifdef FEATURE_GYRO
+/* #ifdef FEATURE_GYRO
 #include "sns_sam_gyroint_v01.h"
-#endif
+#endif */
 
 #include "mct_event_stats.h"
 #define STATS_GYRO_MAX_SAMPLE_BUFFER_SIZE (32)
@@ -35,10 +35,10 @@ typedef struct _mct_event_gyro_data {
   uint32_t frame_id;
   int      ready;
   uint32_t sample_len;
-#ifdef FEATURE_GYRO
+/* #ifdef FEATURE_GYRO
 //  sns_sam_gyroint_sample_t_v01 sample[SNS_SAM_GYROINT_MAX_BUFSIZE_V01 * 2];
 gyro_samples_t sample[STATS_GYRO_MAX_SAMPLE_BUFFER_SIZE];
-#endif
+#endif */
   uint64_t sof;
   uint64_t frame_time;
   float    exposure_time;

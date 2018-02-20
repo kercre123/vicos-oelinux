@@ -99,6 +99,10 @@ LOCAL_SRC_FILES := gtest/qmmf_utils_gtest.cc
 
 LOCAL_MODULE = qmmf_utils_gtest
 
+ifeq ($(LOCAL_VENDOR_MODULE),true)
+LOCAL_VENDOR_MODULE := false
+endif
+
 include $(BUILD_NATIVE_TEST)
 
 # Build qmmf algorithm interface gtest application binary
@@ -112,6 +116,10 @@ LOCAL_C_INCLUDES += $(QMMF_TOPO_MAN_INCLUDE_PATH)
 LOCAL_SRC_FILES := gtest/qmmf_algo_interface_gtest.cc
 
 LOCAL_MODULE = qmmf_algo_interface_gtest
+
+ifeq ($(LOCAL_VENDOR_MODULE),true)
+LOCAL_VENDOR_MODULE := false
+endif
 
 include $(BUILD_NATIVE_TEST)
 

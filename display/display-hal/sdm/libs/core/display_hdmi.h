@@ -71,7 +71,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   void SetS3DMode(LayerStack *layer_stack);
 
   bool underscan_supported_ = false;
-  HWScanSupport scan_support_;
+  HWScanSupport scan_support_ = kScanNotSupported;
   std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
   std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
     HWEvent::CEC_READ_MESSAGE };

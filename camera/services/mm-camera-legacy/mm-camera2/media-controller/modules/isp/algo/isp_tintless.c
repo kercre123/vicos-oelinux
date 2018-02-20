@@ -23,6 +23,8 @@ Qualcomm Technologies Proprietary and Confidential.
 #define MESH_PRINT_SIZE  10
 #define TINTLESS_ALGO_SKIP_COUNT 1
 
+#define PROPERTY_VALUE_MAX 32
+
 void isp_tintless_open_version(uint32_t version);
 tintless_return_t isp_tintless_open(void ** const res, uint32_t * updates_needed);
 tintless_return_t isp_tintless_stat_config(void * const res, tintless_stats_config_t *cfg);

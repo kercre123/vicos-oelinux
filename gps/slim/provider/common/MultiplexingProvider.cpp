@@ -1076,7 +1076,7 @@ void MultiplexingProvider::dispatchIndication
     pData = 0;
     qDataSize = 0;
   }
-  if (eSLIM_MESSAGE_ID_NONE != eMessageId)
+  if ((eSLIM_MESSAGE_ID_NONE != eMessageId) && pData)
   {
     slim_ServiceStatusDispatchDataToRegistered(
       &m_zProviderStatus,

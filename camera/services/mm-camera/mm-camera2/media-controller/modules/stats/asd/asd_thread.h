@@ -16,6 +16,7 @@ typedef struct {
   mct_queue_t     *msg_q;
   boolean         active;
 
+  pthread_condattr_t thread_condattr;
   pthread_cond_t  thread_cond;
   pthread_mutex_t thread_mutex;
   pthread_t       thread_id;

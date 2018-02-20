@@ -185,8 +185,10 @@ enum {
   MCM_ERROR_SIM_INVALID_FILE_PATH,     //!< SIM file path is invalid.
   MCM_ERROR_SIM_SERVICE_NOT_SUPPORTED, //!< SIM service is not supported.
   MCM_ERROR_SIM_AUTH_FAIL,             //!< SIM authorization failure.
-  MCM_ERROR_SIM_PIN_PERM_BLOCKED       //!< SIM PIN is permanently blocked.
+  MCM_ERROR_SIM_PIN_PERM_BLOCKED,      //!< SIM PIN is permanently blocked.
 
+  // SSR specific error
+  MCM_ERROR_RADIO_RESET                //!< SSR happen, device not in proper state.
 } mcm_error_t; //!< Common error codes.
 
 struct {

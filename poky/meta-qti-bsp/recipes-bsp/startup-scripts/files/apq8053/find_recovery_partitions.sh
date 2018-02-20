@@ -97,7 +97,8 @@ FindAndMountEXT4 () {
    echo "EMMC : Looking for EXT4 block device : $dir for $partition"
    mkdir -p $dir
    if [ "$fstab_only" != "1" ]; then
-      mount -t ext4 $mmc_block_device $dir -o relatime,data=ordered,noauto_da_alloc,discard
+      flags=$4
+      mount -t ext4 $mmc_block_device $dir -o $flags
       echo "EMMC : Mounting of $mmc_block_device on $dir done"
    fi
 
@@ -129,7 +130,7 @@ then
     fstype="EXT4"
     eval FindAndMountEXT4 system   /system   1
     eval FindAndMountEXT4 userdata /data     1
-    eval FindAndMountEXT4 cache    /cache
+    eval FindAndMountEXT4 cache    /cache    0 relatime,data=ordered,noauto_da_alloc,discard,noexec,nodev
     eval FindAndMountEXT4 misc     /misc     1
 else
     fstype="UBI"
@@ -140,7 +141,7 @@ else
     eval FindAndMountUBI cachefs /cache
 fi
 
-eval FindAndMount${fstype} modem /firmware
+eval FindAndMount${fstype} modem /firmware 0 relatime,data=ordered,noauto_da_alloc,discard,ro,noexec,nodev
 
 # TODO: recovery image should also move to enforce mode
 # till all the meta_data is updated we are moving to

@@ -355,13 +355,6 @@ AC_SUBST(QSTHW_LIBS)
 
 AM_CONDITIONAL(USE_QSTHW, test "$HAVE_QSTHW_API_H" = "yes" -a "$HAVE_QSTHW_LIB" = "yes")
 
-HAVE_QAHW_EFFECT_API_H=no
-AC_CHECK_HEADERS([mm-audio/qahw_api/inc/qahw_effect_api.h],
-    [HAVE_QAHW_EFFECT_API_H=yes],
-    AC_MSG_WARN([Could not find qahw_effect_api.h]))
-
-AM_CONDITIONAL(USE_QAHW_EFFECT, test "$HAVE_QAHW_EFFECT_API_H" = "yes")
-
 dnl *** finalize CFLAGS, LDFLAGS, LIBS
 
 dnl Overview:
@@ -473,4 +466,3 @@ AC_OUTPUT
 
 AG_GST_OUTPUT_PLUGINS
 ORC_OUTPUT
-

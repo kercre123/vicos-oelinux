@@ -434,8 +434,13 @@ static tAVRC_STS avrc_bld_get_folder_items_cmd(BT_HDR* p_pkt,
     UINT32_TO_BE_STREAM(p_data, cmd->start_item); /* start item (4bytes) */
     UINT32_TO_BE_STREAM(p_data, cmd->end_item);   /* end item (4bytes) */
     UINT8_TO_BE_STREAM(p_data, cmd->attr_count); /* attribute count (1bytes) */
-    for(int i=0;i < nCount; i++)
-        UINT32_TO_BE_STREAM(p_data, cmd->attrs[i]);
+    if (cmd->attr_count > AVRC_MAX_ELEM_ATTR_SIZE)
+    {
+        return AVRC_STS_BAD_PARAM;
+    }
+    if(cmd->attr_count != 255)
+        for(int i=0; i < nCount; i++)
+            UINT32_TO_BE_STREAM(p_data, cmd->attrs[i]);
     p_pkt->len = (p_data - p_start);
     return AVRC_STS_NO_ERROR;
 }
@@ -469,8 +474,13 @@ static tAVRC_STS avrc_bld_get_item_attributes_cmd(BT_HDR* p_pkt,
     UINT64_TO_BE_STREAM(p_data, cmd->uid);  /* uid (8bytes) */
     UINT16_TO_BE_STREAM(p_data, cmd->uid_counter);   /* uid counter (2bytes) */
     UINT8_TO_BE_STREAM(p_data, cmd->attr_count); /* attribute count (1bytes) */
-    for(int i=0;i < nCount; i++)
-        UINT32_TO_BE_STREAM(p_data, cmd->attrs[i]);
+    if (cmd->attr_count > AVRC_MAX_ELEM_ATTR_SIZE)
+    {
+        return AVRC_STS_BAD_PARAM;
+    }
+    if(cmd->attr_count != 255)
+        for(int i=0; i < nCount; i++)
+            UINT32_TO_BE_STREAM(p_data, cmd->attrs[i]);
     p_pkt->len = (p_data - p_start);
     return AVRC_STS_NO_ERROR;
 }

@@ -1309,8 +1309,13 @@ int32_t OverlayItemDateAndTime::CreateSurface() {
   SkImageInfo imageInfo;
   imageInfo.Make(width_, height_, kRGBA_8888_SkColorType, kPremul_SkAlphaType);
 
+#ifdef ANDROID_O_OR_ABOVE
+  canvas_ = (SkCanvas::MakeRasterDirect(imageInfo, mem_info.vaddr,
+                                      width_ *4)).get();
+#else
   canvas_ = SkCanvas::NewRasterDirect(imageInfo, mem_info.vaddr,
                                       width_ *4);
+#endif
   if(!canvas_) {
     OVDBG_ERROR("%s: Skia Creation failed!!",__func__);
     goto ERROR;
@@ -1637,8 +1642,13 @@ int32_t OverlayItemBoundingBox::CreateSurface() {
   imageInfo.Make(BOUNDING_BOX_BUF_WIDTH, BOUNDING_BOX_BUF_HEIGHT,
                  kRGBA_8888_SkColorType, kPremul_SkAlphaType);
 
+#ifdef ANDROID_O_OR_ABOVE
+  canvas_ = (SkCanvas::MakeRasterDirect(imageInfo, mem_info.vaddr,
+                                      BOUNDING_BOX_BUF_WIDTH *4)).get();
+#else
   canvas_ = SkCanvas::NewRasterDirect(imageInfo, mem_info.vaddr,
                                       BOUNDING_BOX_BUF_WIDTH *4);
+#endif
   if(!canvas_) {
     OVDBG_ERROR("%s: Skia Creation failed!!", __func__);
     goto ERROR;
@@ -1917,8 +1927,13 @@ int32_t OverlayItemText::CreateSurface() {
   SkImageInfo imageInfo;
   imageInfo.Make(width_, height_, kRGBA_8888_SkColorType, kPremul_SkAlphaType);
 
+#ifdef ANDROID_O_OR_ABOVE
+  canvas_ = (SkCanvas::MakeRasterDirect(imageInfo, mem_info.vaddr,
+                                      width_ * 4)).get();
+#else
   canvas_ = SkCanvas::NewRasterDirect(imageInfo, mem_info.vaddr,
                                       width_ * 4);
+#endif
   if(!canvas_) {
     OVDBG_ERROR("%s: Skia Creation failed!!",__func__);
     goto ERROR;
@@ -2043,7 +2058,11 @@ int32_t OverlayItemPrivacyMask::UpdateAndDraw() {
   paintBox.setColor(mask_color_);
   paintBox.setStyle(SkPaint::kFill_Style);
   //For blurring effect
+#ifdef ANDROID_O_OR_ABOVE
+  paintBox.setMaskFilter(SkBlurMaskFilter::Make(kNormal_SkBlurStyle,5.0f, 0));
+#else
   paintBox.setMaskFilter(SkBlurMaskFilter::Create(kNormal_SkBlurStyle,5.0f, 0));
+#endif
   OVDBG_VERBOSE(" x_ %d y_ %d width_ %d height_ %d",x_,y_,width_,height_);
   canvas_->drawRect(SkRect::MakeXYWH(0,0, width_, height_), paintBox);
   canvas_->flush();
@@ -2133,8 +2152,13 @@ int32_t OverlayItemPrivacyMask::CreateSurface() {
   imageInfo.Make(PMASK_BOX_BUF_WIDTH, PMASK_BOX_BUF_HEIGHT,
                  kRGBA_8888_SkColorType, kPremul_SkAlphaType);
 
+#ifdef ANDROID_O_OR_ABOVE
+  canvas_ = (SkCanvas::MakeRasterDirect(imageInfo, mem_info.vaddr,
+                                      PMASK_BOX_BUF_WIDTH *4)).get();
+#else
   canvas_ = SkCanvas::NewRasterDirect(imageInfo, mem_info.vaddr,
                                       PMASK_BOX_BUF_WIDTH *4);
+#endif
   if(!canvas_) {
     OVDBG_ERROR("%s: Skia Creation failed!!", __func__);
     goto ERROR;

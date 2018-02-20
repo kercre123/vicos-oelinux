@@ -40,14 +40,20 @@
 
 #define TCP_SPLICE_HASH_INDEX_SHIFT_SIZE 12
 
-#define TCP_SPLICE_HASH_INVALID 0x00
-#define TCP_SPLICE_HASH_BLOCK_MODE 0x01
-#define TCP_SPLICE_HASH_SPLICE_MODE 0x02
-
 #define CLIENT_SUPPORTS_WINDOW_SCALING 0b10
 #define REMOTE_SUPPORTS_WINDOW_SCALING 0b01
 
 #define IPV6_MAX_PAYLOAD 1412
+
+#define PRINTK_IPV6_ADDR(v6_addr) \
+        pr_info(MODULE_NAME \
+        ": 0x%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n", \
+        v6_addr.in6_u.u6_addr8[0], v6_addr.in6_u.u6_addr8[1], v6_addr.in6_u.u6_addr8[2], \
+        v6_addr.in6_u.u6_addr8[3], v6_addr.in6_u.u6_addr8[4], v6_addr.in6_u.u6_addr8[5], \
+        v6_addr.in6_u.u6_addr8[6], v6_addr.in6_u.u6_addr8[7],  v6_addr.in6_u.u6_addr8[8], \
+        v6_addr.in6_u.u6_addr8[9], v6_addr.in6_u.u6_addr8[10], v6_addr.in6_u.u6_addr8[11], \
+        v6_addr.in6_u.u6_addr8[12], v6_addr.in6_u.u6_addr8[13], v6_addr.in6_u.u6_addr8[14], \
+        v6_addr.in6_u.u6_addr8[15]);
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -134,10 +140,11 @@ struct tcp_splice_tuple
 
 struct tcp_splice_hash_entry
 {
+  struct hlist_node hash_node;
+  struct rcu_head rcu;
   struct tcp_splice_session_info session_info;
   struct tcp_splice_tuple splice_tuple;
   unsigned int opp_key; //key to the opposing direction hash entry
-  struct hlist_node hash_node;
 };
 
 
@@ -198,3 +205,16 @@ int tcp_splice_socket(struct sock* sk, int optval, void __user *user, unsigned i
 *
 ***************************************************************************/
 int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session);
+
+/***************************************************************************
+*
+* Function: printSessionInfo
+*
+* Description: prints tcp splice info
+*
+* Parameters: struct tcp_splice_session_info* sp_session; //ptr to tcp splice session
+*
+* Return: none
+*
+***************************************************************************/
+void printSessionInfo(struct tcp_splice_session_info* sp_session);

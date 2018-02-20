@@ -1416,6 +1416,18 @@ extern void BTA_DmSetDeviceName(char *p_name);
 
 /*******************************************************************************
 **
+** Function         BTA_DmSetLeDeviceName
+**
+** Description      This function sets the Bluetooth LE name of the local device.
+**
+**
+** Returns          void
+**
+*******************************************************************************/
+extern void BTA_DmSetLeDeviceName(char *p_name);
+
+/*******************************************************************************
+**
 ** Function         BTA_DmSetVisibility
 **
 ** Description      This function sets the Bluetooth connectable,discoverable,

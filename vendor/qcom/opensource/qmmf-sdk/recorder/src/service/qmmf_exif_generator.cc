@@ -27,14 +27,14 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "ExifGenerator"
+#define LOG_TAG "ExifGenerator"
 
 #include <cmath>
 #include <ctime>
 #include <cstring>
 #include <sys/time.h>
 
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 #include "qmmf_exif_generator.h"
 
 namespace qmmf {
@@ -51,10 +51,8 @@ static const uint32_t kASCIICharacterCodeSize = 8;
 
 ExifGenerator::ExifGenerator()
   : exif_buffer_(nullptr),
-    helper_buffer_(nullptr),
     width_(0),
     height_(0),
-    max_exif_size_(0),
     current_offset_(0),
     helper_buffer_offset_(0),
     tiff_header_begin_offset_(0),
@@ -71,9 +69,12 @@ ExifGenerator::ExifGenerator()
     overflow_flag_(false),
     gps_coords_present_(false),
     gps_timestamp_present_(false) {
+
+  helper_buffer_ = new unsigned char[kMaxExifApp1Length];
 }
 
 ExifGenerator::~ExifGenerator() {
+
   delete[] helper_buffer_;
 }
 
@@ -81,24 +82,19 @@ int32_t ExifGenerator::Generate(const CameraMetadata &meta,
                                 const std::string &vendor_name,
                                 const std::string &product_name,
                                 int32_t width, int32_t height,
-                                unsigned char *buffer, uint32_t size) {
+                                unsigned char *buffer) {
   if (buffer == nullptr) {
-    QMMF_ERROR("%s: %s Invalid buffer passed for the addition of "
-        "exif section outputBuf: %p.", TAG, __func__, buffer);
+    QMMF_ERROR("%s: Invalid buffer passed for the addition of "
+        "exif section outputBuf: %p.",  __func__, buffer);
     return BAD_VALUE;
   }
+
+  memset(helper_buffer_, 0x0, kMaxExifApp1Length);
+
   exif_buffer_    = buffer;
-
-  helper_buffer_  = new unsigned char[size];
-  if (helper_buffer_ == nullptr) {
-    QMMF_ERROR("%s: %s Unable to allocate helper buffer!", TAG, __func__);
-    return NO_MEMORY;
-  }
-
   meta_           = &meta;
   vendor_name_    = vendor_name;
   product_name_   = product_name;
-  max_exif_size_  = size;
   width_          = width;
   height_         = height;
   current_offset_ = 0;
@@ -124,7 +120,7 @@ void ExifGenerator::WriteExifTag(qmmf_exif_tag_t *tag) {
   // Calculate the size of the information that need's to be written
   // in tag's data field, based on the count and size of the data.
   write_length = tag_type_sizes[tag->entry.type] * tag->entry.count;
-  QMMF_VERBOSE("%s: %s write_length %d", TAG, __func__, write_length);
+  QMMF_VERBOSE("%s write_length %d", __func__, write_length);
 
   // Write tag's data value, depending on the size of the info.
   // A helperBuffer is used for the case of size > 4 bytes:
@@ -167,8 +163,8 @@ void ExifGenerator::EndWritingIfd() {
     const uint32_t count = ReadU32(exif_buffer_, write_offset - kTagCountSize);
 
     if (type >= sizeof(tag_type_sizes)/sizeof(tag_type_sizes[0])) {
-        QMMF_ERROR("%s: %s invalid tag type %d in entity %d\n",
-            TAG, __func__, type, i);
+        QMMF_ERROR("%s invalid tag type %d in entity %d\n",
+            __func__, type, i);
     } else if (count * tag_type_sizes[type] > 4) {
       uint32_t helper_offset = ReadU32(exif_buffer_, write_offset);
       // Calculate the offset for each exif tag to where the
@@ -187,8 +183,7 @@ void ExifGenerator::EndWritingIfd() {
 }
 
 void ExifGenerator::WriteGpsIfd() {
-  qmmf_exif_tag_t tag;
-  memset(&tag, 0, sizeof(qmmf_exif_tag_t));
+  qmmf_exif_tag_t tag{};
   tag_count_ = 0;
   tag_count_offset_ = current_offset_;
   current_offset_ += 2;
@@ -258,8 +253,7 @@ void ExifGenerator::WriteGpsIfd() {
 }
 
 void ExifGenerator::WriteInteropIfd() {
-  qmmf_exif_tag_t tag;
-  memset(&tag, 0, sizeof(qmmf_exif_tag_t));
+  qmmf_exif_tag_t tag{};
   tag_count_ = 0;
   tag_count_offset_ = current_offset_;
   current_offset_ += 2;
@@ -289,8 +283,7 @@ void ExifGenerator::WriteInteropIfd() {
 }
 
 void ExifGenerator::WriteExifIfd() {
-  qmmf_exif_tag_t tag;
-  memset(&tag, 0, sizeof(qmmf_exif_tag_t));
+  qmmf_exif_tag_t tag{};
   tag_count_ = 0;
   tag_count_offset_ = current_offset_;
   current_offset_ += 2;
@@ -386,8 +379,7 @@ void ExifGenerator::WriteExifIfd() {
 }
 
 void ExifGenerator::Write0thIfd() {
-  qmmf_exif_tag_t tag;
-  memset(&tag, 0, sizeof(qmmf_exif_tag_t));
+  qmmf_exif_tag_t tag{};
   tag_count_ = 0;
   tag_count_offset_ = current_offset_;
   current_offset_ += 2;
@@ -452,7 +444,7 @@ void ExifGenerator::GetGpsProcessingMethod(const char *gps_proc_method) {
         gps_proc_method_size_ += static_cast<uint32_t>(strlen(gps_proc_method));
         tag_values_.gps_processing_method[gps_proc_method_size_++] = '\0';
     } else {
-        QMMF_ERROR("%s: %s No gps processing method found.", TAG, __func__);
+        QMMF_ERROR("%s No gps processing method found.", __func__);
     }
 }
 
@@ -469,7 +461,7 @@ void ExifGenerator::GetGpsDateTimestamp(int64_t utc_time) {
     tag_values_.gps_timestamp[2].num = timestamp->tm_sec;
     tag_values_.gps_timestamp[2].denom = 1;
   } else {
-    QMMF_ERROR("%s: %s: Unable to get UTC timestamp", TAG, __func__);
+    QMMF_ERROR("%s: Unable to get UTC timestamp", __func__);
   }
 }
 
@@ -579,8 +571,8 @@ status_t ExifGenerator::ExtractExifTagValues() {
   if (meta_->exists(ANDROID_JPEG_ORIENTATION)) {
     GetOrientation(meta_->find(ANDROID_JPEG_ORIENTATION).data.i32[0]);
   } else {
-    QMMF_ERROR("%s: %s No orientation setting has been found in metadata!",
-        TAG, __func__);
+    QMMF_ERROR("%s No orientation setting has been found in metadata!",
+        __func__);
   }
 
   // Exposure time is received in nanoseconds from the metadata.
@@ -594,11 +586,11 @@ status_t ExifGenerator::ExtractExifTagValues() {
             &tag_values_.exposure_time.num,
             &tag_values_.exposure_time.denom);
       } else {
-        QMMF_ERROR("%s: %s Invalid exposure time value!", TAG, __func__);
+        QMMF_ERROR("%s Invalid exposure time value!", __func__);
       }
   } else {
-    QMMF_ERROR("%s: %s No exposure time setting has been found in metadata!",
-        TAG, __func__);
+    QMMF_ERROR("%s No exposure time setting has been found in metadata!",
+        __func__);
   }
 
   if (meta_->exists(ANDROID_SENSOR_SENSITIVITY)) {
@@ -606,7 +598,7 @@ status_t ExifGenerator::ExtractExifTagValues() {
         meta_->find(ANDROID_SENSOR_SENSITIVITY).data.i32[0];
     tag_values_.iso_speed = static_cast<int16_t>(sensor_sensitivity);
   } else {
-    QMMF_ERROR("%s: %s No iso speed setting has been found in metadata!", TAG,
+    QMMF_ERROR("%s No iso speed setting has been found in metadata!",
         __func__);
   }
 
@@ -615,8 +607,8 @@ status_t ExifGenerator::ExtractExifTagValues() {
     tag_values_.focal_length.num = focal_length * 1000;
     tag_values_.focal_length.denom = 1000;
   } else {
-    QMMF_ERROR("%s: %s No focal length setting has been found in metadata!",
-        TAG, __func__);
+    QMMF_ERROR("%s No focal length setting has been found in metadata!",
+        __func__);
   }
 
   // Aperture is received as f-number unit from the metadata.
@@ -628,7 +620,7 @@ status_t ExifGenerator::ExtractExifTagValues() {
     tag_values_.aperture.num = static_cast<int32_t>(apex_value * 1000);
     tag_values_.aperture.denom = 1000;
   } else {
-    QMMF_ERROR("%s: %s No aperture setting has been found in metadata!", TAG,
+    QMMF_ERROR("%s No aperture setting has been found in metadata!",
         __func__);
   }
 
@@ -640,7 +632,7 @@ status_t ExifGenerator::ExtractExifTagValues() {
       tag_values_.aeMode = 1;
     }
   } else {
-    QMMF_ERROR("%s: %s No AE mode setting has been found in metadata!", TAG,
+    QMMF_ERROR("%s No AE mode setting has been found in metadata!",
         __func__);
   }
 
@@ -652,7 +644,7 @@ status_t ExifGenerator::ExtractExifTagValues() {
       tag_values_.awb_mode = 1;
     }
   } else {
-    QMMF_ERROR("%s: %s No AWB mode setting has been found in metadata!", TAG,
+    QMMF_ERROR("%s No AWB mode setting has been found in metadata!",
         __func__);
   }
 
@@ -666,7 +658,7 @@ status_t ExifGenerator::ExtractExifTagValues() {
     GetGpsCoordinates(latitude, longitude, altitude);
   } else {
     gps_coords_present_ = false;
-    QMMF_ERROR("%s: %s No GPS settings have been found in metadata!", TAG,
+    QMMF_ERROR("%s No GPS settings have been found in metadata!",
         __func__);
   }
 
@@ -676,7 +668,7 @@ status_t ExifGenerator::ExtractExifTagValues() {
     GetGpsDateTimestamp(gps_timestamp);
   } else {
     gps_timestamp_present_ = false;
-    QMMF_ERROR("%s: %s No GPS timestamp has been found in metadata!", TAG,
+    QMMF_ERROR("%s No GPS timestamp has been found in metadata!",
         __func__);
   }
 
@@ -688,8 +680,8 @@ status_t ExifGenerator::ExtractExifTagValues() {
     GetGpsProcessingMethod(reinterpret_cast<const char *>(gps_proc_method));
   } else {
     gps_proc_method_present_ = false;
-    QMMF_ERROR("%s: %s: No gps processing method has been found in metadata!",
-        TAG, __func__);
+    QMMF_ERROR("%s: No gps processing method has been found in metadata!",
+        __func__);
   }
 
   return NO_ERROR;
@@ -697,7 +689,8 @@ status_t ExifGenerator::ExtractExifTagValues() {
 
 uint32_t ExifGenerator::WriteExifData() {
   // Write APP1 marker
-  WriteShort((uint16_t) (0xFF00 | APP1_MARKER), exif_buffer_, &current_offset_);
+  WriteShort(static_cast<uint16_t>(0xFF00 | APP1_MARKER),
+             exif_buffer_, &current_offset_);
 
   // Leave space for writing the APP1 length,
   // remember the current offset as beginning
@@ -717,10 +710,10 @@ uint32_t ExifGenerator::WriteExifData() {
 
   // Write Ifds - write all the tags (corresponding to each idf),
   // that were set to the output binary file.
-  memset(&tag_values_, 0, sizeof(ExifTagValues));
+  tag_values_ = {};
   status_t res = ExtractExifTagValues();
   if (res != NO_ERROR) {
-    QMMF_ERROR("%s: %s Error extracting exif tag values!\n", TAG, __func__);
+    QMMF_ERROR("%s Error extracting exif tag values!\n", __func__);
   }
   Write0thIfd();
   WriteExifIfd();
@@ -733,7 +726,7 @@ uint32_t ExifGenerator::WriteExifData() {
     app1_present_ = true;
   }
   if (overflow_flag_ && !app1_present_) {
-    QMMF_ERROR("%s: %s Error writing exif data - overflow: %d", TAG, __func__,
+    QMMF_ERROR("%s Error writing exif data - overflow: %d", __func__,
         current_offset_);
     return 0;
   }
@@ -827,7 +820,7 @@ void ExifGenerator::WriteTagValue(qmmf_exif_tag_t *tag, unsigned char *buffer,
 
 void ExifGenerator::OverwriteShort(uint16_t value, uint8_t *buffer,
                                    uint32_t offset) {
-  if (offset + 1 >= max_exif_size_) {
+  if (offset + 1 >= kMaxExifApp1Length) {
     overflow_flag_ = true;
     return;
   }
@@ -837,7 +830,7 @@ void ExifGenerator::OverwriteShort(uint16_t value, uint8_t *buffer,
 
 void ExifGenerator::WriteByte(uint8_t value, uint8_t *buffer,
                               uint32_t *offset) {
-  if (*offset >= max_exif_size_) {
+  if (*offset >= kMaxExifApp1Length) {
       overflow_flag_ = true;
       return;
   }
@@ -847,7 +840,7 @@ void ExifGenerator::WriteByte(uint8_t value, uint8_t *buffer,
 
 void ExifGenerator::WriteShort(uint16_t value, uint8_t *buffer,
                                uint32_t *offset) {
-  if (*offset + 1 >= max_exif_size_) {
+  if (*offset + 1 >= kMaxExifApp1Length) {
       overflow_flag_ = true;
       return;
   }
@@ -858,7 +851,7 @@ void ExifGenerator::WriteShort(uint16_t value, uint8_t *buffer,
 
 void ExifGenerator::WriteLong(int32_t value, uint8_t *buffer,
                               uint32_t *offset) {
-  if (*offset + 3 >= max_exif_size_) {
+  if (*offset + 3 >= kMaxExifApp1Length) {
       overflow_flag_ = true;
       return;
   }
@@ -871,7 +864,7 @@ void ExifGenerator::WriteLong(int32_t value, uint8_t *buffer,
 
 void ExifGenerator::WriteNBytes(const uint8_t *data, uint32_t count,
                                 uint8_t* buffer, uint32_t *offset) {
-  if (*offset + count >= max_exif_size_) {
+  if (*offset + count >= kMaxExifApp1Length) {
       overflow_flag_ = true;
       return;
   }

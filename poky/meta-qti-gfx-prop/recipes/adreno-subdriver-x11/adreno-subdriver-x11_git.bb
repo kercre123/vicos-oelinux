@@ -11,7 +11,7 @@ PR = "r10"
 SRC_URI = "file://${WORKSPACE}/adreno-subdriver-x11"
 S = "${WORKDIR}/adreno-subdriver-x11"
 
-DEPENDS += "adreno200"
+DEPENDS += "adreno"
 DEPENDS += "libdrm libtbm libgenlock"
 
 EXTRA_OECONF_append += " --with-adreno=${STAGING_DIR_TARGET}/usr"

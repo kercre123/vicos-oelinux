@@ -41,7 +41,7 @@ enum {
 };
 
 CoreInterface *core_intf_ = NULL;
-SdmDisplayBufferAllocator buffer_allocator_;
+SdmDisplayBufferAllocator *buffer_allocator_;
 SdmDisplayBufferSyncHandler buffer_sync_handler_;
 SdmDisplaySocketHandler socket_handler_;
 HWDisplayInterfaceInfo hw_disp_info_;
@@ -54,9 +54,10 @@ int CreateCore()
         DLOGW("Core was already created.");
         return kErrorNone;
     }
+    buffer_allocator_ = new SdmDisplayBufferAllocator;
 
     error = CoreInterface::CreateCore(SdmDisplayDebugger::Get(),
-                                      &buffer_allocator_,
+                                      buffer_allocator_,
                                       &buffer_sync_handler_,
                                       &socket_handler_,
                                       &core_intf_);
@@ -100,6 +101,7 @@ int DestroyCore()
         return error;
     }
     core_intf_ = NULL;
+    delete buffer_allocator_;
 
     #if SDM_DISPLAY_DEBUG
     DLOGD("Core was destroyed successfully");
@@ -160,11 +162,12 @@ int CreateDisplay(int display_id)
        default: display_type  = kDisplayMax; break;
     }
 
-    SdmDisplayProxy *sdm_display = new SdmDisplayProxy(display_type, core_intf_);
+    SdmDisplayProxy *sdm_display = new SdmDisplayProxy(display_type, core_intf_, buffer_allocator_);
+
     display_[display_id] = sdm_display;
     error = display_[display_id]->CreateDisplay() ;
     if (error != kErrorNone) {
-        DLOGE("Failed to create display(%)", display_id);
+        DLOGE("Failed to create display(%d)", display_id);
         delete display_[display_id];
         display_[display_id] = NULL;
 
@@ -308,6 +311,34 @@ bool GetDisplayHdrInfo(int display_id, struct DisplayHdrInfo *display_hdr_info)
     }
 
     error = display_[display_id]->GetHdrInfo(display_hdr_info);
+
+    if (error != kErrorNone) {
+        DLOGE("function failed with error = %d", error);
+        return FAIL;
+    }
+
+    #if SDM_DISPLAY_DEBUG
+    DLOGD("function successful.");
+    #endif
+
+    return SUCCESS;
+}
+
+bool GetDisplayHdcpProtocol(int display_id, struct DisplayHdcpProtocol *display_hdcp_protocol)
+{
+    DisplayError error = kErrorNone;
+
+    if (display_id >= kDisplayMax || display_id < 0) {
+        DLOGE("Display id(%d) out of range.", display_id);
+        return FAIL;
+    }
+
+    if (!display_[display_id]) {
+        DLOGE("function failed. Display(%d) not created yet.", display_id);
+        return FAIL;
+    }
+
+    error = display_[display_id]->GetHdcpProtocol(display_hdcp_protocol);
 
     if (error != kErrorNone) {
         DLOGE("function failed with error = %d", error);

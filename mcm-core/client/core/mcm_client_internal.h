@@ -1,6 +1,7 @@
 /*************************************************************************************
- Copyright (c) 2013-2014 Qualcomm Technologies, Inc.  All Rights Reserved.
- Qualcomm Technologies Proprietary and Confidential.
+ Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+ All Rights Reserved.
+ Confidential and Proprietary - Qualcomm Technologies, Inc.
 **************************************************************************************/
 
 #ifndef MCM_CLIENT_INTERNAL_H
@@ -85,5 +86,8 @@ uint32 mcm_client_internal_get_mcm_handle_for_qmi_handle
 uint32 mcm_client_internal_mutex_init();
 
 
+void mcm_update_ssr_status(uint8_t ssr_status);
+uint8_t mcm_is_device_in_ssr(void);
+uint8_t mcm_is_msg_for_mobileap_service(int msg_id);
 #endif //MCM_CLIENT_INTERNAL_H
 

@@ -66,6 +66,9 @@ static mct_module_init_name_t pproc_modules_list[] = {
 #ifdef CAMERA_FEATURE_PPEISCORE
   {"ppeiscore", module_ppeiscore_init, module_ppeiscore_deinit, NULL},
 #endif
+#ifdef CAMERA_FEATURE_PPDGCORE
+  {"ppdgcore", module_ppdgcore_init, module_ppdgcore_deinit, NULL},
+#endif
 #ifdef CAMERA_FEATURE_VPU
   {"vpu", vpu_module_init, vpu_module_deinit, NULL},
 #endif

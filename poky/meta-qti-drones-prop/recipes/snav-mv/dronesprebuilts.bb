@@ -9,8 +9,9 @@ PR = "r1"
 #S = "${WORKDIR}"
 
 FILESPATH =+ "${WORKSPACE}:"
-SRC_URI   = "file://vendor/qcom/proprietary/drones/drones-prebuilts/snav-oem_1.2.41_8x96.zip"
-SRC_URI  += "file://vendor/qcom/proprietary/drones/drones-prebuilts/mv_1.1_external.zip"
+SRC_URI   = "file://vendor/qcom/proprietary/drones/drones-prebuilts/snav-oem_1.2.53.1_8x96.zip"
+SRC_URI  += "file://vendor/qcom/proprietary/drones/drones-prebuilts/mv_1.1.4_external.zip"
+SRC_URI  += "file://vendor/qcom/proprietary/drones/drones-prebuilts/DG"
 
 SRC_DIR   = "${WORKSPACE}/vendor/qcom/proprietary/drones/drones-prebuilts"
 PACKAGES = "${PN}"
@@ -38,6 +39,13 @@ do_install() {
 	cp -rf ${WORKDIR}/supplement ${prebuilt_dest_snav}
 	#install -m 0644 ${FILE_DIRNAME}/files/libmv*.ipk -D ${prebuilt_dest}
 	#install -m 0644 ${FILE_DIRNAME}/files/*.Linux -D ${prebuilt_dest}
+
+	# Copy the pre-built debian packages from the files directory to the output location
+	prebuilt_dest_dg=${COREBASE}/../FEAT-API-LNX-DG/apps_proc/DG
+	install -d ${prebuilt_dest_dg}
+	cp -rf ${WORKDIR}/vendor/qcom/proprietary/drones/DG/API ${prebuilt_dest_dg}
+	cp -rf ${WORKDIR}/vendor/qcom/proprietary/drones/DG/lib ${prebuilt_dest_dg}
+
 }
 
 INSANE_SKIP_${PN} += "arch"

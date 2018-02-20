@@ -64,6 +64,9 @@
 #include "version.h"
 
 #define DEFAULT_REPAINT_WINDOW 7 /* milliseconds */
+#define MAX_WL_OUTPUT_INTERFACE_VERSON 3
+#define CURRENT_WL_OUPUT_IMPLEMENTED_VERSION 3
+
 
 static void
 weston_output_transform_scale_init(struct weston_output *output,
@@ -3825,7 +3828,7 @@ bind_output(struct wl_client *client,
 	struct wl_resource *resource;
 
 	resource = wl_resource_create(client, &wl_output_interface,
-				      MIN(version, 2), id);
+				      MIN(version, MAX_WL_OUTPUT_INTERFACE_VERSON), id);
 	if (resource == NULL) {
 		wl_client_post_no_memory(client);
 		return;
@@ -3853,6 +3856,15 @@ bind_output(struct wl_client *client,
 				    mode->height,
 				    mode->refresh);
 	}
+
+	if (version >= WL_OUTPUT_HDCP_PROTOCOL_SINCE_VERSION)
+		wl_output_send_hdcp_protocol(resource,
+				output->hdcp_protocol.version,
+				output->hdcp_protocol.interface_type);
+
+	if (version >= WL_OUTPUT_HDR_INFO_SINCE_VERSION)
+		wl_output_send_hdr_info(resource,
+				output->hdr_info.hdr_supported);
 
 	if (version >= WL_OUTPUT_DONE_SINCE_VERSION)
 		wl_output_send_done(resource);
@@ -4017,6 +4029,58 @@ weston_output_init_geometry(struct weston_output *output, int x, int y)
 				  output->height);
 }
 
+static void
+weston_output_init_hdcp_protocol(struct weston_output *output, 
+					uint32_t version, uint32_t interface_type)
+{
+	output->hdcp_protocol.version = sde_wl_hdcp_version_adapter(version);
+	output->hdcp_protocol.interface_type = sde_wl_hdcp_interface_adapter(interface_type);
+}
+
+static void
+weston_output_init_hdr_info(struct weston_output *output, bool hdr_supported)
+{
+	output->hdr_info.hdr_supported = sde_wl_hdcp_hdr_info_adapter(hdr_supported);
+}
+
+inline uint32_t sde_wl_hdcp_version_adapter(uint32_t hdcp_version){
+	switch (hdcp_version) {
+		case SDE_DRM_CONNECTOR_HDCP_UNKNOWN:
+			return WL_OUTPUT_HDCP_VERSION_UNKNOWN;
+		case SDE_DRM_CONNECTOR_HDCP_1_4:
+			return WL_OUTPUT_HDCP_VERSION_1_4;
+		case SDE_DRM_CONNECTOR_HDCP_2_2:
+			return WL_OUTPUT_HDCP_VERSION_2_2;
+		default:
+			return WL_OUTPUT_HDCP_VERSION_NONE;
+	}
+}
+
+
+inline uint32_t sde_wl_hdcp_interface_adapter(uint32_t interface_type){
+	switch (interface_type) {
+		case SDE_DRM_CONNECTOR_UNKNOWN:
+			return WL_OUTPUT_HDCP_INTERFACE_TYPE_UNKNOWN;
+		case SDE_DRM_CONNECTOR_DVII:
+		case SDE_DRM_CONNECTOR_DVID:
+		case SDE_DRM_CONNECTOR_DVIA:
+			return WL_OUTPUT_HDCP_INTERFACE_TYPE_DVI;
+		case SDE_DRM_CONNECTOR_HDMIA:
+		case SDE_DRM_CONNECTOR_HDMIB:
+			return WL_OUTPUT_HDCP_INTERFACE_TYPE_HDMI;
+		case SDE_DRM_CONNECTOR_DISPLAYPORT:
+		case SDE_DRM_CONNECTOR_EDP:
+			return WL_OUTPUT_HDCP_INTERFACE_TYPE_DP;
+		default:
+			return WL_OUTPUT_HDCP_INTERFACE_TYPE_NONE;
+	}
+}
+
+inline uint32_t sde_wl_hdcp_hdr_info_adapter(bool hdr_supported){
+	return (hdr_supported ? WL_OUTPUT_HDR_SUPPORTED_TRUE:WL_OUTPUT_HDR_SUPPORTED_FALSE);
+}
+
+
 WL_EXPORT void
 weston_output_move(struct weston_output *output, int x, int y)
 {
@@ -4047,9 +4111,61 @@ weston_output_move(struct weston_output *output, int x, int y)
 					output->model,
 					output->transform);
 
+		if (wl_resource_get_version(resource) >= WL_OUTPUT_HDCP_PROTOCOL_SINCE_VERSION)
+			wl_output_send_hdcp_protocol(resource,
+					output->hdcp_protocol.version,
+					output->hdcp_protocol.interface_type);
+
+		if (wl_resource_get_version(resource) >= WL_OUTPUT_HDR_INFO_SINCE_VERSION)
+			wl_output_send_hdr_info(resource,
+					output->hdr_info.hdr_supported);
+
 		if (wl_resource_get_version(resource) >= 2)
 			wl_output_send_done(resource);
 	}
+}
+
+WL_EXPORT void
+weston_output_notify_updates(struct weston_output *output)
+{
+	static uint32_t hdcp_protocol_version = WL_OUTPUT_HDCP_VERSION_UNKNOWN;
+	static uint32_t hdcp_interface_type = WL_OUTPUT_HDCP_INTERFACE_TYPE_UNKNOWN;
+	static uint32_t hdr_supported = WL_OUTPUT_HDR_SUPPORTED_FALSE;
+	struct wl_resource *resource;
+
+	/* TODO: need to protect against async calls */
+	if (hdcp_protocol_version == output->hdcp_protocol.version &&
+			hdcp_interface_type == output->hdcp_protocol.interface_type &&
+			hdr_supported == output->hdr_info.hdr_supported)
+		return;
+
+	hdcp_protocol_version = output->hdcp_protocol.version;
+	hdcp_interface_type = output->hdcp_protocol.interface_type;
+	hdr_supported = output->hdr_info.hdr_supported;
+
+	wl_resource_for_each(resource, &output->resource_list) {
+		int version = wl_resource_get_version(resource);
+
+		if ( version >= WL_OUTPUT_HDCP_PROTOCOL_SINCE_VERSION)
+		wl_output_send_hdcp_protocol(resource,
+				output->hdcp_protocol.version,
+				output->hdcp_protocol.interface_type);
+
+		if (version >= WL_OUTPUT_HDR_INFO_SINCE_VERSION)
+			wl_output_send_hdr_info(resource,
+					output->hdr_info.hdr_supported);
+
+		if (version >= WL_OUTPUT_DONE_SINCE_VERSION)
+			wl_output_send_done(resource);
+		}
+}
+
+WL_EXPORT void
+weston_output_update_metadata(struct weston_output *output,
+			bool hdr_supported, uint32_t hdcp_version, uint32_t hdcp_interface_type)
+{
+	weston_output_init_hdr_info(output, hdr_supported);
+	weston_output_init_hdcp_protocol(output, hdcp_version, hdcp_interface_type);
 }
 
 WL_EXPORT void
@@ -4088,8 +4204,8 @@ weston_output_init(struct weston_output *output, struct weston_compositor *c,
 	output->compositor->output_id_pool |= 1 << output->id;
 
 	output->global =
-		wl_global_create(c->wl_display, &wl_output_interface, 2,
-				 output, bind_output);
+		wl_global_create(c->wl_display, &wl_output_interface,
+				CURRENT_WL_OUPUT_IMPLEMENTED_VERSION, output, bind_output);
 }
 
 /** Adds an output to the compositor's output list and

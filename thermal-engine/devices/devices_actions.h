@@ -1,6 +1,6 @@
 /*===========================================================================
 
-  Copyright (c) 2012-2015 Qualcomm Technologies, Inc.  All Rights Reserved.
+  Copyright (c) 2012-2015,2017 Qualcomm Technologies, Inc.  All Rights Reserved.
   Qualcomm Technologies Proprietary and Confidential.
 
 ===========================================================================*/
@@ -27,6 +27,15 @@
 #define LCD_DEV_NAME		"lcd"
 #define BATTERY_DEV_NAME	"battery"
 #define GPU_DEV_NAME		"gpu"
+#define MODEM_DEV_NAME 			"modem"
+#define FUSION_DEV_NAME 		"fusion"
+#define VDD_RESTRICT_DEV_NAME 		"vdd_restriction"
+#define MODEM_CX_DEV_NAME 		"modem_cx"
+#define MODEM_PROC_DEV_NAME 		"modem_proc"
+#define MODEM_PROC_CURRENT_DEV_NAME 	"modem_proc_current"
+#define CPR_BAND_DEV_NAME 		"cpr_band"
+#define MODEM_BW_DEV_NAME 		"modem_bw"
+#define MODEM_SKIN_DEV_NAME 		"modem_skin"
 
 int cpufreq_init(void);
 void clusterfreq_init(void);

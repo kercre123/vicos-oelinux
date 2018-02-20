@@ -29,7 +29,7 @@ create_persist_ext4_img() {
        cp -rf "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}_32/WCNSS_wlan_dictionary.dat" ${PERSIST_DATA_FOLDER}
    fi
 
-   make_ext4fs -s -l ${PERSIST_IMAGE_ROOTFS_SIZE} ${OUTPUT_PERSIST_FILE} ${PERSIST_DATA_FOLDER}
+   make_ext4fs ${PERSISTFS_CONFIG} ${MAKEEXT4_MOUNT_OPT} -s -l ${PERSIST_IMAGE_ROOTFS_SIZE} ${OUTPUT_PERSIST_FILE} ${PERSIST_DATA_FOLDER}
    chmod 644 ${OUTPUT_PERSIST_FILE}
 }
 

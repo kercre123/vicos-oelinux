@@ -5,8 +5,9 @@
     @brief
     Implements functions supported in hlos_event_lookup.h.
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #include "hlos_event_lookup.h"
@@ -105,29 +106,43 @@ void* hlos_event_lookup_request_handler(hlos_core_hlos_request_data_type
     unsigned long event_id;
     core_event_lookup_map_type *event_map;
     int event_map_len;
+    mcm_response_t_v01 resp;
 
     event_handler = NULL;
     event_id = NIL;
     event_map = NULL;
     event_map_len = NIL;
 
-    if(hlos_core_hlos_request_data)
+    if(hlos_core_hlos_request_data && (CRI_CORE_GEN_OPERATIONAL_STATUS_SUSPENDED == cri_core_get_operational_status()))
     {
-        event_id = hlos_core_hlos_request_data->event_id;
-        event_map = hlos_request_map;
-        event_map_len = UTIL_ARR_SIZE(hlos_request_map);
-        event_handler = core_event_lookup_map_checker(event_id,
+        resp.result = MCM_RESULT_FAILURE_V01;
+        resp.error = hlos_map_qmi_ril_error_to_mcm_error(CRI_ERR_RADIO_RESET_V01);
+        hlos_core_send_response(NIL,
+                                CRI_ERR_RADIO_RESET_V01,
+                                hlos_core_hlos_request_data,
+                                &resp,
+                                sizeof(resp));
+    }
+    else
+    {
+        if(hlos_core_hlos_request_data)
+        {
+            event_id = hlos_core_hlos_request_data->event_id;
+            event_map = hlos_request_map;
+            event_map_len = UTIL_ARR_SIZE(hlos_request_map);
+            event_handler = core_event_lookup_map_checker(event_id,
                                                       event_map,
                                                       event_map_len);
-    }
-    if(event_handler == NULL)
-    {
-        /*For the message ids that are in the Range, but are not supported.*/
-        hlos_core_send_response(NIL,
+        }
+        if(event_handler == NULL)
+        {
+            /*For the message ids that are in the Range, but are not supported.*/
+            hlos_core_send_response(NIL,
                                 CRI_ERR_NOT_SUPPORTED_V01,
                                 NULL,
                                 NIL,
                                 0);
+        }
     }
 
     return event_handler;

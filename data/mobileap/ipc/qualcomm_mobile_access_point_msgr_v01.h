@@ -42,7 +42,7 @@
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7
-   It was generated on: Tue Aug 22 2017 (Spin 0)
+   It was generated on: Wed Dec 27 2017 (Spin 0)
    From IDL File: qualcomm_mobile_access_point_msgr_v01.idl */
 
 /** @defgroup qcmap_msgr_qmi_consts Constant values defined in the IDL */
@@ -68,11 +68,11 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define QCMAP_MSGR_V01_IDL_MAJOR_VERS 0x01
 /** Revision Number of the IDL used to generate this file */
-#define QCMAP_MSGR_V01_IDL_MINOR_VERS 0x37
+#define QCMAP_MSGR_V01_IDL_MINOR_VERS 0x39
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define QCMAP_MSGR_V01_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
-#define QCMAP_MSGR_V01_MAX_MESSAGE_ID 0x00CC
+#define QCMAP_MSGR_V01_MAX_MESSAGE_ID 0x00D0
 /**
     @}
   */
@@ -8879,6 +8879,152 @@ typedef struct {
     @}
   */
 
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Request Message; Sets the dundonglemode flag. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Mobile AP Handle */
+  uint32_t mobile_ap_handle;
+  /**<   Handle identifying the mobile AP call instance.
+       The value must be the handle previously returned by
+       QMI_QCMAP_ MSGR_MOBILE_AP_ENABLE_REQ.
+  */
+
+  /* Mandatory */
+  /*  Dundonglemode Mode Flag */
+  uint8_t enable_dun_dongle_mode;
+  /**<   Enable/disable Dundonglemode. Values:\n
+      - TRUE -- Enable\n
+      - FALSE -- Disable
+   */
+}qcmap_msgr_set_dun_dongle_mode_req_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Response Message; Sets the dundonglemode flag. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+}qcmap_msgr_set_dun_dongle_mode_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Request Message; Gets the dundonglemode flag. */
+typedef struct {
+  /* This element is a placeholder to prevent the declaration of
+     an empty struct.  DO NOT USE THIS FIELD UNDER ANY CIRCUMSTANCE */
+  char __placeholder;
+}qcmap_msgr_get_dun_dongle_mode_req_msg_v01;
+
+  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Response Message; Gets the dundonglemode flag. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+
+  /* Optional */
+  /*  Dundonglemode Mode */
+  uint8_t dun_dongle_mode_valid;  /**< Must be set to true if dun_dongle_mode is being passed */
+  uint8_t dun_dongle_mode;
+  /**<   Dundonglemode status. Values: \n
+       - TRUE -- Enabled \n
+       - FALSE -- Disabled
+   */
+}qcmap_msgr_get_dun_dongle_mode_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Request Message; set data path optimization status */
+typedef struct {
+
+  /* Mandatory */
+  /*  Mobile AP Handle */
+  uint32_t mobile_ap_handle;
+
+  /* Mandatory */
+  uint8_t data_path_opt_status;
+  /**<   Set data path status \n
+       - 1 -- Enable \n
+       - 0 --Disable \n
+    */
+}qcmap_msgr_set_data_path_opt_status_req_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Response Message; set data path optimization status */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+}qcmap_msgr_set_data_path_opt_status_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Request Message; set data path opt configuration */
+typedef struct {
+  /* This element is a placeholder to prevent the declaration of
+     an empty struct.  DO NOT USE THIS FIELD UNDER ANY CIRCUMSTANCE */
+  char __placeholder;
+}qcmap_msgr_get_data_path_opt_status_req_msg_v01;
+
+  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup qcmap_msgr_qmi_messages
+    @{
+  */
+/** Response Message; set data path opt configuration */
+typedef struct {
+
+  /* Mandatory */
+  /*  Result Code */
+  qmi_response_type_v01 resp;
+
+  /* Optional */
+  uint8_t data_path_opt_status_valid;  /**< Must be set to true if data_path_opt_status is being passed */
+  uint8_t data_path_opt_status;
+}qcmap_msgr_get_data_path_opt_status_resp_msg_v01;  /* Message */
+/**
+    @}
+  */
+
 /* Conditional compilation tags for message removal */
 //#define REMOVE_QMI_QCMAP_MSGR_ACTIVATE_HOSTAPD_CONFIG_V01
 //#define REMOVE_QMI_QCMAP_MSGR_ACTIVATE_LAN_V01
@@ -8943,12 +9089,14 @@ typedef struct {
 //#define REMOVE_QMI_QCMAP_MSGR_GET_CONNECTED_DEVICES_INFO_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_CRADLE_MODE_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DATA_BITRATE_V01
+//#define REMOVE_QMI_QCMAP_MSGR_GET_DATA_PATH_OPT_STATUS_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DHCP_RESERVATION_RECORDS_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DLNA_MEDIA_DIR_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DLNA_NOTIFY_INTERVAL_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DLNA_STATUS_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DLNA_WHITELISTING_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DMZ_V01
+//#define REMOVE_QMI_QCMAP_MSGR_GET_DUN_DONGLE_MODE_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_DYNAMIC_DNS_CONFIG_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_ETHERNET_MODE_V01
 //#define REMOVE_QMI_QCMAP_MSGR_GET_FIREWALL_CONFIG_V01
@@ -9005,10 +9153,12 @@ typedef struct {
 //#define REMOVE_QMI_QCMAP_MSGR_SET_AUTO_CONNECT_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_BACKHAUL_PREF_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_CRADLE_MODE_V01
+//#define REMOVE_QMI_QCMAP_MSGR_SET_DATA_PATH_OPT_STATUS_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_DLNA_MEDIA_DIR_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_DLNA_NOTIFY_INTERVAL_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_DLNA_WHITELISTING_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_DMZ_V01
+//#define REMOVE_QMI_QCMAP_MSGR_SET_DUN_DONGLE_MODE_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_DYNAMIC_DNS_CONFIG_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_ETHERNET_MODE_V01
 //#define REMOVE_QMI_QCMAP_MSGR_SET_FIREWALL_CONFIG_V01
@@ -9399,6 +9549,14 @@ typedef struct {
 #define QMI_QCMAP_MSGR_SET_GSB_CONFIG_RESP_V01 0x00CB
 #define QMI_QCMAP_MSGR_DELETE_GSB_CONFIG_REQ_V01 0x00CC
 #define QMI_QCMAP_MSGR_DELETE_GSB_CONFIG_RESP_V01 0x00CC
+#define QMI_QCMAP_MSGR_SET_DUN_DONGLE_MODE_REQ_V01 0x00CD
+#define QMI_QCMAP_MSGR_SET_DUN_DONGLE_MODE_RESP_V01 0x00CD
+#define QMI_QCMAP_MSGR_GET_DUN_DONGLE_MODE_REQ_V01 0x00CE
+#define QMI_QCMAP_MSGR_GET_DUN_DONGLE_MODE_RESP_V01 0x00CE
+#define QMI_QCMAP_MSGR_GET_DATA_PATH_OPT_STATUS_REQ_V01 0x00CF
+#define QMI_QCMAP_MSGR_GET_DATA_PATH_OPT_STATUS_RESP_V01 0x00CF
+#define QMI_QCMAP_MSGR_SET_DATA_PATH_OPT_STATUS_REQ_V01 0x00D0
+#define QMI_QCMAP_MSGR_SET_DATA_PATH_OPT_STATUS_RESP_V01 0x00D0
 /**
     @}
   */
@@ -9426,4 +9584,3 @@ qmi_idl_service_object_type qcmap_msgr_get_service_object_internal_v01
 }
 #endif
 #endif
-

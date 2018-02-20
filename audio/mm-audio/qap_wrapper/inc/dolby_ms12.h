@@ -19,7 +19,11 @@ extern "C" {
 typedef enum {
     MS12_SESSION_CFG_MANUAL_MIXER_CTL, /* Manual Mixer Mode */
     MS12_SESSION_CFG_STANDALONE_EXEC,  /* IIDK mode */
-    MS12_SESSION_CFG_DAP_ENABLE,       /* DAP enable configuration
+    MS12_SESSION_CFG_DAP_ENABLE,       /* DAP enable configuration */
+    MS12_SESSION_CFG_DAP_ENABLE_SPEAKER,   /* DAP enable speaker configuration
+                                            - 0: Disable
+                                            - 1: Enable */
+    MS12_SESSION_CFG_DAP_ENABLE_HEADPHONE, /* DAP enable headphone configuration
                                             - 0: Disable
                                             - 1: Enable */
     MS12_SESSION_CFG_DAP_VB_ENABLE,    /* DAPv2 Virtual Bass enable (additional delay)

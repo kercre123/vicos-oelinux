@@ -1,8 +1,9 @@
 /* sensor.c
- *
- * Copyright (c) 2012-2017 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
- */
+ ****************************************************************
+ * Copyright (c) 2012-2018 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
+ ***************************************************************/
 #include <stdio.h>
 #include <dlfcn.h>
 #include <math.h>
@@ -1915,9 +1916,11 @@ static int32_t sensor_set_start_stream(void *sctrl)
 
   rc = sensor_write_i2c_setting_array(ctrl,
     &(ctrl->lib_params->sensor_lib_ptr->start_settings));
-  if (rc)
+  if (rc) {
     SERR("sensor_write_i2c_setting_array failed");
-
+  } else {
+    ctrl->s_data->start_stream_flag = TRUE;
+  }
   SLOW("exit");
   return rc;
 }
@@ -1980,6 +1983,8 @@ static int32_t sensor_set_stop_stream(void *sctrl)
   ctrl->s_data->cur_res = SENSOR_INVALID_RESOLUTION;
   ctrl->s_data->pd_x_win_num = 0;
   ctrl->s_data->pd_y_win_num = 0;
+  ctrl->s_data->start_stream_flag = FALSE;
+  ctrl->s_data->set_focal_length = 0.0;
 
   rc = sensor_write_i2c_setting_array(ctrl,
     &(ctrl->lib_params->sensor_lib_ptr->stop_settings));
@@ -2284,6 +2289,8 @@ static int32_t sensor_open(void **sctrl, void* data)
   ctrl->s_data->hfr_mode = CAM_HFR_MODE_OFF;
   ctrl->s_data->hdr_mode = CAM_SENSOR_HDR_OFF;
   ctrl->s_data->delay_en = 1;
+  ctrl->s_data->start_stream_flag = FALSE;
+  ctrl->s_data->set_focal_length = 0.0;
 
   SLOW("ctrl %p", ctrl);
   return rc;
@@ -2361,6 +2368,7 @@ static int32_t sensor_set_resolution(void *sctrl, void *data)
   SHIGH("Requested:W*H:%d*%d, stream mask:%x, hfr mode:%d, Cur fps:%f",width,
     height,res_cfg->stream_mask,ctrl->s_data->hfr_mode, ctrl->s_data->cur_fps);
 
+  res_cfg->focal_length = ctrl->s_data->set_focal_length;
   rc = sensor_pick_resolution(sctrl, res_cfg, &res);
   if (rc < 0) {
     SERR("failed: sensor_pick_resolution rc %d", rc);
@@ -3148,6 +3156,35 @@ static int32_t sensor_get_cur_chromatix_name(void *sctrl, void *data)
   return SENSOR_SUCCESS;
 }
 
+/**
+ * Function: sensor_focal_lenght_comp
+ *
+ * Description: CAllback function for qsort used for sorting focal lengths
+ *
+ * Arguments:
+ *  @arg1 - float * First Focal length
+ *  @arg2 - float * Second Focal length
+ *
+ * Return values:
+ *  0 - equal
+ *  1 - weight of FL1 is smaller than of FL2
+ *  -1 - weight of FL1 is bigger than of FL2
+ * Notes: none
+ **/
+static int sensor_focal_lenght_comp(const void *arg1, const void *arg2)
+{
+  float first_fl = *(float *)arg1;
+  float second_fl = *(float *)arg2;
+
+  if (first_fl > second_fl) {
+    return 1;
+  } else if (first_fl < second_fl){
+    return -1;
+  }
+
+  return 0;
+}
+
 /*==========================================================
  * FUNCTION    - sensor_get_capabilities -
  *
@@ -3225,6 +3262,31 @@ static int32_t sensor_get_capabilities(void *slib, void *data)
    /* Max op pixel clock*/
    sensor_cap->op_pixel_clk = MAXQ(sensor_cap->op_pixel_clk,
      out_info[i].op_pixel_clk);
+
+   /* Focal length */
+   if (lib->sensor_lib_ptr->sensor_feature_focal_length &&
+     CAM_FOCAL_LENGTHS_MAX > sensor_cap->focal_lengths_count) {
+     uint32_t j = 0;
+     boolean new_val = TRUE;
+     for (j = 0; j < sensor_cap->focal_lengths_count; j++) {
+       if (sensor_cap->focal_lengths[j] == out_info[i].focal_length) {
+          new_val = FALSE;
+          break;
+       }
+     }
+     if (new_val == TRUE) {
+       sensor_cap->focal_lengths[sensor_cap->focal_lengths_count++] =
+         out_info[i].focal_length;
+     }
+   }
+  }
+  /* Focal lengths ascending order */
+  if (lib->sensor_lib_ptr->sensor_feature_focal_length &&
+    sensor_cap->focal_lengths_count > 1) {
+    qsort(sensor_cap->focal_lengths,
+        sensor_cap->focal_lengths_count,
+        sizeof(sensor_cap->focal_lengths[0]),
+        sensor_focal_lenght_comp);
   }
 
   /* Active array and Pixel Array*/
@@ -3718,6 +3780,12 @@ static int32_t sensor_get_resolution_info(void *sctrl, void *data)
       out_info->custom_format.width;
     sensor_out_info->custom_format.height =
       out_info->custom_format.height;
+    sensor_out_info->custom_format.lef_byte_offset =
+      out_info->custom_format.lef_byte_offset;
+    sensor_out_info->custom_format.sef_byte_offset =
+      out_info->custom_format.sef_byte_offset;
+    sensor_out_info->custom_format.sensor_layout =
+      out_info->custom_format.sensor_layout;
   }
 
   memset(sensor_rolloff_config, 0, sizeof(*sensor_rolloff_config));
@@ -4389,6 +4457,7 @@ static int32_t sensor_get_raw_dimension(void *sctrl, void *data)
   res_cfg->stream_mask = (sensor_get->stream_mask | (1 << CAM_STREAM_TYPE_RAW));
   res_cfg->is_fast_aec_mode_on = FALSE;
   res_cfg->fast_aec_sensor_mode = CAM_HFR_MODE_OFF;
+  res_cfg->focal_length = ctrl->s_data->set_focal_length;
   rc = sensor_pick_resolution(sctrl, res_cfg, &pick_res);
   if (rc < 0) {
     SERR("failed: sensor_pick_resolution rc %d", rc);
@@ -4623,6 +4692,7 @@ static int32_t sensor_get_output_info(void *sctrl, void *data)
   dim_output->width = 0;
   dim_output->height = 0;
 
+  get_output_dim->res_cfg.focal_length = ctrl->s_data->set_focal_length;
   /* Get sensor ouput resolution for requested dimension */
   rc = sensor_pick_resolution(ctrl, &get_output_dim->res_cfg, &res);
   if (rc < 0) {
@@ -4678,6 +4748,10 @@ static int32_t sensor_get_output_info(void *sctrl, void *data)
       out_info_array->out_info[res].custom_format.width;
     get_output_dim->output_info.custom_format.height =
       out_info_array->out_info[res].custom_format.height;
+    get_output_dim->output_info.custom_format.lef_byte_offset=
+      out_info_array->out_info[res].custom_format.lef_byte_offset;
+    get_output_dim->output_info.custom_format.sef_byte_offset=
+      out_info_array->out_info[res].custom_format.sef_byte_offset;
   }
 
   SHIGH("pick res %d dim %dX%d op clk %d subframes cnt %d",
@@ -5045,6 +5119,22 @@ static int32_t sensor_set_formatted_cal_data(void *sctrl, void *data)
 }
 
 /*==========================================================
+ * FUNCTION    - sensor_set_focal_length -
+ *
+ * DESCRIPTION:
+ *==========================================================*/
+static int32_t sensor_set_focal_length(void *sctrl, void *data)
+{
+  int rc = SENSOR_SUCCESS;
+  sensor_ctrl_t *ctrl = (sensor_ctrl_t *)sctrl;
+  float set_focal_length = *(float *)data;
+
+  if (ctrl->s_data->start_stream_flag == FALSE)
+    ctrl->s_data->set_focal_length = set_focal_length;
+  return rc;
+}
+
+/*==========================================================
  * FUNCTION    - sensor_set_standby_stream -
  *
  * DESCRIPTION:
@@ -5402,6 +5492,10 @@ static int32_t sensor_process(void *sctrl,
   case SENSOR_SET_ALTERNATIVE_SLAVE:
     rc = sensor_alternative_slave(sctrl, data);
     break;
+  case SENSOR_SET_FOCAL_LENGTH:
+    rc = sensor_set_focal_length(sctrl, data);
+    break;
+
   default:
     SERR("invalid event %d", event);
     rc = SENSOR_FAILURE;

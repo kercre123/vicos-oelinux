@@ -30,7 +30,6 @@
 #pragma once
 
 #include <camera/CameraMetadata.h>
-#include <utils/KeyedVector.h>
 #include <algorithm>
 #include <vector>
 #include <mutex>
@@ -204,24 +203,21 @@ class RecorderImpl {
                                 const uint32_t param_size);
 
   // Data callback handlers.
-  void VideoTrackBufferCallback(uint32_t remote_client_id, uint32_t session_id,
-                                uint32_t client_track_id,
-                                std::vector<BnBuffer>& buffers,
-                                std::vector<MetaData>& meta_buffers);
+  void VideoTrackBufferCb(uint32_t client_id, uint32_t session_id,
+                          uint32_t track_id, std::vector<BnBuffer>& buffers,
+                          std::vector<MetaData>& meta_buffers);
 
-  void AudioTrackBufferCallback(uint32_t remote_client_id, uint32_t session_id,
-                                uint32_t client_track_id,
-                                std::vector<BnBuffer>& buffers,
-                                std::vector<MetaData>& meta_buffers);
+  void AudioTrackBufferCb(uint32_t client_id, uint32_t session_id,
+                          uint32_t track_id, std::vector<BnBuffer>& buffers,
+                          std::vector<MetaData>& meta_buffers);
 
-  void SnapshotCallback(uint32_t remote_client_id, uint32_t camera_id,
-                        uint32_t count, BnBuffer& buffer, MetaData& meta_data);
+  void CameraSnapshotCb(uint32_t client_id, uint32_t camera_id, uint32_t count,
+                        BnBuffer& buffer, MetaData& meta_data);
 
-  void CameraResultCallback(uint32_t remote_client_id, uint32_t camera_id,
-                            const CameraMetadata &result);
+  void CameraResultCb(uint32_t client_id, uint32_t camera_id,
+                      const CameraMetadata &result);
 
-  void CameraErrorCallback(uint32_t client_id,
-                           RecorderErrorData &error);
+  void CameraErrorCb(uint32_t client_id, RecorderErrorData &error);
 
  private:
 
@@ -260,7 +256,7 @@ class RecorderImpl {
   EncoderCore*          encoder_core_;
   AudioSource*          audio_source_;
   AudioEncoderCore*     audio_encoder_core_;
-  //Vector<uint32_t>      session_ids_;
+  //std::vector<uint32_t>      session_ids_;
   RemoteCallbackHandle  remote_cb_handle_;
 
   //std::map<uint32_t, std::vector<TrackInfo> > sessions_;
@@ -281,7 +277,8 @@ class RecorderImpl {
   ClientCameraIdMap     client_cameraid_map_;
   std::mutex            camera_map_lock_;
 
-  bool                  client_died_;
+  typedef std::map<uint32_t, bool> ClientStatusMap;
+  ClientStatusMap       client_status_map_;
   std::mutex            client_died_lock_;
 
   // Not allowed

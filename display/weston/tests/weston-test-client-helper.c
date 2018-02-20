@@ -601,11 +601,25 @@ output_handle_done(void *data,
 	output->initialized = 1;
 }
 
+static void
+output_handle_hdcp(void *data, struct wl_output *wl_output,
+		   uint32_t version, uint32_t interface_type)
+{
+}
+
+static void
+output_handle_hdr(void *data, struct wl_output *wl_output,
+		 uint32_t is_supported)
+{
+}
+
 static const struct wl_output_listener output_listener = {
 	output_handle_geometry,
 	output_handle_mode,
 	output_handle_done,
 	output_handle_scale,
+	output_handle_hdcp,
+	output_handle_hdr
 };
 
 static void

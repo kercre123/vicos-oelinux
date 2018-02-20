@@ -137,7 +137,7 @@ extern unsigned int qmi_csi_debug_level;
   do { \
     uint32_t *int_addr = (uint32_t *)(addr); \
     SMEM_LOG_EVENT6(QMI_CCI_LOG_EVENT_TX_EXT, (cntl_flag) << 16 | (txn_id), (msg_id) << 16 | (msg_len), \
-                    (svc_obj)->service_id, int_addr[2], int_addr[3], int_addr[4]); \
+                    (svc_obj)->service_id, int_addr[0], int_addr[1], int_addr[2]); \
     QMI_CCI_LOGD("QMI_CCI_TX: cntl_flag - %02x, txn_id - %04x, msg_id - %04x, msg_len - %04x, svc_id - %08x\n", \
                  cntl_flag, txn_id, msg_id, msg_len, (svc_obj)->service_id); \
   } while(0)
@@ -148,7 +148,7 @@ extern unsigned int qmi_csi_debug_level;
   do { \
     uint32_t *int_addr = (uint32_t *)(addr); \
     SMEM_LOG_EVENT6(QMI_CCI_LOG_EVENT_RX_EXT, (cntl_flag) << 16 | (txn_id), (msg_id) << 16 | (msg_len), \
-                    (svc_obj)->service_id, int_addr[2], int_addr[3], int_addr[4]); \
+                    (svc_obj)->service_id, int_addr[0], int_addr[1], int_addr[2]); \
     QMI_CCI_LOGD("QMI_CCI_RX: cntl_flag - %02x, txn_id - %04x, msg_id - %04x, msg_len - %04x, svc_id - %08x\n", \
                  cntl_flag, txn_id, msg_id, msg_len, (svc_obj)->service_id); \
   } while(0)

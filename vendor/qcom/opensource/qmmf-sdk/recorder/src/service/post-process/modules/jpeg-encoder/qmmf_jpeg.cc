@@ -27,9 +27,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderJpeg"
+#define LOG_TAG "RecorderJpeg"
 
 #include <sys/mman.h>
+#include <sstream>
+#include <json/json.h>
 
 #include "qmmf_jpeg.h"
 
@@ -46,28 +48,44 @@ const int32_t PostProcJpeg::kSupportedInputFormat = HAL_PIXEL_FORMAT_YCbCr_420_8
 const int32_t PostProcJpeg::kSupportedOutputFormat = HAL_PIXEL_FORMAT_BLOB;
 
 PostProcJpeg::PostProcJpeg()
-    : jpeg_encoder_(nullptr) {
-  QMMF_VERBOSE("%s:%s: Enter", TAG, __func__);
+    : jpeg_encoder_(nullptr),
+      image_quality_(95),
+      state_(State::CREATED),
+      abort_(nullptr) {
+  QMMF_VERBOSE("%s: Enter", __func__);
   jpeg_encoder_ = reprocjpegencoder::JpegEncoder::getInstance();
-  QMMF_VERBOSE("%s:%s: Exit (0x%p)", TAG, __func__, this);
+  QMMF_VERBOSE("%s: Exit (0x%p)", __func__, this);
 }
 
 PostProcJpeg::~PostProcJpeg() {
-  QMMF_VERBOSE("%s:%s: Enter ", TAG, __func__);
+  QMMF_VERBOSE("%s: Enter ", __func__);
   reprocjpegencoder::JpegEncoder::releaseInstance();
   jpeg_encoder_ = nullptr;
-  QMMF_VERBOSE("%s:%s: Exit (0x%p)", TAG, __func__, this);
+  QMMF_VERBOSE("%s: Exit (0x%p)", __func__, this);
 }
 
 status_t PostProcJpeg::Initialize(const PostProcIOParam &in_param,
                                   const PostProcIOParam &out_param) {
-  QMMF_VERBOSE("%s:%s: Enter", TAG, __func__);
+  QMMF_VERBOSE("%s: Enter", __func__);
+
+  std::lock_guard<std::mutex> lock(state_lock_);
+  state_ = State::INITIALIZED;
+
+  thumbnail_data_.clear();
+
   return NO_ERROR;
 }
 
 PostProcIOParam PostProcJpeg::GetInput(const PostProcIOParam &out) {
   PostProcIOParam input_param = out;
   input_param.format = Common::FromHalToQmmfFormat(kSupportedInputFormat);
+
+  // set number of needed buffers for rotation if client does not limit it
+  if (out.buffer_max > 0 && out.buffer_max < kBufCount) {
+    input_param.buffer_count = out.buffer_max;
+  } else {
+    input_param.buffer_count = kBufCount;
+  }
   return input_param;
 }
 
@@ -104,21 +122,73 @@ status_t PostProcJpeg::GetCapabilities(PostProcCaps &caps) {
 }
 
 status_t PostProcJpeg::Start(const int32_t stream_id) {
-  QMMF_VERBOSE("%s:%s: Enter %p", TAG, __func__, this);
+  QMMF_VERBOSE("%s: Enter %p", __func__, this);
+  std::lock_guard<std::mutex> lock(state_lock_);
+  state_ = State::ACTIVE;
   return NO_ERROR;
 }
 
 status_t PostProcJpeg::Stop() {
-  QMMF_INFO("%s:%s: Enter %p", TAG, __func__, this);
+  QMMF_INFO("%s: Enter %p", __func__, this);
+  std::lock_guard<std::mutex> lock(state_lock_);
+  state_ = State::INITIALIZED;
+  return NO_ERROR;
+}
+
+status_t PostProcJpeg::Abort(std::shared_ptr<void> &abort) {
+  QMMF_INFO("%s: Enter %p", __func__, this);
+  std::lock_guard<std::mutex> lock(state_lock_);
+  if (state_ == State::RUNING) {
+    QMMF_VERBOSE("%s: Acquire abort done handler", __func__);
+    abort_ = abort;
+  }
+  state_ = State::ABORTED;
   return NO_ERROR;
 }
 
 status_t PostProcJpeg::Delete() {
-  QMMF_VERBOSE("%s:%s: Enter %p", TAG, __func__, this);
+  QMMF_VERBOSE("%s: Enter %p", __func__, this);
+  std::lock_guard<std::mutex> lock(state_lock_);
+  state_ = State::CREATED;
   return NO_ERROR;
 }
 
 status_t PostProcJpeg::Configure(const std::string config_json_data) {
+  QMMF_VERBOSE("%s: Enter %p", __func__, this);
+  Json::Reader r;
+  Json::Value root;
+
+  auto ret = r.parse(config_json_data, root);
+  if (ret == 0) {
+    QMMF_INFO("%s: no json data", __func__);
+    return NO_ERROR;
+  }
+
+  if (!root.isMember("jpeg quality") || root["jpeg quality"].empty()) {
+    QMMF_INFO("%s:no jpeg quality configuration", __func__);
+  } else {
+    image_quality_ = root["jpeg quality"].asUInt();
+  }
+
+  if (!root.isMember("thumbnail") || root["thumbnail"].empty()) {
+    QMMF_INFO("%s:no thumbnail configuration", __func__);
+  } else {
+    thumbnail_data_.clear();
+    for (Json::Value::ArrayIndex i = 0; i < root["thumbnail"].size(); i++) {
+      QMMF_INFO("%s:add thumbnail[%d] dim %dx%d quality %d", __func__, i,
+          root["thumbnail"][i]["width"].asUInt(),
+          root["thumbnail"][i]["height"].asUInt(),
+          root["thumbnail"][i]["quality"].asUInt());
+
+      thumbnail_data_.emplace_back(
+          root["thumbnail"][i]["width"].asUInt(),
+          root["thumbnail"][i]["height"].asUInt(),
+          root["thumbnail"][i]["quality"].asUInt());
+    }
+  }
+
+  QMMF_VERBOSE("%s: Exit %p", __func__, this);
+
   return NO_ERROR;
 }
 
@@ -127,8 +197,18 @@ status_t PostProcJpeg::Process(const std::vector<StreamBuffer> &in_buffers,
   StreamBuffer in_buffer = in_buffers.front();
   StreamBuffer out_buffer = out_buffers.front();
 
-  QMMF_VERBOSE("%s:%s: %d: Enter in FD: %d out FD: %d ", TAG,
+  QMMF_VERBOSE("%s: %d: Enter in FD: %d out FD: %d ",
       __func__, __LINE__, in_buffer.fd, out_buffer.fd);
+
+  {
+    std::lock_guard<std::mutex> lock(state_lock_);
+    if (state_ != State::ACTIVE) {
+      listener_->OnFrameReady(out_buffer);
+      listener_->OnFrameProcessed(in_buffer);
+      return NO_ERROR;
+    }
+    state_ = State::RUNING;
+  }
 
   void *buf_vaaddr = nullptr;
   if (in_buffer.data == nullptr) {
@@ -139,7 +219,7 @@ status_t PostProcJpeg::Process(const std::vector<StreamBuffer> &in_buffers,
   }
 
   if (buf_vaaddr == MAP_FAILED) {
-      QMMF_ERROR("%s:%s  ION mmap failed: %s (%d)", TAG, __func__,
+      QMMF_ERROR("%s  ION mmap failed: %s (%d)", __func__,
           strerror(errno), errno);
   }
 
@@ -152,7 +232,7 @@ status_t PostProcJpeg::Process(const std::vector<StreamBuffer> &in_buffers,
   }
 
   if (out_vaaddr == MAP_FAILED) {
-      QMMF_ERROR("%s:%s  ION mmap failed: %s (%d)", TAG, __func__,
+      QMMF_ERROR("%s  ION mmap failed: %s (%d)", __func__,
           strerror(errno), errno);
   }
 
@@ -161,9 +241,11 @@ status_t PostProcJpeg::Process(const std::vector<StreamBuffer> &in_buffers,
     jpeg_encoder_->in_buffer_.img_data[0] = (uint8_t*)buf_vaaddr;
     jpeg_encoder_->in_buffer_.out_data[0] = (uint8_t*)out_vaaddr;
     jpeg_encoder_->in_buffer_.source_info = in_buffer.info;
+    jpeg_encoder_->in_buffer_.image_quality = image_quality_;
+    jpeg_encoder_->in_buffer_.thumbnail_data = thumbnail_data_;
     auto buf_vaddr = jpeg_encoder_->Encode(&jpeg_size);
     if (!buf_vaddr) {
-      QMMF_VERBOSE("%s:%s: Jpeg out buffer is NULL", TAG, __func__);
+      QMMF_VERBOSE("%s: Jpeg out buffer is NULL", __func__);
     }
 
     if (in_buffer.data == nullptr) {
@@ -180,13 +262,20 @@ status_t PostProcJpeg::Process(const std::vector<StreamBuffer> &in_buffers,
     out_buffer.timestamp = in_buffer.timestamp;
 
   } else {
-    QMMF_VERBOSE("%s:%s: SKIPP JPEG", TAG, __func__);
+    QMMF_VERBOSE("%s: SKIPP JPEG", __func__);
   }
 
   listener_->OnFrameReady(out_buffer);
   listener_->OnFrameProcessed(in_buffer);
 
-  QMMF_VERBOSE("%s:%s: Exit", TAG, __func__);
+  std::lock_guard<std::mutex> lock(state_lock_);
+  if (state_ == State::ABORTED) {
+    QMMF_VERBOSE("%s: Release abort done handler", __func__);
+    abort_ = nullptr;
+  }
+  state_ = State::ACTIVE;
+
+  QMMF_VERBOSE("%s: Exit", __func__);
 
   return NO_ERROR;
 }

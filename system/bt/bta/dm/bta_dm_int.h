@@ -79,6 +79,7 @@ enum
 
 
 #if BLE_INCLUDED == TRUE
+    BTA_DM_API_SET_LE_NAME_EVT,
     BTA_DM_API_ADD_BLEKEY_EVT,
     BTA_DM_API_ADD_BLEDEVICE_EVT,
     BTA_DM_API_BLE_PASSKEY_REPLY_EVT,
@@ -160,6 +161,13 @@ typedef struct
     BT_HDR              hdr;
     BD_NAME             name; /* max 248 bytes name, plus must be Null terminated */
 } tBTA_DM_API_SET_NAME;
+
+/* data type for BTA_DM_API_SET_LE_NAME_EVT */
+typedef struct
+{
+    BT_HDR              hdr;
+    BD_NAME             name; /* max 248 bytes name, plus must be Null terminated */
+} tBTA_DM_API_SET_LE_NAME;
 
 /* data type for BTA_DM_API_SET_VISIBILITY_EVT */
 typedef struct
@@ -751,6 +759,7 @@ typedef union
     tBTA_DM_API_SET_ENCRYPTION     set_encryption;
 
 #if BLE_INCLUDED == TRUE
+    tBTA_DM_API_SET_LE_NAME             set_le_name;
     tBTA_DM_API_ADD_BLEKEY              add_ble_key;
     tBTA_DM_API_ADD_BLE_DEVICE          add_ble_device;
     tBTA_DM_API_PASSKEY_REPLY           ble_passkey_reply;
@@ -1155,6 +1164,7 @@ extern void bta_dm_pm_timer(tBTA_DM_MSG *p_data);
 extern void bta_dm_add_ampkey (tBTA_DM_MSG *p_data);
 
 #if BLE_INCLUDED == TRUE
+extern void bta_dm_set_dev_le_name (tBTA_DM_MSG *p_data);
 extern void bta_dm_add_blekey (tBTA_DM_MSG *p_data);
 extern void bta_dm_add_ble_device (tBTA_DM_MSG *p_data);
 extern void bta_dm_ble_passkey_reply (tBTA_DM_MSG *p_data);

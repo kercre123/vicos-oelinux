@@ -190,8 +190,8 @@
 #define RPMB_SND_RCV_BUF_SZ         0x1
 
 /* QSEECOM: Secure app region notification */
-#define APP_REGION_ADDR 0x87b00000
-#define APP_REGION_SIZE 0x100000
+#define APP_REGION_ADDR 0x87a00000
+#define APP_REGION_SIZE 0x200000
 
 
 /* MDSS */

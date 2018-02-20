@@ -101,7 +101,7 @@ QCMAP_Firewall::QCMAP_Firewall(QCMAP_Backhaul* QcMapBackhaul)
   this->firewall_config.firewall_enabled = false;
   this->firewall_config.firewall_pkts_allowed = false;
   this->firewall_config.upnp_inbound_pinhole = false;
-  if(QcMapMgr && IS_UL_FIREWALL_ALLOWED(QcMapMgr->target))
+  if(QcMapMgr && (IS_UL_FIREWALL_ALLOWED(QcMapMgr->target)))
     this->firewall_config.enable_ul_firewall = true;
   else
     this->firewall_config.enable_ul_firewall = false;
@@ -1268,6 +1268,7 @@ int QCMAP_Firewall::SetFirewallV4
   uint8 next_hdr_prot;
   QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
 
+
   if( firewall_entry == NULL )
   {
     LOG_MSG_ERROR("NULL firewall_entry",0,0,0);
@@ -1282,7 +1283,8 @@ int QCMAP_Firewall::SetFirewallV4
       return QCMAP_CM_ERROR;
   }
 
-  if(QcMapBackhaul->QcMapBackhaulWWAN->GetState()!= QCMAP_CM_WAN_CONNECTED &&
+  if(QcMapBackhaul && (QcMapBackhaul->QcMapBackhaulWWAN) &&
+     (QcMapBackhaul->QcMapBackhaulWWAN->GetState()!= QCMAP_CM_WAN_CONNECTED) &&
     !QCMAP_Backhaul_Cradle::IsCradleBackhaulAvailableV4() &&
     !QCMAP_Backhaul_WLAN::IsSTAAvailableV4() &&
     !QCMAP_Backhaul_Ethernet::IsEthBackhaulAvailableV4() &&
@@ -1290,7 +1292,7 @@ int QCMAP_Firewall::SetFirewallV4
   {
     strlcpy(devname, QcMapBackhaul->wan_cfg.ipv4_interface, sizeof(devname));
   }
-  else if (!QcMapBackhaul->GetDeviceName(devname,QCMAP_MSGR_IP_FAMILY_V4_V01, qmi_err_num))
+  else if (QcMapBackhaul && !QcMapBackhaul->GetDeviceName(devname,QCMAP_MSGR_IP_FAMILY_V4_V01, qmi_err_num))
   {
     LOG_MSG_ERROR("Failed to get WAN device name",0,0,0);
     *qmi_err_num = QMI_ERR_INTERFACE_NOT_FOUND_V01;
@@ -1552,6 +1554,18 @@ int QCMAP_Firewall::SetFirewallV4
           DeleteConntrackEntryForDropIPv4FirewallEntries(firewall_entry, next_hdr_prot);
       }
     }
+    else
+    {
+      if (firewall_config.firewall_enabled && firewall_config.firewall_pkts_allowed)
+      {
+        /*When the Allow firewall Rule is deleted, corresponding conntrack entry
+          should be deleted to let IPA know*/
+        if (next_hdr_prot == PS_IPPROTO_NO_PROTO)
+          DeleteConntrackEntryForDropIPv4FirewallEntries(firewall_entry, PS_IPPROTO_TCP_UDP);
+        else
+          DeleteConntrackEntryForDropIPv4FirewallEntries(firewall_entry, next_hdr_prot);
+      }
+    }
   }
   return QCMAP_CM_SUCCESS;
 }
@@ -1611,7 +1625,8 @@ int QCMAP_Firewall::SetFirewallV6
       return QCMAP_CM_ERROR;
   }
 
-  if(QcMapBackhaul->QcMapBackhaulWWAN->GetIPv6State() != QCMAP_CM_V6_WAN_CONNECTED &&
+  if(QcMapBackhaul && (QcMapBackhaul->QcMapBackhaulWWAN) &&
+     QcMapBackhaul->QcMapBackhaulWWAN->GetIPv6State() != QCMAP_CM_V6_WAN_CONNECTED &&
      !QCMAP_Backhaul_Cradle::IsCradleBackhaulAvailableV6() &&
      !QCMAP_Backhaul_WLAN::IsSTAAvailableV6() &&
      !QCMAP_Backhaul_Ethernet::IsEthBackhaulAvailableV6() &&
@@ -1619,7 +1634,7 @@ int QCMAP_Firewall::SetFirewallV6
   {
     strlcpy(devname, QcMapBackhaul->wan_cfg.ipv6_interface, sizeof(devname));
   }
-  else if (!QcMapBackhaul->GetDeviceName(devname,QCMAP_MSGR_IP_FAMILY_V6_V01, qmi_err_num))
+  else if (QcMapBackhaul && !QcMapBackhaul->GetDeviceName(devname,QCMAP_MSGR_IP_FAMILY_V6_V01, qmi_err_num))
   {
     LOG_MSG_ERROR("Failed to get WAN device name",0,0,0);
     *qmi_err_num = QMI_ERR_INTERFACE_NOT_FOUND_V01;
@@ -1891,6 +1906,18 @@ int QCMAP_Firewall::SetFirewallV6
           DeleteConntrackEntryForDropIPv6FirewallEntries( firewall_entry, next_hdr_prot);
       }
     }
+    else
+    {
+      if (firewall_config.firewall_enabled && firewall_config.firewall_pkts_allowed)
+      {
+        /*When the Allow firewall Rule is deleted, corresponding conntrack entry
+          should be deleted to let IPA know*/
+        if ( next_hdr_prot == PS_IPPROTO_NO_PROTO )
+          DeleteConntrackEntryForDropIPv6FirewallEntries( firewall_entry, PS_IPPROTO_TCP_UDP);
+        else
+          DeleteConntrackEntryForDropIPv6FirewallEntries( firewall_entry, next_hdr_prot);
+      }
+    }
   }
   return QCMAP_CM_SUCCESS;
 }
@@ -1993,6 +2020,7 @@ boolean QCMAP_Firewall::SetFirewallConfig
       if(firewall_config.firewall_enabled)
       {
         LOG_MSG_INFO1("Firewall was enabled disabling the same",0,0,0);
+        firewall_config.firewall_enabled = enable_firewall;
         node = firewallList->firewallEntryListHead;
         node = ds_dll_next (node, (const void**)(&curr_firewall_entry));
         for (i = 0; i < firewall_config.num_firewall_entries && node; i++)
@@ -2000,7 +2028,7 @@ boolean QCMAP_Firewall::SetFirewallConfig
           SetFirewall(curr_firewall_entry, false, qmi_err_num);
           node = ds_dll_next (node, (const void**)(&curr_firewall_entry));
         }
-        firewall_config.firewall_enabled = enable_firewall;
+
         firewall_config.firewall_pkts_allowed = false;
         firewall_config.upnp_inbound_pinhole = false;
 
@@ -2279,8 +2307,9 @@ boolean QCMAP_Firewall::SetDefaultFirewallRule(qcmap_msgr_ip_family_enum_v01 int
     return false;
   }
 
-  LOG_MSG_INFO1( "SetDefaultFirewallRule:: Enter for Interface %x and devname\= %s",
-                 interface,devname,0 );
+  LOG_MSG_INFO1( "SetDefaultFirewallRule:: Enter for Interface %x and devname\= %s,"
+                 " enable_ul_firewall: %d",
+                 interface,devname, firewall_config.enable_ul_firewall);
 
   /* Default Firewall Configuration based on the mode*/
   switch (interface)
@@ -2469,6 +2498,11 @@ void QCMAP_Firewall::CleanIPv4MangleTable(void)
 
 
   LOG_MSG_INFO1("QCMAP_ConnectionManager::cleanIPv4MangleTable() Enter",0,0,0);
+  if( QcMapBackhaul == NULL )
+  {
+    LOG_MSG_ERROR("NULL QcMapBackhaul object",0,0,0);
+    return ;
+  }
 
   // Delete default firewall rules
   strlcpy(devname, QcMapBackhaul->wan_cfg.ipv4_interface, sizeof(devname));
@@ -2664,6 +2698,7 @@ void QCMAP_Firewall::UpdateIPv6FirewallDefaultRules(char *devname, boolean del)
     ds_system_call(command,strlen(command));
     snprintf(command, MAX_COMMAND_STR_LEN,
               "ip6tables -t mangle -D PREROUTING -i %s -j DROP",devname);
+    ds_system_call(command,strlen(command));
 
     /*==== DL Blacklisting Rules=====*/
     /*Default Rule for DL Firewall - Blacklisting*/
@@ -2675,7 +2710,6 @@ void QCMAP_Firewall::UpdateIPv6FirewallDefaultRules(char *devname, boolean del)
     /*==== UL Blacklisting Rules=====*/
     if(firewall_config.enable_ul_firewall == true)
     {
-      ds_system_call(command,strlen(command));
       snprintf(command, MAX_COMMAND_STR_LEN,
                 "ip6tables -t mangle -D POSTROUTING -o %s  -j DROP",devname);
       ds_system_call(command,strlen(command));

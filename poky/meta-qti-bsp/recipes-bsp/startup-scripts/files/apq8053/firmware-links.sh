@@ -33,12 +33,13 @@
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 export PATH
 
-mkdir -p /firmware
+
 if [ -f /etc/selinux/config ];then
-   mount -t vfat /dev/mmcblk0p1 /firmware -o context=system_u:object_r:firmware_t:s0
+   mount -t vfat /dev/mmcblk0p1 /firmware -o context=system_u:object_r:firmware_t:s0,noexec,nodev,ro,gid=1000
 else
-   mount -t vfat /dev/mmcblk0p1 /firmware
+   mount -t vfat /dev/mmcblk0p1 /firmware -o noexec,nodev,ro,gid=1000
 fi
+
 
 # Check for images and set up symlinks
 cd /firmware/image

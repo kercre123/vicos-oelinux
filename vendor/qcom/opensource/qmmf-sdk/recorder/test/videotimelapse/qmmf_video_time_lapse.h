@@ -44,7 +44,6 @@
 #include <unistd.h>
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <fstream>
 #include <functional>
 #include <future>
@@ -60,6 +59,10 @@
 #include <qmmf-sdk/qmmf_codec.h>
 #include <qmmf-sdk/qmmf_recorder.h>
 #include <qmmf-sdk/qmmf_recorder_params.h>
+
+#include "common/utils/qmmf_condition.h"
+
+using namespace qmmf;
 
 typedef struct ion_allocation_data IonHandleData;
 
@@ -118,7 +121,7 @@ class EncoderSource : public qmmf::avcodec::ICodecSource {
  private:
   std::atomic<bool> atomic_eos_;
   std::mutex wait_for_frame_lock_;
-  std::condition_variable wait_for_frame_;
+  QCondition wait_for_frame_;
   std::list<qmmf::BufferDescriptor> input_free_buffer_list_;
   std::list<qmmf::BufferDescriptor> input_occupy_buffer_list_;
   ReturnBufferCB return_buffer_cb_;
@@ -144,7 +147,7 @@ class EncoderSink : public qmmf::avcodec::ICodecSource {
  private:
   std::ofstream output_file_;
   std::mutex wait_for_frame_lock_;
-  std::condition_variable wait_for_frame_;
+  QCondition wait_for_frame_;
   std::vector<qmmf::BufferDescriptor> output_list_;
   std::list<qmmf::BufferDescriptor> output_free_buffer_list_;
   std::list<qmmf::BufferDescriptor> output_occupy_buffer_list_;

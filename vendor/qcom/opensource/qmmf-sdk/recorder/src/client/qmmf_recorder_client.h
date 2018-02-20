@@ -29,12 +29,10 @@
 
 #pragma once
 
-#include <utils/Mutex.h>
-#include <utils/RefBase.h>
-#include <utils/KeyedVector.h>
 #include <camera/CameraMetadata.h>
 #include <vector>
 #include <map>
+#include <mutex>
 
 #include "common/cameraadaptor/qmmf_camera3_device_client.h"
 #include "qmmf-sdk/qmmf_recorder_params.h"
@@ -166,6 +164,10 @@ class RecorderClient {
                                 const void *param,
                                 const uint32_t param_size);
 
+#ifdef USE_VENDOR_TAG_DESC
+  status_t GetVendorTagDescriptor(sp<VendorTagDescriptor> &desc);
+#endif
+
   // Callback handlers from service.ap
   void NotifyRecorderEvent(EventType event_type, void *event_data,
                            size_t event_data_size);
@@ -218,9 +220,11 @@ class RecorderClient {
     NotifyServerDeathCB notify_server_death_;
   };
 
+#ifndef USE_VENDOR_TAG_DESC
   vendor_tag_ops_t     vendor_tag_ops_;
+#endif
   camera_module_t      *camera_module_;
-  Mutex                lock_;
+  std::mutex           lock_;
   sp<IRecorderService> recorder_service_;
   sp<DeathNotifier>    death_notifier_;
   RecorderCb           recorder_cb_;
@@ -229,9 +233,10 @@ class RecorderClient {
   uint32_t             client_id_;
 
   // List of session callbacks.
-  DefaultKeyedVector<uint32_t, SessionCb > session_cb_list_;
+  std::map<uint32_t, SessionCb > session_cb_list_;
   // List of Track callbacks.
-  DefaultKeyedVector<uint32_t, TrackCb >   track_cb_list_;
+  std::map<uint32_t, TrackCb >   track_cb_list_;
+  std::mutex                     track_list_lock_;
   // Capture callback.
   ImageCaptureCb                           image_capture_cb_;
   // Camera result callback
@@ -249,13 +254,15 @@ class RecorderClient {
   } BufInfo;
 
   // map <session id, vector<track id> >
-  DefaultKeyedVector<uint32_t, Vector<uint32_t> >  sessions_;
+  std::map<uint32_t, std::vector<uint32_t> >  sessions_;
   // map <buffer index, buffer_info>
-  typedef DefaultKeyedVector<uint32_t, BufInfo> buf_info_map;
+  typedef std::map<uint32_t, BufInfo> buf_info_map;
   // map <track_id, map <buffer index, buffer_info> >
-  DefaultKeyedVector<uint32_t,  buf_info_map> track_buf_map_;
+  std::map<uint32_t,  buf_info_map> track_buf_map_;
+  // to protect track_buf_map_
+  std::mutex  track_buf_map_lock_;
 
-  DefaultKeyedVector<uint32_t, BufInfo> snapshot_buffers_;
+  std::map<uint32_t, BufInfo> snapshot_buffers_;
 };
 
 class ServiceCallbackHandler : public BnRecorderServiceCallback {

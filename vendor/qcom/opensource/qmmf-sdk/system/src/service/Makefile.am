@@ -16,6 +16,7 @@ ld_flags = -llog
 ld_flags += -lbinder
 ld_flags += -lutils
 ld_flags += -lcutils
+ld_flags += -lqtisoundtriggerhw
 
 libqmmf_system_service_la_SOURCES  = $(source_files)
 libqmmf_system_service_la_CPPFLAGS = $(cpp_flags)

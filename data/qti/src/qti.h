@@ -661,6 +661,25 @@ SIDE EFFECTS
 int qti_qcmap_init(qti_conf_t * qti_conf);
 
 /*===========================================================================
+
+FUNCTION QCMAP_SERVICE_AVAILABLE_CB()
+
+DESCRIPTION
+  This function is invoked by ipc router, to notify QTI when service is available.
+
+DEPENDENCIES
+  None.
+
+RETURN VALUE
+
+
+SIDE EFFECTS
+  None
+
+=========================================================================*/
+void qcmap_service_available_cb();
+
+/*===========================================================================
 FUNCTION QTI_NL_RECV_MSG()
 
 DESCRIPTION

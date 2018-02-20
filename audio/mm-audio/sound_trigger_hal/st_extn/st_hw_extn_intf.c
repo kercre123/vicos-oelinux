@@ -78,6 +78,7 @@ static int sthw_extn_set_parameters(const struct sound_trigger_hw_device *dev,
     char value[32];
     int ret = 0, err, pause, bad_mic_channel_index;
     bool backend_cfg_change = false;
+    audio_devices_t ec_ref_dev;
 
     ALOGD("%s:[%d] Enter kv pairs %s", __func__, sound_model_handle, kvpairs);
 
@@ -112,6 +113,13 @@ static int sthw_extn_set_parameters(const struct sound_trigger_hw_device *dev,
                 stop_other_sessions(stdev, NULL);
                 start_other_sessions(stdev, NULL);
             }
+        }
+
+        err = str_parms_get_int(parms, QSTHW_PARAMETER_EC_REF_DEVICE, &ec_ref_dev);
+        if (err >= 0) {
+            str_parms_del(parms, QSTHW_PARAMETER_EC_REF_DEVICE);
+            ALOGV("%s: ec ref device 0x%x", __func__, ec_ref_dev);
+            stdev->ec_ref_dev = ec_ref_dev;
         }
 
         goto exit;

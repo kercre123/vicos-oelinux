@@ -1,6 +1,6 @@
 /* st_hw_defs.h
  *
- * Copyright (c) 2016 Qualcomm Technologies, Inc.
+ * Copyright (c) 2016-2017 Qualcomm Technologies, Inc.
  * All Rights Reserved.
  * Confidential and Proprietary - Qualcomm Technologies, Inc.
  *
@@ -40,8 +40,14 @@ struct qsthw_source_tracking_param
     char polarActivityGUI[360];
 };
 
+struct qsthw_target_channel_index_param
+{
+    int target_chan_idx;
+};
+
 typedef union {
     struct qsthw_source_tracking_param st_params;
+    struct qsthw_target_channel_index_param ch_index_params;
 } qsthw_get_param_payload_t;
 
 /* sound trigger set parameter keys */
@@ -49,5 +55,7 @@ typedef union {
 #define QSTHW_PARAMETER_SESSION_PAUSE "st_session_pause"
 #define QSTHW_PARAMETER_BAD_MIC_CHANNEL_INDEX "st_bad_mic_channel_index"
 #define QSTHW_PARAMETER_DIRECTION_OF_ARRIVAL "st_direction_of_arrival"
+#define QSTHW_PARAMETER_CHANNEL_INDEX "st_channel_index"
+#define QSTHW_PARAMETER_EC_REF_DEVICE "st_ec_ref_device"
 
 #endif  //SOUND_TRIGGER_HW_DEFS_H

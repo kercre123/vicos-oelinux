@@ -31,7 +31,6 @@ package vam
 
 import (
     . "common"
-    "encoding/json"
     "io/ioutil"
     "log"
     "net/http"
@@ -46,6 +45,7 @@ const (
     __vam_config_URL        string = "http://127.0.0.1:4000/vamconfig"
     __vam_remove_config_URL string = "http://127.0.0.1:4000/vamremoveconfig"
     __vam_enroll_URL        string = "http://127.0.0.1:4000/vamenroll"
+    __vam_disenroll_URL     string = "http://127.0.0.1:4000/vamdisenroll"
 )
 
 type RespVamURL struct {
@@ -79,7 +79,7 @@ func __create_vam_video_track(chinfo Channel) bool {
     // input vam
     v.Add("track_output", "1")
     v.Add("bitrate", "0")
-    v.Add("low_power_mode", "0")
+    v.Add("low_power_mode", "1")
 
     log.Printf("Vam createvideotrack form:%v \n", v.Encode())
     body := ioutil.NopCloser(strings.NewReader(v.Encode()))
@@ -134,7 +134,6 @@ func __switch_vam_on(w http.ResponseWriter, vamconf string, sess string,
         Resp_ret_reason(w, "Internal error")
         return
     }
-
     chinfo.VCounter += 2
     //chinfo.Status = Vam
     CMap.ChMap_Set(ChList[ch], chinfo)
@@ -145,24 +144,12 @@ func __switch_vam_on(w http.ResponseWriter, vamconf string, sess string,
 }
 
 func Switch_vam_off(chinfo Channel, sess string, ch int) {
-    if chinfo.VCounter != 1 {
-        chinfo.VCounter--
-        CMap.ChMap_Set(ChList[ch], chinfo)
-
-        for index := FR; index < MAX; index++ {
-            __update_session_vam_st(index, sess, false)
-        }
-
-        return
-    }
 
     if !__vam_off(chinfo) {
         return
     }
-
-    chinfo.VCounter--
+    chinfo.VCounter = 0
     CMap.ChMap_Set(ChList[ch], chinfo)
-
     for index := FR; index < MAX; index++ {
         Close_rtsp_proxy(index, sess)
         __update_session_vam_st(index, sess, false)
@@ -176,12 +163,11 @@ func __switch_vam_off(w http.ResponseWriter, vamconf string, sess string,
 
         chinfo.VCounter--
         CMap.ChMap_Set(ChList[ch], chinfo)
-
         Resp_ret(w, true)
         return
     }
-
     if !__vam_off(chinfo) {
+
         Resp_ret_reason(w, "Internal error")
         return
     }
@@ -321,6 +307,14 @@ func __vam_config_post(w http.ResponseWriter, r *http.Request,
     vamtype := __query_vam_config_type(rawQuery)
 
     log.Printf("Vam config post type:%v \n", vamtype)
+    var isMD = false
+    if vamtype == CT {
+            isMD = Is_md_enabled(chinfo)
+            if isMD == false {
+                Resp_ret_reason(w, "Please Enable Motion Detection First")
+                return
+            }
+    }
 
     if vamtype != OC {
         if chinfo.VamConfig[vamtype].Status {
@@ -463,16 +457,6 @@ func VamRemoveConfigHandler(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func __save_enroll_id() {
-    m := &EnrollIdParams{
-        VamEnrollId: EnrollId,
-    }
-
-    j, _ := json.Marshal(m)
-
-    Save_file(ENROLL_ID_FILE, j)
-}
-
 func __vam_enroll_post(w http.ResponseWriter, r *http.Request, chinfo Channel) {
     // check state
     log.Printf("Vam get channel vcounter:%v \n", chinfo.VCounter)
@@ -488,23 +472,41 @@ func __vam_enroll_post(w http.ResponseWriter, r *http.Request, chinfo Channel) {
         panic("error")
     }
 
-    // id + 1
-    EnrollId++
-
-    enroll_params := string(body) + "&" + "vam_enroll_image_id=" + strconv.Itoa(EnrollId)
-
-    data := ioutil.NopCloser(strings.NewReader(enroll_params))
+    data := ioutil.NopCloser(strings.NewReader(string(body)))
 
     resp := Http_post(__vam_enroll_URL, data)
 
     if !Get_resp_ret(resp) {
-        // If fail -1
-        EnrollId--
-        Resp_ret_reason(w, "Internal error")
+        Resp_ret_reason(w, "Enroll request failed")
         return
     }
-    // save file
-    __save_enroll_id()
+
+    Resp_ret(w, true)
+}
+
+func __vam_disenroll_post(w http.ResponseWriter, r *http.Request, chinfo Channel) {
+    // check state
+    log.Printf("Vam get channel vcounter:%v \n", chinfo.VCounter)
+
+    if chinfo.VCounter == 0 {
+        Resp_ret_reason(w, "Please open FR first")
+        return
+    }
+
+    body, err := ioutil.ReadAll(r.Body)
+
+    if err != nil {
+        panic("error")
+    }
+
+    data := ioutil.NopCloser(strings.NewReader(string(body)))
+
+    resp := Http_post(__vam_disenroll_URL, data)
+
+    if !Get_resp_ret(resp) {
+        Resp_ret_reason(w, "Disenroll request failed")
+        return
+    }
 
     Resp_ret(w, true)
 }
@@ -526,6 +528,26 @@ func VamEnrollHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
         __vam_enroll_post(w, r, chinfo)
+    }
+}
+
+func VamDisEnrollHandler(w http.ResponseWriter, r *http.Request) {
+    sess, ok := CheckSession(r)
+    if !ok {
+        Resp_ret(w, false)
+        return
+    }
+
+    sessinfo, ok := SMap.Get(sess)
+
+    chinfo, _ := Vam_tmp_one_streaming(sessinfo)
+
+    if r.Method == "POST" {
+        if !sessinfo.ProxyConf[FR].Status {
+            Resp_ret(w, false)
+            return
+        }
+        __vam_disenroll_post(w, r, chinfo)
     }
 }
 
@@ -551,4 +573,36 @@ func Vam_tmp_one_streaming(sessinfo Session) (Channel, int) {
     }
 
     return chinfo, ch
+}
+
+func Vam_open_streaming() (Channel, int, bool) {
+    var chinfo Channel
+    var ch int
+    var streaming bool = false
+
+    for index := 0; index < MaxChannelNum; index++ {
+        chinfo, _ = CMap.ChMap_Get(ChList[index])
+        if chinfo.VCounter != 0 {
+            ch = index
+            streaming = true
+            break
+        }
+    }
+
+    return chinfo, ch, streaming
+}
+
+func Is_md_enabled(chinfo Channel) bool {
+    var ret bool = false
+
+    for index := 0; index < MaxChannelNum; index++ {
+        chinfo, _ = CMap.ChMap_Get(ChList[index])
+        if chinfo.VamConfig[MD].Counter > 0 {
+
+            ret = true
+            break
+        }
+    }
+    log.Printf("Is MD disable:%v \n", ret)
+    return ret
 }

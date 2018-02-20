@@ -40,8 +40,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 #include "openavb_debug.h"
 #include "openavb_array.h"
 
-OPENAVB_CODE_MODULE_PRI
-
 struct openavb_array_elem {
     void *data;
     bool managed;

@@ -54,6 +54,7 @@
 
 #define LOGTAG "RSP "
 
+
 typedef enum
 {
     WLAN_ACTIVE = 1,

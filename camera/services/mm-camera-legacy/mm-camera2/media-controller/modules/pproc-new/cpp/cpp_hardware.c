@@ -26,6 +26,8 @@
   do {} while (0);
 #endif
 
+#define PROPERTY_VALUE_MAX 32
+
 /* cpp_hardware_select_fw_version:
 *
 * @hw_version: cpp hw version

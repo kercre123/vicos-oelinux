@@ -40,7 +40,8 @@ AM_CPPFLAGS = -D__packed__= \
         -I./utilities/synchronization/ \
         -I./utilities/timer/ \
         -I./utilities/htable/ \
-        -I./utilities/
+        -I./utilities/ \
+        -I./../mcm_ssr_util
 
 c_sources =     ../ipc/mcm_dm_v01.c \
                 ../ipc/mcm_nw_v01.c \
@@ -136,7 +137,7 @@ init_d_SCRIPTS = start_mcm_ril_srv_le
 
 mcm_ril_service_CC = @CC@
 mcm_ril_service_SOURCES = $(c_sources)
-mcm_ril_service_LDADD = -lpthread -lm $(QMIFRAMEWORK_LIBS) -lqmiservices -ldl $(DIAG_LIBS) @GLIB_LIBS@
+mcm_ril_service_LDADD = -lpthread -lm $(QMIFRAMEWORK_LIBS) -lqmiservices ../mcm_ssr_util/libmcm_ssr_util.la -ldl $(DIAG_LIBS) @GLIB_LIBS@
 if USE_AUDIO
 mcm_ril_service_LDFLAGS = -rdynamic
 endif

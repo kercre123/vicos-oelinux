@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1926,6 +1926,11 @@ struct hdd_context_s
     /* debugfs entry */
     struct dentry *debugfs_phy;
 
+#ifdef WLAN_POWER_DEBUGFS
+    /* mutex lock to block concurrent access */
+    struct mutex power_stats_lock;
+#endif
+
     /* Use below lock to protect access to isSchedScanUpdatePending
      * since it will be accessed in two different contexts.
      */
@@ -2041,14 +2046,7 @@ struct hdd_context_s
 
     struct hdd_chain_rssi_context chain_rssi_context;
 
-#ifdef WLAN_FEATURE_MEMDUMP
-    uint8_t *fw_dump_loc;
-    uint32_t dump_loc_paddr;
-    vos_timer_t memdump_cleanup_timer;
     struct mutex memdump_lock;
-    bool memdump_in_progress;
-    bool memdump_init_done;
-#endif /* WLAN_FEATURE_MEMDUMP */
     uint16_t driver_dump_size;
     uint8_t *driver_dump_mem;
 
@@ -2122,6 +2120,8 @@ struct hdd_context_s
     /* the context that is capturing tsf */
     hdd_adapter_t *cap_tsf_context;
 #endif
+    /* flag to show whether moniotr mode is enabled */
+    bool is_mon_enable;
 };
 
 /*---------------------------------------------------------------------------
@@ -2458,8 +2458,6 @@ void hdd_get_fw_version(hdd_context_t *hdd_ctx,
 			uint32_t *major_spid, uint32_t *minor_spid,
 			uint32_t *siid, uint32_t *crmid);
 
-bool hdd_is_memdump_supported(void);
-
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28))
 static inline void
 hdd_set_needed_headroom(struct net_device *wlan_dev, uint16_t len)
@@ -2661,5 +2659,14 @@ void hdd_chip_pwr_save_fail_detected_cb(void *hddctx,
  * Return: 0 for success non-zero for failure
  */
 int hdd_drv_cmd_validate(tANI_U8 *command, int len);
+
+/**
+ * wlan_hdd_monitor_mode_enable() - function to enable/disable monitor mode
+ * @hdd_ctx: pointer to HDD context
+ * @enable: 0 - disable, 1 - enable
+ *
+ * Return: 0 for success and error number for failure
+ */
+int wlan_hdd_monitor_mode_enable(hdd_context_t *hdd_ctx, bool enable);
 
 #endif    // end #if !defined( WLAN_HDD_MAIN_H )

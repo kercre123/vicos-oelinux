@@ -41,7 +41,7 @@ Qualcomm Technologies Proprietary and Confidential.
   #undef CDBG
   #define CDBG ALOGE
 #endif
-
+#define PROPERTY_VALUE_MAX 32
 
 /*to enable isp hw dump, use these two define*/
 /*#define ISP_REG_DUMP*/

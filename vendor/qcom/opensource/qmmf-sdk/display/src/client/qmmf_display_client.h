@@ -34,6 +34,8 @@
 #include <utils/RefBase.h>
 #include <utils/KeyedVector.h>
 #include <map>
+#include <mutex>
+#include <linux/msm_ion.h>
 
 #include "qmmf-sdk/qmmf_display_params.h"
 #include "display/src/client/qmmf_display_service_intf.h"
@@ -102,7 +104,7 @@ public:
     void binderDied(const wp<IBinder>&) override {
         ALOGD("DisplayClient:%s: Display service died", __func__);
 
-          Mutex::Autolock l(parent_->lock_);
+          std::lock_guard<std::mutex> lock(parent_->lock_);
           parent_->display_service_.clear();
           parent_->display_service_ = NULL;
     }
@@ -110,15 +112,13 @@ public:
   };
   friend class DeathNotifier;
 
-  Mutex                lock_;
+  std::mutex            lock_;
   sp<IDisplayService>  display_service_;
   sp<DeathNotifier>    death_notifier_;
   DisplayCb            display_cb_;
   int32_t              ion_device_;
   DisplayHandle        display_handle_;
   DisplayType          display_type_;
-  // List of session callbacks.
-  DefaultKeyedVector<uint32_t, DisplaySessionCb > session_cb_list_;
 
   typedef struct BufInfo {
     // Transferred ION Id.
@@ -127,16 +127,17 @@ public:
     void    *pointer;
     // Size
     size_t  frame_len;
+    // ION handle
+    ion_user_handle_t ion_handle;
+    // surface id
+    uint32_t surface_id;
   } BufInfo;
 
   // map <buffer index, buffer_info>
   typedef std::map<int32_t, BufInfo*> buf_info_map;
   buf_info_map buf_info_map_;
 
-  // map <session id, vector<track id> >
-  DefaultKeyedVector<uint32_t, Vector<uint32_t> >  sessions_;
-
-  bool context_;
+  use_buffer_map surface_id_buffer_allocation_mode_map_;
 };
 
 class ServiceCallbackHandler : public BnDisplayServiceCallback {

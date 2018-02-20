@@ -21,6 +21,7 @@ SRC_URI += "\
             file://0001-Fix-file-synchronization-in-mdev.patch \
             file://fix-mdev-crash.patch \
 "
+SRC_URI_append_apq8053 += "file://apq8053/mdev.conf"
 
 prefix = ""
 
@@ -45,6 +46,10 @@ do_install_append() {
         install -m 0755 ${WORKDIR}/usb.sh ${D}${sysconfdir}/mdev/
         install -m 0755 ${WORKDIR}/iio.sh ${D}${sysconfdir}/mdev/
     fi
+    if [ ${BASEMACHINE} == "apq8053"];then
+     install -m 0644 ${WORKDIR}/apq8053/mdev.conf ${D}${sysconfdir}/
+    fi
+    chmod -R go-x ${D}${sysconfdir}/mdev/
     mkdir -p ${D}/usr/bin
     ln -s /bin/env ${D}/usr/bin/env
 }

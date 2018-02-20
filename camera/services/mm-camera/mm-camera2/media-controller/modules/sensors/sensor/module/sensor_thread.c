@@ -1,7 +1,7 @@
 
 /* sensor.c
  *
-i * Copyright (c) 2012-2016 Qualcomm Technologies, Inc. All Rights Reserved.
+ * Copyright (c) 2012-2017 Qualcomm Technologies, Inc. All Rights Reserved.
  * Qualcomm Technologies Proprietary and Confidential.
  */
 
@@ -196,7 +196,9 @@ boolean sensor_thread_create(module_sensor_bundle_info_t *s_bundle)
    pthread_attr_init(&attr);
    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
    pthread_mutex_init(&thread.mutex, NULL);
-   pthread_cond_init(&thread.cond, NULL);
+   pthread_condattr_init(&thread.condattr);
+   pthread_condattr_setclock(&thread.condattr, CLOCK_MONOTONIC);
+   pthread_cond_init(&thread.cond, &thread.condattr);
    thread.is_thread_started = FALSE;
    thread.readfd = s_bundle->pfd[0];
    thread.writefd = s_bundle->pfd[1];

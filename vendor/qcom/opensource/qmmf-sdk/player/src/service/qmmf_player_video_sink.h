@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -62,9 +62,6 @@ using ::qmmf::display::SurfaceConfig;
 using ::qmmf::display::SurfaceBlending;
 using ::qmmf::display::SurfaceFormat;
 
-#define DISPLAY_WIDTH 1920
-#define DISPLAY_HEIGHT 1080
-
 namespace qmmf {
 namespace player {
 
@@ -78,13 +75,17 @@ class VideoSink {
 
   ~VideoSink();
 
-  status_t CreateTrackSink(uint32_t track_id, VideoTrackParams& track_param);
+  status_t CreateTrackSink(uint32_t track_id,
+                           VideoTrackParams& track_param,
+                           TrackCb& callback);
 
   const ::std::shared_ptr<VideoTrackSink>& GetTrackSink(uint32_t track_id);
 
   status_t StartTrackSink(uint32_t track_id);
 
-  status_t StopTrackSink(uint32_t track_id);
+  status_t StopTrackSink(uint32_t track_id,
+                         const PictureParam& params,
+                         BufferDescriptor* grab_buffer);
 
   status_t DeleteTrackSink(uint32_t track_id);
 
@@ -106,13 +107,13 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
 
   ~VideoTrackSink();
 
-  status_t Init(VideoTrackParams& param);
+  status_t Init(VideoTrackParams& param, TrackCb& callback);
 
   status_t StartSink();
 
-  status_t StopSink();
+  status_t StopSink(const PictureParam& params, BufferDescriptor* grab_buffer);
 
-  status_t PauseSink();
+  status_t PauseSink(const PictureParam& params, BufferDescriptor* grab_buffer);
 
   status_t ResumeSink();
 
@@ -134,6 +135,7 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
   status_t NotifyPortEvent(::qmmf::avcodec::PortEventType event_type,
                            void* event_data) override;
 
+#ifndef DISABLE_DISPLAY
   status_t CreateDisplay(display::DisplayType display_type,
       VideoTrackParams& track_param);
 
@@ -143,10 +145,9 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
       void *event_data, size_t event_data_size);
 
   void DisplayVSyncHandler(int64_t time_stamp);
+#endif
 
   status_t UpdateCropParameters(void* arg);
-
-  status_t GrabPicture(PictureParam param, BufferDescriptor& buffer);
 
   status_t Dispatcher(const BufferDescriptor& codec_buffer);
 
@@ -158,7 +159,12 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
 
   int32_t TrackId() { return track_params_.track_id; }
 
+  static void PtsThreadEntry(VideoTrackSink* sink);
+
+  void PtsThread();
+
   VideoTrackParams        track_params_;
+  TrackCb                 callback_;
   ::qmmf::avcodec::PortreconfigData::CropData                crop_data_;
   uint32_t                current_width;
   uint32_t                current_height;
@@ -168,19 +174,22 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
   TSQueue<::qmmf::avcodec::CodecBuffer>            output_free_buffer_queue_;
   TSQueue<::qmmf::avcodec::CodecBuffer>            output_occupy_buffer_queue_;
 
-  ::android::Mutex        wait_for_frame_lock_;
-  ::android::Condition    wait_for_frame_;
-  ::android::Mutex        queue_lock_;
+  std::mutex              wait_for_frame_lock_;
+  QCondition              wait_for_frame_;
+  std::mutex              queue_lock_;
   bool                    stopplayback_;
   bool                    paused_;
   uint32_t                decoded_frame_number_;
+  uint64_t                last_queued_timestamp_;
 
+#ifndef DISABLE_DISPLAY
   Display*   display_;
+  bool display_started_;
   uint32_t   surface_id_;
   SurfaceParam surface_param_;
+#endif
   SurfaceBuffer surface_buffer_;
-  SurfaceConfig surface_config;
-  bool display_started_;
+  SurfaceConfig surface_config_;
 
   typedef struct BufInfo {
     // FD at service
@@ -198,7 +207,9 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
   void DumpYUVData(BufferDescriptor& codec_buffer);
 #endif
 
+#ifndef DISABLE_DISPLAY
   status_t PushFrameToDisplay(BufferDescriptor& codec_buffer);
+#endif
 
   status_t SkipFrame();
 
@@ -218,14 +229,13 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
   TrickModeDirection                     playback_dir_;
   uint32_t                               displayed_frames_;
   std::mutex                             state_change_lock_;
-  bool                                   grab_picture_;
   int32_t                                ion_device_;
 
   int32_t                                grabpicture_file_fd_;
   BufferDescriptor                       grab_picture_buffer_;
   struct ion_handle_data                 grab_picture_ion_handle_;
-  ::android::Mutex                       grab_picture_buffer_copy_lock_;
-  ::android::Condition                   wait_for_grab_picture_buffer_copy_;
+  std::mutex                             grab_picture_buffer_copy_lock_;
+  QCondition                             wait_for_grab_picture_buffer_copy_;
   uint32_t                               snapshot_dumps_;
   std::mutex                             grab_picture_lock;
 
@@ -236,6 +246,7 @@ class VideoTrackSink : public ::qmmf::avcodec::ICodecSource {
   TSQueue<BufferDescriptor>              decoded_buffer_queue_;
   ::std::thread*                         displayed_buffer_thread_;
   TSQueue<BufferDescriptor>              displayed_buffer_queue_;
+  ::std::thread*                         pts_thread_;
 };
 
 };  // namespace player

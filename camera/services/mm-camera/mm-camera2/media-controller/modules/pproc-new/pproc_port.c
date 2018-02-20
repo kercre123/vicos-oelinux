@@ -455,9 +455,9 @@ static boolean pproc_port_add_modules_to_stream(
     if (rc == TRUE) {
       if (num_submods > 1) {
         for (i = 0; i < num_submods-1; i++) {
-          PP_INFO(":LINK linking mods %s and %s for identity %x",
+          PP_INFO(":LINK linking mods %s and %s for identity %x, stream type: %d",
             MCT_OBJECT_NAME(submodarr[i]), MCT_OBJECT_NAME(submodarr[i+1]),
-            stream_info->identity);
+            stream_info->identity, stream_info->stream_type);
           /* Loop through rest of the modules to link them together */
           rc = mct_stream_link_modules(port_stream_info->pproc_stream,
             submodarr[i], submodarr[i+1], NULL);
@@ -512,6 +512,7 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
   mct_module_t *svhdr = NULL;
   mct_module_t *bincorr = NULL;
   mct_module_t *ppeiscore = NULL;
+  mct_module_t *ppdgcore = NULL;
   mct_module_t *quadracfa = NULL;
   mct_module_t *sat = NULL;
   mct_module_t *sac = NULL;
@@ -637,6 +638,13 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
   }
   ppeiscore = pproc_module_get_sub_mod(MCT_OBJECT_PARENT(port)->data,"ppeiscore");
 
+  ppdgcore = pproc_module_get_sub_mod(MCT_OBJECT_PARENT(port)->data,"ppdgcore");
+  if ((CAM_STREAM_TYPE_VIDEO == stream_info->stream_type) &&
+      (IS_TYPE_DIG_GIMB == stream_info->is_type)) {
+    if (ppdgcore) {
+      submodarr[num_submods++] = ppdgcore;
+    }
+  }
   c2d = pproc_module_get_sub_mod(MCT_OBJECT_PARENT(port)->data,"c2d");
   if (!submod1) {
     submod1 = c2d;
@@ -654,6 +662,8 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
       submodarr[num_submods++] = vpu;
     if (ppeiscore)
       submodarr[num_submods++] = ppeiscore;
+    if (ppdgcore)
+      submodarr[num_submods++] = ppdgcore;
     if (c2d)
       submodarr[num_submods++] = c2d;
     if (cpp)
@@ -687,15 +697,13 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
     }
   }
 
+#ifndef _DRONE_
   if ((CAM_STREAM_TYPE_PARM == stream_info->stream_type) ||
-      ((port_stream_info->pproc_stream->streaminfo.pp_config.feature_mask &
-       CAM_QCOM_FEATURE_LCAC) && (CAM_STREAM_TYPE_VIDEO == stream_info->stream_type))
-     ) {
+      (port_stream_info->pproc_stream->streaminfo.pp_config.feature_mask &
+       CAM_QCOM_FEATURE_LCAC)) {
     lcac = pproc_module_get_sub_mod(MCT_OBJECT_PARENT(port)->data, "lcac");
-    if (lcac) {
-      submodarr[num_submods++] = lcac;
-    }
   }
+#endif
 
   if (((port_stream_info->pproc_stream->streaminfo.pp_config.feature_mask &
     CAM_QCOM_FEATURE_DENOISE2D) || (CAM_STREAM_TYPE_PARM == stream_info->stream_type) ||
@@ -731,12 +739,8 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
   if ((port_stream_info->pproc_stream->streaminfo.pp_config.feature_mask &
       CAM_QTI_FEATURE_SW_TNR) || (CAM_STREAM_TYPE_PARM == stream_info->stream_type) ||
       ((port_stream_info->pproc_stream->streaminfo.reprocess_config.
-      pp_feature_config.feature_mask & CAM_QTI_FEATURE_SW_TNR)) ||
-      (CAM_STREAM_TYPE_PARM == stream_info->stream_type)) {
+      pp_feature_config.feature_mask & CAM_QTI_FEATURE_SW_TNR))) {
     sw_tnr = pproc_module_get_sub_mod(MCT_OBJECT_PARENT(port)->data, "sw_tnr");
-    if (sw_tnr) {
-      submodarr[num_submods++] = sw_tnr;
-    }
   }
 
   if ((port_stream_info->pproc_stream->streaminfo.pp_config.feature_mask &
@@ -785,6 +789,12 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
   }
     break;
   case CAM_STREAM_TYPE_PARM:
+    if (lcac) {
+      submodarr[num_submods++] = lcac;
+    }
+    if (sw_tnr) {
+      submodarr[num_submods++] = sw_tnr;
+    }
     if (llvd) {
       submodarr[num_submods++] = llvd;
     }
@@ -799,6 +809,9 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
     break;
   case CAM_STREAM_TYPE_CALLBACK:
   case CAM_STREAM_TYPE_PREVIEW: {
+    if (sw_tnr) {
+      submodarr[num_submods++] = sw_tnr;
+    }
     if (vpu) {
       submodarr[num_submods++] = vpu;
     }
@@ -895,10 +908,24 @@ static boolean pproc_port_create_stream_topology(mct_module_t *pproc,
       if (ppeiscore) {
         submodarr[num_submods++] = ppeiscore;
       }
+      if (lcac) {
+        submodarr[num_submods++] = lcac;
+      }
+      if (sw_tnr) {
+       submodarr[num_submods++] = sw_tnr;
+      }
       submodarr[num_submods++] = submod1;
     } else {
       if (llvd) {
         submodarr[num_submods++] = llvd;
+      }
+      else {
+        if (lcac) {
+          submodarr[num_submods++] = lcac;
+        }
+        if (sw_tnr) {
+          submodarr[num_submods++] = sw_tnr;
+        }
       }
       submodarr[num_submods++] = submod1;
     }

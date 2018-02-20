@@ -27,15 +27,20 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "RecorderJpeg"
+#define LOG_TAG "RecorderJpeg"
 
-#include <condition_variable>
+#include <mutex>
 #include <dlfcn.h>
+
 #include <hardware/camera3.h>
 #include <mm_jpeg_interface.h>
-#include <mutex>
 #include <qmmf_jpeg_core.h>
 #include <utils/Log.h>
+
+#include "common/utils/qmmf_log.h"
+#include "common/utils/qmmf_condition.h"
+
+using namespace qmmf;
 
 typedef uint32_t (*jpeg_open_proc_t)(mm_jpeg_ops_t *,
                                      mm_jpeg_mpo_ops_t *,
@@ -52,7 +57,7 @@ typedef struct {
   uint32_t job_id_;
   std::mutex encode_lock_;
   std::mutex enc_done_lock_;
-  std::condition_variable enc_done_cond_;
+  QCondition enc_done_cond_;
 } JpegEncoderParams;
 
 #define JE_GET_PARAMS(x) JpegEncoderParams *(x) = (JpegEncoderParams *)cfg_
@@ -60,6 +65,13 @@ typedef struct {
 namespace qmmf {
 
 namespace reprocjpegencoder {
+
+
+const uint32_t JpegEncoder::kDefaultMainThumbWidth  = 960;
+const uint32_t JpegEncoder::kDefaultMainThumbHeight = 480;
+
+const uint32_t JpegEncoder::kDefaultSecondThumbWidth  = 320;
+const uint32_t JpegEncoder::kDefaultSecondThumbHeight = 240;
 
 JpegEncoder *JpegEncoder::encoder_instance_ = 0;
 
@@ -148,6 +160,7 @@ JpegEncoder::JpegEncoder() :
   cfg->params_.num_tmb_bufs = 0;
 
   cfg->params_.encode_thumbnail = 0;
+  cfg->params_.encode_second_thumbnail = 0;
   if (cfg->params_.encode_thumbnail) {
     cfg->params_.num_tmb_bufs = cfg->params_.num_src_bufs;
   }
@@ -184,6 +197,81 @@ JpegEncoder::~JpegEncoder() {
   delete cfg;
   if (nullptr != libjpeg_interface_) {
     dlclose(libjpeg_interface_);
+  }
+}
+
+void JpegEncoder::UpdateThumbnailData(const CameraBufferMetaData& source_info) {
+  JE_GET_PARAMS(cfg);
+
+  auto &thumbnail_data = in_buffer_.thumbnail_data;
+  if (!thumbnail_data.empty()) {
+    auto thumb_cnt = thumbnail_data.size();
+    if (thumb_cnt > 2) {
+      QMMF_ERROR("%s: Max supported thumbnails is 2. In is %d", __func__,
+          thumb_cnt);
+      // clip to 2
+      thumb_cnt = 2;
+    }
+    // validate data
+    for (uint32_t i = 0; i < thumb_cnt; i++) {
+      if ((thumbnail_data[i].width > source_info.plane_info[0].width) ||
+          (thumbnail_data[i].width == 0) ||
+          (thumbnail_data[i].height > source_info.plane_info[0].height) ||
+          (thumbnail_data[i].height == 0) ||
+          (thumbnail_data[i].thumb_quality > 100) ||
+          (thumbnail_data[i].thumb_quality == 0)) {
+        QMMF_ERROR("%s: Invalid thumbnail input paramethers (%d x %d %d)",
+            __func__,
+            thumbnail_data[i].width, thumbnail_data[i].height,
+            thumbnail_data[i].thumb_quality);
+        return;
+      }
+    }
+
+    for (uint32_t i = 0; i < thumb_cnt; i++) {
+      QMMF_VERBOSE("%s: thumbnail input paramethers (%d x %d %d)",
+          __func__,
+          thumbnail_data[i].width, thumbnail_data[i].height,
+          thumbnail_data[i].thumb_quality);
+    }
+    cfg->params_.encode_thumbnail = 1;
+    cfg->params_.num_tmb_bufs = cfg->params_.num_src_bufs;
+
+    cfg->job_.encode_job.thumb_dim.src_dim.width =
+        source_info.plane_info[0].stride;
+    cfg->job_.encode_job.thumb_dim.src_dim.height =
+        source_info.plane_info[0].scanline;
+    cfg->job_.encode_job.thumb_dim.dst_dim.width = thumbnail_data[0].width;
+    cfg->job_.encode_job.thumb_dim.dst_dim.height = thumbnail_data[0].height;
+    cfg->job_.encode_job.thumb_dim.crop.top = 0;
+    cfg->job_.encode_job.thumb_dim.crop.left = 0;
+    cfg->job_.encode_job.thumb_dim.crop.width =
+        source_info.plane_info[0].width;
+    cfg->job_.encode_job.thumb_dim.crop.height =
+        source_info.plane_info[0].height;
+    cfg->params_.thumb_dim = cfg->job_.encode_job.thumb_dim;
+    cfg->params_.thumb_quality = thumbnail_data[0].thumb_quality;
+
+    if (thumb_cnt == 2) {
+      cfg->params_.encode_second_thumbnail = 1;
+
+      cfg->job_.encode_job.second_thumb_dim.src_dim.width =
+          source_info.plane_info[0].stride;
+      cfg->job_.encode_job.second_thumb_dim.src_dim.height =
+          source_info.plane_info[0].scanline;
+      cfg->job_.encode_job.second_thumb_dim.dst_dim.width =
+          thumbnail_data[1].width;
+      cfg->job_.encode_job.second_thumb_dim.dst_dim.height =
+          thumbnail_data[1].height;
+      cfg->job_.encode_job.second_thumb_dim.crop.top = 0;
+      cfg->job_.encode_job.second_thumb_dim.crop.left = 0;
+      cfg->job_.encode_job.second_thumb_dim.crop.width =
+          source_info.plane_info[0].width;
+      cfg->job_.encode_job.second_thumb_dim.crop.height =
+          source_info.plane_info[0].height;
+      cfg->params_.second_thumb_dim = cfg->job_.encode_job.second_thumb_dim;
+      QMMF_INFO("%s: Encode second thumbnail is enabled", __func__);
+    }
   }
 }
 
@@ -229,13 +317,25 @@ void JpegEncoder::FillImgData(const CameraBufferMetaData& source_info) {
 
   cfg->job_.encode_job.thumb_dim.src_dim.width = source_info.plane_info[0].stride;
   cfg->job_.encode_job.thumb_dim.src_dim.height = source_info.plane_info[0].scanline;
-  cfg->job_.encode_job.thumb_dim.dst_dim.width = 320;
-  cfg->job_.encode_job.thumb_dim.dst_dim.height = 240;
+  cfg->job_.encode_job.thumb_dim.dst_dim.width = kDefaultMainThumbWidth;
+  cfg->job_.encode_job.thumb_dim.dst_dim.height = kDefaultMainThumbHeight;
   cfg->job_.encode_job.thumb_dim.crop.top = 0;
   cfg->job_.encode_job.thumb_dim.crop.left = 0;
   cfg->job_.encode_job.thumb_dim.crop.width = 0;
   cfg->job_.encode_job.thumb_dim.crop.height = 0;
   cfg->params_.thumb_dim = cfg->job_.encode_job.thumb_dim;
+
+  cfg->job_.encode_job.second_thumb_dim.src_dim.width = source_info.plane_info[0].stride;
+  cfg->job_.encode_job.second_thumb_dim.src_dim.height = source_info.plane_info[0].scanline;
+  cfg->job_.encode_job.second_thumb_dim.dst_dim.width =
+      kDefaultSecondThumbWidth;
+  cfg->job_.encode_job.second_thumb_dim.dst_dim.height =
+      kDefaultSecondThumbHeight;
+  cfg->job_.encode_job.second_thumb_dim.crop.top = 0;
+  cfg->job_.encode_job.second_thumb_dim.crop.left = 0;
+  cfg->job_.encode_job.second_thumb_dim.crop.width = 0;
+  cfg->job_.encode_job.second_thumb_dim.crop.height = 0;
+  cfg->params_.second_thumb_dim = cfg->job_.encode_job.second_thumb_dim;
 
   cfg->pic_size_.w = source_info.plane_info[0].width;
   cfg->pic_size_.h = source_info.plane_info[0].height;
@@ -252,9 +352,14 @@ void *JpegEncoder::Encode(size_t *jpeg_size) {
   }
 
   FillImgData(in_buffer_.source_info);
+  // buffer data
   cfg->params_.src_main_buf[0].buf_vaddr = in_buffer_.img_data[0];
   cfg->params_.src_thumb_buf[0].buf_vaddr = in_buffer_.img_data[0];
   cfg->params_.dest_buf[0].buf_vaddr = in_buffer_.out_data[0];
+  cfg->params_.quality = in_buffer_.image_quality;
+  // thumbnail data
+  UpdateThumbnailData(in_buffer_.source_info);
+
   cfg->job_id_ = 0;
 
   cfg->handle_ = cfg->jpeg_open_proc(&cfg->ops_, NULL, cfg->pic_size_, NULL);
@@ -271,7 +376,7 @@ void *JpegEncoder::Encode(size_t *jpeg_size) {
 
   if (!cfg->ops_.start_job(&cfg->job_, &cfg->job_id_)) {
     std::unique_lock<std::mutex> ul(cfg->enc_done_lock_);
-    cfg->enc_done_cond_.wait(ul);
+    cfg->enc_done_cond_.Wait(ul);
     ul.unlock();
 
     if (jpeg_size) {
@@ -311,7 +416,7 @@ void JpegEncoder::EncodeCb(void *p_output, void *userData) {
   enc->job_result_size_ = output->buf_filled_len;
 
   JpegEncoderParams *cfg = (JpegEncoderParams *)enc->cfg_;
-  cfg->enc_done_cond_.notify_one();
+  cfg->enc_done_cond_.Signal();
 }
 
 } //namespace reprocjpegencoder ends here

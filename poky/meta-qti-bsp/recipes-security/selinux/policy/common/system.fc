@@ -27,3 +27,4 @@
 
 /system(/.*)?                 gen_context(system_u:object_r:system_dir_t,s0)
 /system/bin(/.*)?             gen_context(system_u:object_r:bin_t,s0)
+/etc/init\.d(/.*)?            gen_context(system_u:object_r:initrc_exec_t,s0)

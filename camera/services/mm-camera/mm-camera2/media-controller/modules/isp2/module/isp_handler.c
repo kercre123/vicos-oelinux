@@ -575,8 +575,8 @@ static boolean isp_handler_send_dis_config(mct_module_t *module,
   dis_cfg.session_id = session_param->session_id;
   dis_cfg.stream_id = stream_param->stream_info.stream->streamid;
   dis_cfg.streaming_mode = stream_param->stream_info.streaming_mode;
-  dis_cfg.height = stream_param->stream_info.original_dim.height;
-  dis_cfg.width = stream_param->stream_info.original_dim.width;
+  dis_cfg.height = hw_stream_info->height_before_dis;
+  dis_cfg.width = hw_stream_info->width_before_dis;
   dis_cfg.col_num = cs_rs_stats_info.num_cols;
   dis_cfg.row_num = cs_rs_stats_info.num_rows;
  /* send dimensions to DIS */

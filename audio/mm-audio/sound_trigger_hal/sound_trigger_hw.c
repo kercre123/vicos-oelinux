@@ -1454,11 +1454,12 @@ static int stdev_unload_sound_model(const struct sound_trigger_hw_device *dev,
 
     pthread_mutex_lock(&st_session->lock);
     free(st_session->sm_data);
-    free(st_session);
     pthread_mutex_unlock(&st_session->lock);
 
     st_session_deinit(st_session);
     pthread_mutex_destroy(&st_session->lock);
+
+    free(st_session);
 
 exit:
     pthread_mutex_unlock(&stdev->lock);
@@ -1761,6 +1762,7 @@ static int stdev_open(const hw_module_t* module, const char* name,
     stdev->capture_device = AUDIO_DEVICE_IN_BUILTIN_MIC;
     stdev->available_devices = AUDIO_DEVICE_IN_BUILTIN_MIC;
     stdev->client_req_exec_mode = ST_EXEC_MODE_NONE;
+    stdev->ec_ref_dev = AUDIO_DEVICE_OUT_SPEAKER;
 
     pthread_mutex_init(&stdev->lock, (const pthread_mutexattr_t *) NULL);
     pthread_mutex_init(&stdev->ref_cnt_lock, (const pthread_mutexattr_t*)NULL);

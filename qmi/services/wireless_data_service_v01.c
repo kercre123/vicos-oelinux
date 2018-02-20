@@ -5,7 +5,7 @@
 GENERAL DESCRIPTION
   This is the file which defines the wds service Data structures.
 
-  Copyright (c) 2006-2015 Qualcomm Technologies, Inc. All rights reserved.
+  Copyright (c) 2006-2015, 2017 Qualcomm Technologies, Inc. All rights reserved.
   Confidential and Proprietary - Qualcomm Technologies, Inc.
 
 
@@ -16,7 +16,7 @@ GENERAL DESCRIPTION
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7 
-   It was generated on: Mon Sep 21 2015 (Spin 0)
+   It was generated on: Mon Jul 24 2017 (Spin 0)
    From IDL File: wireless_data_service_v01.idl */
 
 #include "stdint.h"
@@ -28,6 +28,133 @@ GENERAL DESCRIPTION
 
 
 /*Type Definitions*/
+static const uint8_t wds_v2x_result_type_data_v01[] = {
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_result_type_v01, service_id),
+
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_result_type_v01, result),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_v2x_non_sps_info_type_data_v01[] = {
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_info_type_v01, service_id),
+
+  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_info_type_v01, port),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_v2x_sps_flow_id_info_data_v01[] = {
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_id_info_v01, req_id),
+
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_id_info_v01, sps_id),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_v2x_sps_flow_result_info_data_v01[] = {
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_result_info_v01, flow_id),
+  QMI_IDL_TYPE88(0, 2),
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_result_info_v01, result),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_op_reserved_pco_info_ex_type_data_v01[] = {
+  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_info_ex_type_v01, pco_id),
+
+  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_info_ex_type_v01, mcc),
+
+  QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_info_ex_type_v01, mnc),
+
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_info_ex_type_v01, mnc_includes_pcs_digit),
+
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_info_ex_type_v01, app_specific_info),
+  QMI_WDS_APP_SPECIFIC_INFO_V01,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_info_ex_type_v01, app_specific_info) - QMI_IDL_OFFSET8(wds_op_reserved_pco_info_ex_type_v01, app_specific_info_len),
+
+  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_op_reserved_pco_info_ex_type_v01, container_id),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_op_reserved_pco_list_info_type_data_v01[] = {
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_list_info_type_v01, pco_info),
+  QMI_WDS_MAX_NUM_PCO_V01,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_list_info_type_v01, pco_info) - QMI_IDL_OFFSET8(wds_op_reserved_pco_list_info_type_v01, pco_info_len),
+  QMI_IDL_TYPE88(0, 4),
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_op_reserved_pco_list_type_data_v01[] = {
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_list_type_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_op_reserved_pco_list_type_v01, pco_list_info),
+  QMI_IDL_TYPE88(0, 5),
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_report_apn_op_reserved_pco_list_data_v01[] = {
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_report_apn_op_reserved_pco_list_v01, report_op_reserved_pco_list_change),
+
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_report_apn_op_reserved_pco_list_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_apn_msisdn_info_type_data_v01[] = {
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_apn_msisdn_info_type_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_apn_msisdn_info_type_v01, msisdn),
+  QMI_WDS_MSISDN_INFO_MAX_V01,
+  QMI_IDL_OFFSET8(wds_apn_msisdn_info_type_v01, msisdn) - QMI_IDL_OFFSET8(wds_apn_msisdn_info_type_v01, msisdn_len),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_report_apn_msisdn_change_data_v01[] = {
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_report_apn_msisdn_change_v01, report_msisdn_info_change),
+
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_report_apn_msisdn_change_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_apn_name_list_type_data_v01[] = {
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_apn_name_list_type_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
 static const uint8_t wds_statistics_indicator_type_data_v01[] = {
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(wds_statistics_indicator_type_v01, stats_period),
@@ -102,7 +229,7 @@ static const uint8_t wds_data_system_status_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_data_system_status_type_v01, network_info),
   QMI_WDS_SYS_NETWORK_MAX_V01,
   QMI_IDL_OFFSET8(wds_data_system_status_type_v01, network_info) - QMI_IDL_OFFSET8(wds_data_system_status_type_v01, network_info_len),
-  QMI_IDL_TYPE88(0, 5),
+  QMI_IDL_TYPE88(0, 16),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -222,7 +349,7 @@ static const uint8_t wds_umts_qos_type_data_v01[] = {
 static const uint8_t wds_umts_qos_with_sig_ind_type_data_v01[] = {
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_umts_qos_with_sig_ind_type_v01, umts_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
   QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(wds_umts_qos_with_sig_ind_type_v01, sig_ind),
 
@@ -398,7 +525,7 @@ static const uint8_t wds_pcscf_ipv4_addr_list_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_pcscf_ipv4_addr_list_type_v01, pcscf_ipv4_addr_list),
   QMI_WDS_PCSCF_ADDR_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_pcscf_ipv4_addr_list_type_v01, pcscf_ipv4_addr_list) - QMI_IDL_OFFSET8(wds_pcscf_ipv4_addr_list_type_v01, pcscf_ipv4_addr_list_len),
-  QMI_IDL_TYPE88(0, 24),
+  QMI_IDL_TYPE88(0, 35),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -415,7 +542,7 @@ static const uint8_t wds_fqdn_list_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_fqdn_list_type_v01, fqdn_list),
   QMI_WDS_FQDN_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_fqdn_list_type_v01, fqdn_list) - QMI_IDL_OFFSET8(wds_fqdn_list_type_v01, fqdn_list_len),
-  QMI_IDL_TYPE88(0, 26),
+  QMI_IDL_TYPE88(0, 37),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -432,7 +559,7 @@ static const uint8_t wds_domain_name_list_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_domain_name_list_type_v01, domain_name_list),
   QMI_WDS_DOMAIN_NAME_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_domain_name_list_type_v01, domain_name_list) - QMI_IDL_OFFSET8(wds_domain_name_list_type_v01, domain_name_list_len),
-  QMI_IDL_TYPE88(0, 28),
+  QMI_IDL_TYPE88(0, 39),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -449,7 +576,7 @@ static const uint8_t wds_pcscf_ipv6_addr_list_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_pcscf_ipv6_addr_list_type_v01, pcscf_ipv6_addr_list),
   QMI_WDS_PCSCF_ADDR_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_pcscf_ipv6_addr_list_type_v01, pcscf_ipv6_addr_list) - QMI_IDL_OFFSET8(wds_pcscf_ipv6_addr_list_type_v01, pcscf_ipv6_addr_list_len),
-  QMI_IDL_TYPE88(0, 30),
+  QMI_IDL_TYPE88(0, 41),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -536,7 +663,7 @@ static const uint8_t wds_full_call_record_type_data_v01[] = {
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_full_call_record_type_v01, call_record),
-  QMI_IDL_TYPE88(0, 36),
+  QMI_IDL_TYPE88(0, 47),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -545,7 +672,7 @@ static const uint8_t wds_full_call_history_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_full_call_history_type_v01, full_call_history),
   ((QMI_WDS_MAX_CALL_HISTORY_V01) & 0xFF), ((QMI_WDS_MAX_CALL_HISTORY_V01) >> 8),
   QMI_IDL_OFFSET8(wds_full_call_history_type_v01, full_call_history) - QMI_IDL_OFFSET8(wds_full_call_history_type_v01, full_call_history_len),
-  QMI_IDL_TYPE88(0, 37),
+  QMI_IDL_TYPE88(0, 48),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -561,7 +688,7 @@ static const uint8_t wds_id_only_call_history_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_id_only_call_history_type_v01, id_only_call_history),
   ((QMI_WDS_MAX_CALL_HISTORY_V01) & 0xFF), ((QMI_WDS_MAX_CALL_HISTORY_V01) >> 8),
   QMI_IDL_OFFSET8(wds_id_only_call_history_type_v01, id_only_call_history) - QMI_IDL_OFFSET8(wds_id_only_call_history_type_v01, id_only_call_history_len),
-  QMI_IDL_TYPE88(0, 39),
+  QMI_IDL_TYPE88(0, 50),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -663,7 +790,7 @@ static const uint8_t wds_embms_tmgi_list_struct_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_embms_tmgi_list_struct_type_v01, tmgi_list),
   QMI_WDS_EMBMS_MAX_TMGI_V01,
   QMI_IDL_OFFSET8(wds_embms_tmgi_list_struct_type_v01, tmgi_list) - QMI_IDL_OFFSET8(wds_embms_tmgi_list_struct_type_v01, tmgi_list_len),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -694,6 +821,33 @@ static const uint8_t wds_pdn_throttle_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_pdn_throttle_info_type_v01, apn_string),
   QMI_WDS_APN_NAME_MAX_V01,
   QMI_IDL_OFFSET8(wds_pdn_throttle_info_type_v01, apn_string) - QMI_IDL_OFFSET8(wds_pdn_throttle_info_type_v01, apn_string_len),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_pdn_throttle_info_ext_type_data_v01[] = {
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, is_ipv4_throttled),
+
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, is_ipv6_throttled),
+
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, is_non_ip_throttled),
+
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, remaining_ipv4_throttled_time),
+
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, remaining_ipv6_throttled_time),
+
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, remaining_non_ip_throttled_time),
+
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, apn_string),
+  QMI_WDS_APN_NAME_MAX_V01,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, apn_string) - QMI_IDL_OFFSET8(wds_pdn_throttle_info_ext_type_v01, apn_string_len),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -763,10 +917,10 @@ static const uint8_t wds_traffic_selector_type_data_v01[] = {
 
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_traffic_selector_type_v01, start_address),
-  QMI_IDL_TYPE88(0, 54),
+  QMI_IDL_TYPE88(0, 66),
   QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_traffic_selector_type_v01, end_address),
-  QMI_IDL_TYPE88(0, 54),
+  QMI_IDL_TYPE88(0, 66),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -947,7 +1101,7 @@ static const uint8_t wds_throughput_info_type_data_v01[] = {
   QMI_IDL_OFFSET8(wds_throughput_info_type_v01, bearer_rlp_mac_id_throughput_info),
   QMI_WDS_MAX_BEARER_RLP_MAC_ID_CONTEXT_V01,
   QMI_IDL_OFFSET8(wds_throughput_info_type_v01, bearer_rlp_mac_id_throughput_info) - QMI_IDL_OFFSET8(wds_throughput_info_type_v01, bearer_rlp_mac_id_throughput_info_len),
-  QMI_IDL_TYPE88(0, 68),
+  QMI_IDL_TYPE88(0, 80),
   QMI_IDL_FLAG_END_VALUE
 };
 
@@ -974,18 +1128,44 @@ static const uint8_t wds_profile_changed_ind_type_data_v01[] = {
   QMI_IDL_FLAG_END_VALUE
 };
 
-static const uint8_t wds_apn_name_list_type_data_v01[] = {
+static const uint8_t wds_apn_param_apn_string_type_data_v01[] = {
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_STRING,
-  QMI_IDL_OFFSET8(wds_apn_name_list_type_v01, apn_name),
+  QMI_IDL_OFFSET8(wds_apn_param_apn_string_type_v01, apn_string),
   QMI_WDS_APN_NAME_MAX_V01,
 
   QMI_IDL_FLAG_END_VALUE
 };
 
-static const uint8_t wds_apn_param_apn_string_type_data_v01[] = {
+static const uint8_t wds_profile_identifier_ex_type_data_v01[] = {
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_profile_identifier_ex_type_v01, profile_ident_type),
+  QMI_IDL_TYPE88(0, 32),
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_STRING,
-  QMI_IDL_OFFSET8(wds_apn_param_apn_string_type_v01, apn_string),
+  QMI_IDL_OFFSET8(wds_profile_identifier_ex_type_v01, apn_name),
   QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_profile_identifier_ex_type_v01, pdp_type),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_v2x_non_sps_flow_info_type_data_v01[] = {
+  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_info_type_v01, reg_info),
+  QMI_IDL_TYPE88(0, 1),
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_info_type_v01, protocol),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t wds_v2x_service_sub_info_type_data_v01[] = {
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_service_sub_info_type_v01, req_id),
+
+  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_service_sub_info_type_v01, action),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -1014,7 +1194,7 @@ static const uint8_t wds_set_event_report_req_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_set_event_report_req_msg_v01, report_stats),
-  QMI_IDL_TYPE88(0, 0),
+  QMI_IDL_TYPE88(0, 11),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_event_report_req_msg_v01, report_data_bearer_tech) - QMI_IDL_OFFSET8(wds_set_event_report_req_msg_v01, report_data_bearer_tech_valid)),
   0x12,
@@ -1124,7 +1304,7 @@ static const uint8_t wds_event_report_ind_msg_data_v01[] = {
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, channel_rate),
-  QMI_IDL_TYPE88(0, 1),
+  QMI_IDL_TYPE88(0, 12),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, data_bearer_tech) - QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, data_bearer_tech_valid)),
   0x17,
@@ -1155,7 +1335,7 @@ static const uint8_t wds_event_report_ind_msg_data_v01[] = {
   0x1D,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, current_bearer_tech),
-  QMI_IDL_TYPE88(0, 2),
+  QMI_IDL_TYPE88(0, 13),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, data_call_status) - QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, data_call_status_valid)),
   0x1F,
@@ -1171,19 +1351,19 @@ static const uint8_t wds_event_report_ind_msg_data_v01[] = {
   0x22,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, data_call_type),
-  QMI_IDL_TYPE88(0, 4),
+  QMI_IDL_TYPE88(0, 15),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, evdo_page_monitor_period_change) - QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, evdo_page_monitor_period_change_valid)),
   0x23,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, evdo_page_monitor_period_change),
-  QMI_IDL_TYPE88(0, 3),
+  QMI_IDL_TYPE88(0, 14),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, system_status) - QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, system_status_valid)),
   0x24,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_event_report_ind_msg_v01, system_status),
-  QMI_IDL_TYPE88(0, 6),
+  QMI_IDL_TYPE88(0, 17),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_event_report_ind_msg_v01, tx_dropped_count) - QMI_IDL_OFFSET16RELATIVE(wds_event_report_ind_msg_v01, tx_dropped_count_valid)),
   0x25,
@@ -1216,7 +1396,7 @@ static const uint8_t wds_event_report_ind_msg_data_v01[] = {
   0x2A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_event_report_ind_msg_v01, bearer_tech_ex),
-  QMI_IDL_TYPE88(0, 7),
+  QMI_IDL_TYPE88(0, 18),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_event_report_ind_msg_v01, uplink_fc_seq_num) - QMI_IDL_OFFSET16RELATIVE(wds_event_report_ind_msg_v01, uplink_fc_seq_num_valid)),
   0x2B,
@@ -1227,7 +1407,7 @@ static const uint8_t wds_event_report_ind_msg_data_v01[] = {
   0x2C,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_event_report_ind_msg_v01, delay_dormancy_result),
-  QMI_IDL_TYPE88(0, 8)
+  QMI_IDL_TYPE88(0, 19)
 };
 
 static const uint8_t wds_abort_req_msg_data_v01[] = {
@@ -1324,10 +1504,62 @@ static const uint8_t wds_indication_register_req_msg_data_v01[] = {
    QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_embms_svc_interest),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_dl_thrpt_reporting_status_change) - QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_dl_thrpt_reporting_status_change_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_dl_thrpt_reporting_status_change) - QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_dl_thrpt_reporting_status_change_valid)),
   0x21,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_dl_thrpt_reporting_status_change)
+  QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_dl_thrpt_reporting_status_change),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_lte_attach_params) - QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_lte_attach_params_valid)),
+  0x22,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_lte_attach_params),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_apn_op_reserved_pco_list) - QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_apn_op_reserved_pco_list_valid)),
+  0x23,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_apn_op_reserved_pco_list),
+  QMI_IDL_TYPE88(0, 7),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_apn_msisdn_change) - QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_apn_msisdn_change_valid)),
+  0x24,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_indication_register_req_msg_v01, report_apn_msisdn_change),
+  QMI_IDL_TYPE88(0, 9),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_3gpp_rab_reject_ind) - QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_3gpp_rab_reject_ind_valid)),
+  0x25,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_indication_register_req_msg_v01, report_3gpp_rab_reject_ind),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_pdn_throttle_info) - QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_pdn_throttle_info_valid)),
+  0x26,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_indication_register_req_msg_v01, report_pdn_throttle_info),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_ma_keep_alive_status) - QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_ma_keep_alive_status_valid)),
+  0x27,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_indication_register_req_msg_v01, report_ma_keep_alive_status),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_sps_flow_reg_result) - QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_sps_flow_reg_result_valid)),
+  0x28,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_indication_register_req_msg_v01, report_v2x_sps_flow_reg_result),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_sps_flow_update_result) - QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_sps_flow_update_result_valid)),
+  0x29,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_indication_register_req_msg_v01, report_v2x_sps_flow_update_result),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_sps_flow_dereg_result) - QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_sps_flow_dereg_result_valid)),
+  0x2A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_indication_register_req_msg_v01, report_v2x_sps_flow_dereg_result),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_service_sub_result) - QMI_IDL_OFFSET16RELATIVE(wds_indication_register_req_msg_v01, report_v2x_service_sub_result_valid)),
+  0x2B,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_indication_register_req_msg_v01, report_v2x_service_sub_result)
 };
 
 static const uint8_t wds_indication_register_resp_msg_data_v01[] = {
@@ -1425,17 +1657,27 @@ static const uint8_t wds_start_network_interface_req_msg_data_v01[] = {
   0x36,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_start_network_interface_req_msg_v01, handoff_context),
-  QMI_IDL_TYPE88(0, 9),
+  QMI_IDL_TYPE88(0, 20),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, ips_id) - QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, ips_id_valid)),
   0x37,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_start_network_interface_req_msg_v01, ips_id),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, apn_type) - QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, apn_type_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, apn_type) - QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, apn_type_valid)),
   0x38,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET16ARRAY(wds_start_network_interface_req_msg_v01, apn_type)
+  QMI_IDL_OFFSET16ARRAY(wds_start_network_interface_req_msg_v01, apn_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, disallow_in_roaming) - QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, disallow_in_roaming_valid)),
+  0x39,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_start_network_interface_req_msg_v01, disallow_in_roaming),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, mo_exceptional_data_capability) - QMI_IDL_OFFSET16RELATIVE(wds_start_network_interface_req_msg_v01, mo_exceptional_data_capability_valid)),
+  0x3A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_start_network_interface_req_msg_v01, mo_exceptional_data_capability)
 };
 
 static const uint8_t wds_start_network_interface_resp_msg_data_v01[] = {
@@ -1457,7 +1699,7 @@ static const uint8_t wds_start_network_interface_resp_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_start_network_interface_resp_msg_v01, verbose_call_end_reason),
-  QMI_IDL_TYPE88(0, 10),
+  QMI_IDL_TYPE88(0, 21),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_start_network_interface_resp_msg_v01, ep_id) - QMI_IDL_OFFSET8(wds_start_network_interface_resp_msg_v01, ep_id_valid)),
   0x12,
@@ -1476,10 +1718,15 @@ static const uint8_t wds_stop_network_interface_req_msg_data_v01[] = {
    QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, pkt_data_handle),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, disable_autoconnect) - QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, disable_autoconnect_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, disable_autoconnect) - QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, disable_autoconnect_valid)),
   0x10,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, disable_autoconnect)
+  QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, disable_autoconnect),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, local_abort) - QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, local_abort_valid)),
+  0x11,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_stop_network_interface_req_msg_v01, local_abort)
 };
 
 static const uint8_t wds_stop_network_interface_resp_msg_data_v01[] = {
@@ -1510,7 +1757,7 @@ static const uint8_t wds_pkt_srvc_status_ind_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_pkt_srvc_status_ind_msg_v01, status),
-  QMI_IDL_TYPE88(0, 11),
+  QMI_IDL_TYPE88(0, 22),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_pkt_srvc_status_ind_msg_v01, call_end_reason) - QMI_IDL_OFFSET8(wds_pkt_srvc_status_ind_msg_v01, call_end_reason_valid)),
   0x10,
@@ -1521,7 +1768,7 @@ static const uint8_t wds_pkt_srvc_status_ind_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_pkt_srvc_status_ind_msg_v01, verbose_call_end_reason),
-  QMI_IDL_TYPE88(0, 10),
+  QMI_IDL_TYPE88(0, 21),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_pkt_srvc_status_ind_msg_v01, ip_family) - QMI_IDL_OFFSET8(wds_pkt_srvc_status_ind_msg_v01, ip_family_valid)),
   0x12,
@@ -1559,7 +1806,7 @@ static const uint8_t wds_get_current_channel_rate_resp_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_current_channel_rate_resp_msg_v01, rates),
-  QMI_IDL_TYPE88(0, 12)
+  QMI_IDL_TYPE88(0, 23)
 };
 
 static const uint8_t wds_get_pkt_statistics_req_msg_data_v01[] = {
@@ -1708,25 +1955,25 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, umts_requested_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, umts_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, umts_minimum_qos_valid)),
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, umts_minimum_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, gprs_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, gprs_requested_qos_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, gprs_requested_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, gprs_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, gprs_minimum_qos_valid)),
   0x1A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, gprs_minimum_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, username) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, username_valid)),
   0x1B,
@@ -1774,13 +2021,13 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0x23,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, tft_id1_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, tft_id2_params) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, tft_id2_params_valid)),
   0x24,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, tft_id2_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, pdp_context) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, pdp_context_valid)),
   0x25,
@@ -1807,13 +2054,13 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0x29,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, umts_requested_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, umts_minimum_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, umts_minimum_qos_with_sig_ind_valid)),
   0x2A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, umts_minimum_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, primary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, primary_dns_ipv6_address_preference_valid)),
   0x2B,
@@ -1836,7 +2083,7 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0x2E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, threegpp_lte_qos_params),
-  QMI_IDL_TYPE88(0, 17),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, apn_disabled_flag) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, apn_disabled_flag_valid)),
   0x2F,
@@ -1877,7 +2124,7 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0x39,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, max_pdn_conn_per_block) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, max_pdn_conn_per_block_valid)),
   0x3A,
@@ -1945,6 +2192,17 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, override_home_pdp_type),
 
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, op_reserved_pco_id_list) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, op_reserved_pco_id_list_valid)),
+  0x47,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, op_reserved_pco_id_list),
+  QMI_WDS_MAX_NUM_PCO_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, msisdn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, msisdn_flag_valid)),
+  0x48,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, msisdn_flag),
+
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, common_pcscf_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, common_pcscf_addr_using_dhcp_valid)),
   0x7D,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
@@ -1969,7 +2227,7 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0x81,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, common_pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, common_pco_mcc) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, common_pco_mcc_valid)),
   0x82,
@@ -2007,7 +2265,7 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0x88,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, linger_params),
-  QMI_IDL_TYPE88(0, 20),
+  QMI_IDL_TYPE88(0, 31),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, common_secodnary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, common_secodnary_dns_ipv6_address_preference_valid)),
   0x89,
@@ -2228,7 +2486,7 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
   0xBF,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, pco_mnc_includes_pcs_digit_3gpp2),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, failure_timer) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, failure_timer_valid)),
   0xC0,
@@ -2257,6 +2515,11 @@ static const uint8_t wds_create_profile_req_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, dns_addr_using_dhcp_3gpp2),
 
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, clat_enabled) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, clat_enabled_valid)),
+  0xDE,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_create_profile_req_msg_v01, clat_enabled),
+
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, ipv6_prefix_delegation) - QMI_IDL_OFFSET16RELATIVE(wds_create_profile_req_msg_v01, ipv6_prefix_delegation_valid)),
   0xDF,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
@@ -2272,7 +2535,7 @@ static const uint8_t wds_create_profile_resp_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_create_profile_resp_msg_v01, profile),
-  QMI_IDL_TYPE88(0, 21),
+  QMI_IDL_TYPE88(0, 32),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_create_profile_resp_msg_v01, extended_error_code) - QMI_IDL_OFFSET8(wds_create_profile_resp_msg_v01, extended_error_code_valid)),
   0xE0,
@@ -2284,7 +2547,7 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_modify_profile_settings_req_msg_v01, profile),
-  QMI_IDL_TYPE88(0, 21),
+  QMI_IDL_TYPE88(0, 32),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modify_profile_settings_req_msg_v01, profile_name) - QMI_IDL_OFFSET8(wds_modify_profile_settings_req_msg_v01, profile_name_valid)),
   0x10,
@@ -2327,25 +2590,25 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, umts_requested_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, umts_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, umts_minimum_qos_valid)),
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, umts_minimum_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, gprs_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, gprs_requested_qos_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, gprs_requested_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, gprs_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, gprs_minimum_qos_valid)),
   0x1A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, gprs_minimum_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, username) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, username_valid)),
   0x1B,
@@ -2393,13 +2656,13 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x23,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, tft_id1_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, tft_id2_params) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, tft_id2_params_valid)),
   0x24,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, tft_id2_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, pdp_context) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, pdp_context_valid)),
   0x25,
@@ -2426,13 +2689,13 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x29,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, umts_requested_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, umts_minimum_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, umts_minimum_qos_with_sig_ind_valid)),
   0x2A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, umts_minimum_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, primary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, primary_dns_ipv6_address_preference_valid)),
   0x2B,
@@ -2455,7 +2718,7 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x2E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, threegpp_lte_qos_params),
-  QMI_IDL_TYPE88(0, 17),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, apn_disabled_flag) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, apn_disabled_flag_valid)),
   0x2F,
@@ -2496,7 +2759,7 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x39,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, max_pdn_conn_per_block) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, max_pdn_conn_per_block_valid)),
   0x3A,
@@ -2564,6 +2827,17 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, override_home_pdp_type),
 
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, op_reserved_pco_id_list) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, op_reserved_pco_id_list_valid)),
+  0x47,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, op_reserved_pco_id_list),
+  QMI_WDS_MAX_NUM_PCO_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, msisdn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, msisdn_flag_valid)),
+  0x48,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, msisdn_flag),
+
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, common_pcscf_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, common_pcscf_addr_using_dhcp_valid)),
   0x7D,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
@@ -2588,7 +2862,7 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x81,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, common_pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, common_pco_mcc) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, common_pco_mcc_valid)),
   0x82,
@@ -2626,7 +2900,7 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0x88,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, linger_params),
-  QMI_IDL_TYPE88(0, 20),
+  QMI_IDL_TYPE88(0, 31),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, common_secodnary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, common_secodnary_dns_ipv6_address_preference_valid)),
   0x89,
@@ -2842,7 +3116,7 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
   0xBF,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit_3gpp2),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, failure_timer) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, failure_timer_valid)),
   0xC0,
@@ -2871,6 +3145,11 @@ static const uint8_t wds_modify_profile_settings_req_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, dns_addr_using_dhcp_3gpp2),
 
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, clat_enabled) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, clat_enabled_valid)),
+  0xDE,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_modify_profile_settings_req_msg_v01, clat_enabled),
+
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, ipv6_prefix_delegation) - QMI_IDL_OFFSET16RELATIVE(wds_modify_profile_settings_req_msg_v01, ipv6_prefix_delegation_valid)),
   0xDF,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
@@ -2893,7 +3172,7 @@ static const uint8_t wds_delete_profile_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_delete_profile_req_msg_v01, profile),
-  QMI_IDL_TYPE88(0, 21)
+  QMI_IDL_TYPE88(0, 32)
 };
 
 static const uint8_t wds_delete_profile_resp_msg_data_v01[] = {
@@ -2926,7 +3205,7 @@ static const uint8_t wds_get_profile_list_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_get_profile_list_resp_msg_v01, profile_list),
   QMI_WDS_PROFILE_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_get_profile_list_resp_msg_v01, profile_list) - QMI_IDL_OFFSET8(wds_get_profile_list_resp_msg_v01, profile_list_len),
-  QMI_IDL_TYPE88(0, 22),
+  QMI_IDL_TYPE88(0, 33),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_list_resp_msg_v01, extended_error_code) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_list_resp_msg_v01, extended_error_code_valid)),
   0xE0,
@@ -2938,7 +3217,7 @@ static const uint8_t wds_get_profile_settings_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_profile_settings_req_msg_v01, profile),
-  QMI_IDL_TYPE88(0, 21)
+  QMI_IDL_TYPE88(0, 32)
 };
 
 static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
@@ -2988,25 +3267,25 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, umts_requested_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, umts_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, umts_minimum_qos_valid)),
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, umts_minimum_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, gprs_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, gprs_requested_qos_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, gprs_requested_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, gprs_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, gprs_minimum_qos_valid)),
   0x1A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, gprs_minimum_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, username) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, username_valid)),
   0x1B,
@@ -3054,13 +3333,13 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x23,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, tft_id1_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, tft_id2_params) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, tft_id2_params_valid)),
   0x24,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, tft_id2_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, pdp_context) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, pdp_context_valid)),
   0x25,
@@ -3087,13 +3366,13 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x29,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, umts_requested_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, umts_minimum_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, umts_minimum_qos_with_sig_ind_valid)),
   0x2A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, umts_minimum_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, primary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, primary_dns_ipv6_address_preference_valid)),
   0x2B,
@@ -3116,7 +3395,7 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x2E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, threegpp_lte_qos_params),
-  QMI_IDL_TYPE88(0, 17),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, apn_disabled_flag) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, apn_disabled_flag_valid)),
   0x2F,
@@ -3157,7 +3436,7 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x39,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, max_pdn_conn_per_block) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, max_pdn_conn_per_block_valid)),
   0x3A,
@@ -3225,6 +3504,17 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, override_home_pdp_type),
 
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, op_reserved_pco_id_list) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, op_reserved_pco_id_list_valid)),
+  0x47,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, op_reserved_pco_id_list),
+  QMI_WDS_MAX_NUM_PCO_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, msisdn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, msisdn_flag_valid)),
+  0x48,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, msisdn_flag),
+
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, common_pcscf_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, common_pcscf_addr_using_dhcp_valid)),
   0x7D,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
@@ -3249,7 +3539,7 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x81,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, common_pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, common_pco_mcc) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, common_pco_mcc_valid)),
   0x82,
@@ -3287,7 +3577,7 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x88,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, linger_params),
-  QMI_IDL_TYPE88(0, 20),
+  QMI_IDL_TYPE88(0, 31),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, common_secodnary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, common_secodnary_dns_ipv6_address_preference_valid)),
   0x89,
@@ -3320,6 +3610,11 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0x8E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, common_apn_disabled_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, persistent) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, persistent_valid)),
+  0x8F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, persistent),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, negotiate_dns_server_preference) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, negotiate_dns_server_preference_valid)),
   0x90,
@@ -3503,7 +3798,7 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0xBF,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, pco_mnc_includes_pcs_digit_3gpp2),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, failure_timer) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, failure_timer_valid)),
   0xC0,
@@ -3531,6 +3826,11 @@ static const uint8_t wds_get_profile_settings_resp_msg_data_v01[] = {
   0xC4,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, dns_addr_using_dhcp_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, clat_enabled) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, clat_enabled_valid)),
+  0xDE,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_profile_settings_resp_msg_v01, clat_enabled),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, ipv6_prefix_delegation) - QMI_IDL_OFFSET16RELATIVE(wds_get_profile_settings_resp_msg_v01, ipv6_prefix_delegation_valid)),
   0xDF,
@@ -3596,25 +3896,25 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, umts_requested_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, umts_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, umts_minimum_qos_valid)),
   0x18,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, umts_minimum_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, gprs_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, gprs_requested_qos_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, gprs_requested_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, gprs_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, gprs_minimum_qos_valid)),
   0x1A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, gprs_minimum_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, username) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, username_valid)),
   0x1B,
@@ -3662,13 +3962,13 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0x23,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, tft_id1_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, tft_id2_params) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, tft_id2_params_valid)),
   0x24,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, tft_id2_params),
-  QMI_IDL_TYPE88(0, 16),
+  QMI_IDL_TYPE88(0, 27),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, pdp_context) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, pdp_context_valid)),
   0x25,
@@ -3695,13 +3995,13 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0x29,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, umts_requested_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, umts_minimum_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, umts_minimum_qos_with_sig_ind_valid)),
   0x2A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, umts_minimum_qos_with_sig_ind),
-  QMI_IDL_TYPE88(0, 14),
+  QMI_IDL_TYPE88(0, 25),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, primary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, primary_dns_ipv6_address_preference_valid)),
   0x2B,
@@ -3724,7 +4024,7 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0x2E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, threegpp_lte_qos_params),
-  QMI_IDL_TYPE88(0, 17),
+  QMI_IDL_TYPE88(0, 28),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, apn_disabled_flag) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, apn_disabled_flag_valid)),
   0x2F,
@@ -3765,7 +4065,7 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0x39,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, max_pdn_conn_per_block) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, max_pdn_conn_per_block_valid)),
   0x3A,
@@ -3833,6 +4133,17 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, override_home_pdp_type),
 
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, op_reserved_pco_id_list) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, op_reserved_pco_id_list_valid)),
+  0x47,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, op_reserved_pco_id_list),
+  QMI_WDS_MAX_NUM_PCO_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, msisdn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, msisdn_flag_valid)),
+  0x48,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, msisdn_flag),
+
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, common_pcscf_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, common_pcscf_addr_using_dhcp_valid)),
   0x7D,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
@@ -3857,7 +4168,7 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0x81,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, common_pco_mnc_includes_pcs_digit),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, common_pco_mcc) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, common_pco_mcc_valid)),
   0x82,
@@ -3895,7 +4206,7 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0x88,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, linger_params),
-  QMI_IDL_TYPE88(0, 20),
+  QMI_IDL_TYPE88(0, 31),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, common_secodnary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, common_secodnary_dns_ipv6_address_preference_valid)),
   0x89,
@@ -4111,7 +4422,7 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0xBF,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, pco_mnc_includes_pcs_digit_3gpp2),
-  QMI_IDL_TYPE88(0, 18),
+  QMI_IDL_TYPE88(0, 29),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, failure_timer) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, failure_timer_valid)),
   0xC0,
@@ -4139,6 +4450,11 @@ static const uint8_t wds_get_default_settings_resp_msg_data_v01[] = {
   0xC4,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, dns_addr_using_dhcp_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, clat_enabled) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, clat_enabled_valid)),
+  0xDE,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_default_settings_resp_msg_v01, clat_enabled),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, ipv6_prefix_delegation) - QMI_IDL_OFFSET16RELATIVE(wds_get_default_settings_resp_msg_v01, ipv6_prefix_delegation_valid)),
   0xDF,
@@ -4195,13 +4511,13 @@ static const uint8_t wds_get_runtime_settings_resp_msg_data_v01[] = {
   0x17,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, umts_requested_qos),
-  QMI_IDL_TYPE88(0, 13),
+  QMI_IDL_TYPE88(0, 24),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, gprs_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, gprs_requested_qos_valid)),
   0x19,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, gprs_requested_qos),
-  QMI_IDL_TYPE88(0, 15),
+  QMI_IDL_TYPE88(0, 26),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, username) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, username_valid)),
   0x1B,
@@ -4223,7 +4539,7 @@ static const uint8_t wds_get_runtime_settings_resp_msg_data_v01[] = {
   0x1F,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, profile),
-  QMI_IDL_TYPE88(0, 23),
+  QMI_IDL_TYPE88(0, 34),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ipv4_gateway_addr) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ipv4_gateway_addr_valid)),
   0x20,
@@ -4244,25 +4560,25 @@ static const uint8_t wds_get_runtime_settings_resp_msg_data_v01[] = {
   0x23,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, pcscf_ipv4_server_addr_list),
-  QMI_IDL_TYPE88(0, 25),
+  QMI_IDL_TYPE88(0, 36),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, fqdn) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, fqdn_valid)),
   0x24,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, fqdn),
-  QMI_IDL_TYPE88(0, 27),
+  QMI_IDL_TYPE88(0, 38),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ipv6_addr) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ipv6_addr_valid)),
   0x25,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, ipv6_addr),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ipv6_gateway_addr) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ipv6_gateway_addr_valid)),
   0x26,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, ipv6_gateway_addr),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, primary_dns_IPv6_address) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, primary_dns_IPv6_address_valid)),
   0x27,
@@ -4285,7 +4601,7 @@ static const uint8_t wds_get_runtime_settings_resp_msg_data_v01[] = {
   0x2A,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, domain_name_list),
-  QMI_IDL_TYPE88(0, 29),
+  QMI_IDL_TYPE88(0, 40),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ip_family) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, ip_family_valid)),
   0x2B,
@@ -4306,13 +4622,26 @@ static const uint8_t wds_get_runtime_settings_resp_msg_data_v01[] = {
   0x2E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, pcscf_ipv6_server_addr_list),
-  QMI_IDL_TYPE88(0, 31),
+  QMI_IDL_TYPE88(0, 42),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco_valid)),
   0x2F,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco),
-  QMI_IDL_TYPE88(0, 19)
+  QMI_IDL_TYPE88(0, 30),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco_list) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco_list_valid)),
+  0x30,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, operator_reserved_pco_list),
+  QMI_IDL_TYPE88(0, 5),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, msisdn) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, msisdn_valid)),
+  0x31,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_runtime_settings_resp_msg_v01, msisdn),
+  QMI_WDS_MSISDN_INFO_MAX_V01,
+  QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, msisdn) - QMI_IDL_OFFSET16RELATIVE(wds_get_runtime_settings_resp_msg_v01, msisdn_len)
 };
 
 static const uint8_t wds_set_mip_mode_req_msg_data_v01[] = {
@@ -4452,7 +4781,7 @@ static const uint8_t wds_get_dun_call_info_req_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_dun_call_info_req_msg_v01, report_stats),
-  QMI_IDL_TYPE88(0, 33),
+  QMI_IDL_TYPE88(0, 44),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_dun_call_info_req_msg_v01, report_dormancy_status) - QMI_IDL_OFFSET8(wds_get_dun_call_info_req_msg_v01, report_dormancy_status_valid)),
   0x12,
@@ -4480,7 +4809,7 @@ static const uint8_t wds_get_dun_call_info_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_dun_call_info_resp_msg_v01, connection_status),
-  QMI_IDL_TYPE88(0, 34),
+  QMI_IDL_TYPE88(0, 45),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_dun_call_info_resp_msg_v01, call_end_reason) - QMI_IDL_OFFSET8(wds_get_dun_call_info_resp_msg_v01, call_end_reason_valid)),
   0x11,
@@ -4511,7 +4840,7 @@ static const uint8_t wds_get_dun_call_info_resp_msg_data_v01[] = {
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_dun_call_info_resp_msg_v01, channel_rate),
-  QMI_IDL_TYPE88(0, 12),
+  QMI_IDL_TYPE88(0, 23),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_dun_call_info_resp_msg_v01, last_call_tx_ok_bytes_count) - QMI_IDL_OFFSET8(wds_get_dun_call_info_resp_msg_v01, last_call_tx_ok_bytes_count_valid)),
   0x17,
@@ -4569,7 +4898,7 @@ static const uint8_t wds_dun_call_info_ind_msg_data_v01[] = {
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_dun_call_info_ind_msg_v01, channel_rate),
-  QMI_IDL_TYPE88(0, 1)
+  QMI_IDL_TYPE88(0, 12)
 };
 
 /*
@@ -4593,7 +4922,7 @@ static const uint8_t wds_set_active_mip_profile_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_set_active_mip_profile_req_msg_v01, profile_identifier),
-  QMI_IDL_TYPE88(0, 35)
+  QMI_IDL_TYPE88(0, 46)
 };
 
 static const uint8_t wds_set_active_mip_profile_resp_msg_data_v01[] = {
@@ -4671,7 +5000,7 @@ static const uint8_t wds_modify_mip_profile_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_modify_mip_profile_req_msg_v01, profile_identifier),
-  QMI_IDL_TYPE88(0, 35),
+  QMI_IDL_TYPE88(0, 46),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modify_mip_profile_req_msg_v01, profile_state) - QMI_IDL_OFFSET8(wds_modify_mip_profile_req_msg_v01, profile_state_valid)),
   0x10,
@@ -4863,13 +5192,13 @@ static const uint8_t wds_get_current_data_bearer_technology_resp_msg_data_v01[] 
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_current_data_bearer_technology_resp_msg_v01, current_bearer_tech),
-  QMI_IDL_TYPE88(0, 2),
+  QMI_IDL_TYPE88(0, 13),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_current_data_bearer_technology_resp_msg_v01, last_bearer_tech) - QMI_IDL_OFFSET8(wds_get_current_data_bearer_technology_resp_msg_v01, last_bearer_tech_valid)),
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_current_data_bearer_technology_resp_msg_v01, last_bearer_tech),
-  QMI_IDL_TYPE88(0, 2)
+  QMI_IDL_TYPE88(0, 13)
 };
 
 /*
@@ -4888,13 +5217,13 @@ static const uint8_t wds_call_history_list_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_call_history_list_resp_msg_v01, full_call_history),
-  QMI_IDL_TYPE88(0, 38),
+  QMI_IDL_TYPE88(0, 49),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_call_history_list_resp_msg_v01, id_only_call_history) - QMI_IDL_OFFSET16RELATIVE(wds_call_history_list_resp_msg_v01, id_only_call_history_valid)),
   0x11,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_call_history_list_resp_msg_v01, id_only_call_history),
-  QMI_IDL_TYPE88(0, 40)
+  QMI_IDL_TYPE88(0, 51)
 };
 
 static const uint8_t wds_call_history_read_req_msg_data_v01[] = {
@@ -4912,7 +5241,7 @@ static const uint8_t wds_call_history_read_resp_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_call_history_read_resp_msg_v01, call_history_record),
-  QMI_IDL_TYPE88(0, 36)
+  QMI_IDL_TYPE88(0, 47)
 };
 
 /*
@@ -4949,7 +5278,7 @@ static const uint8_t wds_get_default_profile_num_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_default_profile_num_req_msg_v01, profile),
-  QMI_IDL_TYPE88(0, 41)
+  QMI_IDL_TYPE88(0, 52)
 };
 
 static const uint8_t wds_get_default_profile_num_resp_msg_data_v01[] = {
@@ -4972,7 +5301,7 @@ static const uint8_t wds_set_default_profile_num_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_set_default_profile_num_req_msg_v01, profile_identifier),
-  QMI_IDL_TYPE88(0, 42)
+  QMI_IDL_TYPE88(0, 53)
 };
 
 static const uint8_t wds_set_default_profile_num_resp_msg_data_v01[] = {
@@ -4991,7 +5320,7 @@ static const uint8_t wds_reset_profile_to_default_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_reset_profile_to_default_req_msg_v01, profile_identifier),
-  QMI_IDL_TYPE88(0, 21)
+  QMI_IDL_TYPE88(0, 32)
 };
 
 static const uint8_t wds_reset_profile_to_default_resp_msg_data_v01[] = {
@@ -5010,7 +5339,7 @@ static const uint8_t wds_reset_profile_param_to_invalid_req_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_reset_profile_param_to_invalid_req_msg_v01, profile_param),
-  QMI_IDL_TYPE88(0, 43)
+  QMI_IDL_TYPE88(0, 54)
 };
 
 static const uint8_t wds_reset_profile_param_to_invalid_resp_msg_data_v01[] = {
@@ -5042,7 +5371,7 @@ static const uint8_t wds_fmc_set_tunnel_params_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_fmc_set_tunnel_params_req_msg_v01, tunnel_params),
-  QMI_IDL_TYPE88(0, 44),
+  QMI_IDL_TYPE88(0, 55),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_fmc_set_tunnel_params_req_msg_v01, ipv4_sock_addr) - QMI_IDL_OFFSET8(wds_fmc_set_tunnel_params_req_msg_v01, ipv4_sock_addr_valid)),
   0x10,
@@ -5093,7 +5422,7 @@ static const uint8_t wds_fmc_get_tunnel_params_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_fmc_get_tunnel_params_resp_msg_v01, tunnel_params),
-  QMI_IDL_TYPE88(0, 44),
+  QMI_IDL_TYPE88(0, 55),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_fmc_get_tunnel_params_resp_msg_v01, ipv4_sock_addr) - QMI_IDL_OFFSET8(wds_fmc_get_tunnel_params_resp_msg_v01, ipv4_sock_addr_valid)),
   0x11,
@@ -5207,7 +5536,7 @@ static const uint8_t wds_get_pre_dormancy_cdma_settings_resp_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_pre_dormancy_cdma_settings_resp_msg_v01, pre_dormancy_settings),
-  QMI_IDL_TYPE88(0, 45)
+  QMI_IDL_TYPE88(0, 56)
 };
 
 static const uint8_t wds_set_cam_timer_req_msg_data_v01[] = {
@@ -5364,7 +5693,7 @@ static const uint8_t wds_get_evdo_page_monitor_period_resp_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_evdo_page_monitor_period_resp_msg_v01, evdo_page_monitor_period),
-  QMI_IDL_TYPE88(0, 3)
+  QMI_IDL_TYPE88(0, 14)
 };
 
 /*
@@ -5382,7 +5711,7 @@ static const uint8_t wds_get_call_throttle_info_resp_msg_data_v01[] = {
   QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_call_throttle_info_resp_msg_v01, call_throttled),
-  QMI_IDL_TYPE88(0, 46)
+  QMI_IDL_TYPE88(0, 57)
 };
 
 static const uint8_t wds_get_nsapi_req_msg_data_v01[] = {
@@ -5501,7 +5830,7 @@ static const uint8_t wds_dun_ctrl_event_report_ind_msg_data_v01[] = {
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_dun_ctrl_event_report_ind_msg_v01, previous_dun_failure_reason),
-  QMI_IDL_TYPE88(0, 10)
+  QMI_IDL_TYPE88(0, 21)
 };
 
 static const uint8_t wds_control_pending_dun_call_req_msg_data_v01[] = {
@@ -5525,7 +5854,7 @@ static const uint8_t wds_embms_tmgi_activate_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, tranx_id) - QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, tranx_id_valid)),
   0x10,
@@ -5543,7 +5872,7 @@ static const uint8_t wds_embms_tmgi_activate_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, earfcn_list),
   QMI_WDS_EMBMS_MAX_EARFCN_V01,
   QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, earfcn_list) - QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, earfcn_list_len),
-  QMI_IDL_TYPE88(0, 48),
+  QMI_IDL_TYPE88(0, 59),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, sai_list) - QMI_IDL_OFFSET8(wds_embms_tmgi_activate_req_msg_v01, sai_list_valid)),
   0x13,
@@ -5601,7 +5930,7 @@ static const uint8_t wds_embms_tmgi_activate_ind_msg_data_v01[] = {
   0x02,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_activate_ind_msg_v01, tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_activate_ind_msg_v01, tranx_id) - QMI_IDL_OFFSET8(wds_embms_tmgi_activate_ind_msg_v01, tranx_id_valid)),
   0x10,
@@ -5613,7 +5942,7 @@ static const uint8_t wds_embms_tmgi_deactivate_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_deactivate_req_msg_v01, tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_deactivate_req_msg_v01, tranx_id) - QMI_IDL_OFFSET8(wds_embms_tmgi_deactivate_req_msg_v01, tranx_id_valid)),
   0x10,
@@ -5641,7 +5970,7 @@ static const uint8_t wds_embms_tmgi_deactivate_ind_msg_data_v01[] = {
   0x02,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_deactivate_ind_msg_v01, tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_deactivate_ind_msg_v01, tranx_id) - QMI_IDL_OFFSET8(wds_embms_tmgi_deactivate_ind_msg_v01, tranx_id_valid)),
   0x10,
@@ -5670,7 +5999,7 @@ static const uint8_t wds_embms_tmgi_list_query_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_list_query_resp_msg_v01, tmgi_list),
-  QMI_IDL_TYPE88(0, 49),
+  QMI_IDL_TYPE88(0, 60),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_embms_tmgi_list_query_resp_msg_v01, warn_reason) - QMI_IDL_OFFSET16RELATIVE(wds_embms_tmgi_list_query_resp_msg_v01, warn_reason_valid)),
   0x11,
@@ -5683,7 +6012,7 @@ static const uint8_t wds_embms_tmgi_list_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_list_ind_msg_v01, tmgi_list),
-  QMI_IDL_TYPE88(0, 49),
+  QMI_IDL_TYPE88(0, 60),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_embms_tmgi_list_ind_msg_v01, warn_reason) - QMI_IDL_OFFSET16RELATIVE(wds_embms_tmgi_list_ind_msg_v01, warn_reason_valid)),
   0x11,
@@ -5735,7 +6064,7 @@ static const uint8_t wds_get_last_data_call_status_resp_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_last_data_call_status_resp_msg_v01, data_call_type),
-  QMI_IDL_TYPE88(0, 50),
+  QMI_IDL_TYPE88(0, 61),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_last_data_call_status_resp_msg_v01, data_call_addr_family) - QMI_IDL_OFFSET8(wds_get_last_data_call_status_resp_msg_v01, data_call_addr_family_valid)),
   0x12,
@@ -5759,7 +6088,7 @@ static const uint8_t wds_get_current_data_system_status_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_current_data_system_status_resp_msg_v01, system_status),
-  QMI_IDL_TYPE88(0, 6)
+  QMI_IDL_TYPE88(0, 17)
 };
 
 static const uint8_t wds_get_pdn_throttle_info_req_msg_data_v01[] = {
@@ -5774,13 +6103,39 @@ static const uint8_t wds_get_pdn_throttle_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, resp),
   QMI_IDL_TYPE88(1, 0),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info) - QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info) - QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_valid)),
   0x10,
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info),
   QMI_WDS_APNS_MAX_V01,
   QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info) - QMI_IDL_OFFSET8(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_len),
-  QMI_IDL_TYPE88(0, 51)
+  QMI_IDL_TYPE88(0, 62),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_ext) - QMI_IDL_OFFSET16RELATIVE(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_ext_valid)),
+  0x11,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_ext),
+  QMI_WDS_APNS_MAX_V01,
+  QMI_IDL_OFFSET16RELATIVE(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_ext) - QMI_IDL_OFFSET16RELATIVE(wds_get_pdn_throttle_info_resp_msg_v01, throttle_info_ext_len),
+  QMI_IDL_TYPE88(0, 63)
+};
+
+static const uint8_t wds_pdn_throttle_info_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_pdn_throttle_info_ind_msg_v01, throttle_info) - QMI_IDL_OFFSET8(wds_pdn_throttle_info_ind_msg_v01, throttle_info_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ind_msg_v01, throttle_info),
+  QMI_WDS_APNS_MAX_V01,
+  QMI_IDL_OFFSET8(wds_pdn_throttle_info_ind_msg_v01, throttle_info) - QMI_IDL_OFFSET8(wds_pdn_throttle_info_ind_msg_v01, throttle_info_len),
+  QMI_IDL_TYPE88(0, 62),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_pdn_throttle_info_ind_msg_v01, throttle_info_ext) - QMI_IDL_OFFSET16RELATIVE(wds_pdn_throttle_info_ind_msg_v01, throttle_info_ext_valid)),
+  0x11,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_pdn_throttle_info_ind_msg_v01, throttle_info_ext),
+  QMI_WDS_APNS_MAX_V01,
+  QMI_IDL_OFFSET16RELATIVE(wds_pdn_throttle_info_ind_msg_v01, throttle_info_ext) - QMI_IDL_OFFSET16RELATIVE(wds_pdn_throttle_info_ind_msg_v01, throttle_info_ext_len),
+  QMI_IDL_TYPE88(0, 63)
 };
 
 /*
@@ -5875,10 +6230,37 @@ static const uint8_t wds_get_lte_attach_params_resp_msg_data_v01[] = {
    QMI_IDL_1_BYTE_ENUM,
   QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ip_type),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ota_attach_performed) - QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ota_attach_performed_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ota_attach_performed) - QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ota_attach_performed_valid)),
   0x12,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ota_attach_performed)
+  QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ota_attach_performed),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_address) - QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_address_valid)),
+  0x13,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_address),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_gateway_addr) - QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_gateway_addr_valid)),
+  0x14,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_gateway_addr),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_subnet_mask) - QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_subnet_mask_valid)),
+  0x15,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv4_subnet_mask),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv6_addr) - QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv6_addr_valid)),
+  0x16,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_lte_attach_params_resp_msg_v01, ipv6_addr),
+  QMI_IDL_TYPE88(0, 43),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_lte_attach_params_resp_msg_v01, ipv6_gateway_addr) - QMI_IDL_OFFSET16RELATIVE(wds_get_lte_attach_params_resp_msg_v01, ipv6_gateway_addr_valid)),
+  0x17,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_get_lte_attach_params_resp_msg_v01, ipv6_gateway_addr),
+  QMI_IDL_TYPE88(0, 43)
 };
 
 /*
@@ -5916,12 +6298,12 @@ static const uint8_t wds_embms_tmgi_act_deact_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, act_tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   0x02,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, deact_tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, tranx_id) - QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, tranx_id_valid)),
   0x10,
@@ -5939,7 +6321,7 @@ static const uint8_t wds_embms_tmgi_act_deact_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, earfcn_list),
   QMI_WDS_EMBMS_MAX_EARFCN_V01,
   QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, earfcn_list) - QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, earfcn_list_len),
-  QMI_IDL_TYPE88(0, 48),
+  QMI_IDL_TYPE88(0, 59),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, sai_list) - QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_req_msg_v01, sai_list_valid)),
   0x13,
@@ -5997,7 +6379,7 @@ static const uint8_t wds_embms_tmgi_act_deact_ind_msg_data_v01[] = {
   0x02,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_ind_msg_v01, act_tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   0x03,
    QMI_IDL_GENERIC_4_BYTE,
@@ -6006,7 +6388,7 @@ static const uint8_t wds_embms_tmgi_act_deact_ind_msg_data_v01[] = {
   0x04,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_ind_msg_v01, deact_tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_ind_msg_v01, tranx_id) - QMI_IDL_OFFSET8(wds_embms_tmgi_act_deact_ind_msg_v01, tranx_id_valid)),
   0x10,
@@ -6035,7 +6417,7 @@ static const uint8_t wds_set_additional_pdn_filter_req_msg_data_v01[] = {
   0x02,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_set_additional_pdn_filter_req_msg_v01, net_policy_info),
-  QMI_IDL_TYPE88(0, 52),
+  QMI_IDL_TYPE88(0, 64),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_additional_pdn_filter_req_msg_v01, next_hdr_prot) - QMI_IDL_OFFSET8(wds_set_additional_pdn_filter_req_msg_v01, next_hdr_prot_valid)),
   0x10,
@@ -6046,7 +6428,7 @@ static const uint8_t wds_set_additional_pdn_filter_req_msg_data_v01[] = {
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_set_additional_pdn_filter_req_msg_v01, tcp_udp_src),
-  QMI_IDL_TYPE88(0, 53)
+  QMI_IDL_TYPE88(0, 65)
 };
 
 static const uint8_t wds_set_additional_pdn_filter_resp_msg_data_v01[] = {
@@ -6127,7 +6509,7 @@ static const uint8_t wds_reverse_ip_transport_connection_ind_msg_data_v01[] = {
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_reverse_ip_transport_connection_ind_msg_v01, ipv6_addr),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_reverse_ip_transport_connection_ind_msg_v01, mtu) - QMI_IDL_OFFSET8(wds_reverse_ip_transport_connection_ind_msg_v01, mtu_valid)),
   0x15,
@@ -6171,13 +6553,13 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   0x14,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_ipsec_static_sa_config_resp_msg_v01, dest_addr),
-  QMI_IDL_TYPE88(0, 54),
+  QMI_IDL_TYPE88(0, 66),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_ipsec_static_sa_config_resp_msg_v01, local_addr) - QMI_IDL_OFFSET8(wds_get_ipsec_static_sa_config_resp_msg_v01, local_addr_valid)),
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_ipsec_static_sa_config_resp_msg_v01, local_addr),
-  QMI_IDL_TYPE88(0, 54),
+  QMI_IDL_TYPE88(0, 66),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_ipsec_static_sa_config_resp_msg_v01, hash_algo) - QMI_IDL_OFFSET8(wds_get_ipsec_static_sa_config_resp_msg_v01, hash_algo_valid)),
   0x16,
@@ -6233,13 +6615,13 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   0x1E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, nat_local_ip_addr),
-  QMI_IDL_TYPE88(0, 54),
+  QMI_IDL_TYPE88(0, 66),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, nat_remote_ip_addr) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, nat_remote_ip_addr_valid)),
   0x1F,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, nat_remote_ip_addr),
-  QMI_IDL_TYPE88(0, 54),
+  QMI_IDL_TYPE88(0, 66),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv4_address) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv4_address_valid)),
   0x20,
@@ -6292,7 +6674,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_address),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_address) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_address_len),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dns) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dns_valid)),
   0x28,
@@ -6300,7 +6682,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dns),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dns) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dns_len),
-  QMI_IDL_TYPE88(0, 56),
+  QMI_IDL_TYPE88(0, 68),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_nbns) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_nbns_valid)),
   0x29,
@@ -6308,7 +6690,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_nbns),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_nbns) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_nbns_len),
-  QMI_IDL_TYPE88(0, 56),
+  QMI_IDL_TYPE88(0, 68),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dhcp_valid)),
   0x2A,
@@ -6316,7 +6698,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dhcp),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_dhcp_len),
-  QMI_IDL_TYPE88(0, 56),
+  QMI_IDL_TYPE88(0, 68),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv4_subnet) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv4_subnet_valid)),
   0x2B,
@@ -6324,7 +6706,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv4_subnet),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv4_subnet) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv4_subnet_len),
-  QMI_IDL_TYPE88(0, 55),
+  QMI_IDL_TYPE88(0, 67),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_supported_attributes) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_supported_attributes_valid)),
   0x2C,
@@ -6339,7 +6721,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_subnet),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_subnet) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_ipv6_subnet_len),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_pcscf_ipv4_address) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_pcscf_ipv4_address_valid)),
   0x2E,
@@ -6354,7 +6736,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_pcscf_ipv6_address),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_pcscf_ipv6_address) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_internal_pcscf_ipv6_address_len),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip4_ha) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip4_ha_valid)),
   0x30,
@@ -6376,7 +6758,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_ha),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_ha) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_ha_len),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_hoa) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_hoa_valid)),
   0x33,
@@ -6384,7 +6766,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_hoa),
   QMI_WDS_IPSEC_SA_CFG_ATTR_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_hoa) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, cfg_attr_3gpp2_mip6_hoa_len),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_list) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_list_valid)),
   0x34,
@@ -6392,7 +6774,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_list),
   QMI_WDS_IPSEC_SA_MAX_TS_COUNT_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_list) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_list_len),
-  QMI_IDL_TYPE88(0, 57),
+  QMI_IDL_TYPE88(0, 69),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_responder_list) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_responder_list_valid)),
   0x35,
@@ -6400,7 +6782,7 @@ static const uint8_t wds_get_ipsec_static_sa_config_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_responder_list),
   QMI_WDS_IPSEC_SA_MAX_TS_COUNT_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_responder_list) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, traffic_selector_responder_list_len),
-  QMI_IDL_TYPE88(0, 57),
+  QMI_IDL_TYPE88(0, 69),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, apn) - QMI_IDL_OFFSET16RELATIVE(wds_get_ipsec_static_sa_config_resp_msg_v01, apn_valid)),
   0x36,
@@ -6461,13 +6843,13 @@ static const uint8_t wds_get_data_bearer_technology_ex_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_data_bearer_technology_ex_resp_msg_v01, bearer_tech),
-  QMI_IDL_TYPE88(0, 7),
+  QMI_IDL_TYPE88(0, 18),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_data_bearer_technology_ex_resp_msg_v01, last_bearer_tech) - QMI_IDL_OFFSET8(wds_get_data_bearer_technology_ex_resp_msg_v01, last_bearer_tech_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_data_bearer_technology_ex_resp_msg_v01, last_bearer_tech),
-  QMI_IDL_TYPE88(0, 7)
+  QMI_IDL_TYPE88(0, 18)
 };
 
 static const uint8_t wds_set_lte_data_retry_req_msg_data_v01[] = {
@@ -6552,13 +6934,13 @@ static const uint8_t wds_handoff_information_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_handoff_information_ind_msg_v01, handoff_event_info),
-  QMI_IDL_TYPE88(0, 58),
+  QMI_IDL_TYPE88(0, 70),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_handoff_information_ind_msg_v01, handoff_failure_reason) - QMI_IDL_OFFSET8(wds_handoff_information_ind_msg_v01, handoff_failure_reason_valid)),
   0x11,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_handoff_information_ind_msg_v01, handoff_failure_reason),
-  QMI_IDL_TYPE88(0, 59)
+  QMI_IDL_TYPE88(0, 71)
 };
 
 static const uint8_t wds_set_data_path_req_msg_data_v01[] = {
@@ -6623,7 +7005,7 @@ static const uint8_t wds_embms_sai_list_query_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list),
   QMI_WDS_EMBMS_FREQ_SAI_MAX_V01,
   QMI_IDL_OFFSET8(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list) - QMI_IDL_OFFSET8(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list_len),
-  QMI_IDL_TYPE88(0, 60),
+  QMI_IDL_TYPE88(0, 72),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list_ex) - QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list_ex_valid)),
   0x11,
@@ -6631,7 +7013,7 @@ static const uint8_t wds_embms_sai_list_query_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list_ex),
   QMI_WDS_EMBMS_FREQ_SAI_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list_ex) - QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_query_resp_msg_v01, freq_sai_list_ex_len),
-  QMI_IDL_TYPE88(0, 61)
+  QMI_IDL_TYPE88(0, 73)
 };
 
 static const uint8_t wds_embms_sai_list_ind_msg_data_v01[] = {
@@ -6641,7 +7023,7 @@ static const uint8_t wds_embms_sai_list_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_embms_sai_list_ind_msg_v01, freq_sai_list),
   QMI_WDS_EMBMS_FREQ_SAI_MAX_V01,
   QMI_IDL_OFFSET8(wds_embms_sai_list_ind_msg_v01, freq_sai_list) - QMI_IDL_OFFSET8(wds_embms_sai_list_ind_msg_v01, freq_sai_list_len),
-  QMI_IDL_TYPE88(0, 60),
+  QMI_IDL_TYPE88(0, 72),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_ind_msg_v01, tranx_id) - QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_ind_msg_v01, tranx_id_valid)),
   0x11,
@@ -6654,7 +7036,7 @@ static const uint8_t wds_embms_sai_list_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET16ARRAY(wds_embms_sai_list_ind_msg_v01, freq_sai_list_ex),
   QMI_WDS_EMBMS_FREQ_SAI_MAX_V01,
   QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_ind_msg_v01, freq_sai_list_ex) - QMI_IDL_OFFSET16RELATIVE(wds_embms_sai_list_ind_msg_v01, freq_sai_list_ex_len),
-  QMI_IDL_TYPE88(0, 61)
+  QMI_IDL_TYPE88(0, 73)
 };
 
 static const uint8_t wds_bind_mux_data_port_req_msg_data_v01[] = {
@@ -6722,7 +7104,7 @@ static const uint8_t wds_internal_iface_ev_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_internal_iface_ev_ind_msg_v01, outage),
-  QMI_IDL_TYPE88(0, 62),
+  QMI_IDL_TYPE88(0, 74),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_internal_iface_ev_ind_msg_v01, extended_ip_config_status) - QMI_IDL_OFFSET8(wds_internal_iface_ev_ind_msg_v01, extended_ip_config_status_valid)),
   0x11,
@@ -6748,13 +7130,13 @@ static const uint8_t wds_internal_iface_ev_ind_msg_data_v01[] = {
   0x15,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_internal_iface_ev_ind_msg_v01, rf_conditions),
-  QMI_IDL_TYPE88(0, 63),
+  QMI_IDL_TYPE88(0, 75),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_internal_iface_ev_ind_msg_v01, dos_ack_info) - QMI_IDL_OFFSET8(wds_internal_iface_ev_ind_msg_v01, dos_ack_info_valid)),
   0x16,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_internal_iface_ev_ind_msg_v01, dos_ack_info),
-  QMI_IDL_TYPE88(0, 64)
+  QMI_IDL_TYPE88(0, 76)
 };
 
 static const uint8_t wds_get_internal_runtime_settings_req_msg_data_v01[] = {
@@ -6784,7 +7166,7 @@ static const uint8_t wds_get_internal_runtime_settings_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_internal_runtime_settings_resp_msg_v01, rf_conditions),
-  QMI_IDL_TYPE88(0, 63),
+  QMI_IDL_TYPE88(0, 75),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_internal_runtime_settings_resp_msg_v01, dorm_timer) - QMI_IDL_OFFSET8(wds_get_internal_runtime_settings_resp_msg_v01, dorm_timer_valid)),
   0x11,
@@ -6822,7 +7204,7 @@ static const uint8_t wds_get_internal_runtime_settings_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_get_internal_runtime_settings_resp_msg_v01, operation_failure),
   QMI_WDS_MAX_RUNTIME_SETTINGS_FAILURES_V01,
   QMI_IDL_OFFSET8(wds_get_internal_runtime_settings_resp_msg_v01, operation_failure) - QMI_IDL_OFFSET8(wds_get_internal_runtime_settings_resp_msg_v01, operation_failure_len),
-  QMI_IDL_TYPE88(0, 65)
+  QMI_IDL_TYPE88(0, 77)
 };
 
 static const uint8_t wds_set_internal_runtime_settings_req_msg_data_v01[] = {
@@ -6840,7 +7222,7 @@ static const uint8_t wds_set_internal_runtime_settings_req_msg_data_v01[] = {
   0x12,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_set_internal_runtime_settings_req_msg_v01, session_timer),
-  QMI_IDL_TYPE88(0, 66),
+  QMI_IDL_TYPE88(0, 78),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_internal_runtime_settings_req_msg_v01, hdr_1x_handdown_option) - QMI_IDL_OFFSET8(wds_set_internal_runtime_settings_req_msg_v01, hdr_1x_handdown_option_valid)),
   0x13,
@@ -6880,7 +7262,7 @@ static const uint8_t wds_set_internal_runtime_settings_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_set_internal_runtime_settings_resp_msg_v01, operation_failure),
   QMI_WDS_MAX_RUNTIME_SETTINGS_FAILURES_V01,
   QMI_IDL_OFFSET8(wds_set_internal_runtime_settings_resp_msg_v01, operation_failure) - QMI_IDL_OFFSET8(wds_set_internal_runtime_settings_resp_msg_v01, operation_failure_len),
-  QMI_IDL_TYPE88(0, 67)
+  QMI_IDL_TYPE88(0, 79)
 };
 
 /*
@@ -6928,7 +7310,7 @@ static const uint8_t wds_get_last_throughput_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_get_last_throughput_info_resp_msg_v01, throughput_info),
   QMI_WDS_MAX_THROUGHPUT_INFO_V01,
   QMI_IDL_OFFSET8(wds_get_last_throughput_info_resp_msg_v01, throughput_info) - QMI_IDL_OFFSET8(wds_get_last_throughput_info_resp_msg_v01, throughput_info_len),
-  QMI_IDL_TYPE88(0, 69)
+  QMI_IDL_TYPE88(0, 81)
 };
 
 static const uint8_t wds_throughput_info_ind_msg_data_v01[] = {
@@ -6938,7 +7320,7 @@ static const uint8_t wds_throughput_info_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_throughput_info_ind_msg_v01, throughput_info),
   QMI_WDS_MAX_THROUGHPUT_INFO_V01,
   QMI_IDL_OFFSET8(wds_throughput_info_ind_msg_v01, throughput_info) - QMI_IDL_OFFSET8(wds_throughput_info_ind_msg_v01, throughput_info_len),
-  QMI_IDL_TYPE88(0, 69)
+  QMI_IDL_TYPE88(0, 81)
 };
 
 static const uint8_t wds_config_profile_list_req_msg_data_v01[] = {
@@ -6948,7 +7330,7 @@ static const uint8_t wds_config_profile_list_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_config_profile_list_req_msg_v01, profile_event_register),
   QMI_WDS_PROFILE_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_config_profile_list_req_msg_v01, profile_event_register) - QMI_IDL_OFFSET8(wds_config_profile_list_req_msg_v01, profile_event_register_len),
-  QMI_IDL_TYPE88(0, 70)
+  QMI_IDL_TYPE88(0, 82)
 };
 
 static const uint8_t wds_config_profile_list_resp_msg_data_v01[] = {
@@ -6963,7 +7345,7 @@ static const uint8_t wds_profile_changed_ind_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_profile_changed_ind_msg_v01, profile_changed_ind),
-  QMI_IDL_TYPE88(0, 71)
+  QMI_IDL_TYPE88(0, 83)
 };
 
 static const uint8_t wds_get_capabilities_req_msg_data_v01[] = {
@@ -7003,7 +7385,7 @@ static const uint8_t wds_get_roaming_info_resp_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_get_roaming_info_resp_msg_v01, roaming_apn_name_list),
   QMI_WDS_APN_NAME_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_get_roaming_info_resp_msg_v01, roaming_apn_name_list) - QMI_IDL_OFFSET8(wds_get_roaming_info_resp_msg_v01, roaming_apn_name_list_len),
-  QMI_IDL_TYPE88(0, 72)
+  QMI_IDL_TYPE88(0, 10)
 };
 
 static const uint8_t wds_roaming_info_ind_msg_data_v01[] = {
@@ -7013,7 +7395,7 @@ static const uint8_t wds_roaming_info_ind_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_roaming_info_ind_msg_v01, roaming_apn_name_list),
   QMI_WDS_APN_NAME_LIST_MAX_V01,
   QMI_IDL_OFFSET8(wds_roaming_info_ind_msg_v01, roaming_apn_name_list) - QMI_IDL_OFFSET8(wds_roaming_info_ind_msg_v01, roaming_apn_name_list_len),
-  QMI_IDL_TYPE88(0, 72)
+  QMI_IDL_TYPE88(0, 10)
 };
 
 static const uint8_t wds_get_delegated_ipv6_prefix_req_msg_data_v01[] = {
@@ -7033,7 +7415,7 @@ static const uint8_t wds_get_delegated_ipv6_prefix_resp_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_get_delegated_ipv6_prefix_resp_msg_v01, ipv6_prefix),
-  QMI_IDL_TYPE88(0, 32)
+  QMI_IDL_TYPE88(0, 43)
 };
 
 static const uint8_t wds_remove_delegated_ipv6_prefix_req_msg_data_v01[] = {
@@ -7041,7 +7423,7 @@ static const uint8_t wds_remove_delegated_ipv6_prefix_req_msg_data_v01[] = {
   0x10,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_remove_delegated_ipv6_prefix_req_msg_v01, ipv6_prefix),
-  QMI_IDL_TYPE88(0, 32),
+  QMI_IDL_TYPE88(0, 43),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_remove_delegated_ipv6_prefix_req_msg_v01, host_ll_addr) - QMI_IDL_OFFSET8(wds_remove_delegated_ipv6_prefix_req_msg_v01, host_ll_addr_valid)),
   0x11,
@@ -7166,7 +7548,7 @@ static const uint8_t wds_embms_content_desc_update_req_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_content_desc_update_req_msg_v01, tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   0x02,
    QMI_IDL_GENERIC_2_BYTE,
@@ -7269,7 +7651,7 @@ static const uint8_t wds_embms_content_desc_control_ind_msg_data_v01[] = {
   0x01,
    QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_embms_content_desc_control_ind_msg_v01, tmgi),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_embms_content_desc_control_ind_msg_v01, tranx_id) - QMI_IDL_OFFSET8(wds_embms_content_desc_control_ind_msg_v01, tranx_id_valid)),
   0x10,
@@ -7335,7 +7717,7 @@ static const uint8_t wds_apn_param_info_change_ind_msg_data_v01[] = {
   QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_AGGREGATE,
   QMI_IDL_OFFSET8(wds_apn_param_info_change_ind_msg_v01, changed_apn_string_info),
   QMI_WDS_MAX_APN_INFO_ARRAY_SIZE_V01,
-  QMI_IDL_TYPE88(0, 73),
+  QMI_IDL_TYPE88(0, 84),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_apn_param_info_change_ind_msg_v01, changed_pdp_type_info) - QMI_IDL_OFFSET16RELATIVE(wds_apn_param_info_change_ind_msg_v01, changed_pdp_type_info_valid)),
   0x11,
@@ -7429,7 +7811,7 @@ static const uint8_t wds_embms_svc_interest_info_req_msg_data_v01[] = {
   QMI_IDL_OFFSET8(wds_embms_svc_interest_info_req_msg_v01, tmgi_list),
   QMI_WDS_EMBMS_SVC_INTEREST_MAX_V01,
   QMI_IDL_OFFSET8(wds_embms_svc_interest_info_req_msg_v01, tmgi_list) - QMI_IDL_OFFSET8(wds_embms_svc_interest_info_req_msg_v01, tmgi_list_len),
-  QMI_IDL_TYPE88(0, 47),
+  QMI_IDL_TYPE88(0, 58),
 
   QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_embms_svc_interest_info_req_msg_v01, tranx_id) - QMI_IDL_OFFSET16RELATIVE(wds_embms_svc_interest_info_req_msg_v01, tranx_id_valid)),
   0x10,
@@ -7506,8 +7888,1657 @@ static const uint8_t wds_keep_alive_data_session_resp_msg_data_v01[] = {
   QMI_IDL_TYPE88(1, 0)
 };
 
+static const uint8_t wds_set_always_on_pdn_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_always_on_pdn_req_msg_v01, profile_index_3gpp) - QMI_IDL_OFFSET8(wds_set_always_on_pdn_req_msg_v01, profile_index_3gpp_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_set_always_on_pdn_req_msg_v01, profile_index_3gpp),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_always_on_pdn_req_msg_v01, applicable_rat_mask) - QMI_IDL_OFFSET8(wds_set_always_on_pdn_req_msg_v01, applicable_rat_mask_valid)),
+  0x11,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(wds_set_always_on_pdn_req_msg_v01, applicable_rat_mask)
+};
+
+static const uint8_t wds_set_always_on_pdn_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_set_always_on_pdn_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_apn_op_reserved_pco_list_change_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_apn_op_reserved_pco_list_change_ind_msg_v01, pco_list),
+  QMI_IDL_TYPE88(0, 6)
+};
+
+static const uint8_t wds_get_apn_op_reserved_pco_list_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_apn_op_reserved_pco_list_req_msg_v01, apn_name) - QMI_IDL_OFFSET8(wds_get_apn_op_reserved_pco_list_req_msg_v01, apn_name_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_get_apn_op_reserved_pco_list_req_msg_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01
+};
+
+static const uint8_t wds_get_apn_op_reserved_pco_list_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_apn_op_reserved_pco_list_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_apn_op_reserved_pco_list_resp_msg_v01, pco_list_info) - QMI_IDL_OFFSET8(wds_get_apn_op_reserved_pco_list_resp_msg_v01, pco_list_info_valid)),
+  0x10,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_apn_op_reserved_pco_list_resp_msg_v01, pco_list_info),
+  QMI_IDL_TYPE88(0, 5)
+};
+
+static const uint8_t wds_apn_msisdn_change_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_apn_msisdn_change_ind_msg_v01, apn_msisdn_info),
+  QMI_IDL_TYPE88(0, 8)
+};
+
+static const uint8_t wds_get_apn_msisdn_info_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_req_msg_v01, apn_name) - QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_req_msg_v01, apn_name_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_req_msg_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01
+};
+
+static const uint8_t wds_get_apn_msisdn_info_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_resp_msg_v01, msisdn) - QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_resp_msg_v01, msisdn_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_resp_msg_v01, msisdn),
+  QMI_WDS_MSISDN_INFO_MAX_V01,
+  QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_resp_msg_v01, msisdn) - QMI_IDL_OFFSET8(wds_get_apn_msisdn_info_resp_msg_v01, msisdn_len)
+};
+
+/*
+ * wds_tear_down_always_on_pdn_req_msg is empty
+ * static const uint8_t wds_tear_down_always_on_pdn_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t wds_tear_down_always_on_pdn_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_tear_down_always_on_pdn_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_lte_attach_params_ind_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, attach_params_valid),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, apn_string) - QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, apn_string_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, apn_string),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ip_type) - QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ip_type_valid)),
+  0x11,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ip_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_address) - QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_address_valid)),
+  0x12,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_address),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_gateway_addr) - QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_gateway_addr_valid)),
+  0x13,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_gateway_addr),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_subnet_mask) - QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_subnet_mask_valid)),
+  0x14,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv4_subnet_mask),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv6_addr) - QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv6_addr_valid)),
+  0x15,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_lte_attach_params_ind_msg_v01, ipv6_addr),
+  QMI_IDL_TYPE88(0, 43),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_lte_attach_params_ind_msg_v01, ipv6_gateway_addr) - QMI_IDL_OFFSET16RELATIVE(wds_lte_attach_params_ind_msg_v01, ipv6_gateway_addr_valid)),
+  0x16,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_lte_attach_params_ind_msg_v01, ipv6_gateway_addr),
+  QMI_IDL_TYPE88(0, 43)
+};
+
+static const uint8_t wds_reset_and_modify_profile_settings_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, profile),
+  QMI_IDL_TYPE88(0, 32),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, profile_name) - QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, profile_name_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, profile_name),
+  QMI_WDS_PROFILE_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_type) - QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_type_valid)),
+  0x11,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_hdr_compression_type) - QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_hdr_compression_type_valid)),
+  0x12,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_hdr_compression_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_data_compression_type) - QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_data_compression_type_valid)),
+  0x13,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_data_compression_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, apn_name) - QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, apn_name_valid)),
+  0x14,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_req_msg_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_DNS_IPv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_DNS_IPv4_address_preference_valid)),
+  0x15,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, primary_DNS_IPv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_DNS_IPv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_DNS_IPv4_address_preference_valid)),
+  0x16,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_DNS_IPv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_requested_qos_valid)),
+  0x17,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, umts_requested_qos),
+  QMI_IDL_TYPE88(0, 24),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_minimum_qos_valid)),
+  0x18,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, umts_minimum_qos),
+  QMI_IDL_TYPE88(0, 24),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, gprs_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, gprs_requested_qos_valid)),
+  0x19,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, gprs_requested_qos),
+  QMI_IDL_TYPE88(0, 26),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, gprs_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, gprs_minimum_qos_valid)),
+  0x1A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, gprs_minimum_qos),
+  QMI_IDL_TYPE88(0, 26),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, username) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, username_valid)),
+  0x1B,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, username),
+  QMI_WDS_USER_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, password) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, password_valid)),
+  0x1C,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, password),
+  QMI_WDS_PASSWORD_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, authentication_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, authentication_preference_valid)),
+  0x1D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, authentication_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipv4_address_preference_valid)),
+  0x1E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, ipv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_pco) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_pco_valid)),
+  0x1F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_pco),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_access_control_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_access_control_flag_valid)),
+  0x20,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_access_control_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_dhcp_valid)),
+  0x21,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_dhcp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, im_cn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, im_cn_flag_valid)),
+  0x22,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, im_cn_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, tft_id1_params) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, tft_id1_params_valid)),
+  0x23,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, tft_id1_params),
+  QMI_IDL_TYPE88(0, 27),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, tft_id2_params) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, tft_id2_params_valid)),
+  0x24,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, tft_id2_params),
+  QMI_IDL_TYPE88(0, 27),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_context) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_context_valid)),
+  0x25,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdp_context),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_flag_valid)),
+  0x26,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_id) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_id_valid)),
+  0x27,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, primary_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipv6_address_preference_valid)),
+  0x28,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_requested_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_requested_qos_with_sig_ind_valid)),
+  0x29,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, umts_requested_qos_with_sig_ind),
+  QMI_IDL_TYPE88(0, 25),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_minimum_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_minimum_qos_with_sig_ind_valid)),
+  0x2A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, umts_minimum_qos_with_sig_ind),
+  QMI_IDL_TYPE88(0, 25),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_dns_ipv6_address_preference_valid)),
+  0x2B,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, primary_dns_ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secodnary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secodnary_dns_ipv6_address_preference_valid)),
+  0x2C,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, secodnary_dns_ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, addr_allocation_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, addr_allocation_preference_valid)),
+  0x2D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, addr_allocation_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, threegpp_lte_qos_params) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, threegpp_lte_qos_params_valid)),
+  0x2E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, threegpp_lte_qos_params),
+  QMI_IDL_TYPE88(0, 28),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_disabled_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_disabled_flag_valid)),
+  0x2F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, apn_disabled_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_inactivity_timeout) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_inactivity_timeout_valid)),
+  0x30,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_inactivity_timeout),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_class) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_class_valid)),
+  0x31,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, apn_class),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_bearer) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_bearer_valid)),
+  0x35,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, apn_bearer),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, support_emergency_calls) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, support_emergency_calls_valid)),
+  0x36,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, support_emergency_calls),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, op_pco_id) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, op_pco_id_valid)),
+  0x37,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, op_pco_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mcc) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mcc_valid)),
+  0x38,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mcc),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit_valid)),
+  0x39,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit),
+  QMI_IDL_TYPE88(0, 29),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, max_pdn_conn_per_block) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, max_pdn_conn_per_block_valid)),
+  0x3A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, max_pdn_conn_per_block),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, max_pdn_conn_timer) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, max_pdn_conn_timer_valid)),
+  0x3B,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, max_pdn_conn_timer),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_req_wait_interval) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_req_wait_interval_valid)),
+  0x3C,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_req_wait_interval),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_user_data_3gpp) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_user_data_3gpp_valid)),
+  0x3D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, app_user_data_3gpp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, roaming_disallowed) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, roaming_disallowed_valid)),
+  0x3E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, roaming_disallowed),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_discon_wait_timer) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_discon_wait_timer_valid)),
+  0x3F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_discon_wait_timer),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, dns_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, dns_addr_using_dhcp_valid)),
+  0x40,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, dns_addr_using_dhcp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lte_roaming_pdp_type) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lte_roaming_pdp_type_valid)),
+  0x41,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, lte_roaming_pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_roaming_pdp_type) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, umts_roaming_pdp_type_valid)),
+  0x42,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, umts_roaming_pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, iwlan_to_lte_roaming_ho_allowed_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, iwlan_to_lte_roaming_ho_allowed_flag_valid)),
+  0x43,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, iwlan_to_lte_roaming_ho_allowed_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lte_to_iwlan_roaming_ho_allowed_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lte_to_iwlan_roaming_ho_allowed_flag_valid)),
+  0x44,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, lte_to_iwlan_roaming_ho_allowed_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, failure_timer_3gpp) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, failure_timer_3gpp_valid)),
+  0x45,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, failure_timer_3gpp),
+  QMI_WDS_3GPP_MAX_FAILURE_TIMER_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, override_home_pdp_type) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, override_home_pdp_type_valid)),
+  0x46,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, override_home_pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, op_reserved_pco_id_list) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, op_reserved_pco_id_list_valid)),
+  0x47,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, op_reserved_pco_id_list),
+  QMI_WDS_MAX_NUM_PCO_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, msisdn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, msisdn_flag_valid)),
+  0x48,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, msisdn_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pcscf_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pcscf_addr_using_dhcp_valid)),
+  0x7D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_pcscf_addr_using_dhcp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_dns_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_dns_addr_using_dhcp_valid)),
+  0x7E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_dns_addr_using_dhcp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pdp_type) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pdp_type_valid)),
+  0x7F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_app_user_data) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_app_user_data_valid)),
+  0x80,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_app_user_data),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pco_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pco_mnc_includes_pcs_digit_valid)),
+  0x81,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_pco_mnc_includes_pcs_digit),
+  QMI_IDL_TYPE88(0, 29),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pco_mcc) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_pco_mcc_valid)),
+  0x82,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_pco_mcc),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_op_pco_id) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_op_pco_id_valid)),
+  0x83,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_op_pco_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_auth_password) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_auth_password_valid)),
+  0x84,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_auth_password),
+  QMI_WDS_PASSWORD_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_user_id) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_user_id_valid)),
+  0x85,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_user_id),
+  QMI_WDS_USER_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_auth_protocol) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_auth_protocol_valid)),
+  0x86,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_auth_protocol),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_is_pcscf_address_needed) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_is_pcscf_address_needed_valid)),
+  0x87,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_is_pcscf_address_needed),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, linger_params) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, linger_params_valid)),
+  0x88,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, linger_params),
+  QMI_IDL_TYPE88(0, 31),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_secodnary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_secodnary_dns_ipv6_address_preference_valid)),
+  0x89,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_secodnary_dns_ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_primary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_primary_dns_ipv6_address_preference_valid)),
+  0x8A,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_primary_dns_ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_secondary_DNS_IPv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_secondary_DNS_IPv4_address_preference_valid)),
+  0x8B,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_secondary_DNS_IPv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_primary_DNS_IPv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_primary_DNS_IPv4_address_preference_valid)),
+  0x8C,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_primary_DNS_IPv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_apn_class) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_apn_class_valid)),
+  0x8D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_apn_class),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_apn_disabled_flag) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, common_apn_disabled_flag_valid)),
+  0x8E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, common_apn_disabled_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, negotiate_dns_server_preference) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, negotiate_dns_server_preference_valid)),
+  0x90,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, negotiate_dns_server_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ppp_session_close_timer_DO) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ppp_session_close_timer_DO_valid)),
+  0x91,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, ppp_session_close_timer_DO),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ppp_session_close_timer_1x) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ppp_session_close_timer_1x_valid)),
+  0x92,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, ppp_session_close_timer_1x),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, allow_linger) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, allow_linger_valid)),
+  0x93,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, allow_linger),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lcp_ack_timeout) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lcp_ack_timeout_valid)),
+  0x94,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, lcp_ack_timeout),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipcp_ack_timeout) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipcp_ack_timeout_valid)),
+  0x95,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, ipcp_ack_timeout),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_timeout) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_timeout_valid)),
+  0x96,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, auth_timeout),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lcp_creq_retry_count) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, lcp_creq_retry_count_valid)),
+  0x97,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, lcp_creq_retry_count),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipcp_creq_retry_count) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipcp_creq_retry_count_valid)),
+  0x98,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, ipcp_creq_retry_count),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_retry_count) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_retry_count_valid)),
+  0x99,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, auth_retry_count),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_protocol) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_protocol_valid)),
+  0x9A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, auth_protocol),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, user_id) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, user_id_valid)),
+  0x9B,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, user_id),
+  QMI_WDS_USER_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_password) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, auth_password_valid)),
+  0x9C,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, auth_password),
+  QMI_WDS_PASSWORD_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, data_rate) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, data_rate_valid)),
+  0x9D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, data_rate),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_type) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_type_valid)),
+  0x9E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, app_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, data_mode) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, data_mode_valid)),
+  0x9F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, data_mode),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_priority) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_priority_valid)),
+  0xA0,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, app_priority),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_string) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_string_valid)),
+  0xA1,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, apn_string),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_type) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_type_valid)),
+  0xA2,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, is_pcscf_address_needed) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, is_pcscf_address_needed_valid)),
+  0xA3,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, is_pcscf_address_needed),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_v4_dns_address) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_v4_dns_address_valid)),
+  0xA4,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, primary_v4_dns_address),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_v4_dns_address) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_v4_dns_address_valid)),
+  0xA5,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_v4_dns_address),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_v6_dns_address) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, primary_v6_dns_address_valid)),
+  0xA6,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, primary_v6_dns_address),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_v6_dns_address) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_v6_dns_address_valid)),
+  0xA7,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, secondary_v6_dns_address),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, rat_type) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, rat_type_valid)),
+  0xA8,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, rat_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_enabled_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_enabled_3gpp2_valid)),
+  0xA9,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, apn_enabled_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_inactivity_timeout_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_inactivity_timeout_3gpp2_valid)),
+  0xAA,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_inactivity_timeout_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_class_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, apn_class_3gpp2_valid)),
+  0xAB,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, apn_class_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_auth_protocol) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_auth_protocol_valid)),
+  0xAD,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_auth_protocol),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_user_id) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_user_id_valid)),
+  0xAE,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_user_id),
+  QMI_WDS_USER_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_auth_password) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_auth_password_valid)),
+  0xAF,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_level_auth_password),
+  QMI_WDS_PASSWORD_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_label) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_label_valid)),
+  0xB0,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pdn_label),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, op_pco_id_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, op_pco_id_3gpp2_valid)),
+  0xBD,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, op_pco_id_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mcc_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mcc_3gpp2_valid)),
+  0xBE,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mcc_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit_3gpp2_valid)),
+  0xBF,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pco_mnc_includes_pcs_digit_3gpp2),
+  QMI_IDL_TYPE88(0, 29),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, failure_timer) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, failure_timer_valid)),
+  0xC0,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, failure_timer),
+  QMI_WDS_MAX_FAILURE_TIMER_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, disallow_timer) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, disallow_timer_valid)),
+  0xC1,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, disallow_timer),
+  QMI_WDS_MAX_DISALLOW_TIMER_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_user_data_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, app_user_data_3gpp2_valid)),
+  0xC2,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, app_user_data_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_dhcp_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_dhcp_3gpp2_valid)),
+  0xC3,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, pcscf_addr_using_dhcp_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, dns_addr_using_dhcp_3gpp2) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, dns_addr_using_dhcp_3gpp2_valid)),
+  0xC4,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, dns_addr_using_dhcp_3gpp2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, clat_enabled) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, clat_enabled_valid)),
+  0xDE,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, clat_enabled),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipv6_prefix_delegation) - QMI_IDL_OFFSET16RELATIVE(wds_reset_and_modify_profile_settings_req_msg_v01, ipv6_prefix_delegation_valid)),
+  0xDF,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_reset_and_modify_profile_settings_req_msg_v01, ipv6_prefix_delegation)
+};
+
+static const uint8_t wds_reset_and_modify_profile_settings_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_resp_msg_v01, extended_error_code) - QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_resp_msg_v01, extended_error_code_valid)),
+  0xE0,
+   QMI_IDL_2_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_reset_and_modify_profile_settings_resp_msg_v01, extended_error_code)
+};
+
+static const uint8_t wds_set_attach_profile_info_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, profile_name) - QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, profile_name_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, profile_name),
+  QMI_WDS_PROFILE_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_type) - QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_type_valid)),
+  0x11,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_hdr_compression_type) - QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_hdr_compression_type_valid)),
+  0x12,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_hdr_compression_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_data_compression_type) - QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_data_compression_type_valid)),
+  0x13,
+   QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, pdp_data_compression_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, apn_name) - QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, apn_name_valid)),
+  0x14,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_req_msg_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, primary_DNS_IPv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, primary_DNS_IPv4_address_preference_valid)),
+  0x15,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, primary_DNS_IPv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, secondary_DNS_IPv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, secondary_DNS_IPv4_address_preference_valid)),
+  0x16,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, secondary_DNS_IPv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_requested_qos_valid)),
+  0x17,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, umts_requested_qos),
+  QMI_IDL_TYPE88(0, 24),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_minimum_qos_valid)),
+  0x18,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, umts_minimum_qos),
+  QMI_IDL_TYPE88(0, 24),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, gprs_requested_qos) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, gprs_requested_qos_valid)),
+  0x19,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, gprs_requested_qos),
+  QMI_IDL_TYPE88(0, 26),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, gprs_minimum_qos) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, gprs_minimum_qos_valid)),
+  0x1A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, gprs_minimum_qos),
+  QMI_IDL_TYPE88(0, 26),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, username) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, username_valid)),
+  0x1B,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, username),
+  QMI_WDS_USER_NAME_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, password) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, password_valid)),
+  0x1C,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_STRING,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, password),
+  QMI_WDS_PASSWORD_MAX_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, authentication_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, authentication_preference_valid)),
+  0x1D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, authentication_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, ipv4_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, ipv4_address_preference_valid)),
+  0x1E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, ipv4_address_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pcscf_addr_using_pco) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pcscf_addr_using_pco_valid)),
+  0x1F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pcscf_addr_using_pco),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdp_access_control_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdp_access_control_flag_valid)),
+  0x20,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pdp_access_control_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pcscf_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pcscf_addr_using_dhcp_valid)),
+  0x21,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pcscf_addr_using_dhcp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, im_cn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, im_cn_flag_valid)),
+  0x22,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, im_cn_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, tft_id1_params) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, tft_id1_params_valid)),
+  0x23,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, tft_id1_params),
+  QMI_IDL_TYPE88(0, 27),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, tft_id2_params) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, tft_id2_params_valid)),
+  0x24,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, tft_id2_params),
+  QMI_IDL_TYPE88(0, 27),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdp_context) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdp_context_valid)),
+  0x25,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pdp_context),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, secondary_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, secondary_flag_valid)),
+  0x26,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, secondary_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, primary_id) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, primary_id_valid)),
+  0x27,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, primary_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, ipv6_address_preference_valid)),
+  0x28,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_requested_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_requested_qos_with_sig_ind_valid)),
+  0x29,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, umts_requested_qos_with_sig_ind),
+  QMI_IDL_TYPE88(0, 25),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_minimum_qos_with_sig_ind) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_minimum_qos_with_sig_ind_valid)),
+  0x2A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, umts_minimum_qos_with_sig_ind),
+  QMI_IDL_TYPE88(0, 25),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, primary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, primary_dns_ipv6_address_preference_valid)),
+  0x2B,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, primary_dns_ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, secodnary_dns_ipv6_address_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, secodnary_dns_ipv6_address_preference_valid)),
+  0x2C,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, secodnary_dns_ipv6_address_preference),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, addr_allocation_preference) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, addr_allocation_preference_valid)),
+  0x2D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_1_BYTE_ENUM,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, addr_allocation_preference),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, threegpp_lte_qos_params) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, threegpp_lte_qos_params_valid)),
+  0x2E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, threegpp_lte_qos_params),
+  QMI_IDL_TYPE88(0, 28),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, apn_disabled_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, apn_disabled_flag_valid)),
+  0x2F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, apn_disabled_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdn_inactivity_timeout) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdn_inactivity_timeout_valid)),
+  0x30,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pdn_inactivity_timeout),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, apn_class) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, apn_class_valid)),
+  0x31,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, apn_class),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, apn_bearer) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, apn_bearer_valid)),
+  0x35,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, apn_bearer),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, support_emergency_calls) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, support_emergency_calls_valid)),
+  0x36,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, support_emergency_calls),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, op_pco_id) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, op_pco_id_valid)),
+  0x37,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, op_pco_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pco_mcc) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pco_mcc_valid)),
+  0x38,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pco_mcc),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pco_mnc_includes_pcs_digit) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pco_mnc_includes_pcs_digit_valid)),
+  0x39,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pco_mnc_includes_pcs_digit),
+  QMI_IDL_TYPE88(0, 29),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, max_pdn_conn_per_block) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, max_pdn_conn_per_block_valid)),
+  0x3A,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, max_pdn_conn_per_block),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, max_pdn_conn_timer) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, max_pdn_conn_timer_valid)),
+  0x3B,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, max_pdn_conn_timer),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdn_req_wait_interval) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdn_req_wait_interval_valid)),
+  0x3C,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pdn_req_wait_interval),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, app_user_data_3gpp) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, app_user_data_3gpp_valid)),
+  0x3D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, app_user_data_3gpp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, roaming_disallowed) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, roaming_disallowed_valid)),
+  0x3E,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, roaming_disallowed),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdn_discon_wait_timer) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, pdn_discon_wait_timer_valid)),
+  0x3F,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, pdn_discon_wait_timer),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, dns_addr_using_dhcp) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, dns_addr_using_dhcp_valid)),
+  0x40,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, dns_addr_using_dhcp),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, lte_roaming_pdp_type) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, lte_roaming_pdp_type_valid)),
+  0x41,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, lte_roaming_pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_roaming_pdp_type) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, umts_roaming_pdp_type_valid)),
+  0x42,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, umts_roaming_pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, iwlan_to_lte_roaming_ho_allowed_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, iwlan_to_lte_roaming_ho_allowed_flag_valid)),
+  0x43,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, iwlan_to_lte_roaming_ho_allowed_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, lte_to_iwlan_roaming_ho_allowed_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, lte_to_iwlan_roaming_ho_allowed_flag_valid)),
+  0x44,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, lte_to_iwlan_roaming_ho_allowed_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, failure_timer_3gpp) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, failure_timer_3gpp_valid)),
+  0x45,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, failure_timer_3gpp),
+  QMI_WDS_3GPP_MAX_FAILURE_TIMER_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, override_home_pdp_type) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, override_home_pdp_type_valid)),
+  0x46,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, override_home_pdp_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, op_reserved_pco_id_list) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, op_reserved_pco_id_list_valid)),
+  0x47,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, op_reserved_pco_id_list),
+  QMI_WDS_MAX_NUM_PCO_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, msisdn_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, msisdn_flag_valid)),
+  0x48,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, msisdn_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, append_flag) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, append_flag_valid)),
+  0x90,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, append_flag),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_config_action) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_config_action_valid)),
+  0x91,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, attach_config_action),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_ip_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_ip_addr_rules_valid)),
+  0x92,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, attach_apn_ip_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_dns_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_dns_addr_rules_valid)),
+  0x93,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, attach_apn_dns_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_pcscf_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_pcscf_addr_rules_valid)),
+  0x94,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, attach_apn_pcscf_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_pcscf_or_dns_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, attach_apn_pcscf_or_dns_addr_rules_valid)),
+  0x95,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, attach_apn_pcscf_or_dns_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_ip_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_ip_addr_rules_valid)),
+  0x96,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_ip_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_dns_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_dns_addr_rules_valid)),
+  0x97,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_dns_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_pcscf_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_pcscf_addr_rules_valid)),
+  0x98,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_pcscf_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_pcscf_or_dns_addr_rules) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_pcscf_or_dns_addr_rules_valid)),
+  0x99,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, on_demand_apn_pcscf_or_dns_addr_rules),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, clat_enabled) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, clat_enabled_valid)),
+  0xDE,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, clat_enabled),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, ipv6_prefix_delegation) - QMI_IDL_OFFSET16RELATIVE(wds_set_attach_profile_info_req_msg_v01, ipv6_prefix_delegation_valid)),
+  0xDF,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_set_attach_profile_info_req_msg_v01, ipv6_prefix_delegation)
+};
+
+static const uint8_t wds_set_attach_profile_info_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_attach_profile_info_resp_msg_v01, profile_index) - QMI_IDL_OFFSET8(wds_set_attach_profile_info_resp_msg_v01, profile_index_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_resp_msg_v01, profile_index),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_set_attach_profile_info_resp_msg_v01, extended_error_code) - QMI_IDL_OFFSET8(wds_set_attach_profile_info_resp_msg_v01, extended_error_code_valid)),
+  0xE0,
+   QMI_IDL_2_BYTE_ENUM,
+  QMI_IDL_OFFSET8(wds_set_attach_profile_info_resp_msg_v01, extended_error_code)
+};
+
+static const uint8_t wds_delete_all_profiles_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(wds_delete_all_profiles_req_msg_v01, profile_type_mask),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_delete_all_profiles_req_msg_v01, profile_persistence_mask) - QMI_IDL_OFFSET8(wds_delete_all_profiles_req_msg_v01, profile_persistence_mask_valid)),
+  0x10,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(wds_delete_all_profiles_req_msg_v01, profile_persistence_mask),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_delete_all_profiles_req_msg_v01, profile_client_type_mask) - QMI_IDL_OFFSET8(wds_delete_all_profiles_req_msg_v01, profile_client_type_mask_valid)),
+  0x11,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(wds_delete_all_profiles_req_msg_v01, profile_client_type_mask)
+};
+
+static const uint8_t wds_delete_all_profiles_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_delete_all_profiles_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_delete_all_profiles_result_ind_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_delete_all_profiles_result_ind_msg_v01, status),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_delete_all_profiles_result_ind_msg_v01, deleted_profiles_list) - QMI_IDL_OFFSET8(wds_delete_all_profiles_result_ind_msg_v01, deleted_profiles_list_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_delete_all_profiles_result_ind_msg_v01, deleted_profiles_list),
+  QMI_WDS_DELETE_ALL_PROFILES_LIST_MAX_V01,
+  QMI_IDL_OFFSET8(wds_delete_all_profiles_result_ind_msg_v01, deleted_profiles_list) - QMI_IDL_OFFSET8(wds_delete_all_profiles_result_ind_msg_v01, deleted_profiles_list_len),
+  QMI_IDL_TYPE88(0, 85)
+};
+
+static const uint8_t wds_3gpp_rab_reject_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_3gpp_rab_reject_ind_msg_v01, rab_reject_cause)
+};
+
+/*
+ * wds_get_last_3gpp_rab_reject_info_req_msg is empty
+ * static const uint8_t wds_get_last_3gpp_rab_reject_info_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t wds_get_last_3gpp_rab_reject_info_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_last_3gpp_rab_reject_info_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_last_3gpp_rab_reject_info_resp_msg_v01, rab_reject_cause) - QMI_IDL_OFFSET8(wds_get_last_3gpp_rab_reject_info_resp_msg_v01, rab_reject_cause_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_get_last_3gpp_rab_reject_info_resp_msg_v01, rab_reject_cause)
+};
+
+/*
+ * wds_get_throttled_pdn_reject_timer_req_msg is empty
+ * static const uint8_t wds_get_throttled_pdn_reject_timer_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t wds_get_throttled_pdn_reject_timer_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_throttled_pdn_reject_timer_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_throttled_pdn_reject_timer_resp_msg_v01, throttled_pdn_reject_timer) - QMI_IDL_OFFSET8(wds_get_throttled_pdn_reject_timer_resp_msg_v01, throttled_pdn_reject_timer_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_get_throttled_pdn_reject_timer_resp_msg_v01, throttled_pdn_reject_timer)
+};
+
+static const uint8_t wds_set_throttled_pdn_reject_timer_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_set_throttled_pdn_reject_timer_req_msg_v01, throttled_pdn_reject_timer)
+};
+
+static const uint8_t wds_set_throttled_pdn_reject_timer_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_set_throttled_pdn_reject_timer_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_set_ehrpd_fallback_apn_list_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_set_ehrpd_fallback_apn_list_req_msg_v01, fallback_apn_name_list),
+  QMI_WDS_EHRPD_FALLBACK_APN_MAX_V01,
+  QMI_IDL_OFFSET8(wds_set_ehrpd_fallback_apn_list_req_msg_v01, fallback_apn_name_list) - QMI_IDL_OFFSET8(wds_set_ehrpd_fallback_apn_list_req_msg_v01, fallback_apn_name_list_len),
+  QMI_IDL_TYPE88(0, 10)
+};
+
+static const uint8_t wds_set_ehrpd_fallback_apn_list_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_set_ehrpd_fallback_apn_list_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+/*
+ * wds_get_ehrpd_fallback_apn_list_req_msg is empty
+ * static const uint8_t wds_get_ehrpd_fallback_apn_list_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t wds_get_ehrpd_fallback_apn_list_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_ehrpd_fallback_apn_list_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_get_ehrpd_fallback_apn_list_resp_msg_v01, fallback_apn_name_list) - QMI_IDL_OFFSET8(wds_get_ehrpd_fallback_apn_list_resp_msg_v01, fallback_apn_name_list_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_get_ehrpd_fallback_apn_list_resp_msg_v01, fallback_apn_name_list),
+  QMI_WDS_EHRPD_FALLBACK_APN_MAX_V01,
+  QMI_IDL_OFFSET8(wds_get_ehrpd_fallback_apn_list_resp_msg_v01, fallback_apn_name_list) - QMI_IDL_OFFSET8(wds_get_ehrpd_fallback_apn_list_resp_msg_v01, fallback_apn_name_list_len),
+  QMI_IDL_TYPE88(0, 10)
+};
+
+static const uint8_t wds_subsequent_data_transfer_status_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(wds_subsequent_data_transfer_status_req_msg_v01, subsequent_data_transfer_status_type_mask)
+};
+
+static const uint8_t wds_subsequent_data_transfer_status_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_subsequent_data_transfer_status_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_modem_assisted_ka_start_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, keep_alive_type),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, timer_value) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, timer_value_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, timer_value),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_ipv4_address) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_ipv4_address_valid)),
+  0x11,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_ipv4_address),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_ipv6_address) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_ipv6_address_valid)),
+  0x12,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_ipv6_address),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_ipv4_address) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_ipv4_address_valid)),
+  0x13,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_ipv4_address),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_ipv6_address) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_ipv6_address_valid)),
+  0x14,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_ipv6_address),
+  QMI_WDS_IPV6_ADDR_LEN_V01,
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_port) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_port_valid)),
+  0x15,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, dest_port),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_port) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_port_valid)),
+  0x16,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, source_port),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, apn_name) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, apn_name_valid)),
+  0x17,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_STRING,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_req_msg_v01, apn_name),
+  QMI_WDS_APN_NAME_MAX_V01
+};
+
+static const uint8_t wds_modem_assisted_ka_start_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_resp_msg_v01, keep_alive_handle) - QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_resp_msg_v01, keep_alive_handle_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_start_resp_msg_v01, keep_alive_handle)
+};
+
+static const uint8_t wds_modem_assisted_ka_status_ind_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_status_ind_msg_v01, status),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_status_ind_msg_v01, keep_alive_handle)
+};
+
+static const uint8_t wds_modem_assisted_ka_stop_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_stop_req_msg_v01, keep_alive_handle)
+};
+
+static const uint8_t wds_modem_assisted_ka_stop_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_modem_assisted_ka_stop_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_v2x_sps_flow_reg_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, req_id),
+
+  0x02,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, priority),
+
+  0x03,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, periodicity),
+
+  0x04,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, msg_size),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, service_id) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, service_id_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, service_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, sps_port) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, sps_port_valid)),
+  0x11,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, sps_port),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, evt_driven_port) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, evt_driven_port_valid)),
+  0x12,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, evt_driven_port),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, protocol) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, protocol_valid)),
+  0x13,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_req_msg_v01, protocol)
+};
+
+static const uint8_t wds_v2x_sps_flow_reg_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_v2x_sps_flow_reg_result_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_reg_result_ind_msg_v01, reg_result),
+  QMI_IDL_TYPE88(0, 3)
+};
+
+static const uint8_t wds_v2x_sps_flow_dereg_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_dereg_req_msg_v01, flow_id),
+  QMI_IDL_TYPE88(0, 2)
+};
+
+static const uint8_t wds_v2x_sps_flow_dereg_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_dereg_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_v2x_sps_flow_dereg_result_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_dereg_result_ind_msg_v01, dereg_result),
+  QMI_IDL_TYPE88(0, 3)
+};
+
+static const uint8_t wds_v2x_sps_flow_update_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_req_msg_v01, flow_id),
+  QMI_IDL_TYPE88(0, 2),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_req_msg_v01, periodicity) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_req_msg_v01, periodicity_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_req_msg_v01, periodicity),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_req_msg_v01, msg_size) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_req_msg_v01, msg_size_valid)),
+  0x11,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_req_msg_v01, msg_size)
+};
+
+static const uint8_t wds_v2x_sps_flow_update_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_v2x_sps_flow_update_result_ind_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_update_result_ind_msg_v01, update_result),
+  QMI_IDL_TYPE88(0, 3)
+};
+
+static const uint8_t wds_v2x_sps_flow_get_info_req_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_req_msg_v01, flow_id),
+  QMI_IDL_TYPE88(0, 2)
+};
+
+static const uint8_t wds_v2x_sps_flow_get_info_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, priority) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, priority_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, priority),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, periodicity) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, periodicity_valid)),
+  0x11,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, periodicity),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, msg_size) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, msg_size_valid)),
+  0x12,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, msg_size),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, service_id) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, service_id_valid)),
+  0x13,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, service_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, sps_port) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, sps_port_valid)),
+  0x14,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, sps_port),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, evt_driven_port) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, evt_driven_port_valid)),
+  0x15,
+   QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, evt_driven_port),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, protocol) - QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, protocol_valid)),
+  0x16,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_sps_flow_get_info_resp_msg_v01, protocol)
+};
+
+static const uint8_t wds_v2x_non_sps_flow_reg_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_req_msg_v01, req_id),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_req_msg_v01, non_sps_flow_info) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_req_msg_v01, non_sps_flow_info_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_req_msg_v01, non_sps_flow_info),
+  WDS_V2X_NON_SPS_MAX_FLOWS_V01,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_req_msg_v01, non_sps_flow_info) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_req_msg_v01, non_sps_flow_info_len),
+  QMI_IDL_TYPE88(0, 86)
+};
+
+static const uint8_t wds_v2x_non_sps_flow_reg_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_resp_msg_v01, reg_result) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_resp_msg_v01, reg_result_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_resp_msg_v01, reg_result),
+  WDS_V2X_NON_SPS_MAX_FLOWS_V01,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_resp_msg_v01, reg_result) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_reg_resp_msg_v01, reg_result_len),
+  QMI_IDL_TYPE88(0, 0)
+};
+
+static const uint8_t wds_v2x_non_sps_flow_dereg_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_req_msg_v01, req_id),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_req_msg_v01, non_sps_flow_info) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_req_msg_v01, non_sps_flow_info_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_req_msg_v01, non_sps_flow_info),
+  WDS_V2X_NON_SPS_MAX_FLOWS_V01,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_req_msg_v01, non_sps_flow_info) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_req_msg_v01, non_sps_flow_info_len),
+  QMI_IDL_TYPE88(0, 1)
+};
+
+static const uint8_t wds_v2x_non_sps_flow_dereg_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_resp_msg_v01, dereg_result) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_resp_msg_v01, dereg_result_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_resp_msg_v01, dereg_result),
+  WDS_V2X_NON_SPS_MAX_FLOWS_V01,
+  QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_resp_msg_v01, dereg_result) - QMI_IDL_OFFSET8(wds_v2x_non_sps_flow_dereg_resp_msg_v01, dereg_result_len),
+  QMI_IDL_TYPE88(0, 0)
+};
+
+static const uint8_t wds_v2x_service_subscribe_req_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_req_msg_v01, service_info),
+  QMI_IDL_TYPE88(0, 87),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_service_subscribe_req_msg_v01, service_id_list) - QMI_IDL_OFFSET8(wds_v2x_service_subscribe_req_msg_v01, service_id_list_valid)),
+  0x10,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_req_msg_v01, service_id_list),
+  QMI_WDS_V2X_MAX_SUB_V01,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_req_msg_v01, service_id_list) - QMI_IDL_OFFSET8(wds_v2x_service_subscribe_req_msg_v01, service_id_list_len),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_v2x_service_subscribe_req_msg_v01, port) - QMI_IDL_OFFSET16RELATIVE(wds_v2x_service_subscribe_req_msg_v01, port_valid)),
+  0x11,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_v2x_service_subscribe_req_msg_v01, port)
+};
+
+static const uint8_t wds_v2x_service_subscribe_resp_msg_data_v01[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0)
+};
+
+static const uint8_t wds_v2x_service_subscribe_result_ind_msg_data_v01[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, req_id),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, subscribe_wildcard_result) - QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, subscribe_wildcard_result_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, subscribe_wildcard_result),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, reg_result) - QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, reg_result_valid)),
+  0x11,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, reg_result),
+  QMI_WDS_V2X_MAX_SUB_V01,
+  QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, reg_result) - QMI_IDL_OFFSET8(wds_v2x_service_subscribe_result_ind_msg_v01, reg_result_len),
+  QMI_IDL_TYPE88(0, 0)
+};
+
+/*
+ * wds_v2x_service_get_subscribe_list_req_msg is empty
+ * static const uint8_t wds_v2x_service_get_subscribe_list_req_msg_data_v01[] = {
+ * };
+ */
+
+static const uint8_t wds_v2x_service_get_subscribe_list_resp_msg_data_v01[] = {
+  0x02,
+   QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, resp),
+  QMI_IDL_TYPE88(1, 0),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, wildcard_enabled) - QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, wildcard_enabled_valid)),
+  0x10,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, wildcard_enabled),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, service_id) - QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, service_id_valid)),
+  0x11,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, service_id),
+  QMI_WDS_V2X_MAX_SUB_V01,
+  QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, service_id) - QMI_IDL_OFFSET8(wds_v2x_service_get_subscribe_list_resp_msg_v01, service_id_len),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(wds_v2x_service_get_subscribe_list_resp_msg_v01, dest_port) - QMI_IDL_OFFSET16RELATIVE(wds_v2x_service_get_subscribe_list_resp_msg_v01, dest_port_valid)),
+  0x12,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_2_BYTE,
+  QMI_IDL_OFFSET16ARRAY(wds_v2x_service_get_subscribe_list_resp_msg_v01, dest_port)
+};
+
 /* Type Table */
 static const qmi_idl_type_table_entry  wds_type_table_v01[] = {
+  {sizeof(wds_v2x_result_type_v01), wds_v2x_result_type_data_v01},
+  {sizeof(wds_v2x_non_sps_info_type_v01), wds_v2x_non_sps_info_type_data_v01},
+  {sizeof(wds_v2x_sps_flow_id_info_v01), wds_v2x_sps_flow_id_info_data_v01},
+  {sizeof(wds_v2x_sps_flow_result_info_v01), wds_v2x_sps_flow_result_info_data_v01},
+  {sizeof(wds_op_reserved_pco_info_ex_type_v01), wds_op_reserved_pco_info_ex_type_data_v01},
+  {sizeof(wds_op_reserved_pco_list_info_type_v01), wds_op_reserved_pco_list_info_type_data_v01},
+  {sizeof(wds_op_reserved_pco_list_type_v01), wds_op_reserved_pco_list_type_data_v01},
+  {sizeof(wds_report_apn_op_reserved_pco_list_v01), wds_report_apn_op_reserved_pco_list_data_v01},
+  {sizeof(wds_apn_msisdn_info_type_v01), wds_apn_msisdn_info_type_data_v01},
+  {sizeof(wds_report_apn_msisdn_change_v01), wds_report_apn_msisdn_change_data_v01},
+  {sizeof(wds_apn_name_list_type_v01), wds_apn_name_list_type_data_v01},
   {sizeof(wds_statistics_indicator_type_v01), wds_statistics_indicator_type_data_v01},
   {sizeof(wds_channel_rate_type_v01), wds_channel_rate_type_data_v01},
   {sizeof(wds_current_bearer_tech_type_v01), wds_current_bearer_tech_type_data_v01},
@@ -7560,6 +9591,7 @@ static const qmi_idl_type_table_entry  wds_type_table_v01[] = {
   {sizeof(wds_embms_tmgi_list_struct_type_v01), wds_embms_tmgi_list_struct_type_data_v01},
   {sizeof(wds_get_data_call_type_v01), wds_get_data_call_type_data_v01},
   {sizeof(wds_pdn_throttle_info_type_v01), wds_pdn_throttle_info_type_data_v01},
+  {sizeof(wds_pdn_throttle_info_ext_type_v01), wds_pdn_throttle_info_ext_type_data_v01},
   {sizeof(wds_reqd_net_policy_info_v01), wds_reqd_net_policy_info_data_v01},
   {sizeof(wds_tcp_udp_port_range_v01), wds_tcp_udp_port_range_data_v01},
   {sizeof(wds_ip_addr_type_v01), wds_ip_addr_type_data_v01},
@@ -7580,8 +9612,10 @@ static const qmi_idl_type_table_entry  wds_type_table_v01[] = {
   {sizeof(wds_throughput_info_type_v01), wds_throughput_info_type_data_v01},
   {sizeof(wds_profile_event_register_type_v01), wds_profile_event_register_type_data_v01},
   {sizeof(wds_profile_changed_ind_type_v01), wds_profile_changed_ind_type_data_v01},
-  {sizeof(wds_apn_name_list_type_v01), wds_apn_name_list_type_data_v01},
-  {sizeof(wds_apn_param_apn_string_type_v01), wds_apn_param_apn_string_type_data_v01}
+  {sizeof(wds_apn_param_apn_string_type_v01), wds_apn_param_apn_string_type_data_v01},
+  {sizeof(wds_profile_identifier_ex_type_v01), wds_profile_identifier_ex_type_data_v01},
+  {sizeof(wds_v2x_non_sps_flow_info_type_v01), wds_v2x_non_sps_flow_info_type_data_v01},
+  {sizeof(wds_v2x_service_sub_info_type_v01), wds_v2x_service_sub_info_type_data_v01}
 };
 
 /* Message Table */
@@ -7738,6 +9772,7 @@ static const qmi_idl_message_table_entry wds_message_table_v01[] = {
   {sizeof(wds_get_current_data_system_status_resp_msg_v01), wds_get_current_data_system_status_resp_msg_data_v01},
   {sizeof(wds_get_pdn_throttle_info_req_msg_v01), wds_get_pdn_throttle_info_req_msg_data_v01},
   {sizeof(wds_get_pdn_throttle_info_resp_msg_v01), wds_get_pdn_throttle_info_resp_msg_data_v01},
+  {sizeof(wds_pdn_throttle_info_ind_msg_v01), wds_pdn_throttle_info_ind_msg_data_v01},
   {sizeof(wds_get_lte_max_attach_pdn_num_req_msg_v01), 0},
   {sizeof(wds_get_lte_max_attach_pdn_num_resp_msg_v01), wds_get_lte_max_attach_pdn_num_resp_msg_data_v01},
   {sizeof(wds_set_lte_attach_pdn_list_req_msg_v01), wds_set_lte_attach_pdn_list_req_msg_data_v01},
@@ -7856,7 +9891,63 @@ static const qmi_idl_message_table_entry wds_message_table_v01[] = {
   {sizeof(wds_query_downlink_throughput_reporting_status_req_msg_v01), 0},
   {sizeof(wds_query_downlink_throughput_reporting_status_resp_msg_v01), wds_query_downlink_throughput_reporting_status_resp_msg_data_v01},
   {sizeof(wds_keep_alive_data_session_req_msg_v01), wds_keep_alive_data_session_req_msg_data_v01},
-  {sizeof(wds_keep_alive_data_session_resp_msg_v01), wds_keep_alive_data_session_resp_msg_data_v01}
+  {sizeof(wds_keep_alive_data_session_resp_msg_v01), wds_keep_alive_data_session_resp_msg_data_v01},
+  {sizeof(wds_set_always_on_pdn_req_msg_v01), wds_set_always_on_pdn_req_msg_data_v01},
+  {sizeof(wds_set_always_on_pdn_resp_msg_v01), wds_set_always_on_pdn_resp_msg_data_v01},
+  {sizeof(wds_apn_op_reserved_pco_list_change_ind_msg_v01), wds_apn_op_reserved_pco_list_change_ind_msg_data_v01},
+  {sizeof(wds_get_apn_op_reserved_pco_list_req_msg_v01), wds_get_apn_op_reserved_pco_list_req_msg_data_v01},
+  {sizeof(wds_get_apn_op_reserved_pco_list_resp_msg_v01), wds_get_apn_op_reserved_pco_list_resp_msg_data_v01},
+  {sizeof(wds_apn_msisdn_change_ind_msg_v01), wds_apn_msisdn_change_ind_msg_data_v01},
+  {sizeof(wds_get_apn_msisdn_info_req_msg_v01), wds_get_apn_msisdn_info_req_msg_data_v01},
+  {sizeof(wds_get_apn_msisdn_info_resp_msg_v01), wds_get_apn_msisdn_info_resp_msg_data_v01},
+  {sizeof(wds_tear_down_always_on_pdn_req_msg_v01), 0},
+  {sizeof(wds_tear_down_always_on_pdn_resp_msg_v01), wds_tear_down_always_on_pdn_resp_msg_data_v01},
+  {sizeof(wds_lte_attach_params_ind_msg_v01), wds_lte_attach_params_ind_msg_data_v01},
+  {sizeof(wds_reset_and_modify_profile_settings_req_msg_v01), wds_reset_and_modify_profile_settings_req_msg_data_v01},
+  {sizeof(wds_reset_and_modify_profile_settings_resp_msg_v01), wds_reset_and_modify_profile_settings_resp_msg_data_v01},
+  {sizeof(wds_set_attach_profile_info_req_msg_v01), wds_set_attach_profile_info_req_msg_data_v01},
+  {sizeof(wds_set_attach_profile_info_resp_msg_v01), wds_set_attach_profile_info_resp_msg_data_v01},
+  {sizeof(wds_delete_all_profiles_req_msg_v01), wds_delete_all_profiles_req_msg_data_v01},
+  {sizeof(wds_delete_all_profiles_resp_msg_v01), wds_delete_all_profiles_resp_msg_data_v01},
+  {sizeof(wds_delete_all_profiles_result_ind_msg_v01), wds_delete_all_profiles_result_ind_msg_data_v01},
+  {sizeof(wds_3gpp_rab_reject_ind_msg_v01), wds_3gpp_rab_reject_ind_msg_data_v01},
+  {sizeof(wds_get_last_3gpp_rab_reject_info_req_msg_v01), 0},
+  {sizeof(wds_get_last_3gpp_rab_reject_info_resp_msg_v01), wds_get_last_3gpp_rab_reject_info_resp_msg_data_v01},
+  {sizeof(wds_get_throttled_pdn_reject_timer_req_msg_v01), 0},
+  {sizeof(wds_get_throttled_pdn_reject_timer_resp_msg_v01), wds_get_throttled_pdn_reject_timer_resp_msg_data_v01},
+  {sizeof(wds_set_throttled_pdn_reject_timer_req_msg_v01), wds_set_throttled_pdn_reject_timer_req_msg_data_v01},
+  {sizeof(wds_set_throttled_pdn_reject_timer_resp_msg_v01), wds_set_throttled_pdn_reject_timer_resp_msg_data_v01},
+  {sizeof(wds_set_ehrpd_fallback_apn_list_req_msg_v01), wds_set_ehrpd_fallback_apn_list_req_msg_data_v01},
+  {sizeof(wds_set_ehrpd_fallback_apn_list_resp_msg_v01), wds_set_ehrpd_fallback_apn_list_resp_msg_data_v01},
+  {sizeof(wds_get_ehrpd_fallback_apn_list_req_msg_v01), 0},
+  {sizeof(wds_get_ehrpd_fallback_apn_list_resp_msg_v01), wds_get_ehrpd_fallback_apn_list_resp_msg_data_v01},
+  {sizeof(wds_subsequent_data_transfer_status_req_msg_v01), wds_subsequent_data_transfer_status_req_msg_data_v01},
+  {sizeof(wds_subsequent_data_transfer_status_resp_msg_v01), wds_subsequent_data_transfer_status_resp_msg_data_v01},
+  {sizeof(wds_modem_assisted_ka_start_req_msg_v01), wds_modem_assisted_ka_start_req_msg_data_v01},
+  {sizeof(wds_modem_assisted_ka_start_resp_msg_v01), wds_modem_assisted_ka_start_resp_msg_data_v01},
+  {sizeof(wds_modem_assisted_ka_status_ind_msg_v01), wds_modem_assisted_ka_status_ind_msg_data_v01},
+  {sizeof(wds_modem_assisted_ka_stop_req_msg_v01), wds_modem_assisted_ka_stop_req_msg_data_v01},
+  {sizeof(wds_modem_assisted_ka_stop_resp_msg_v01), wds_modem_assisted_ka_stop_resp_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_reg_req_msg_v01), wds_v2x_sps_flow_reg_req_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_reg_resp_msg_v01), wds_v2x_sps_flow_reg_resp_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_reg_result_ind_msg_v01), wds_v2x_sps_flow_reg_result_ind_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_dereg_req_msg_v01), wds_v2x_sps_flow_dereg_req_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_dereg_resp_msg_v01), wds_v2x_sps_flow_dereg_resp_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_dereg_result_ind_msg_v01), wds_v2x_sps_flow_dereg_result_ind_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_update_req_msg_v01), wds_v2x_sps_flow_update_req_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_update_resp_msg_v01), wds_v2x_sps_flow_update_resp_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_update_result_ind_msg_v01), wds_v2x_sps_flow_update_result_ind_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_get_info_req_msg_v01), wds_v2x_sps_flow_get_info_req_msg_data_v01},
+  {sizeof(wds_v2x_sps_flow_get_info_resp_msg_v01), wds_v2x_sps_flow_get_info_resp_msg_data_v01},
+  {sizeof(wds_v2x_non_sps_flow_reg_req_msg_v01), wds_v2x_non_sps_flow_reg_req_msg_data_v01},
+  {sizeof(wds_v2x_non_sps_flow_reg_resp_msg_v01), wds_v2x_non_sps_flow_reg_resp_msg_data_v01},
+  {sizeof(wds_v2x_non_sps_flow_dereg_req_msg_v01), wds_v2x_non_sps_flow_dereg_req_msg_data_v01},
+  {sizeof(wds_v2x_non_sps_flow_dereg_resp_msg_v01), wds_v2x_non_sps_flow_dereg_resp_msg_data_v01},
+  {sizeof(wds_v2x_service_subscribe_req_msg_v01), wds_v2x_service_subscribe_req_msg_data_v01},
+  {sizeof(wds_v2x_service_subscribe_resp_msg_v01), wds_v2x_service_subscribe_resp_msg_data_v01},
+  {sizeof(wds_v2x_service_subscribe_result_ind_msg_v01), wds_v2x_service_subscribe_result_ind_msg_data_v01},
+  {sizeof(wds_v2x_service_get_subscribe_list_req_msg_v01), 0},
+  {sizeof(wds_v2x_service_get_subscribe_list_resp_msg_v01), wds_v2x_service_get_subscribe_list_resp_msg_data_v01}
 };
 
 /* Range Table */
@@ -7885,18 +9976,18 @@ static const qmi_idl_service_message_table_entry wds_service_command_messages_v0
   {QMI_WDS_RESET_REQ_V01, QMI_IDL_TYPE16(0, 0), 0},
   {QMI_WDS_SET_EVENT_REPORT_REQ_V01, QMI_IDL_TYPE16(0, 2), 64},
   {QMI_WDS_ABORT_REQ_V01, QMI_IDL_TYPE16(0, 5), 5},
-  {QMI_WDS_INDICATION_REGISTER_REQ_V01, QMI_IDL_TYPE16(0, 7), 68},
+  {QMI_WDS_INDICATION_REGISTER_REQ_V01, QMI_IDL_TYPE16(0, 7), 410},
   {QMI_WDS_GET_SUPPORTED_MSGS_REQ_V01, QMI_IDL_TYPE16(1, 0), 0},
   {QMI_WDS_GET_SUPPORTED_FIELDS_REQ_V01, QMI_IDL_TYPE16(1, 2), 5},
-  {QMI_WDS_START_NETWORK_INTERFACE_REQ_V01, QMI_IDL_TYPE16(0, 9), 516},
-  {QMI_WDS_STOP_NETWORK_INTERFACE_REQ_V01, QMI_IDL_TYPE16(0, 11), 11},
+  {QMI_WDS_START_NETWORK_INTERFACE_REQ_V01, QMI_IDL_TYPE16(0, 9), 524},
+  {QMI_WDS_STOP_NETWORK_INTERFACE_REQ_V01, QMI_IDL_TYPE16(0, 11), 15},
   {QMI_WDS_GET_PKT_SRVC_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 13), 0},
   {QMI_WDS_GET_CURRENT_CHANNEL_RATE_REQ_V01, QMI_IDL_TYPE16(0, 16), 0},
   {QMI_WDS_GET_PKT_STATISTICS_REQ_V01, QMI_IDL_TYPE16(0, 18), 7},
   {QMI_WDS_GO_DORMANT_REQ_V01, QMI_IDL_TYPE16(0, 20), 7},
   {QMI_WDS_GO_ACTIVE_REQ_V01, QMI_IDL_TYPE16(0, 22), 0},
-  {QMI_WDS_CREATE_PROFILE_REQ_V01, QMI_IDL_TYPE16(0, 24), 2490},
-  {QMI_WDS_MODIFY_PROFILE_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 26), 2487},
+  {QMI_WDS_CREATE_PROFILE_REQ_V01, QMI_IDL_TYPE16(0, 24), 2521},
+  {QMI_WDS_MODIFY_PROFILE_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 26), 2518},
   {QMI_WDS_DELETE_PROFILE_REQ_V01, QMI_IDL_TYPE16(0, 28), 5},
   {QMI_WDS_GET_PROFILE_LIST_REQ_V01, QMI_IDL_TYPE16(0, 30), 4},
   {QMI_WDS_GET_PROFILE_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 32), 5},
@@ -7956,56 +10047,79 @@ static const qmi_idl_service_message_table_entry wds_service_command_messages_v0
   {QMI_WDS_GET_LAST_DATA_CALL_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 146), 0},
   {QMI_WDS_GET_CURRENT_SYSTEM_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 148), 0},
   {QMI_WDS_GET_PDN_THROTTLE_INFO_REQ_V01, QMI_IDL_TYPE16(0, 150), 4},
-  {QMI_WDS_GET_LTE_ATTACH_PARAMS_REQ_V01, QMI_IDL_TYPE16(0, 159), 0},
-  {QMI_WDS_RESET_PKT_STATISTICS_REQ_V01, QMI_IDL_TYPE16(0, 161), 0},
-  {QMI_WDS_GET_FLOW_CONTROL_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 163), 0},
-  {QMI_WDS_EMBMS_TMGI_ACT_DEACT_REQ_V01, QMI_IDL_TYPE16(0, 165), 721},
-  {QMI_WDS_BIND_DATA_PORT_REQ_V01, QMI_IDL_TYPE16(0, 168), 5},
-  {QMI_WDS_SET_ADDITIONAL_PDN_FILTER_REQ_V01, QMI_IDL_TYPE16(0, 170), 24},
-  {QMI_WDS_REMOVE_ADDITIONAL_PDN_FILTER_REQ_V01, QMI_IDL_TYPE16(0, 172), 7},
-  {QMI_WDS_REVERSE_IP_TRANSPORT_CONNECTION_IND_REGISTRATION_REQ_V01, QMI_IDL_TYPE16(0, 175), 4},
-  {QMI_WDS_GET_IPSEC_STATIC_SA_CONFIG_REQ_V01, QMI_IDL_TYPE16(0, 178), 0},
-  {QMI_WDS_REVERSE_IP_TRANSPORT_CONFIG_COMPLETE_REQ_V01, QMI_IDL_TYPE16(0, 180), 11},
-  {QMI_WDS_GET_DATA_BEARER_TECHNOLOGY_EX_REQ_V01, QMI_IDL_TYPE16(0, 182), 0},
-  {QMI_WDS_GET_LTE_MAX_ATTACH_PDN_NUM_REQ_V01, QMI_IDL_TYPE16(0, 152), 0},
-  {QMI_WDS_SET_LTE_ATTACH_PDN_LIST_REQ_V01, QMI_IDL_TYPE16(0, 154), 116},
-  {QMI_WDS_GET_LTE_ATTACH_PDN_LIST_REQ_V01, QMI_IDL_TYPE16(0, 156), 0},
-  {QMI_WDS_SET_LTE_DATA_RETRY_REQ_V01, QMI_IDL_TYPE16(0, 184), 4},
-  {QMI_WDS_GET_LTE_DATA_RETRY_REQ_V01, QMI_IDL_TYPE16(0, 186), 0},
-  {QMI_WDS_SET_LTE_ATTACH_TYPE_REQ_V01, QMI_IDL_TYPE16(0, 188), 7},
-  {QMI_WDS_GET_LTE_ATTACH_TYPE_REQ_V01, QMI_IDL_TYPE16(0, 190), 0},
-  {QMI_WDS_SET_DATA_PATH_REQ_V01, QMI_IDL_TYPE16(0, 194), 7},
-  {QMI_WDS_GET_DATA_PATH_REQ_V01, QMI_IDL_TYPE16(0, 196), 0},
-  {QMI_WDS_UPDATE_LTE_ATTACH_PDN_LIST_PROFILES_REQ_V01, QMI_IDL_TYPE16(0, 198), 0},
-  {QMI_WDS_EMBMS_SAI_LIST_QUERY_REQ_V01, QMI_IDL_TYPE16(0, 200), 0},
-  {QMI_WDS_BIND_MUX_DATA_PORT_REQ_V01, QMI_IDL_TYPE16(0, 203), 26},
-  {QMI_WDS_SET_THROUGHPUT_INFO_IND_FREQ_REQ_V01, QMI_IDL_TYPE16(0, 216), 7},
-  {QMI_WDS_GET_LAST_THROUGHPUT_INFO_REQ_V01, QMI_IDL_TYPE16(0, 218), 0},
-  {QMI_WDS_INITIATE_ESP_REKEY_REQ_V01, QMI_IDL_TYPE16(0, 205), 0},
-  {QMI_WDS_CONFIGURE_PROFILE_EVENT_LIST_REQ_V01, QMI_IDL_TYPE16(0, 221), 514},
-  {QMI_WDS_GET_CAPABILITIES_REQ_V01, QMI_IDL_TYPE16(0, 224), 4},
-  {QMI_WDS_GET_ROAMING_INFO_REQ_V01, QMI_IDL_TYPE16(0, 226), 0},
-  {QMI_WDS_GET_DELEGATED_IPV6_PREFIX_REQ_V01, QMI_IDL_TYPE16(0, 229), 19},
-  {QMI_WDS_REMOVE_DELEGATED_IPV6_PREFIX_REQ_V01, QMI_IDL_TYPE16(0, 231), 39},
-  {QMI_WDS_ABORT_GO_DORMANT_REQ_V01, QMI_IDL_TYPE16(0, 233), 0},
-  {QMI_WDS_BIND_SUBSCRIPTION_REQ_V01, QMI_IDL_TYPE16(0, 235), 7},
-  {QMI_WDS_GET_BIND_SUBSCRIPTION_REQ_V01, QMI_IDL_TYPE16(0, 237), 0},
-  {QMI_WDS_SET_LTE_DATA_CALL_TYPE_REQ_V01, QMI_IDL_TYPE16(0, 239), 7},
-  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_INFO_IND_FREQ_REQ_V01, QMI_IDL_TYPE16(0, 241), 7},
-  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_PARAMS_REQ_V01, QMI_IDL_TYPE16(0, 244), 0},
-  {QMI_WDS_EMBMS_CONTENT_DESC_UPDATE_REQ_V01, QMI_IDL_TYPE16(0, 246), 135},
-  {QMI_WDS_POLICY_REFRESH_REQ_V01, QMI_IDL_TYPE16(0, 249), 7},
-  {QMI_WDS_SET_SILENT_REDIAL_REQ_V01, QMI_IDL_TYPE16(0, 254), 4},
-  {QMI_WDS_GET_CONFIGURED_THROUGHPUT_INFO_REQ_V01, QMI_IDL_TYPE16(0, 257), 0},
-  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_REQ_V01, QMI_IDL_TYPE16(0, 259), 0},
-  {QMI_WDS_EMBMS_SVC_INTEREST_INFO_REQ_V01, QMI_IDL_TYPE16(0, 262), 1033},
-  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_REPORT_PERIOD_REQ_V01, QMI_IDL_TYPE16(0, 264), 7},
-  {QMI_WDS_QUERY_DOWNLINK_THROUGHPUT_REPORTING_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 267), 0},
-  {QMI_WDS_KEEP_ALIVE_DATA_SESSION_REQ_V01, QMI_IDL_TYPE16(0, 269), 4},
-  {QMI_WDS_REFRESH_DHCP_CONFIG_INFO_REQ_V01, QMI_IDL_TYPE16(0, 214), 0},
-  {QMI_WDS_SET_INTERNAL_RUNTIME_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 212), 40},
-  {QMI_WDS_GET_INTERNAL_RUNTIME_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 210), 18},
-  {QMI_WDS_INTERNAL_IFACE_EV_REGISTER_REQ_V01, QMI_IDL_TYPE16(0, 207), 7}
+  {QMI_WDS_GET_LTE_ATTACH_PARAMS_REQ_V01, QMI_IDL_TYPE16(0, 160), 0},
+  {QMI_WDS_RESET_PKT_STATISTICS_REQ_V01, QMI_IDL_TYPE16(0, 162), 0},
+  {QMI_WDS_GET_FLOW_CONTROL_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 164), 0},
+  {QMI_WDS_EMBMS_TMGI_ACT_DEACT_REQ_V01, QMI_IDL_TYPE16(0, 166), 721},
+  {QMI_WDS_BIND_DATA_PORT_REQ_V01, QMI_IDL_TYPE16(0, 169), 5},
+  {QMI_WDS_SET_ADDITIONAL_PDN_FILTER_REQ_V01, QMI_IDL_TYPE16(0, 171), 24},
+  {QMI_WDS_REMOVE_ADDITIONAL_PDN_FILTER_REQ_V01, QMI_IDL_TYPE16(0, 173), 7},
+  {QMI_WDS_REVERSE_IP_TRANSPORT_CONNECTION_IND_REGISTRATION_REQ_V01, QMI_IDL_TYPE16(0, 176), 4},
+  {QMI_WDS_GET_IPSEC_STATIC_SA_CONFIG_REQ_V01, QMI_IDL_TYPE16(0, 179), 0},
+  {QMI_WDS_REVERSE_IP_TRANSPORT_CONFIG_COMPLETE_REQ_V01, QMI_IDL_TYPE16(0, 181), 11},
+  {QMI_WDS_GET_DATA_BEARER_TECHNOLOGY_EX_REQ_V01, QMI_IDL_TYPE16(0, 183), 0},
+  {QMI_WDS_GET_LTE_MAX_ATTACH_PDN_NUM_REQ_V01, QMI_IDL_TYPE16(0, 153), 0},
+  {QMI_WDS_SET_LTE_ATTACH_PDN_LIST_REQ_V01, QMI_IDL_TYPE16(0, 155), 116},
+  {QMI_WDS_GET_LTE_ATTACH_PDN_LIST_REQ_V01, QMI_IDL_TYPE16(0, 157), 0},
+  {QMI_WDS_SET_LTE_DATA_RETRY_REQ_V01, QMI_IDL_TYPE16(0, 185), 4},
+  {QMI_WDS_GET_LTE_DATA_RETRY_REQ_V01, QMI_IDL_TYPE16(0, 187), 0},
+  {QMI_WDS_SET_LTE_ATTACH_TYPE_REQ_V01, QMI_IDL_TYPE16(0, 189), 7},
+  {QMI_WDS_GET_LTE_ATTACH_TYPE_REQ_V01, QMI_IDL_TYPE16(0, 191), 0},
+  {QMI_WDS_SET_DATA_PATH_REQ_V01, QMI_IDL_TYPE16(0, 195), 7},
+  {QMI_WDS_GET_DATA_PATH_REQ_V01, QMI_IDL_TYPE16(0, 197), 0},
+  {QMI_WDS_UPDATE_LTE_ATTACH_PDN_LIST_PROFILES_REQ_V01, QMI_IDL_TYPE16(0, 199), 0},
+  {QMI_WDS_EMBMS_SAI_LIST_QUERY_REQ_V01, QMI_IDL_TYPE16(0, 201), 0},
+  {QMI_WDS_BIND_MUX_DATA_PORT_REQ_V01, QMI_IDL_TYPE16(0, 204), 26},
+  {QMI_WDS_SET_THROUGHPUT_INFO_IND_FREQ_REQ_V01, QMI_IDL_TYPE16(0, 217), 7},
+  {QMI_WDS_GET_LAST_THROUGHPUT_INFO_REQ_V01, QMI_IDL_TYPE16(0, 219), 0},
+  {QMI_WDS_INITIATE_ESP_REKEY_REQ_V01, QMI_IDL_TYPE16(0, 206), 0},
+  {QMI_WDS_CONFIGURE_PROFILE_EVENT_LIST_REQ_V01, QMI_IDL_TYPE16(0, 222), 514},
+  {QMI_WDS_GET_CAPABILITIES_REQ_V01, QMI_IDL_TYPE16(0, 225), 4},
+  {QMI_WDS_GET_ROAMING_INFO_REQ_V01, QMI_IDL_TYPE16(0, 227), 0},
+  {QMI_WDS_GET_DELEGATED_IPV6_PREFIX_REQ_V01, QMI_IDL_TYPE16(0, 230), 19},
+  {QMI_WDS_REMOVE_DELEGATED_IPV6_PREFIX_REQ_V01, QMI_IDL_TYPE16(0, 232), 39},
+  {QMI_WDS_ABORT_GO_DORMANT_REQ_V01, QMI_IDL_TYPE16(0, 234), 0},
+  {QMI_WDS_BIND_SUBSCRIPTION_REQ_V01, QMI_IDL_TYPE16(0, 236), 7},
+  {QMI_WDS_GET_BIND_SUBSCRIPTION_REQ_V01, QMI_IDL_TYPE16(0, 238), 0},
+  {QMI_WDS_SET_LTE_DATA_CALL_TYPE_REQ_V01, QMI_IDL_TYPE16(0, 240), 7},
+  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_INFO_IND_FREQ_REQ_V01, QMI_IDL_TYPE16(0, 242), 7},
+  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_PARAMS_REQ_V01, QMI_IDL_TYPE16(0, 245), 0},
+  {QMI_WDS_EMBMS_CONTENT_DESC_UPDATE_REQ_V01, QMI_IDL_TYPE16(0, 247), 135},
+  {QMI_WDS_POLICY_REFRESH_REQ_V01, QMI_IDL_TYPE16(0, 250), 7},
+  {QMI_WDS_SET_SILENT_REDIAL_REQ_V01, QMI_IDL_TYPE16(0, 255), 4},
+  {QMI_WDS_GET_CONFIGURED_THROUGHPUT_INFO_REQ_V01, QMI_IDL_TYPE16(0, 258), 0},
+  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_REQ_V01, QMI_IDL_TYPE16(0, 260), 0},
+  {QMI_WDS_EMBMS_SVC_INTEREST_INFO_REQ_V01, QMI_IDL_TYPE16(0, 263), 1033},
+  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_REPORT_PERIOD_REQ_V01, QMI_IDL_TYPE16(0, 265), 7},
+  {QMI_WDS_QUERY_DOWNLINK_THROUGHPUT_REPORTING_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 268), 0},
+  {QMI_WDS_KEEP_ALIVE_DATA_SESSION_REQ_V01, QMI_IDL_TYPE16(0, 270), 4},
+  {QMI_WDS_SET_ALWAYS_ON_PDN_REQ_V01, QMI_IDL_TYPE16(0, 272), 15},
+  {QMI_WDS_TEAR_DOWN_ALWAYS_ON_PDN_REQ_V01, QMI_IDL_TYPE16(0, 280), 0},
+  {QMI_WDS_RESET_AND_MODIFY_PROFILE_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 283), 2518},
+  {QMI_WDS_SET_ATTACH_PROFILE_INFO_REQ_V01, QMI_IDL_TYPE16(0, 285), 1142},
+  {QMI_WDS_GET_APN_OP_RESERVED_PCO_LIST_REQ_V01, QMI_IDL_TYPE16(0, 275), 153},
+  {QMI_WDS_GET_APN_MSISDN_INFO_REQ_V01, QMI_IDL_TYPE16(0, 278), 153},
+  {QMI_WDS_DELETE_ALL_PROFILES_REQ_V01, QMI_IDL_TYPE16(0, 287), 33},
+  {QMI_WDS_GET_LAST_3GPP_RAB_REJECT_INFO_REQ_V01, QMI_IDL_TYPE16(0, 291), 0},
+  {QMI_WDS_GET_THROTTLED_PDN_REJECT_TIMER_REQ_V01, QMI_IDL_TYPE16(0, 293), 0},
+  {QMI_WDS_SET_THROTTLED_PDN_REJECT_TIMER_REQ_V01, QMI_IDL_TYPE16(0, 295), 7},
+  {QMI_WDS_SET_EHRPD_FALLBACK_APN_LIST_REQ_V01, QMI_IDL_TYPE16(0, 297), 2420},
+  {QMI_WDS_GET_EHRPD_FALLBACK_APN_LIST_REQ_V01, QMI_IDL_TYPE16(0, 299), 0},
+  {QMI_WDS_SUBSEQUENT_DATA_TRANSFER_STATUS_REQ_V01, QMI_IDL_TYPE16(0, 301), 11},
+  {QMI_WDS_MODEM_ASSISTED_KA_START_REQ_V01, QMI_IDL_TYPE16(0, 303), 229},
+  {QMI_WDS_MODEM_ASSISTED_KA_STOP_REQ_V01, QMI_IDL_TYPE16(0, 306), 7},
+  {QMI_WDS_V2X_SPS_FLOW_REG_REQ_V01, QMI_IDL_TYPE16(0, 308), 49},
+  {QMI_WDS_V2X_SPS_FLOW_DEREG_REQ_V01, QMI_IDL_TYPE16(0, 311), 8},
+  {QMI_WDS_V2X_SPS_FLOW_UPDATE_REQ_V01, QMI_IDL_TYPE16(0, 314), 22},
+  {QMI_WDS_V2X_SPS_FLOW_GET_INFO_REQ_V01, QMI_IDL_TYPE16(0, 317), 8},
+  {QMI_WDS_V2X_NON_SPS_FLOW_REG_REQ_V01, QMI_IDL_TYPE16(0, 319), 2561},
+  {QMI_WDS_V2X_NON_SPS_FLOW_DEREG_REQ_V01, QMI_IDL_TYPE16(0, 321), 1541},
+  {QMI_WDS_V2X_SERVICE_SUBSCRIBE_REQ_V01, QMI_IDL_TYPE16(0, 323), 1040},
+  {QMI_WDS_V2X_GET_SERVICE_SUBSCRIPTION_INFO_REQ_V01, QMI_IDL_TYPE16(0, 326), 0},
+  {QMI_WDS_REFRESH_DHCP_CONFIG_INFO_REQ_V01, QMI_IDL_TYPE16(0, 215), 0},
+  {QMI_WDS_SET_INTERNAL_RUNTIME_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 213), 40},
+  {QMI_WDS_GET_INTERNAL_RUNTIME_SETTINGS_REQ_V01, QMI_IDL_TYPE16(0, 211), 18},
+  {QMI_WDS_INTERNAL_IFACE_EV_REGISTER_REQ_V01, QMI_IDL_TYPE16(0, 208), 7}
 };
 
 static const qmi_idl_service_message_table_entry wds_service_response_messages_v01[] = {
@@ -8026,9 +10140,9 @@ static const qmi_idl_service_message_table_entry wds_service_response_messages_v
   {QMI_WDS_MODIFY_PROFILE_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 27), 12},
   {QMI_WDS_DELETE_PROFILE_RESP_V01, QMI_IDL_TYPE16(0, 29), 12},
   {QMI_WDS_GET_PROFILE_LIST_RESP_V01, QMI_IDL_TYPE16(0, 31), 13531},
-  {QMI_WDS_GET_PROFILE_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 33), 2494},
-  {QMI_WDS_GET_DEFAULT_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 35), 2494},
-  {QMI_WDS_GET_RUNTIME_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 37), 8974},
+  {QMI_WDS_GET_PROFILE_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 33), 2529},
+  {QMI_WDS_GET_DEFAULT_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 35), 2525},
+  {QMI_WDS_GET_RUNTIME_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 37), 11887},
   {QMI_WDS_SET_MIP_MODE_RESP_V01, QMI_IDL_TYPE16(0, 39), 7},
   {QMI_WDS_GET_MIP_MODE_RESP_V01, QMI_IDL_TYPE16(0, 41), 11},
   {QMI_WDS_GET_DORMANCY_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 43), 11},
@@ -8082,57 +10196,80 @@ static const qmi_idl_service_message_table_entry wds_service_response_messages_v
   {QMI_WDS_GET_PREFERRED_DATA_SYSTEM_RESP_V01, QMI_IDL_TYPE16(0, 145), 14},
   {QMI_WDS_GET_LAST_DATA_CALL_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 147), 23},
   {QMI_WDS_GET_CURRENT_SYSTEM_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 149), 156},
-  {QMI_WDS_GET_PDN_THROTTLE_INFO_RESP_V01, QMI_IDL_TYPE16(0, 151), 1299},
-  {QMI_WDS_GET_LTE_ATTACH_PARAMS_RESP_V01, QMI_IDL_TYPE16(0, 160), 168},
-  {QMI_WDS_RESET_PKT_STATISTICS_RESP_V01, QMI_IDL_TYPE16(0, 162), 7},
-  {QMI_WDS_GET_FLOW_CONTROL_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 164), 11},
-  {QMI_WDS_EMBMS_TMGI_ACT_DEACT_RESP_V01, QMI_IDL_TYPE16(0, 166), 12},
-  {QMI_WDS_BIND_DATA_PORT_RESP_V01, QMI_IDL_TYPE16(0, 169), 7},
-  {QMI_WDS_SET_ADDITIONAL_PDN_FILTER_RESP_V01, QMI_IDL_TYPE16(0, 171), 14},
-  {QMI_WDS_REMOVE_ADDITIONAL_PDN_FILTER_RESP_V01, QMI_IDL_TYPE16(0, 173), 7},
-  {QMI_WDS_REVERSE_IP_TRANSPORT_CONNECTION_IND_REGISTRATION_RESP_V01, QMI_IDL_TYPE16(0, 176), 7},
-  {QMI_WDS_GET_IPSEC_STATIC_SA_CONFIG_RESP_V01, QMI_IDL_TYPE16(0, 179), 1562},
-  {QMI_WDS_REVERSE_IP_TRANSPORT_CONFIG_COMPLETE_RESP_V01, QMI_IDL_TYPE16(0, 181), 7},
-  {QMI_WDS_GET_DATA_BEARER_TECHNOLOGY_EX_RESP_V01, QMI_IDL_TYPE16(0, 183), 45},
-  {QMI_WDS_GET_LTE_MAX_ATTACH_PDN_NUM_RESP_V01, QMI_IDL_TYPE16(0, 153), 11},
-  {QMI_WDS_SET_LTE_ATTACH_PDN_LIST_RESP_V01, QMI_IDL_TYPE16(0, 155), 7},
-  {QMI_WDS_GET_LTE_ATTACH_PDN_LIST_RESP_V01, QMI_IDL_TYPE16(0, 157), 239},
-  {QMI_WDS_SET_LTE_DATA_RETRY_RESP_V01, QMI_IDL_TYPE16(0, 185), 7},
-  {QMI_WDS_GET_LTE_DATA_RETRY_RESP_V01, QMI_IDL_TYPE16(0, 187), 11},
-  {QMI_WDS_SET_LTE_ATTACH_TYPE_RESP_V01, QMI_IDL_TYPE16(0, 189), 7},
-  {QMI_WDS_GET_LTE_ATTACH_TYPE_RESP_V01, QMI_IDL_TYPE16(0, 191), 14},
-  {QMI_WDS_SET_DATA_PATH_RESP_V01, QMI_IDL_TYPE16(0, 195), 7},
-  {QMI_WDS_GET_DATA_PATH_RESP_V01, QMI_IDL_TYPE16(0, 197), 14},
-  {QMI_WDS_UPDATE_LTE_ATTACH_PDN_LIST_PROFILES_RESP_V01, QMI_IDL_TYPE16(0, 199), 7},
-  {QMI_WDS_EMBMS_SAI_LIST_QUERY_RESP_V01, QMI_IDL_TYPE16(0, 201), 9411},
-  {QMI_WDS_BIND_MUX_DATA_PORT_RESP_V01, QMI_IDL_TYPE16(0, 204), 7},
-  {QMI_WDS_SET_THROUGHPUT_INFO_IND_FREQ_RESP_V01, QMI_IDL_TYPE16(0, 217), 7},
-  {QMI_WDS_GET_LAST_THROUGHPUT_INFO_RESP_V01, QMI_IDL_TYPE16(0, 219), 42261},
-  {QMI_WDS_INITIATE_ESP_REKEY_RESP_V01, QMI_IDL_TYPE16(0, 206), 7},
-  {QMI_WDS_CONFIGURE_PROFILE_EVENT_LIST_RESP_V01, QMI_IDL_TYPE16(0, 222), 7},
-  {QMI_WDS_GET_CAPABILITIES_RESP_V01, QMI_IDL_TYPE16(0, 225), 11},
-  {QMI_WDS_GET_ROAMING_INFO_RESP_V01, QMI_IDL_TYPE16(0, 227), 3031},
-  {QMI_WDS_GET_DELEGATED_IPV6_PREFIX_RESP_V01, QMI_IDL_TYPE16(0, 230), 27},
-  {QMI_WDS_REMOVE_DELEGATED_IPV6_PREFIX_RESP_V01, QMI_IDL_TYPE16(0, 232), 7},
-  {QMI_WDS_ABORT_GO_DORMANT_RESP_V01, QMI_IDL_TYPE16(0, 234), 7},
-  {QMI_WDS_BIND_SUBSCRIPTION_RESP_V01, QMI_IDL_TYPE16(0, 236), 7},
-  {QMI_WDS_GET_BIND_SUBSCRIPTION_RESP_V01, QMI_IDL_TYPE16(0, 238), 14},
-  {QMI_WDS_SET_LTE_DATA_CALL_TYPE_RESP_V01, QMI_IDL_TYPE16(0, 240), 7},
-  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_INFO_IND_FREQ_RESP_V01, QMI_IDL_TYPE16(0, 242), 7},
-  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_PARAMS_RESP_V01, QMI_IDL_TYPE16(0, 245), 14},
-  {QMI_WDS_EMBMS_CONTENT_DESC_UPDATE_RESP_V01, QMI_IDL_TYPE16(0, 247), 7},
-  {QMI_WDS_POLICY_REFRESH_RESP_V01, QMI_IDL_TYPE16(0, 250), 7},
-  {QMI_WDS_SET_SILENT_REDIAL_RESP_V01, QMI_IDL_TYPE16(0, 255), 7},
-  {QMI_WDS_GET_CONFIGURED_THROUGHPUT_INFO_RESP_V01, QMI_IDL_TYPE16(0, 258), 21},
-  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_RESP_V01, QMI_IDL_TYPE16(0, 260), 18},
-  {QMI_WDS_EMBMS_SVC_INTEREST_INFO_RESP_V01, QMI_IDL_TYPE16(0, 263), 7},
-  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_REPORT_PERIOD_RESP_V01, QMI_IDL_TYPE16(0, 265), 7},
-  {QMI_WDS_QUERY_DOWNLINK_THROUGHPUT_REPORTING_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 268), 21},
-  {QMI_WDS_KEEP_ALIVE_DATA_SESSION_RESP_V01, QMI_IDL_TYPE16(0, 270), 7},
-  {QMI_WDS_REFRESH_DHCP_CONFIG_INFO_RESP_V01, QMI_IDL_TYPE16(0, 215), 7},
-  {QMI_WDS_SET_INTERNAL_RUNTIME_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 213), 56},
-  {QMI_WDS_GET_INTERNAL_RUNTIME_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 211), 100},
-  {QMI_WDS_INTERNAL_IFACE_EV_REGISTER_RESP_V01, QMI_IDL_TYPE16(0, 208), 7}
+  {QMI_WDS_GET_PDN_THROTTLE_INFO_RESP_V01, QMI_IDL_TYPE16(0, 151), 2631},
+  {QMI_WDS_GET_LTE_ATTACH_PARAMS_RESP_V01, QMI_IDL_TYPE16(0, 161), 229},
+  {QMI_WDS_RESET_PKT_STATISTICS_RESP_V01, QMI_IDL_TYPE16(0, 163), 7},
+  {QMI_WDS_GET_FLOW_CONTROL_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 165), 11},
+  {QMI_WDS_EMBMS_TMGI_ACT_DEACT_RESP_V01, QMI_IDL_TYPE16(0, 167), 12},
+  {QMI_WDS_BIND_DATA_PORT_RESP_V01, QMI_IDL_TYPE16(0, 170), 7},
+  {QMI_WDS_SET_ADDITIONAL_PDN_FILTER_RESP_V01, QMI_IDL_TYPE16(0, 172), 14},
+  {QMI_WDS_REMOVE_ADDITIONAL_PDN_FILTER_RESP_V01, QMI_IDL_TYPE16(0, 174), 7},
+  {QMI_WDS_REVERSE_IP_TRANSPORT_CONNECTION_IND_REGISTRATION_RESP_V01, QMI_IDL_TYPE16(0, 177), 7},
+  {QMI_WDS_GET_IPSEC_STATIC_SA_CONFIG_RESP_V01, QMI_IDL_TYPE16(0, 180), 1562},
+  {QMI_WDS_REVERSE_IP_TRANSPORT_CONFIG_COMPLETE_RESP_V01, QMI_IDL_TYPE16(0, 182), 7},
+  {QMI_WDS_GET_DATA_BEARER_TECHNOLOGY_EX_RESP_V01, QMI_IDL_TYPE16(0, 184), 45},
+  {QMI_WDS_GET_LTE_MAX_ATTACH_PDN_NUM_RESP_V01, QMI_IDL_TYPE16(0, 154), 11},
+  {QMI_WDS_SET_LTE_ATTACH_PDN_LIST_RESP_V01, QMI_IDL_TYPE16(0, 156), 7},
+  {QMI_WDS_GET_LTE_ATTACH_PDN_LIST_RESP_V01, QMI_IDL_TYPE16(0, 158), 239},
+  {QMI_WDS_SET_LTE_DATA_RETRY_RESP_V01, QMI_IDL_TYPE16(0, 186), 7},
+  {QMI_WDS_GET_LTE_DATA_RETRY_RESP_V01, QMI_IDL_TYPE16(0, 188), 11},
+  {QMI_WDS_SET_LTE_ATTACH_TYPE_RESP_V01, QMI_IDL_TYPE16(0, 190), 7},
+  {QMI_WDS_GET_LTE_ATTACH_TYPE_RESP_V01, QMI_IDL_TYPE16(0, 192), 14},
+  {QMI_WDS_SET_DATA_PATH_RESP_V01, QMI_IDL_TYPE16(0, 196), 7},
+  {QMI_WDS_GET_DATA_PATH_RESP_V01, QMI_IDL_TYPE16(0, 198), 14},
+  {QMI_WDS_UPDATE_LTE_ATTACH_PDN_LIST_PROFILES_RESP_V01, QMI_IDL_TYPE16(0, 200), 7},
+  {QMI_WDS_EMBMS_SAI_LIST_QUERY_RESP_V01, QMI_IDL_TYPE16(0, 202), 9411},
+  {QMI_WDS_BIND_MUX_DATA_PORT_RESP_V01, QMI_IDL_TYPE16(0, 205), 7},
+  {QMI_WDS_SET_THROUGHPUT_INFO_IND_FREQ_RESP_V01, QMI_IDL_TYPE16(0, 218), 7},
+  {QMI_WDS_GET_LAST_THROUGHPUT_INFO_RESP_V01, QMI_IDL_TYPE16(0, 220), 42261},
+  {QMI_WDS_INITIATE_ESP_REKEY_RESP_V01, QMI_IDL_TYPE16(0, 207), 7},
+  {QMI_WDS_CONFIGURE_PROFILE_EVENT_LIST_RESP_V01, QMI_IDL_TYPE16(0, 223), 7},
+  {QMI_WDS_GET_CAPABILITIES_RESP_V01, QMI_IDL_TYPE16(0, 226), 11},
+  {QMI_WDS_GET_ROAMING_INFO_RESP_V01, QMI_IDL_TYPE16(0, 228), 3031},
+  {QMI_WDS_GET_DELEGATED_IPV6_PREFIX_RESP_V01, QMI_IDL_TYPE16(0, 231), 27},
+  {QMI_WDS_REMOVE_DELEGATED_IPV6_PREFIX_RESP_V01, QMI_IDL_TYPE16(0, 233), 7},
+  {QMI_WDS_ABORT_GO_DORMANT_RESP_V01, QMI_IDL_TYPE16(0, 235), 7},
+  {QMI_WDS_BIND_SUBSCRIPTION_RESP_V01, QMI_IDL_TYPE16(0, 237), 7},
+  {QMI_WDS_GET_BIND_SUBSCRIPTION_RESP_V01, QMI_IDL_TYPE16(0, 239), 14},
+  {QMI_WDS_SET_LTE_DATA_CALL_TYPE_RESP_V01, QMI_IDL_TYPE16(0, 241), 7},
+  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_INFO_IND_FREQ_RESP_V01, QMI_IDL_TYPE16(0, 243), 7},
+  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_PARAMS_RESP_V01, QMI_IDL_TYPE16(0, 246), 14},
+  {QMI_WDS_EMBMS_CONTENT_DESC_UPDATE_RESP_V01, QMI_IDL_TYPE16(0, 248), 7},
+  {QMI_WDS_POLICY_REFRESH_RESP_V01, QMI_IDL_TYPE16(0, 251), 7},
+  {QMI_WDS_SET_SILENT_REDIAL_RESP_V01, QMI_IDL_TYPE16(0, 256), 7},
+  {QMI_WDS_GET_CONFIGURED_THROUGHPUT_INFO_RESP_V01, QMI_IDL_TYPE16(0, 259), 21},
+  {QMI_WDS_GET_DOWNLINK_THROUGHPUT_INFO_RESP_V01, QMI_IDL_TYPE16(0, 261), 18},
+  {QMI_WDS_EMBMS_SVC_INTEREST_INFO_RESP_V01, QMI_IDL_TYPE16(0, 264), 7},
+  {QMI_WDS_SET_DOWNLINK_THROUGHPUT_REPORT_PERIOD_RESP_V01, QMI_IDL_TYPE16(0, 266), 7},
+  {QMI_WDS_QUERY_DOWNLINK_THROUGHPUT_REPORTING_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 269), 21},
+  {QMI_WDS_KEEP_ALIVE_DATA_SESSION_RESP_V01, QMI_IDL_TYPE16(0, 271), 7},
+  {QMI_WDS_SET_ALWAYS_ON_PDN_RESP_V01, QMI_IDL_TYPE16(0, 273), 7},
+  {QMI_WDS_TEAR_DOWN_ALWAYS_ON_PDN_RESP_V01, QMI_IDL_TYPE16(0, 281), 7},
+  {QMI_WDS_RESET_AND_MODIFY_PROFILE_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 284), 12},
+  {QMI_WDS_SET_ATTACH_PROFILE_INFO_RESP_V01, QMI_IDL_TYPE16(0, 286), 16},
+  {QMI_WDS_GET_APN_OP_RESERVED_PCO_LIST_RESP_V01, QMI_IDL_TYPE16(0, 276), 2661},
+  {QMI_WDS_GET_APN_MSISDN_INFO_RESP_V01, QMI_IDL_TYPE16(0, 279), 266},
+  {QMI_WDS_DELETE_ALL_PROFILES_RESP_V01, QMI_IDL_TYPE16(0, 288), 7},
+  {QMI_WDS_GET_LAST_3GPP_RAB_REJECT_INFO_RESP_V01, QMI_IDL_TYPE16(0, 292), 14},
+  {QMI_WDS_GET_THROTTLED_PDN_REJECT_TIMER_RESP_V01, QMI_IDL_TYPE16(0, 294), 14},
+  {QMI_WDS_SET_THROTTLED_PDN_REJECT_TIMER_RESP_V01, QMI_IDL_TYPE16(0, 296), 7},
+  {QMI_WDS_SET_EHRPD_FALLBACK_APN_LIST_RESP_V01, QMI_IDL_TYPE16(0, 298), 7},
+  {QMI_WDS_GET_EHRPD_FALLBACK_APN_LIST_RESP_V01, QMI_IDL_TYPE16(0, 300), 2427},
+  {QMI_WDS_SUBSEQUENT_DATA_TRANSFER_STATUS_RESP_V01, QMI_IDL_TYPE16(0, 302), 7},
+  {QMI_WDS_MODEM_ASSISTED_KA_START_RESP_V01, QMI_IDL_TYPE16(0, 304), 14},
+  {QMI_WDS_MODEM_ASSISTED_KA_STOP_RESP_V01, QMI_IDL_TYPE16(0, 307), 7},
+  {QMI_WDS_V2X_SPS_FLOW_REG_RESP_V01, QMI_IDL_TYPE16(0, 309), 7},
+  {QMI_WDS_V2X_SPS_FLOW_DEREG_RESP_V01, QMI_IDL_TYPE16(0, 312), 7},
+  {QMI_WDS_V2X_SPS_FLOW_UPDATE_RESP_V01, QMI_IDL_TYPE16(0, 315), 7},
+  {QMI_WDS_V2X_SPS_FLOW_GET_INFO_RESP_V01, QMI_IDL_TYPE16(0, 318), 49},
+  {QMI_WDS_V2X_NON_SPS_FLOW_REG_RESP_V01, QMI_IDL_TYPE16(0, 320), 2051},
+  {QMI_WDS_V2X_NON_SPS_FLOW_DEREG_RESP_V01, QMI_IDL_TYPE16(0, 322), 2051},
+  {QMI_WDS_V2X_SERVICE_SUBSCRIBE_RESP_V01, QMI_IDL_TYPE16(0, 324), 7},
+  {QMI_WDS_V2X_GET_SERVICE_SUBSCRIPTION_INFO_RESP_V01, QMI_IDL_TYPE16(0, 327), 1040},
+  {QMI_WDS_REFRESH_DHCP_CONFIG_INFO_RESP_V01, QMI_IDL_TYPE16(0, 216), 7},
+  {QMI_WDS_SET_INTERNAL_RUNTIME_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 214), 56},
+  {QMI_WDS_GET_INTERNAL_RUNTIME_SETTINGS_RESP_V01, QMI_IDL_TYPE16(0, 212), 100},
+  {QMI_WDS_INTERNAL_IFACE_EV_REGISTER_RESP_V01, QMI_IDL_TYPE16(0, 209), 7}
 };
 
 static const qmi_idl_service_message_table_entry wds_service_indication_messages_v01[] = {
@@ -8144,25 +10281,36 @@ static const qmi_idl_service_message_table_entry wds_service_indication_messages
   {QMI_WDS_EMBMS_TMGI_ACTIVATE_IND_V01, QMI_IDL_TYPE16(0, 137), 23},
   {QMI_WDS_EMBMS_TMGI_DEACTIVATE_IND_V01, QMI_IDL_TYPE16(0, 140), 23},
   {QMI_WDS_EMBMS_TMGI_LIST_IND_V01, QMI_IDL_TYPE16(0, 143), 1041},
-  {QMI_WDS_EMBMS_TMGI_ACT_DEACT_IND_V01, QMI_IDL_TYPE16(0, 167), 41},
-  {QMI_WDS_EXTENDED_IP_CONFIG_IND_V01, QMI_IDL_TYPE16(0, 174), 7},
-  {QMI_WDS_REVERSE_IP_TRANSPORT_CONNECTION_IND_V01, QMI_IDL_TYPE16(0, 177), 64},
-  {QMI_WDS_LTE_ATTACH_PDN_LIST_IND_V01, QMI_IDL_TYPE16(0, 158), 116},
-  {QMI_WDS_REVERSE_IP_TRANSPORT_FILTER_SETUP_IND_V01, QMI_IDL_TYPE16(0, 192), 14},
-  {QMI_WDS_HANDOFF_INFORMATION_IND_V01, QMI_IDL_TYPE16(0, 193), 25},
-  {QMI_WDS_EMBMS_SAI_LIST_IND_V01, QMI_IDL_TYPE16(0, 202), 9409},
-  {QMI_WDS_THROUGHPUT_INFO_IND_V01, QMI_IDL_TYPE16(0, 220), 42254},
-  {QMI_WDS_PROFILE_EVENT_REGISTER_IND_V01, QMI_IDL_TYPE16(0, 223), 6},
-  {QMI_WDS_ROAMING_INFO_IND_V01, QMI_IDL_TYPE16(0, 228), 3024},
-  {QMI_WDS_DOWNLINK_THROUGHPUT_INFO_IND_V01, QMI_IDL_TYPE16(0, 243), 15},
-  {QMI_WDS_EMBMS_CONTENT_DESC_CONTROL_IND_V01, QMI_IDL_TYPE16(0, 248), 30},
-  {QMI_WDS_POLICY_REFRESH_RESULT_IND_V01, QMI_IDL_TYPE16(0, 251), 7},
-  {QMI_WDS_POLICY_READY_IND_V01, QMI_IDL_TYPE16(0, 252), 134},
-  {QMI_WDS_APN_PARAM_INFO_CHANGE_IND_V01, QMI_IDL_TYPE16(0, 253), 310},
-  {QMI_WDS_CONFIGURED_THROUGHPUT_INFO_IND_V01, QMI_IDL_TYPE16(0, 256), 14},
-  {QMI_WDS_EMBMS_SVC_INTEREST_IND_V01, QMI_IDL_TYPE16(0, 261), 5},
-  {QMI_WDS_DOWNLINK_THROUGHPUT_REPORTING_STATUS_IND_V01, QMI_IDL_TYPE16(0, 266), 14},
-  {QMI_WDS_INTERNAL_IFACE_EV_IND_V01, QMI_IDL_TYPE16(0, 209), 58}
+  {QMI_WDS_EMBMS_TMGI_ACT_DEACT_IND_V01, QMI_IDL_TYPE16(0, 168), 41},
+  {QMI_WDS_EXTENDED_IP_CONFIG_IND_V01, QMI_IDL_TYPE16(0, 175), 7},
+  {QMI_WDS_REVERSE_IP_TRANSPORT_CONNECTION_IND_V01, QMI_IDL_TYPE16(0, 178), 64},
+  {QMI_WDS_LTE_ATTACH_PDN_LIST_IND_V01, QMI_IDL_TYPE16(0, 159), 116},
+  {QMI_WDS_REVERSE_IP_TRANSPORT_FILTER_SETUP_IND_V01, QMI_IDL_TYPE16(0, 193), 14},
+  {QMI_WDS_HANDOFF_INFORMATION_IND_V01, QMI_IDL_TYPE16(0, 194), 25},
+  {QMI_WDS_EMBMS_SAI_LIST_IND_V01, QMI_IDL_TYPE16(0, 203), 9409},
+  {QMI_WDS_THROUGHPUT_INFO_IND_V01, QMI_IDL_TYPE16(0, 221), 42254},
+  {QMI_WDS_PROFILE_EVENT_REGISTER_IND_V01, QMI_IDL_TYPE16(0, 224), 6},
+  {QMI_WDS_ROAMING_INFO_IND_V01, QMI_IDL_TYPE16(0, 229), 3024},
+  {QMI_WDS_DOWNLINK_THROUGHPUT_INFO_IND_V01, QMI_IDL_TYPE16(0, 244), 15},
+  {QMI_WDS_EMBMS_CONTENT_DESC_CONTROL_IND_V01, QMI_IDL_TYPE16(0, 249), 30},
+  {QMI_WDS_POLICY_REFRESH_RESULT_IND_V01, QMI_IDL_TYPE16(0, 252), 7},
+  {QMI_WDS_POLICY_READY_IND_V01, QMI_IDL_TYPE16(0, 253), 134},
+  {QMI_WDS_APN_PARAM_INFO_CHANGE_IND_V01, QMI_IDL_TYPE16(0, 254), 310},
+  {QMI_WDS_CONFIGURED_THROUGHPUT_INFO_IND_V01, QMI_IDL_TYPE16(0, 257), 14},
+  {QMI_WDS_EMBMS_SVC_INTEREST_IND_V01, QMI_IDL_TYPE16(0, 262), 5},
+  {QMI_WDS_DOWNLINK_THROUGHPUT_REPORTING_STATUS_IND_V01, QMI_IDL_TYPE16(0, 267), 14},
+  {QMI_WDS_LTE_ATTACH_PARAMS_IND_V01, QMI_IDL_TYPE16(0, 282), 222},
+  {QMI_WDS_APN_OP_RESERVED_PCO_LIST_CHANGE_IND_V01, QMI_IDL_TYPE16(0, 274), 2805},
+  {QMI_WDS_APN_MSISDN_CHANGE_IND_V01, QMI_IDL_TYPE16(0, 277), 410},
+  {QMI_WDS_DELETE_ALL_PROFILES_RESULT_IND_V01, QMI_IDL_TYPE16(0, 289), 7708},
+  {QMI_WDS_3GPP_RAB_REJECT_IND_V01, QMI_IDL_TYPE16(0, 290), 7},
+  {QMI_WDS_PDN_THROTTLE_INFO_IND_V01, QMI_IDL_TYPE16(0, 152), 2624},
+  {QMI_WDS_MODEM_ASSISTED_KA_STATUS_IND_V01, QMI_IDL_TYPE16(0, 305), 14},
+  {QMI_WDS_V2X_SPS_FLOW_REG_RESULT_IND_V01, QMI_IDL_TYPE16(0, 310), 12},
+  {QMI_WDS_V2X_SPS_FLOW_DEREG_RESULT_IND_V01, QMI_IDL_TYPE16(0, 313), 12},
+  {QMI_WDS_V2X_SPS_FLOW_UPDATE_RESULT_IND_V01, QMI_IDL_TYPE16(0, 316), 12},
+  {QMI_WDS_V2X_SERVICE_SUBSCRIBE_RESULT_IND_V01, QMI_IDL_TYPE16(0, 325), 2055},
+  {QMI_WDS_INTERNAL_IFACE_EV_IND_V01, QMI_IDL_TYPE16(0, 210), 58}
 };
 
 /*Service Object*/
@@ -8176,7 +10324,7 @@ struct qmi_idl_service_object wds_qmi_idl_service_object_v01 = {
     sizeof(wds_service_indication_messages_v01)/sizeof(qmi_idl_service_message_table_entry) },
   { wds_service_command_messages_v01, wds_service_response_messages_v01, wds_service_indication_messages_v01},
   &wds_qmi_idl_type_table_object_v01,
-  0x6E,
+  0x87,
   NULL
 };
 

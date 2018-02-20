@@ -103,7 +103,7 @@ import com.qti.wifidbreceiver.IWiFiDBReceiverResponseListener;
 public class IZatManager {
     private static String TAG = "IZatManager";
     private static final boolean VERBOSE = Log.isLoggable(TAG, Log.VERBOSE);
-    private static final String SDK_Version = "4.0.1";
+    private static final String SDK_Version = "4.1.0";
 
     private int mFlpFeaturMasks = -1;
     private final int FEATURE_BIT_TIME_BASED_BATCHING_IS_SUPPORTED = 0x1;

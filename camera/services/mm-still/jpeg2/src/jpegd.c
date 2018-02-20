@@ -752,7 +752,7 @@ void jpegd_destroy(jpegd_obj_t *p_obj)
             os_mutex_unlock_jpg(&(p_decoder->mutex));
 
             // Join the input request thread
-            os_thread_create_jpg(&p_decoder->thread, NULL);
+            os_thread_create_jpg(&p_decoder->thread, NULL,(void *)(p_decoder));
 
             // Destroy destination buffers
             jpeg_buffer_destroy((jpeg_buffer_t *)&(p_decoder->engine_dst.p_luma_buffers[0]));

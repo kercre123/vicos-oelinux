@@ -88,7 +88,8 @@ protected:
    *
    *  Add the exif data and encoded thumbnail to the o/p buffer
    **/
-  OMX_ERRORTYPE writeExifData(QImage *aThumbnail = NULL, QIBuffer *aOutBuffer = NULL);
+  OMX_ERRORTYPE writeExifData(QImage *aThumbnail[] = NULL,
+      QIBuffer *aOutBuffer = NULL);
 
   /** startEncode
    *

@@ -128,6 +128,10 @@ static struct gl_renderer_interface *gl_renderer;
 
 static const char default_seat[] = "seat0";
 
+
+static void
+weston_output_refresh_metadata(struct weston_output *output);
+
 static void
 drm_output_update_msc(struct drm_output *output, unsigned int seq);
 
@@ -240,7 +244,7 @@ drm_fb_get_from_bo(struct gbm_bo *bo,
 {
     struct drm_fb *fb = gbm_bo_get_user_data(bo);
     uint32_t width, height;
-    uint32_t handles[4], pitches[4], offsets[4];
+    uint32_t handles[4] = {0}, pitches[4] = {0}, offsets[4] = {0};
     int ret;
 
     if (fb)
@@ -426,6 +430,9 @@ drm_output_repaint(struct weston_output *output_base,
     if (output->destroy_pending)
         return -1;
 
+    weston_output_refresh_metadata(output_base);
+    weston_output_notify_updates(output_base);
+
     if (!output->next) {
         drm_output_render(output, damage);
     }
@@ -440,9 +447,7 @@ drm_output_repaint(struct weston_output *output_base,
         weston_log("fail to commit to sdm display! err=%d\n", ret);
     }
 
-    pthread_mutex_lock(&output->hpd_lock);
     output->frame_pending = 1;
-    pthread_mutex_unlock(&output->hpd_lock);
 
     return 0;
 }
@@ -510,9 +515,7 @@ drm_output_start_repaint_loop(struct weston_output *output_base)
 
         fb_id = output->current->fb_id;
 
-	pthread_mutex_lock(&output->hpd_lock);
         output->frame_pending = 1;
-	pthread_mutex_unlock(&output->hpd_lock);
 
         return;
 
@@ -566,14 +569,12 @@ on_vblank(int fd, uint32_t mask, void *data)
 
    read(fd, &v, sizeof v);
 
-   pthread_mutex_lock(&output->hpd_lock);
    if (output->frame_pending) {
        drm_output_update_msc(output, output->last_vblank.frame);
        drm_output_release_fb(output, output->current);
        output->current = output->next;
        output->next = NULL;
        output->frame_pending = 0;
-       pthread_cond_signal(&output->hpd_cond);
 
        wl_list_for_each_safe(sdm_layer, next_sdm_layer, &output->commited_layer_list, link) {
            destroy_sdm_layer(sdm_layer);
@@ -586,7 +587,6 @@ on_vblank(int fd, uint32_t mask, void *data)
        ts.tv_nsec = output->last_vblank.usec * 1000;
        weston_output_finish_frame(&output->base, &ts, flags);
    }
-   pthread_mutex_unlock(&output->hpd_lock);
 
    return 1;
 }
@@ -774,8 +774,8 @@ drm_assign_planes(struct weston_output *output_base)
             /* Composed by Display Hardware directly */
             /* ToDo(User): handle scenarios if SDE composition is not possible */
             ev->psf_flags = PRESENTATION_FEEDBACK_KIND_ZERO_COPY;
-            /* Forget the view as it might be destroyed at anytime */
-            sdm_layer->view = NULL;
+            /* Set the view's plane back to NULL so that it is not composed by GPU */
+            sdm_layer->view->plane = NULL;
         }
     }
 
@@ -1094,7 +1094,7 @@ drm_output_add_mode(struct drm_output *output, const drmModeModeInfo *info)
     struct drm_mode *mode;
     uint64_t refresh;
 
-    mode = malloc(sizeof *mode);
+    mode = zalloc(sizeof *mode);
     if (mode == NULL)
         return NULL;
 
@@ -1265,11 +1265,19 @@ drm_output_init_egl(struct drm_output *output, struct drm_backend *b)
                          output->base.current_mode->height,
                          format[0],
                          GBM_BO_USE_SCANOUT |
-                         GBM_BO_USE_RENDERING);
+                         GBM_BO_USE_RENDERING |
+                         GBM_BO_USAGE_UBWC_ALIGNED_QTI |
+                         GBM_BO_USAGE_HW_RENDERING_QTI);
+
+    output->framebuffer_ubwc = false;
+
     if (!output->surface) {
         weston_log("failed to create gbm surface\n");
         return -1;
     }
+
+    //Query whether allocated BOs are UBWC or not
+    gbm_perform(GBM_PERFORM_GET_SURFACE_UBWC_STATUS, output->surface, &output->framebuffer_ubwc);
 
     if (format[1])
         n_formats = 2;
@@ -1676,11 +1684,6 @@ hotplug_handler(int disp, bool connected, void *data)
     struct drm_output *output = (struct drm_output *) data;
     struct timespec ts;
 
-    pthread_mutex_lock(&output->hpd_lock);
-    while (output->frame_pending)
-        pthread_cond_wait(&output->hpd_cond, &output->hpd_lock);
-    pthread_mutex_unlock(&output->hpd_lock);
-
     if (connected) {
 	output->base.start_repaint_loop = drm_output_start_repaint_loop;
 	output->base.repaint = drm_output_repaint;
@@ -1703,6 +1706,37 @@ hotplug_handler(int disp, bool connected, void *data)
     weston_output_schedule_repaint(&output->base);
 }
 
+/**
+ * Gets HDCP and HDR metadata and configures the weston_output structure
+ *
+ * A helper function to get HDCP Protocol and HDR Info from the sdm backend
+ * and update the weston output object.
+ *
+ * @param output pointer to weston_output structure
+ */
+static void
+weston_output_refresh_metadata(struct weston_output *output){
+    struct DisplayHdrInfo display_hdr_info = {0};
+    struct DisplayHdcpProtocol display_hdcp_protocol = {0};
+    bool hdr_supported = false;
+    uint32_t hdcp_version = 0;
+    uint32_t hdcp_interface_type = 0;
+
+    bool rc_hdr = GetDisplayHdrInfo(display_id, &display_hdr_info);
+    bool rc_hdcp = GetDisplayHdcpProtocol(display_id, &display_hdcp_protocol);
+    if (rc_hdr) {
+        hdr_supported = display_hdr_info.hdr_supported;
+    } else {
+        weston_log("WARN: Failed to Get Display HDR Info\n");
+    }
+    if (rc_hdcp) {
+        hdcp_version = display_hdcp_protocol.hdcp_version;
+        hdcp_interface_type = display_hdcp_protocol.hdcp_interface_type;
+    } else {
+        weston_log("WARN: Failed to Get Display HDCP Protocol\n");
+    }
+    weston_output_update_metadata(output, hdr_supported, hdcp_version, hdcp_interface_type);
+}
 
 /**
  * Create and configure a Weston output structure
@@ -1725,7 +1759,8 @@ create_output_for_connector(struct drm_backend *b, int x, int y, struct udev_dev
     struct drm_mode *drm_mode, *next, *current;
     struct weston_mode *m;
     struct weston_config_section *section;
-    drmModeModeInfo crtc_mode, modeline;
+    drmModeModeInfo crtc_mode = {0}, modeline = {0};
+    float x_dpi, y_dpi;
     int i, width, height, refresh, scale;
     char *s;
     enum output_config config;
@@ -1740,7 +1775,7 @@ create_output_for_connector(struct drm_backend *b, int x, int y, struct udev_dev
     output->base.compositor = b->compositor;
     output->base.subpixel = WL_OUTPUT_SUBPIXEL_NONE;
     /* TODO (user): To get name, make, model, serial no. from SDM interface */
-    output->base.name = "HDMI-A";
+    output->base.name = strdup("HDMI-A");
     output->base.make = "unknown";
     output->base.model = "unknown";
     output->base.serial_number = "unknown";
@@ -1786,7 +1821,8 @@ create_output_for_connector(struct drm_backend *b, int x, int y, struct udev_dev
     setup_output_seat_constraint(b, &output->base, s);
     free(s);
 
-    output->dpms_prop = WESTON_DPMS_OFF;
+    output->dpms_prop = zalloc(sizeof *output->dpms_prop);
+    output->dpms = WESTON_DPMS_OFF;
     if (config == OUTPUT_CONFIG_OFF) {
         weston_log("Disabling output %s\n", output->base.name);
         drmModeSetCrtc(b->drm.fd, output->crtc_id,
@@ -1808,10 +1844,14 @@ create_output_for_connector(struct drm_backend *b, int x, int y, struct udev_dev
             width   = display_config.x_pixels;
             height  = display_config.y_pixels;
             refresh = display_config.fps*1000;
+            x_dpi = display_config.x_dpi;
+            y_dpi = display_config.y_dpi;
         } else { /* default 1080p, 60 fps */
             width   = 1920;
             height  = 1080;
             refresh = 60*1000;
+            x_dpi = 25.4;
+            y_dpi = 25.4;
         }
 
     config = OUTPUT_CONFIG_MODE;
@@ -1830,8 +1870,10 @@ create_output_for_connector(struct drm_backend *b, int x, int y, struct udev_dev
     output->base.current_mode = &current->base;
     output->base.current_mode->flags |= WL_OUTPUT_MODE_CURRENT;
 
-    uint32_t mmWidth  = (display_config.x_pixels/display_config.x_dpi)*25.4;
-    uint32_t mmHeight = (display_config.y_pixels/display_config.y_dpi)*25.4;
+    uint32_t mmWidth  = (width/x_dpi)*25.4;
+    uint32_t mmHeight = (height/y_dpi)*25.4;
+
+    weston_output_refresh_metadata(&output->base);
     weston_output_init(&output->base, b->compositor, x, y, mmWidth, mmHeight, transform, scale);
 
     if (b->use_pixman) {

@@ -723,6 +723,24 @@ bool LinuxSharedMemoryIPC::update
 	return true;
 }
 
+bool LinuxSharedMemoryIPC::updateGmId(ClockIdentity& id, uint16_t portNumber) {
+	int buf_offset = 0;
+	pid_t process_id = getpid();
+	char *shm_buffer = master_offset_buffer;
+	gPtpTimeData *ptimedata;
+	if( shm_buffer != NULL ) {
+		/* lock */
+		pthread_mutex_lock((pthread_mutex_t *) shm_buffer);
+		buf_offset += sizeof(pthread_mutex_t);
+		ptimedata   = (gPtpTimeData *) (shm_buffer + buf_offset);
+		id.getIdentityString(ptimedata->gmIdentifier);
+		ptimedata->portNumber = portNumber;
+		/* unlock */
+		pthread_mutex_unlock((pthread_mutex_t *) shm_buffer);
+	}
+	return true;
+}
+
 void LinuxSharedMemoryIPC::stop() {
 	if( master_offset_buffer != NULL ) {
 		munmap( master_offset_buffer, SHM_SIZE );

@@ -88,8 +88,10 @@ class QCMAP_ConnectionManager
     static bool flag;
     static QCMAP_ConnectionManager* object;
     QCMAP_ConnectionManager();
+    void init();
 
   public:
+    bool data_path_opt_enable;
     bool DUN_SoftAP_enable_flag;
     bool dual_wifi_mode;
     bool packet_stats_enabled;
@@ -255,7 +257,7 @@ class QCMAP_ConnectionManager
     }
 
     /* Find match a match for MAC address in the linked list*/
-    static bool MatchMacAddrInList(qcmap_nl_addr_t* nl_addr);
+    static int MatchMacAddrInList(qcmap_nl_addr_t* nl_addr);
 
     /*Deleting information for a device from list*/
     static bool DeleteDeviceEntryInfo
@@ -361,6 +363,9 @@ class QCMAP_ConnectionManager
     QCMAP_Backhaul* GetBackhaulObjectFromMap(profile_handle_type_v01 profile_handle);
     QCMAP_Backhaul* GetBackhaulObjectFromVLAN(uint32 vlan_id);
     void InsertBackhaulObjectToMap(profile_handle_type_v01 profile_handle, QCMAP_Backhaul *obj);
+    boolean DataPathOptInit(boolean flag);
+    boolean SetDataPathOptManagerStatus(boolean data_path_opt_status, qmi_error_type_v01 *qmi_err_num);
+    boolean GetDataPathOptManagerStatus( boolean *data_path_opt_status, qmi_error_type_v01 *qmi_err_num);
     static void RemoveBackhaulObjectFromMap(profile_handle_type_v01 profile_handle);
     static uint8 BackhaulObjectCountFromMap();
     static QCMAP_Backhaul_WWAN *GetBackhaulWWANObject(profile_handle_type_v01 profile_handle);

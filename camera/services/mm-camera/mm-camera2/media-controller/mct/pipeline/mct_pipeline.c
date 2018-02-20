@@ -45,6 +45,7 @@ static cam_dimension_t default_preview_sizes[] = {
   { 1280, 720},  // 720P, reserved
   { 1280, 640},  // Used for 360 Camera
   { 1280, 480},  // VGA stereo
+  { 1040, 780},  // Used for low power mode
   { 960, 960},   // Used for HD 360 Camera
   { 720, 720},   // Used for 1440x720 360 Camera
   { 864, 480},   // FWVGA
@@ -81,6 +82,7 @@ static cam_dimension_t default_picture_sizes[] = {
   { 3040, 3040},
   { 3016, 3016}, // Used for 360 Camera
   { 3840, 2160},
+  { 3648, 2736},
   { 3264, 2448}, // 8MP added for 8909
   { 3200, 2400}, // 8MP
   { 2976, 2976},
@@ -113,11 +115,13 @@ static cam_dimension_t default_picture_sizes[] = {
   { 1200, 1200},
   { 1280, 640},  // Used for 360 Camera
   { 1280, 480},  // VGA stereo
+  { 1040, 780},  // Used for low power mode
   { 1024, 768},  // 1MP XGA
   { 960, 960},   // Used for HD 360 Camera
   { 720, 720},   // Used for 1440x720 360 Camera
   { 800, 600},   // SVGA
 #ifdef _LE_CAMERA_
+  { 960, 720},
   { 848, 480},   //WVGA Wide
   { 858, 480},   //WVGA Wide
 #endif
@@ -181,6 +185,7 @@ static cam_dimension_t default_liveshot_sizes[] = {
   { 1280, 640},  // Used for 360 Camera
   { 1280, 480},  // VGA stereo
   { 1024, 768},  // 1MP XGA
+  { 1040, 780},  // Used for low power mode
   { 960, 960},   // Used for HD 360 Camera
   { 720, 720},   // Used for 1440x720 360 Camera
   { 800, 600},   // SVGA
@@ -231,6 +236,7 @@ static cam_dimension_t default_video_sizes[] = {
   { 1280, 720}, // 720p
   { 1280, 640},  // Used for 360 Camera
   { 1280, 480},  // VGA stereo
+  { 1040, 780},  // Used for low power mode
   { 960, 960},  // Used for HD 360 Camera
   { 720, 720},   // Used for 1440x720 360 Camera
   { 864, 480},  // FWVGA
@@ -272,8 +278,9 @@ static cam_dimension_t default_hfr_video_sizes[] = {
   { 1340, 760}, //Digital gimbal
   { 1280, 720}, // 720p
   { 1280, 480},  // VGA stereo
-  { 640, 240},  // QVGA stereo
   { 720, 480},  // 480p
+  { 640, 480},  // VGA
+  { 640, 240},  // QA stereo
   { 480, 480},   // Used for 480p 360 Camera
   { 480, 360},  // HVGA for HFR support
   { 480, 320},  // HVGA

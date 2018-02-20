@@ -1,7 +1,8 @@
 /* sensor_pick_res.c
  *
- * Copyright (c) 2014-2017 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
+ * Copyright (c) 2014-2017 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
 
 #include "math.h"
@@ -20,46 +21,49 @@ const uint32_t pick_v1[SEN_COND_MAX][SEN_USECASE_MAX] = {
    *  Snapshot usecase we need to put value 0 for the FPS
    *  pick_v1[0][4] = 0.
    */
-  /*FAST AEC  QUAD  HFR   IHDR   RHDR VHDR Snapshot Video/P *//*check for 1*/
-  {    1,      0,    1,    0,    0,   1,     0,      1    }, /* FPS*/
-  {    0,      0,    1,    0,    0,   0,     1,      1    }, /* Bounded FPS*/
-  {    0,      1,    0,    1,    1,   0,     1,      1    }, /* Aspect ratio*/
-  {    0,      1,    0,    1,    1,   1,     1,      1    }, /* Resolution w*/
-  {    0,      1,    0,    1,    1,   0,     1,      1    }, /* Resolution h*/
-  {    1,      0,    1,    1,    1,   1,     1,      1    }, /* Mode Pix Clk */
-  {    0,      1,    0,    0,    0,   0,     0,      0    }, /* mod QUADRA */
-  {    0,      0,    1,    0,    0,   0,     0,      0    }, /* mod HFR*/
-  {    0,      0,    0,    0,    0,   0,     1,      1    }, /* mod DEF*/
-  {    0,      0,    0,    1,    0,   1,     0,      0    }, /* mod IHDR*/
-  {    0,      0,    0,    0,    1,   0,     0,      0    }, /* mod RHDR*/
-  {    1,      0,    1,    0,    0,   1,     1,      0    }, /* mod Max Res*/
-  {    0,      0,    0,    1,    1,   0,     0,      1    }, /* mod Best Res*/
+  /*FL FAST AEC QUAD  HFR   IHDR   RHDR VHDR Snapshot Video/P *//*check for 1*/
+  { 1,   1,      0,    1,    0,    0,   1,     0,      1    }, /* FPS*/
+  { 0,   0,      0,    1,    0,    0,   0,     1,      1    }, /* Bounded FPS*/
+  { 0,   0,      1,    0,    1,    1,   0,     1,      1    }, /* Aspect ratio*/
+  { 1,   0,      1,    0,    1,    1,   1,     1,      1    }, /* Resolution w*/
+  { 1,   0,      1,    0,    1,    1,   0,     1,      1    }, /* Resolution h*/
+  { 0,   1,      0,    1,    1,    1,   1,     1,      1    }, /* Mode Pix Clk */
+  { 0,   0,      1,    0,    0,    0,   0,     0,      0    }, /* mod QUADRA */
+  { 0,   0,      0,    1,    0,    0,   0,     0,      0    }, /* mod HFR*/
+  { 0,   0,      0,    0,    0,    0,   0,     1,      1    }, /* mod DEF*/
+  { 0,   0,      0,    0,    1,    0,   1,     0,      0    }, /* mod IHDR*/
+  { 0,   0,      0,    0,    0,    1,   0,     0,      0    }, /* mod RHDR*/
+  { 0,   1,      0,    1,    0,    0,   1,     1,      0    }, /* mod Max Res*/
+  { 0,   0,      0,    0,    1,    1,   0,     0,      1    }, /* mod Best Res*/
+  { 1,   0,      0,    0,    0,    0,   0,     0,      0    }, /* mod FL*/
 };
 
 const uint32_t pick_v3[SEN_COND_MAX][SEN_USECASE_MAX] = {
-  /*FAST AEC  QUAD HFR   IHDR  RHDR VHDR Snapshot   Video/P  *//*check for 1*/
+  /*FL FAST AEC  QUAD HFR  IHDR RHDR VHDR Snapshot   Video/P  *//*check for 1*/
   [SEN_COND_FPS] =
-  {    0,      0,  1,    0,   0,    1,    0,        1  }, /* FPS*/
+  { 1,   0,      0,  1,    0,   0,    1,    0,        1  }, /* FPS*/
   [SEN_COND_BOUNDED_FPS] =
-  {    0,      0,  1,    0,   0,    0,    1,        1  }, /* Bounded FPS*/
+  { 0,   0,      0,  1,    0,   0,    0,    1,        1  }, /* Bounded FPS*/
   [SEN_COND_ASPR] =
-  {    0,      1,  0,    1,   1,    0,    1,        1  }, /* Aspect ratio */
+  { 0,   0,      1,  0,    1,   1,    0,    1,        1  }, /* Aspect ratio */
   [SEN_COND_W] =
-  {    0,      1,  1,    1,   1,    1,    1,        1  }, /* Resolution w*/
+  { 1,   0,      1,  1,    1,   1,    1,    1,        1  }, /* Resolution w*/
   [SEN_COND_H] =
-  {    0,      1,  1,    1,   1,    0,    1,        1  }, /* Resolution h*/
+  { 1,   0,      1,  1,    1,   1,    0,    1,        1  }, /* Resolution h*/
   [SEN_COND_MODE_DEF] =
-  {    0,      0,  0,    0,   0,    0,    1,        1  }, /* mod DEF*/
+  { 0,   0,      0,  0,    0,   0,    0,    1,        1  }, /* mod DEF*/
   [SEN_COND_MODE_IHDR] =
-  {    0,      0,  0,    1,   0,    1,    0,        0  }, /* mod IHDR*/
+  { 0,   0,      0,  0,    1,   0,    1,    0,        0  }, /* mod IHDR*/
   [SEN_COND_MODE_RHDR] =
-  {    0,      0,  0,    0,   1,    0,    0,        0  }, /* mod RHDR*/
+  { 0,   0,      0,  0,    0,   1,    0,    0,        0  }, /* mod RHDR*/
   [SEN_COND_MODE_MPIX] =
-  {    1,      0,  1,    0,   0,    1,    1,        0  }, /* mod Max Res*/
+  { 0,   1,      0,  1,    0,   0,    1,    1,        0  }, /* mod Max Res*/
   [SEN_COND_MODE_BEST_RES] =
-  {    0,      0,  0,    1,   1,    0,    0,        1  }, /* mod Best Res*/
+  { 0,   0,      0,  0,    1,   1,    0,    0,        1  }, /* mod Best Res*/
   [SEN_COND_MODE_QUADRA] =
-  {    0,      1,  0,    0,   0,    0,    0,        0  }, /* mod QUADRA */
+  { 0,   0,      1,  0,    0,   0,    0,    0,        0  }, /* mod QUADRA */
+  [SEN_COND_FOCAL_LENGTH] =
+  { 1,   0,      0,  0,    0,   0,    0,    0,        0  }, /* mod FL */
 };
 
 const is_usecase_func_t func_v1 = {
@@ -70,7 +74,8 @@ const is_usecase_func_t func_v1 = {
     [SEN_USECASE_RHDR] = sensor_pick_res_is_rhdr,
     [SEN_USECASE_VHDR] = sensor_pick_res_is_vhdr,
     [SEN_USECASE_VP] = sensor_pick_res_is_video_preview,
-    [SEN_USECASE_SNAP] = sensor_pick_res_is_snapshot
+    [SEN_USECASE_SNAP] = sensor_pick_res_is_snapshot,
+    [SEN_USECASE_FOCAL_LENGTH] = sensor_pick_res_is_focal_length,
 };
 
 const check_func_t check_v1 = {
@@ -86,8 +91,24 @@ const check_func_t check_v1 = {
     [SEN_COND_MODE_IHDR] = sensor_pick_check_mode,
     [SEN_COND_MODE_RHDR] = sensor_pick_check_mode,
     [SEN_COND_MODE_MPIX] = sensor_pick_check_mpix,
-    [SEN_COND_MODE_BEST_RES] = sensor_pick_check_best_res
+    [SEN_COND_MODE_BEST_RES] = sensor_pick_check_best_res,
+    [SEN_COND_FOCAL_LENGTH] = sensor_pick_check_focal_length,
 };
+
+/** sensor_pick_check_focal_length: checking Focal Length mode
+ *
+ *  @pick_data: handle to sensor pick structure
+ *
+ *  This function check input mode based on requested mode
+ *
+ *  Return: TRUE for success
+ *          FALSE error for failure
+ **/
+boolean sensor_pick_check_focal_length(sensor_pick_data_t *pick_data)
+{
+  SLOW("check mode: in %f, exp %f", pick_data->in_focal_length, pick_data->ex_focal_length);
+  return (pick_data->in_focal_length == pick_data->ex_focal_length);
+}
 
 /** sensor_pick_check_mode: checking input mode
  *
@@ -282,6 +303,21 @@ boolean sensor_pick_res_is_fast_aec(
   return (pick_usecase->is_fast_aec_mode_on == TRUE);
 }
 
+/** sensor_pick_res_is_focal_length: checking for Focal length usecase
+ *
+ *  @pick_usecase: handle to sensor pick structure
+ *
+ *  This function return true if Focal length usecase is enabled
+ *
+ *  Return: TRUE for success
+ *          FALSE error for failure
+ **/
+boolean sensor_pick_res_is_focal_length(sensor_pick_usecase_t *pick_usecase)
+{
+  SLOW("Enter");
+  return (pick_usecase->sensor_feature_focal_length == 1);
+}
+
 /** sensor_pick_res_is_hfr: checking for HFR usecase
  *
  *  @pick_usecase:pointer to sensor pick usecase structure
@@ -293,8 +329,10 @@ boolean sensor_pick_res_is_fast_aec(
  **/
 boolean sensor_pick_res_is_hfr(sensor_pick_usecase_t *pick_usecase)
 {
+    /* RAW only mode can also have high frame rate */
     return ((pick_usecase->hfr_mode != CAM_HFR_MODE_OFF) &&
-      (pick_usecase->stream_mask & (1 << CAM_STREAM_TYPE_VIDEO)));
+      ((pick_usecase->stream_mask & (1 << CAM_STREAM_TYPE_VIDEO)) ||
+       (pick_usecase->stream_mask == (1 << CAM_STREAM_TYPE_RAW))));
 }
 
 /** sensor_pick_res_is_ihdr: checking for in-sensor HDR usecase
@@ -433,14 +471,17 @@ static void sensor_pick_fill_input_data(sensor_pick_data_t *pick_data,
   pick_data->in_clk = in_info->op_pixel_clk;
   pick_data->in_mode = in_info->mode;
   pick_data->in_ar = (pick_data->in_w*QFACTOR)/pick_data->in_h;
+  pick_data->in_focal_length = in_info->focal_length;
 
-  SLOW("in_w:%d, in_h:%d,in_fps:%f, in_clk:%d, in_mode:%d, in_ar: %d",
+  SLOW("in_w:%d, in_h:%d,in_fps:%f, in_clk:%d, in_mode:%d, in_ar: %d,"
+       "in_focal_length: %f",
     pick_data->in_w,
     pick_data->in_h,
     pick_data->in_fps,
     pick_data->in_clk,
     pick_data->in_mode,
-    pick_data->in_ar);
+    pick_data->in_ar,
+    pick_data->in_focal_length);
 }
 
 static void sensor_pick_fill_expected_data(void *sctrl)
@@ -451,6 +492,7 @@ static void sensor_pick_fill_expected_data(void *sctrl)
   sensor_pick_usecase_t *pick_usecase = &sensor_pick->pick_usecase;
   sensor_set_res_cfg_t *res_cfg = &sensor_pick->res_cfg;
 
+  pick_data->ex_focal_length = res_cfg->focal_length;
   pick_data->ex_w = res_cfg->width;
   pick_data->ex_h = res_cfg->height;
   pick_data->ex_mode = sensor_pick_get_mode(sensor_pick->usecase);
@@ -465,13 +507,44 @@ static void sensor_pick_fill_expected_data(void *sctrl)
   if (pick_usecase->is_fast_aec_mode_on)
     pick_data->ex_fps = sensor_get_hfr_mode_fps(res_cfg->fast_aec_sensor_mode);
 
-  SLOW("ex_w:%d, ex_h:%d,ex_mode:%d, ex_fps:%f, ex_clk:%d, ex_ar: %d",
+  SLOW("ex_w:%d, ex_h:%d,ex_mode:%d, ex_fps:%f, ex_clk:%d, ex_ar: %d,"
+       "ex_focal_length: %f",
     pick_data->ex_w,
     pick_data->ex_h,
     pick_data->ex_mode,
     pick_data->ex_fps,
     pick_data->ex_clk,
-    pick_data->ex_ar);
+    pick_data->ex_ar,
+    pick_data->ex_focal_length);
+}
+
+static boolean sensor_pick_validate_focal_length(void *sctrl)
+{
+  sensor_ctrl_t *ctrl = (sensor_ctrl_t *)sctrl;
+  sensor_pick_dev_t *sensor_pick = &ctrl->s_data->sensor_pick;
+  struct sensor_lib_out_info_array *out_info_array =
+    &ctrl->lib_params->sensor_lib_ptr->out_info_array;
+  sensor_set_res_cfg_t *res_cfg = &sensor_pick->res_cfg;
+  struct sensor_lib_out_info_t *out_info;
+  int32_t i;
+  boolean found = 0;
+
+  if (res_cfg->focal_length <= 0.0) {
+    return FALSE;
+  }
+
+  if (ctrl->lib_params->sensor_lib_ptr->sensor_feature_focal_length == 0) {
+    return FALSE;
+  }
+
+  for (i = 0; i < out_info_array->size; i++) {
+    out_info = &(out_info_array->out_info[i]);
+    if (res_cfg->focal_length == out_info->focal_length) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
 }
 
 static void sensor_pick_fill_usecase_data(void *sctrl)
@@ -485,6 +558,8 @@ static void sensor_pick_fill_usecase_data(void *sctrl)
   pick_usecase->hfr_mode = ctrl->s_data->hfr_mode;
   pick_usecase->is_fast_aec_mode_on = res_cfg->is_fast_aec_mode_on;
   pick_usecase->is_quadra_mode = ctrl->s_data->is_quadra_mode;
+  pick_usecase->sensor_feature_focal_length =
+    sensor_pick_validate_focal_length(sctrl);
 
   switch(ctrl->s_data->hdr_mode) {
     case CAM_SENSOR_HDR_IN_SENSOR:
@@ -682,12 +757,14 @@ int32_t sensor_pick_resolution(void *sctrl,
   *pick_res = res_idx;
 
   SHIGH("res_idx: %d", res_idx);
-  SLOW("Matched pick_w:%d, pick_h:%d, pick_fps:%f, pick_clk:%d, pick_mode:%d",
+  SLOW("Matched pick_w:%d, pick_h:%d, pick_fps:%f, pick_clk:%d, pick_mode:%d,"
+       "focal_length: %f",
     out_info_array->out_info[res_idx].x_output,
     out_info_array->out_info[res_idx].y_output,
     out_info_array->out_info[res_idx].max_fps,
     out_info_array->out_info[res_idx].op_pixel_clk,
-    out_info_array->out_info[res_idx].mode);
+    out_info_array->out_info[res_idx].mode,
+    out_info_array->out_info[res_idx].focal_length);
 
   return 0;
 }

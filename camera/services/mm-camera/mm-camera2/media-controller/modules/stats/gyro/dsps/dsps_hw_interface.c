@@ -1,13 +1,18 @@
 /*============================================================================
+Copyright (c) 2012-2015,2017 Qualcomm Technologies, Inc.
+All Rights Reserved.
+Confidential and Proprietary - Qualcomm Technologies, Inc.
+============================================================================*/
 
-   Copyright (c) 2012 - 2015 Qualcomm Technologies, Inc. All Rights Reserved.
-   Qualcomm Technologies Proprietary and Confidential.
-
+/*============================================================================
    This file defines the media/module/master controller's interface with the
    DSPS modules.
-
 ============================================================================*/
+
+#ifdef FEATURE_GYRO_DSPS
 #include "dsps_hw.h"
+#endif
+#include "dsps_hw_interface.h"
 #include "camera_dbg.h"
 
 
@@ -24,10 +29,12 @@
 
 int32_t dsps_get_sensor_caps(void *dsps_config, dsps_data_type sensor_type) {
   int32_t rc =0;
+#ifdef FEATURE_GYRO_DSPS
   rc = dsps_request_sensor_caps(dsps_config, sensor_type);
   if(rc != 0) {
     IS_ERR("Could not query for Sensor capabilities");
   }
+#endif
   return rc;
 }
 
@@ -44,6 +51,8 @@ int32_t dsps_get_sensor_caps(void *dsps_config, dsps_data_type sensor_type) {
 
 void *dsps_proc_init(void *port, dsps_callback_func dsps_callback)
 {
+
+#ifdef FEATURE_GYRO_DSPS
   sensor1_config_t *dsps_config;
 
    IS_LOW("E\n");
@@ -61,9 +70,16 @@ void *dsps_proc_init(void *port, dsps_callback_func dsps_callback)
   dsps_config->port = port;
   dsps_config->dsps_callback = dsps_callback;
   pthread_mutex_init(&(dsps_config->callback_mutex), NULL);
-  pthread_cond_init(&(dsps_config->callback_condvar), NULL);
+
+  pthread_condattr_init(&dsps_config->callback_condattr);
+  pthread_condattr_setclock(&dsps_config->callback_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&(dsps_config->callback_condvar), &dsps_config->callback_condattr);
+
   pthread_mutex_init(&(dsps_config->thread_mutex), NULL);
-  pthread_cond_init(&(dsps_config->thread_condvar), NULL);
+
+  pthread_condattr_init(&dsps_config->thread_condattr);
+  pthread_condattr_setclock(&dsps_config->thread_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&(dsps_config->thread_condvar), &dsps_config->thread_condattr);
   if (dsps_open((void *)dsps_config) != 0) {
     goto dsps_open_error;
   }
@@ -73,6 +89,7 @@ void *dsps_proc_init(void *port, dsps_callback_func dsps_callback)
 dsps_open_error:
    IS_ERR("Failed to open sensor1 port");
   free(dsps_config);
+#endif
   return NULL;
 }
 
@@ -84,6 +101,7 @@ dsps_open_error:
  **/
 void dsps_proc_deinit(void *dsps_client_handle)
 {
+#ifdef FEATURE_GYRO_DSPS
   sensor1_config_t *dsps_config = (sensor1_config_t *)dsps_client_handle;
 
   if (dsps_config == NULL) {
@@ -93,6 +111,7 @@ void dsps_proc_deinit(void *dsps_client_handle)
 
   dsps_disconnect((void *)dsps_config);
   free(dsps_config);
+#endif
 }
 
 
@@ -103,21 +122,21 @@ void dsps_proc_deinit(void *dsps_client_handle)
  *==========================================================================*/
 int dsps_proc_set_params_gyro(void *dsps_client_handle, dsps_set_data_t *data)
 {
-  sensor1_config_t *dsps_obj = (sensor1_config_t *)dsps_client_handle;
+  int rc = 0;
 
+#ifdef FEATURE_GYRO_DSPS
+  sensor1_config_t *dsps_obj = (sensor1_config_t *)dsps_client_handle;
   if (dsps_obj == NULL || dsps_obj->status != DSPS_RUNNING) {
      IS_LOW("DSPS is not running, deinitialized or not connected");
     return -1;
   }
 
-  int rc = 0;
   sensor1_req_data_t msg_data;
   msg_data.sensor_type = data->sensor_type;
   int wait = 0;
 
-   IS_LOW("msg_type %d", data->msg_type);
+  IS_LOW("msg_type %d", data->msg_type);
 
-#ifdef FEATURE_GYRO_DSPS
   switch (data->msg_type) {
   case DSPS_GET_REPORT:
     dsps_obj->dsps_time_state.ts_cnt++;
@@ -184,14 +203,15 @@ int dsps_proc_set_params_gyro(void *dsps_client_handle, dsps_set_data_t *data)
  *==========================================================================*/
 int dsps_proc_set_params_gravity(void *dsps_client_handle, dsps_set_data_t *data)
 {
-  sensor1_config_t *dsps_config = (sensor1_config_t *)dsps_client_handle;
+  int rc = 0;
 
+#ifdef FEATURE_GYRO_DSPS
+  sensor1_config_t *dsps_config = (sensor1_config_t *)dsps_client_handle;
   if (dsps_config == NULL || dsps_config->status != DSPS_RUNNING) {
      IS_LOW("DSPS is not running, deinitialized or not connected");
     return -1;
   }
 
-  int rc = 0;
   sensor1_req_data_t msg_data;
   msg_data.sensor_type = data->sensor_type;
   msg_data.msg_type = data->msg_type;
@@ -224,7 +244,7 @@ int dsps_proc_set_params_gravity(void *dsps_client_handle, dsps_set_data_t *data
     IS_ERR("Invalid param");
     return -1;
   }
-#ifdef FEATURE_GYRO_DSPS
+
   if (dsps_send_request((void *)dsps_config, &msg_data, wait) < 0) {
     IS_ERR("Error sending request");
     return -1;
@@ -241,14 +261,16 @@ int dsps_proc_set_params_gravity(void *dsps_client_handle, dsps_set_data_t *data
  *==========================================================================*/
 int dsps_proc_set_params_light(void *dsps_client_handle, dsps_set_data_t *data)
 {
-  sensor1_config_t *dsps_config = (sensor1_config_t *)dsps_client_handle;
 
+  int rc = 0;
+
+#ifdef FEATURE_GYRO_DSPS
+  sensor1_config_t *dsps_config = (sensor1_config_t *)dsps_client_handle;
   if (dsps_config == NULL || dsps_config->status != DSPS_RUNNING) {
      IS_ERR("DSPS is not running, deinitialized or not connected");
     return -1;
   }
 
-  int rc = 0;
   sensor1_req_data_t msg_data;
   msg_data.sensor_type = data->sensor_type;
   msg_data.msg_type = data->msg_type;
@@ -274,7 +296,7 @@ int dsps_proc_set_params_light(void *dsps_client_handle, dsps_set_data_t *data)
       return -1;
       break;
     }
-#ifdef FEATURE_GYRO_DSPS
+
   if (dsps_send_request((void *)dsps_config, &msg_data, wait) < 0) {
     IS_LOW("Error sending request");
     return -1;
@@ -291,8 +313,10 @@ int dsps_proc_set_params_light(void *dsps_client_handle, dsps_set_data_t *data)
  *==========================================================================*/
 int dsps_proc_set_params(void *dsps_client_handle, dsps_set_data_t *data)
 {
-  sensor1_config_t *dsps_config = (sensor1_config_t *)dsps_client_handle;
   int rc = 0;
+
+#ifdef FEATURE_GYRO_DSPS
+  sensor1_config_t *dsps_config = (sensor1_config_t *)dsps_client_handle;
 
   if (dsps_config == NULL || dsps_config->status != DSPS_RUNNING) {
      IS_LOW("DSPS is not running, deinitialized or not connected");
@@ -316,6 +340,7 @@ int dsps_proc_set_params(void *dsps_client_handle, dsps_set_data_t *data)
     rc = -1;
     break;
   }
+#endif
 
   return rc;
 }  /* dsps_proc_set_params */

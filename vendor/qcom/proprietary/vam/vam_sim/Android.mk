@@ -28,6 +28,6 @@ LOCAL_SHARED_LIBRARIES += libavcodec
 
 LOCAL_MODULE = VASim
 
-include $(BUILD_EXECUTABLE)
+#include $(BUILD_EXECUTABLE)
 
 endif # BUILD_VAM

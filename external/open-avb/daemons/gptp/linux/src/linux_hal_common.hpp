@@ -641,6 +641,12 @@ public:
 	 uint32_t pdelay_count, PortState port_state );
 
 	/**
+	 * @brief Updates GmIdentity IPC values
+	 * @return TRUE
+	 */
+	virtual bool updateGmId(ClockIdentity& id, uint16_t portNumber);
+
+	/**
 	 * @brief unmaps and unlink shared memory
 	 * @return void
 	 */

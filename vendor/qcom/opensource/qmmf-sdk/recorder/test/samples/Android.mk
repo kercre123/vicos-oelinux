@@ -20,8 +20,11 @@ LOCAL_SRC_FILES  += qmmf_recorder_test_wav.cc
 LOCAL_SRC_FILES  += qmmf_recorder_test_aac.cc
 LOCAL_SRC_FILES  += qmmf_recorder_test_amr.cc
 
-LOCAL_SHARED_LIBRARIES += libqmmf_recorder_client libqmmf_display_client
+LOCAL_SHARED_LIBRARIES += libqmmf_utils libqmmf_recorder_client
 LOCAL_SHARED_LIBRARIES += libcamera_client
+ifneq ($(DISABLE_DISPLAY),1)
+LOCAL_SHARED_LIBRARIES += libqmmf_display_client
+endif
 
 LOCAL_MODULE = qmmf_recorder_test
 

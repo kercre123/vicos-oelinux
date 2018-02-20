@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,102 +30,91 @@
 #pragma once
 
 #include <map>
+#include <mutex>
 #include <string>
+#include <thread>
+
 #include <qmmf-sdk/qmmf_player.h>
 #include <qmmf-sdk/qmmf_player_params.h>
+
 #include "player/test/samples/qmmf_player_parser.h"
-#include <pthread.h>
-#include <mutex>
 
 using namespace qmmf;
 using namespace player;
 using namespace android;
 
-enum class AudioFileType{
+enum class AudioFileType {
+  kPCM,
   kAAC,
   kAMR,
-  kG711
-};
-
-enum class PlayerState
-{
-  kError = 0,
-  kIdle = 1 << 0,
-  kPrepared = 1 << 1,
-  kStarted = 1 << 2,
-  kPaused = 1 << 3,
-  kStopped =  1 << 4,
-  kCompleted = 1<< 5,
-};
-
-struct Event{
-  PlayerState state;
+  kG711,
+  kMP3,
 };
 
 class PlayerTest {
  public:
   PlayerTest();
-
   ~PlayerTest();
 
-  int32_t Connect();
+  void Connect();
+  void Disconnect();
 
-  int32_t Disconnect();
+  void Prepare();
+  void Delete();
+  void Start();
+  void Stop();
+  void Pause();
+  void Resume();
 
-  int32_t Prepare();
+  void SetPosition();
+  void SetTrickMode();
 
-  int32_t Start();
+  void GrabPicture();
 
-  int32_t Stop();
+  void AdjustVolume(const int32_t adjustment);
 
-  int32_t Pause();
+  void PlayerHandler(EventType event_type,
+                     void* event_data,
+                     size_t event_data_size);
 
-  int32_t Resume();
+  void AudioTrackHandler(uint32_t track_id,
+                         EventType event_type,
+                         void* event_data,
+                         size_t event_data_size);
 
-  int32_t SetPosition();
+  void VideoTrackHandler(uint32_t track_id,
+                         EventType event_type,
+                         void* event_data,
+                         size_t event_data_size);
 
-  int32_t SetTrickMode();
-
-  int32_t GrabPicture();
-
-  int32_t Delete();
-
-  void playercb(EventType event_type, void *event_data,
-                size_t event_data_size);
-
-  void audiotrackcb(EventType event_type, void *event_data,
-                    size_t event_data_size);
-
-  void videotrackcb(EventType event_type, void *event_data,
-                    size_t event_data_size);
-
-  static void* StartPlaying(void* ptr);
-
-  int32_t StopPlaying();
-
-  char *            filename_;
+  char*             filename_;
   AudioFileType     filetype_;
 
  private:
+  enum class State {
+    kStopped,
+    kRunning,
+    kPaused,
+  };
 
   int32_t ParseFile(AudioTrackCreateParam& audio_track_param_);
 
+  static void ThreadEntry(PlayerTest* player_test);
+  void Thread();
+
   Player player_;
-  std::map <uint32_t , std::vector<uint32_t> > sessions_;
 
-  std::mutex        state_change_lock_;
-  bool              stopped_;
+  ::std::thread*    thread_;
+  ::std::mutex      lock_;
+  State             state_;
   bool              start_again_;
-  bool              paused_;
-  pthread_t         start_thread_id;
+  int32_t           volume_;
 
+  PCMfileIO*        pcm_file_io_;
   AACfileIO*        aac_file_io_;
   G711fileIO*       g711_file_io_;
   AMRfileIO*        amr_file_io_;
-
-  std::map<uint32_t, const char *>  statemap_;
-  const char*                       player_test_event_[2];
-  const char *                      current_state_;
+  MP3fileIO*        mp3_file_io_;
 };
 
 class CmdMenu {
@@ -139,6 +128,8 @@ class CmdMenu {
       PAUSE_CMD                         = '6',
       RESUME_CMD                        = '7',
       DELETE_CMD                        = '8',
+      VOLUME_UP_CMD                     = 'U',
+      VOLUME_DOWN_CMD                   = 'D',
       EXIT_CMD                          = 'X',
       NEXT_CMD                          = '\n',
       INVALID_CMD                       = '0'

@@ -17,6 +17,8 @@
 #include "camera_dbg.h"
 #include <sys/sysinfo.h>
 
+#define UNIX_PATH_MAX 108
+
 #if 0
 #undef CDBG
 #define CDBG ALOGE

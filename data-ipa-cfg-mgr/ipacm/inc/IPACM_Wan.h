@@ -216,9 +216,11 @@ private:
 	uint32_t ODU_fl_hdl[IPA_NUM_DEFAULT_WAN_FILTER_RULES];
 	int num_firewall_v4,num_firewall_v6;
 	uint32_t wan_v4_addr;
+	uint32_t public_wan_v4_addr;
 	uint32_t wan_v4_addr_gw;
 	uint32_t wan_v6_addr_gw[4];
 	bool wan_v4_addr_set;
+	bool public_wan_v4_addr_set;
 	bool wan_v4_addr_gw_set;
 	bool wan_v6_addr_gw_set;
 	bool active_v4;

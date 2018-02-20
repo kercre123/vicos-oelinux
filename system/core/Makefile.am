@@ -20,7 +20,9 @@ BUILD_COMPONENTS += leproperties
 BUILD_COMPONENTS += toolbox
 BUILD_COMPONENTS += usb
 BUILD_COMPONENTS += include
+if !NO_DEBUGGERD
 BUILD_COMPONENTS += debuggerd
+endif
 endif
 
 if BUILD_HOST

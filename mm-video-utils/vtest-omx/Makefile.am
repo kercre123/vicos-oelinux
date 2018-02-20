@@ -5,6 +5,7 @@ AM_CFLAGS += -D_POSIX_SOURCE -DPOSIX_C_SOURCE=199506L
 AM_CFLAGS += -D_XOPEN_SOURCE=600
 AM_CFLAGS += -D_ANDROID_
 AM_CFLAGS += -Wno-deprecated-declarations
+AM_CFLAGS += -Wno-multichar
 #AM_CFLAGS += -Wno-mismatched-tags
 AM_CFLAGS += -fno-stack-protector
 AM_CFLAGS += -DNON_BIONIC

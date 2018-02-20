@@ -106,6 +106,8 @@ boolean is_set_parameters(is_set_parameter_t *param, is_info_t *is_info, is_set_
     if (param->u.is_config_info.stream_type == CAM_STREAM_TYPE_VIDEO) {
       is_info->width[IS_VIDEO] = param->u.is_config_info.width;
       is_info->height[IS_VIDEO] = param->u.is_config_info.height;
+      is_info->stride[IS_VIDEO] = param->u.is_config_info.stride;
+      is_info->scanline[IS_VIDEO] = param->u.is_config_info.scanline;
       IS_HIGH("IS_SET_PARAM_DIS_CONFIG, vwidth = %ld, vheight = %ld",
         is_info->width[IS_VIDEO], is_info->height[IS_VIDEO]);
     } else {
@@ -113,6 +115,8 @@ boolean is_set_parameters(is_set_parameter_t *param, is_info_t *is_info, is_set_
          by poster of this event */
       is_info->width[IS_PREVIEW] = param->u.is_config_info.width;
       is_info->height[IS_PREVIEW] = param->u.is_config_info.height;
+      is_info->stride[IS_PREVIEW] = param->u.is_config_info.stride;
+      is_info->scanline[IS_PREVIEW] = param->u.is_config_info.scanline;
       IS_HIGH("IS_SET_PARAM_DIS_CONFIG, pwidth = %ld, pheight = %ld",
         is_info->width[IS_PREVIEW], is_info->height[IS_PREVIEW]);
     }

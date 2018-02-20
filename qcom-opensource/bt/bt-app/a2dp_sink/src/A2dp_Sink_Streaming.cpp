@@ -99,7 +99,10 @@ void BtA2dpSinkStreamingMsgHandler(void *msg) {
     BtEvent* pCleanupEvent = NULL, *pControlRequest = NULL, *pReleaseControlReq = NULL;
     uint32_t pcm_data_read = 0;
     uint8_t rtp_offset = 0;
-    uint32_t timestamp_len = (pA2dpSinkStream->enable_notification_cb ? sizeof(uint64_t) : 0);
+    uint32_t timestamp_len = 0;
+    if (pA2dpSinkStream) {
+        timestamp_len = (pA2dpSinkStream->enable_notification_cb ? sizeof(uint64_t) : 0);
+    }
 #if (defined(BT_AUDIO_HAL_INTEGRATION))
     qahw_out_buffer_t out_buf;
 #endif
@@ -139,8 +142,10 @@ void BtA2dpSinkStreamingMsgHandler(void *msg) {
             break;
         case A2DP_SINK_STREAMING_CLOSE_AUDIO_STREAM:
             ALOGD(LOGTAG " A2DP_SINK_STREAMING_CLOSE_AUDIO_STREAM");
-            pA2dpSinkStream->CloseAudioStream();
-            pA2dpSinkStream->StopDataFetchTimer();
+            if (pA2dpSinkStream) {
+                pA2dpSinkStream->CloseAudioStream();
+                pA2dpSinkStream->StopDataFetchTimer();
+            }
             // release control
             pReleaseControlReq = new BtEvent;
             pReleaseControlReq->btamControlRelease.event_id = BT_AM_RELEASE_CONTROL;
@@ -157,12 +162,14 @@ void BtA2dpSinkStreamingMsgHandler(void *msg) {
             break;
         case A2DP_SINK_STREAMING_FETCH_PCM_DATA:
             ALOGD(LOGTAG " A2DP_SINK_STREAMING_FETCH_PCM_DATA");
-            if (!pA2dpSinkStream->enable_notification_cb) {
-                if (!pA2dpSinkStream->pcm_timer) {
-                    ALOGD(LOGTAG " pcm_timer already false, don't fetch data");
-                    break;
+            if (pA2dpSinkStream) {
+                if (!pA2dpSinkStream->enable_notification_cb) {
+                    if (!pA2dpSinkStream->pcm_timer) {
+                        ALOGD(LOGTAG " pcm_timer already false, don't fetch data");
+                        break;
+                    }
+                    pA2dpSinkStream->pcm_timer = false;
                 }
-                pA2dpSinkStream->pcm_timer = false;
             }
 #if (defined USE_GST)
             uint8_t * data;
@@ -282,125 +289,128 @@ void BtA2dpSinkStreamingMsgHandler(void *msg) {
         case A2DP_SINK_STREAMING_AM_RELEASE_CONTROL:
             ALOGD(LOGTAG " A2DP_SINK_STREAMING_AM_RELEASE_CONTROL");
             // release focus in this case.
-            pA2dpSinkStream->CloseAudioStream();
-            pA2dpSinkStream->StopDataFetchTimer();
-            if (pA2dpSinkStream->use_bt_a2dp_hal) {
-                pA2dpSinkStream->SuspendInputStream();
-            }
-            if (pA2dpSinkStream->controlStatus != STATUS_LOSS_TRANSIENT) {
-                pReleaseControlReq = new BtEvent;
-                pReleaseControlReq->btamControlRelease.event_id = BT_AM_RELEASE_CONTROL;
-                pReleaseControlReq->btamControlRelease.profile_id = PROFILE_ID_A2DP_SINK;
-                PostMessage(THREAD_ID_BT_AM, pReleaseControlReq);
-            }
-            break;
-
-        case BT_AM_CONTROL_STATUS:
-            ALOGD(LOGTAG " BT_AM_CONTROL_STATUS");
-            ALOGD(LOGTAG " earlier status = %d  new status = %d", pA2dpSinkStream->controlStatus,
-                    pEvent->btamControlStatus.status_type);
-            pA2dpSinkStream->controlStatus = pEvent->btamControlStatus.status_type;
-            switch(pA2dpSinkStream->controlStatus) {
-                case STATUS_LOSS:
-                    // inform bluedroid
-                    if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
-                        pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
-                        audio_focus_state_vendor(0, &pA2dpSinkStream->mStreamingDevice);
-                    }
-                    // send pause to remote
-                    if (pAvrcp != NULL)
-                        pAvrcp->SendPassThruCommandNative(CMD_ID_PAUSE,
-                        &pA2dpSinkStream->mStreamingDevice, 0);
-                    // release control
+            if (pA2dpSinkStream) {
+                pA2dpSinkStream->CloseAudioStream();
+                pA2dpSinkStream->StopDataFetchTimer();
+                if (pA2dpSinkStream->use_bt_a2dp_hal) {
+                    pA2dpSinkStream->SuspendInputStream();
+                }
+                if (pA2dpSinkStream->controlStatus != STATUS_LOSS_TRANSIENT) {
                     pReleaseControlReq = new BtEvent;
                     pReleaseControlReq->btamControlRelease.event_id = BT_AM_RELEASE_CONTROL;
                     pReleaseControlReq->btamControlRelease.profile_id = PROFILE_ID_A2DP_SINK;
                     PostMessage(THREAD_ID_BT_AM, pReleaseControlReq);
-                    pA2dpSinkStream->CloseAudioStream();
-                    pA2dpSinkStream->StopDataFetchTimer();
-                    break;
-                case STATUS_LOSS_TRANSIENT:
-                    // inform bluedroid
-                    if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
-                        pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
-                        audio_focus_state_vendor(0, &pA2dpSinkStream->mStreamingDevice);
-                    }
-                    // send pause to remote
-                    if (pAvrcp != NULL) {
-                        ALOGD(LOGTAG " copy resuming device");
-                        memcpy(&pA2dpSinkStream->mResumingDevice,
-                            &pA2dpSinkStream->mStreamingDevice, sizeof(bt_bdaddr_t));
-                        ALOGD(LOGTAG " sending pause copy resuming device");
-                        pAvrcp->SendPassThruCommandNative(CMD_ID_PAUSE,
+                }
+            }
+            break;
+        case BT_AM_CONTROL_STATUS:
+            ALOGD(LOGTAG " BT_AM_CONTROL_STATUS");
+            if (pA2dpSinkStream) {
+                ALOGD(LOGTAG " earlier status = %d  new status = %d", pA2dpSinkStream->controlStatus,
+                        pEvent->btamControlStatus.status_type);
+                pA2dpSinkStream->controlStatus = pEvent->btamControlStatus.status_type;
+                switch(pA2dpSinkStream->controlStatus) {
+                    case STATUS_LOSS:
+                         // inform bluedroid
+                        if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
+                            pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
+                            audio_focus_state_vendor(0, &pA2dpSinkStream->mStreamingDevice);
+                        }
+                        // send pause to remote
+                        if (pAvrcp != NULL)
+                            pAvrcp->SendPassThruCommandNative(CMD_ID_PAUSE,
                             &pA2dpSinkStream->mStreamingDevice, 0);
-                    }
-                    pA2dpSinkStream->CloseAudioStream();
-                    pA2dpSinkStream->StopDataFetchTimer();
-                    break;
-                case STATUS_GAIN:
-                    // inform bluedroid
-                    if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
-                        pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
-                        audio_focus_state_vendor(3, &pA2dpSinkStream->mStreamingDevice);
-                    }
-                    pA2dpSinkStream->ConfigureAudioHal();
-                    if (!pA2dpSinkStream->enable_notification_cb) {
-                        if (pA2dpSinkStream->codec_type == A2DP_SINK_AUDIO_CODEC_SBC)
-                            pA2dpSinkStream->StartPcmTimer();
-                        else {
-                            BtEvent *pEvent = new BtEvent;
-                            pEvent->a2dpSinkStreamingEvent.event_id =
-                                    A2DP_SINK_FILL_COMPRESS_BUFFER;
-                            if (pA2dpSinkStream) {
+                        // release control
+                        pReleaseControlReq = new BtEvent;
+                        pReleaseControlReq->btamControlRelease.event_id = BT_AM_RELEASE_CONTROL;
+                        pReleaseControlReq->btamControlRelease.profile_id = PROFILE_ID_A2DP_SINK;
+                        PostMessage(THREAD_ID_BT_AM, pReleaseControlReq);
+                        pA2dpSinkStream->CloseAudioStream();
+                        pA2dpSinkStream->StopDataFetchTimer();
+                        break;
+                    case STATUS_LOSS_TRANSIENT:
+                        // inform bluedroid
+                        if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
+                            pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
+                            audio_focus_state_vendor(0, &pA2dpSinkStream->mStreamingDevice);
+                        }
+                        // send pause to remote
+                        if (pAvrcp != NULL) {
+                            ALOGD(LOGTAG " copy resuming device");
+                            memcpy(&pA2dpSinkStream->mResumingDevice,
+                                &pA2dpSinkStream->mStreamingDevice, sizeof(bt_bdaddr_t));
+                            ALOGD(LOGTAG " sending pause copy resuming device");
+                            pAvrcp->SendPassThruCommandNative(CMD_ID_PAUSE,
+                                &pA2dpSinkStream->mStreamingDevice, 0);
+                        }
+                        pA2dpSinkStream->CloseAudioStream();
+                        pA2dpSinkStream->StopDataFetchTimer();
+                        break;
+                    case STATUS_GAIN:
+                        // inform bluedroid
+                        if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
+                            pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
+                            audio_focus_state_vendor(3, &pA2dpSinkStream->mStreamingDevice);
+                        }
+                        pA2dpSinkStream->ConfigureAudioHal();
+                        if (!pA2dpSinkStream->enable_notification_cb) {
+                            if (pA2dpSinkStream->codec_type == A2DP_SINK_AUDIO_CODEC_SBC)
+                                pA2dpSinkStream->StartPcmTimer();
+                            else {
+                                BtEvent *pEvent = new BtEvent;
+                                pEvent->a2dpSinkStreamingEvent.event_id =
+                                        A2DP_SINK_FILL_COMPRESS_BUFFER;
                                 thread_post(pA2dpSinkStream->threadInfo.thread_id,
                                 pA2dpSinkStream->threadInfo.thread_handler, (void*)pEvent);
                             }
                         }
-                    }
-                    break;
-                case STATUS_REGAINED:
-                    // inform bluedroid
-                    ALOGD(LOGTAG " STATUS_REGAINED");
-                    if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
-                        pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
-                        audio_focus_state_vendor(3, &pA2dpSinkStream->mStreamingDevice);
-                    }
-                    pA2dpSinkStream->ConfigureAudioHal();
-                    if (!pA2dpSinkStream->enable_notification_cb) {
-                        if (pA2dpSinkStream->codec_type == A2DP_SINK_AUDIO_CODEC_SBC)
-                            pA2dpSinkStream->StartPcmTimer();
-                        else {
-                            BtEvent *pEvent = new BtEvent;
-                            pEvent->a2dpSinkStreamingEvent.event_id =
-                                    A2DP_SINK_FILL_COMPRESS_BUFFER;
-                            if (pA2dpSinkStream) {
-                                thread_post(pA2dpSinkStream->threadInfo.thread_id,
-                                pA2dpSinkStream->threadInfo.thread_handler, (void*)pEvent);
+                        break;
+                    case STATUS_REGAINED:
+                        // inform bluedroid
+                        ALOGD(LOGTAG " STATUS_REGAINED");
+                        if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL) {
+                            pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
+                            audio_focus_state_vendor(3, &pA2dpSinkStream->mStreamingDevice);
+                        }
+                        pA2dpSinkStream->ConfigureAudioHal();
+                        if (!pA2dpSinkStream->enable_notification_cb) {
+                            if (pA2dpSinkStream->codec_type == A2DP_SINK_AUDIO_CODEC_SBC)
+                                pA2dpSinkStream->StartPcmTimer();
+                            else {
+                                BtEvent *pEvent = new BtEvent;
+                                pEvent->a2dpSinkStreamingEvent.event_id =
+                                        A2DP_SINK_FILL_COMPRESS_BUFFER;
+                                    thread_post(pA2dpSinkStream->threadInfo.thread_id,
+                                    pA2dpSinkStream->threadInfo.thread_handler, (void*)pEvent);
                             }
                         }
-                    }
-                    // send play to remote
-                    if (pAvrcp != NULL && memcmp(&pA2dpSinkStream->mResumingDevice, &bd_addr_null,
-                            sizeof(bt_bdaddr_t))) {
-                        ALOGD(LOGTAG " STATUS_REGAINED, sending play");
-                        pAvrcp->SendPassThruCommandNative(CMD_ID_PLAY,
-                                &pA2dpSinkStream->mResumingDevice, 1);
-                        memset(&pA2dpSinkStream->mResumingDevice, 0, sizeof(bt_bdaddr_t));
-                    }
-                    break;
+                        // send play to remote
+                        if (pAvrcp != NULL && memcmp(&pA2dpSinkStream->mResumingDevice, &bd_addr_null,
+                                sizeof(bt_bdaddr_t))) {
+                            ALOGD(LOGTAG " STATUS_REGAINED, sending play");
+                            pAvrcp->SendPassThruCommandNative(CMD_ID_PLAY,
+                                    &pA2dpSinkStream->mResumingDevice, 1);
+                            memset(&pA2dpSinkStream->mResumingDevice, 0, sizeof(bt_bdaddr_t));
+                        }
+                        break;
+                }
             }
             break;
         case A2DP_SINK_FILL_COMPRESS_BUFFER:
             ALOGD(LOGTAG " A2DP_SINK_FILL_COMPRESS_BUFFER");
-            pA2dpSinkStream->FillCompressBuffertoAudioOutHal();
+            if (pA2dpSinkStream) {
+                pA2dpSinkStream->FillCompressBuffertoAudioOutHal();
+            }
             break;
         case A2DP_SINK_STREAMING_DISCONNECTED:
             ALOGD(LOGTAG " A2DP_SINK_STREAMING_DISCONNECTED");
-            pA2dpSinkStream->StopDataFetchTimer();
-            if (pA2dpSinkStream->use_bt_a2dp_hal) {
-                pA2dpSinkStream->CloseInputStream();
+            if (pA2dpSinkStream) {
+                pA2dpSinkStream->StopDataFetchTimer();
+                if (pA2dpSinkStream->use_bt_a2dp_hal) {
+                    pA2dpSinkStream->CloseInputStream();
+                }
+                pA2dpSinkStream->CloseAudioStream();
             }
-            pA2dpSinkStream->CloseAudioStream();
             break;
         case A2DP_SINK_STREAMING_FLUSH_AUDIO:
             ALOGD(LOGTAG " A2DP_SINK_STREAMING_FLUSH_AUDIO");
@@ -408,11 +418,12 @@ void BtA2dpSinkStreamingMsgHandler(void *msg) {
             qahw_out_pause(pA2dpSinkStream->out_stream);
             qahw_out_flush(pA2dpSinkStream->out_stream);
 #endif
-            pA2dpSinkStream->StopDataFetchTimer();
-            if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL)
-            {
-                pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
-                    update_flushing_device_vendor(&pEvent->a2dpSinkStreamingEvent.bd_addr);
+            if (pA2dpSinkStream) {
+                if (pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface != NULL)
+                {
+                    pA2dpSinkStream->mBtA2dpSinkStreamingVendorInterface->
+                        update_flushing_device_vendor(&pEvent->a2dpSinkStreamingEvent.bd_addr);
+                }
             }
             break;
         default:

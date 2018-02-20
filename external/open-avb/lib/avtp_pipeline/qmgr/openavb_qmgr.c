@@ -33,7 +33,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
  */
 
 #include <openavb_types.h>
-#include "openavb_ether_hal.h"
 #define AVB_LOG_COMPONENT "QMGR"
 //#define AVB_LOG_LEVEL AVB_LOG_LEVEL_DEBUG
 #include "openavb_log.h"
@@ -41,9 +40,8 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 
 #include "openavb_qmgr.h"
 #include "avb_sched.h"
-#include "openavb_ether_hal.h"
 
-#ifdef AVB_FEATURE_NEUTRINO
+#if AVB_FEATURE_NEUTRINO
 #include "neutrino.h"
 #endif
 
@@ -59,7 +57,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 
 // Qdisc configuration
 typedef struct {
-	device_t *igb_dev;
 	int mode;
 	int ifindex;
 	char ifname[IFNAMSIZ];
@@ -104,20 +101,9 @@ static bool setupHWQueue(int nClass, unsigned classBytesPerSec)
 	int err = 0;
 	AVB_TRACE_ENTRY(AVB_TRACE_QUEUE_MANAGER);
 
-#ifdef AVB_FEATURE_NEUTRINO
+#if AVB_FEATURE_NEUTRINO
 	AVB_LOGF_DEBUG("setupHWQueue: interface = %s", qdisc_data.ifname);
 	err = ntn_set_class_bandwidth(nClass, classBytesPerSec, qdisc_data.ifname);
-#else
-	U32 class_a_bytes_per_sec, class_b_bytes_per_sec;
-
-	if (nClass == SR_CLASS_A) {
-		class_a_bytes_per_sec = classBytesPerSec;
-		class_b_bytes_per_sec =  qmgr_classes[SR_CLASS_B].classBytesPerSec;
-	} else {
-		class_a_bytes_per_sec =  qmgr_classes[SR_CLASS_A].classBytesPerSec;
-		class_b_bytes_per_sec = classBytesPerSec;
-	}
-	err = igb_set_class_bandwidth2(qdisc_data.igb_dev, class_a_bytes_per_sec, class_b_bytes_per_sec);
 #endif
 
 	if (err)
@@ -262,15 +248,6 @@ bool openavbQmgrInitialize(int mode, int ifindex, const char* ifname, unsigned m
 	AVB_LOGF_DEBUG("Initializing QMgr; mode=%d, idx=%d, mtu=%u, link_kbit=%u, nsr_kbit=%u",
 				   qdisc_data.mode, ifindex, mtu, link_kbit, nsr_kbit);
 
-#ifndef AVB_FEATURE_NEUTRINO
-	if ( qdisc_data.mode != AVB_SHAPER_DISABLED
-	     && (qdisc_data.igb_dev = igbAcquireDevice()) == 0)
-	{
-		AVB_LOG_ERROR("Initializing QMgr; unable to acquire igb device");
-		goto exit;
-	}
-#endif
-
 	// Initialize data for classes and streams
 	memset(qmgr_classes, 0, sizeof(qmgr_classes));
 	memset(qmgr_streams, 0, sizeof(qmgr_streams));
@@ -288,9 +265,6 @@ bool openavbQmgrInitialize(int mode, int ifindex, const char* ifname, unsigned m
 
 	ret = TRUE;
 
-#ifndef AVB_FEATURE_NEUTRINO
-exit:
-#endif
 	UNLOCK();
 	AVB_TRACE_EXIT(AVB_TRACE_QUEUE_MANAGER);
 	return ret;
@@ -312,10 +286,6 @@ void openavbQmgrFinalize(void)
 				}
 			}
 		}
-#ifndef AVB_FEATURE_NEUTRINO
-		igbReleaseDevice(qdisc_data.igb_dev);
-		qdisc_data.igb_dev = NULL;
-#endif
 	}
 
 	UNLOCK();

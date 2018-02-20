@@ -114,6 +114,12 @@
     <ctl name="MultiMedia1 Mixer SLIM_0_TX" value="0" />
     <ctl name="MultiMedia1 Mixer SLIM_4_TX" value="0" />
     <ctl name="MultiMedia1 Mixer INTERNAL_BT_SCO_TX" value="0" />
+    <ctl name="MultiMedia28 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia28 Mixer INTERNAL_BT_SCO_TX" value="0" />
+    <ctl name="MultiMedia28 Mixer AFE_PCM_TX" value="0" />
+    <ctl name="MultiMedia29 Mixer SLIM_0_TX" value="0" />
+    <ctl name="MultiMedia29 Mixer INTERNAL_BT_SCO_TX" value="0" />
+    <ctl name="MultiMedia29 Mixer AFE_PCM_TX" value="0" />
     <ctl name="QUIN_MI2S_RX Audio Mixer MultiMedia1" value="0" />
     <ctl name="QUIN_MI2S_RX Audio Mixer MultiMedia2" value="0" />
     <ctl name="QUIN_MI2S_RX Audio Mixer MultiMedia3" value="0" />
@@ -1280,6 +1286,40 @@
 
     <path name="audio-record-compress4 usb-headset-mic">
         <ctl name="MultiMedia19 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress5">
+        <ctl name="MultiMedia28 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress5 bt-sco">
+        <ctl name="MultiMedia28 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress5 bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
+        <path name="audio-record-compress5 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress5 usb-headset-mic">
+        <ctl name="MultiMedia28 Mixer AFE_PCM_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress6">
+        <ctl name="MultiMedia29 Mixer SLIM_0_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress6 bt-sco">
+        <ctl name="MultiMedia29 Mixer INTERNAL_BT_SCO_TX" value="1" />
+    </path>
+
+    <path name="audio-record-compress6 bt-sco-wb">
+        <ctl name="Internal BTSCO SampleRate" value="16000" />
+        <path name="audio-record-compress6 bt-sco" />
+    </path>
+
+    <path name="audio-record-compress6 usb-headset-mic">
+        <ctl name="MultiMedia29 Mixer AFE_PCM_TX" value="1" />
     </path>
 
     <path name="low-latency-record">

@@ -6,6 +6,9 @@
 #include "QIPerf.h"
 #include "dlfcn.h"
 #include "jpeglog.h"
+#include "limits.h"
+#include<stdlib.h>
+#include<string.h>
 
 /** img_perf_lock_handle_create
  *

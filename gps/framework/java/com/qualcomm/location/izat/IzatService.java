@@ -10,9 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.IBinder;
-import android.os.UserHandle;
 import android.os.ServiceManager;
-import android.os.RemoteException;
 import android.util.Log;
 import com.qualcomm.location.izat.flp.FlpServiceProvider;
 import com.qti.flp.IFlpService;
@@ -28,8 +26,8 @@ import com.qualcomm.location.izat.wifidbreceiver.WiFiDBReceiver;
 
 public class IzatService extends Service {
     private static final String TAG = "IzatService";
-    private static final String Service_Version = "4.0.0";
-    private static final boolean VERBOSE_DBG = Log.isLoggable(TAG, Log.VERBOSE);
+    private static final String Service_Version = "4.1.0";
+    private static final boolean VERBOSE = Log.isLoggable(TAG, Log.VERBOSE);
     private static final String IZAT_SERVICE_NAME = "com.qualcomm.location.izat.IzatService";
     private static final String ACCESS_FINE_LOCATION =
             android.Manifest.permission.ACCESS_FINE_LOCATION;
@@ -38,7 +36,7 @@ public class IzatService extends Service {
 
     @Override
     public void onCreate() {
-        if (VERBOSE_DBG) {
+        if (VERBOSE) {
             Log.d(TAG, "onCreate");
         }
         mContext = this;
@@ -51,11 +49,11 @@ public class IzatService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        if (VERBOSE_DBG) {
+        if (VERBOSE) {
             Log.d(TAG, "onBind");
         }
         if ("com.qualcomm.location.izat.IzatService".equals(intent.getAction())) {
-            if (VERBOSE_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "Got a binding request.");
             }
             return mBinder;

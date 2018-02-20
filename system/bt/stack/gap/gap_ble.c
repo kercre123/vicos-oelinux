@@ -230,7 +230,7 @@ tGATT_STATUS gap_read_attr_value (UINT16 handle, tGATT_VALUE *p_value, BOOLEAN i
             switch (p_db_attr->uuid)
             {
                 case GATT_UUID_GAP_DEVICE_NAME:
-                    BTM_ReadLocalDeviceName((char **)&p_dev_name);
+                    BTM_ReadLocalLeDeviceName((char **)&p_dev_name);
                     if (strlen ((char *)p_dev_name) > GATT_MAX_ATTR_LEN)
                         p_value->len = GATT_MAX_ATTR_LEN;
                     else
@@ -483,7 +483,7 @@ void GAP_BleAttrDBUpdate(UINT16 attr_uuid, tGAP_BLE_ATTR_VALUE *p_value)
                 break;
 
             case GATT_UUID_GAP_DEVICE_NAME:
-                BTM_SetLocalDeviceName((char *)p_value->p_dev_name);
+                BTM_SetLocalLeDeviceName((char *)p_value->p_dev_name);
                 break;
 
             case GATT_UUID_GAP_CENTRAL_ADDR_RESOL:
