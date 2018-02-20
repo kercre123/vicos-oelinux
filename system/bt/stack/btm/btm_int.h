@@ -644,6 +644,7 @@ typedef struct
 {
 #if BTM_MAX_LOC_BD_NAME_LEN > 0
     tBTM_LOC_BD_NAME bd_name;                    /* local Bluetooth device name */
+    tBTM_LOC_BD_NAME le_name;                    /* local Bluetooth LE device name */
 #endif
     BOOLEAN          pin_type;                   /* TRUE if PIN type is fixed */
     UINT8            pin_code_len;               /* Bonding information */

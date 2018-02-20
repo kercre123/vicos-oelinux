@@ -1,5 +1,7 @@
 # sources and intermediate files are separated
 
+external_bt_path := $(top_srcdir)/../../vendor/qcom/opensource/bluetooth
+
 AM_CFLAGS = -Wall \
         -Wundef \
         -Wstrict-prototypes \
@@ -24,9 +26,9 @@ AM_CPPFLAGS = -Iinclude \
         -I../udrv/include \
         -I../vnd/include \
         -I../utils/include \
-        -I$(WORKSPACE)/vendor/qcom/opensource/bluetooth/system_bt_ext \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/include \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/ar
+        -I$(external_bt_path)/system_bt_ext \
+        -I$(external_bt_path)/system_bt_ext/bta/include \
+        -I$(external_bt_path)/system_bt_ext/bta/ar
 c_sources = \
         dm/bta_dm_ci.c \
         dm/bta_dm_act.c \
@@ -101,17 +103,17 @@ c_sources = \
         jv/bta_jv_api.c
 
 c_sources+= \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_act.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_ci.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_api.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_aact.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_main.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_cfg.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_ssm.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_sbc.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_aac.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/avk/bta_avk_mp3.c\
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/ar/bta_ar_ext.c
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_act.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_ci.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_api.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_aact.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_main.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_cfg.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_ssm.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_sbc.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_aac.c \
+        $(external_bt_path)/system_bt_ext/bta/avk/bta_avk_mp3.c\
+        $(external_bt_path)/system_bt_ext/bta/ar/bta_ar_ext.c
 common_LDFLAGS = -lpthread  -lrt ../stack/libbtstack.la -lbtif
 common_CFLAGS =  $(AM_CFLAGS) -fPIC -D_GNU_SOURCE
 

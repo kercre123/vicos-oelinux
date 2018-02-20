@@ -67,8 +67,8 @@
 #define A2D_MP3_IE_VBR_MSK                     0x80    /* b7 variable bit rate */
 #define A2D_MP3_IE_VBR                         0x80    /* supported */
 
-#define A2D_MP3_IE_BIT_RATE_MSK                0x07FFF  /* bit rate */
-#define A2D_MP3_IE_BIT_RATE                    0x07FFF
+#define A2D_MP3_IE_BIT_RATE_MSK                0x7FFF  /* bit rate */
+#define A2D_MP3_IE_BIT_RATE                    0x7FFF
 
 /*****************************************************************************
 **  Type Definitions

@@ -132,6 +132,9 @@ char outputFilename [50] = "/etc/data/misc/bluedroid/output_sample.pcm";
 #ifndef AUDIO_CHANNEL_OUT_STEREO
 #define AUDIO_CHANNEL_OUT_STEREO 0x03
 #endif
+
+#define STACK_OVERHEAD 13
+
 #define A2DP_SRC_AUDIO_CODEC_PCM 0x40
 #define A2DP_SRC_AUDIO_CODEC_SBC 0x00
 /* BTIF media cmd event definition : BTIF_MEDIA_TASK_CMD */
@@ -4087,6 +4090,47 @@ UINT8 btif_media_sink_enque_buf(BT_HDR *p_pkt)
     }
 
     return fixed_queue_length(btif_media_cb.RxSbcQ);
+}
+
+
+/*******************************************************************************
+ **
+ ** Function         btif_media_writebuf_vendor
+ **
+ ** Description
+ **
+ **
+ ** Returns
+ *******************************************************************************/
+size_t *btif_media_writebuf_vendor(bt_bdaddr_t *bd_addr, const void* buffer, size_t length, uint8_t codectype)
+{
+    if(buffer == NULL){
+        return 0;
+    }
+    BTIF_TRACE_IMP("AV %s , data size = %d", __FUNCTION__,length);
+
+    if(length > 0 && btif_media_cb.TxAaQ != NULL) {
+
+        if (fixed_queue_length(btif_media_cb.TxAaQ) < MAX_OUTPUT_A2DP_FRAME_QUEUE_SZ)
+        {
+            BT_HDR *p_buf = (BT_HDR *)osi_malloc(length + sizeof(BT_HDR)+STACK_OVERHEAD);// 13 is overhead for stack headers
+            p_buf->len = length;
+            p_buf->offset = STACK_OVERHEAD;// overhead for stack headers
+            uint8_t* data_ptr;
+            data_ptr = (uint8_t*)(p_buf + 1)+p_buf->offset;
+            memcpy(data_ptr, buffer ,length);
+            fixed_queue_enqueue(btif_media_cb.TxAaQ, p_buf);
+        }else {
+            APPL_TRACE_DEBUG("### discarded frame ###");
+            while(fixed_queue_length(btif_media_cb.TxAaQ) == 0) {
+                osi_free(fixed_queue_try_dequeue(btif_media_cb.TxAaQ));
+            }
+            return 0;
+        }
+        bta_av_ci_src_data_ready(BTA_AV_CHNL_AUDIO);
+        return length;
+    }
+    return 0;
 }
 
 /*******************************************************************************

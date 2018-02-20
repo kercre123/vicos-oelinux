@@ -226,6 +226,17 @@ extern BT_HDR *btif_media_aa_readbuf(void);
 
 /*******************************************************************************
  **
+ ** Function         btif_media_writebuf_vendor
+ **
+ ** Description
+ **
+ **
+ ** Returns
+ *******************************************************************************/
+extern size_t *btif_media_writebuf_vendor(bt_bdaddr_t *bd_addr, const void* buffer, size_t length, uint8_t codectype);
+
+/*******************************************************************************
+ **
  ** Function         btif_media_sink_enque_buf
  **
  ** Description      This function is called by the av_co to fill A2DP Sink Queue

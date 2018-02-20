@@ -40,9 +40,6 @@
 #include <unistd.h>
 
 #include <hardware/bluetooth.h>
-#if (defined(SSR_CLEANUP) && SSR_CLEANUP == TRUE)
-#include <hardware/vendor.h>
-#endif
 
 #include "bdaddr.h"
 #include "bta_gatt_api.h"
@@ -2095,6 +2092,10 @@ static void btif_dm_upstreams_evt(UINT16 event, char* p_param)
 
             HAL_CBACK(bt_hal_cbacks, acl_state_changed_cb, BT_STATUS_SUCCESS,
                       &bd_addr, BT_ACL_STATE_CONNECTED);
+
+            HAL_CBACK(bt_vendor_callbacks, acl_state_changed_with_reason_cb, BT_STATUS_SUCCESS,
+                &bd_addr, BT_ACL_STATE_CONNECTED, BT_STATUS_SUCCESS,
+                p_data->link_up.link_type);
 #if (defined(BTC_INCLUDED) && BTC_INCLUDED == TRUE)
             btc_post_msg(BLUETOOTH_DEVICE_CONNECTED);
 #endif
@@ -2126,6 +2127,9 @@ static void btif_dm_upstreams_evt(UINT16 event, char* p_param)
             BTIF_TRACE_DEBUG("BTA_DM_LINK_DOWN_EVT. Sending BT_ACL_STATE_DISCONNECTED");
             HAL_CBACK(bt_hal_cbacks, acl_state_changed_cb, BT_STATUS_SUCCESS,
                       &bd_addr, BT_ACL_STATE_DISCONNECTED);
+            HAL_CBACK(bt_vendor_callbacks, acl_state_changed_with_reason_cb, BT_STATUS_SUCCESS,
+                    &bd_addr, BT_ACL_STATE_DISCONNECTED, btm_get_acl_disc_reason_code(),
+                                p_data->link_down.link_type);
 #if (defined(BTC_INCLUDED) && BTC_INCLUDED == TRUE)
             btc_post_msg(BLUETOOTH_DEVICE_DISCONNECTED);
 #endif

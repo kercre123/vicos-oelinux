@@ -279,6 +279,15 @@ static void bta_av_api_enable(tBTA_AV_DATA *p_data)
     (*bta_av_cb.p_cback)(BTA_AV_ENABLE_EVT, (tBTA_AV *)&enable);
 }
 
+
+BOOLEAN is_pump_encoded_data_supported()
+{
+    if((bta_av_cb.features & BTA_AV_FEAT_ENCODED_DATA) == BTA_AV_FEAT_ENCODED_DATA) {
+        return true;
+    }
+    return false;
+}
+
 /*******************************************************************************
 **
 ** Function         bta_av_addr_to_scb

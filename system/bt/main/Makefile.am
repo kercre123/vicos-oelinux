@@ -1,5 +1,7 @@
 # sources and intermediate files are separated
 
+external_bt_path := $(top_srcdir)/../../vendor/qcom/opensource/bluetooth
+
 AM_CFLAGS = -Wall \
         -Wundef \
         -Wstrict-prototypes \
@@ -32,14 +34,14 @@ AM_CPPFLAGS= \
         -I../embdrv/sbc/decoder/include \
         -I../audio_a2dp_hw \
         -I../utils/include \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/include \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/ar \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/include \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/udrv/include \
+        -I$(external_bt_path)/system_bt_ext/bta/include \
+        -I$(external_bt_path)/system_bt_ext/bta/ar \
+        -I$(external_bt_path)/system_bt_ext/btif/include \
+        -I$(external_bt_path)/system_bt_ext/udrv/include \
         -I${WORKSPACE}/external/tinyxml2 \
         -I${WORKSPACE}/external/zlib \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/hal/include \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/vhal/include
+        -I$(external_bt_path)/hal/include \
+        -I$(external_bt_path)/vhal/include
 
 if MDM_ROME
 AM_CFLAGS += -DBT_SOC_TYPE_ROME
@@ -80,9 +82,9 @@ c_sources = \
 # BTC
 if BTC_SUPPORT
 AM_CFLAGS += -DBTC_INCLUDED=TRUE
-AM_CPPFLAGS += -DBTC_INCLUDED=TRUE -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btc/include
+AM_CPPFLAGS += -DBTC_INCLUDED=TRUE -I$(external_bt_path)/system_bt_ext/btc/include
 c_sources += \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btc/src/btc_common.c
+        $(external_bt_path)/system_bt_ext/btc/src/btc_common.c
 endif
 
 
@@ -118,14 +120,14 @@ common_LDFLAGS = -ldl -lrt -lresolv -Wl,--whole-archive,../hci/.libs/libbt-hci.a
 				 -laudioutils
 
 c_sources+= \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/src/btif_avk_media_task.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/src/btif_avk.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/src/btif_avk_rc.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/src/btif_avk_media_aac.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/src/btif_avk_media_mp3.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/src/btif_avk_media_aptx.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/btif/co/bta_avk_co.c \
-        ${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/udrv/ulinux/uipc_avk.c
+        $(external_bt_path)/system_bt_ext/btif/src/btif_avk_media_task.c \
+        $(external_bt_path)/system_bt_ext/btif/src/btif_avk.c \
+        $(external_bt_path)/system_bt_ext/btif/src/btif_avk_rc.c \
+        $(external_bt_path)/system_bt_ext/btif/src/btif_avk_media_aac.c \
+        $(external_bt_path)/system_bt_ext/btif/src/btif_avk_media_mp3.c \
+        $(external_bt_path)/system_bt_ext/btif/src/btif_avk_media_aptx.c \
+        $(external_bt_path)/system_bt_ext/btif/co/bta_avk_co.c \
+        $(external_bt_path)/system_bt_ext/udrv/ulinux/uipc_avk.c
 
 common_CFLAGS =  $(AM_CFLAGS) -fPIC -DUSE_AUDIO_TRACK -D_GNU_SOURCE $(Z_LIB)
 

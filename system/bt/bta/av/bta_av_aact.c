@@ -53,6 +53,7 @@
 #include "bta_ar_int_ext.h"
 
 extern BOOLEAN is_sniff_disabled;
+extern pump_encoded_data;
 /*****************************************************************************
 **  Constants
 *****************************************************************************/
@@ -1532,6 +1533,7 @@ void bta_av_str_opened (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
     UINT8 *p;
     UINT16 mtu;
     UINT8 cur_role;
+    tBTA_AV_MTU_CONFIG mtu_config;
 
     msg.hdr.layer_specific = p_scb->hndl;
     msg.is_up = TRUE;
@@ -1544,6 +1546,8 @@ void bta_av_str_opened (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
 
 
     p_scb->stream_mtu = p_data->str_msg.msg.open_ind.peer_mtu - AVDT_MEDIA_HDR_SIZE;
+    mtu_config.mtu = p_data->str_msg.msg.open_ind.peer_mtu;
+    mtu_config.hndl = p_scb->hndl;
     mtu = bta_av_chk_mtu(p_scb, p_scb->stream_mtu);
     APPL_TRACE_DEBUG("bta_av_str_opened l2c_cid: 0x%x stream_mtu: %d mtu: %d",
         p_scb->l2c_cid, p_scb->stream_mtu, mtu);
@@ -1601,6 +1605,9 @@ void bta_av_str_opened (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
             open.sep = AVDT_TSEP_SRC;
 
         (*bta_av_cb.p_cback)(BTA_AV_OPEN_EVT, (tBTA_AV *) &open);
+        mtu_config.packet_type = open.edr;
+        APPL_TRACE_DEBUG("bta_av_str_opened BTA_AV_MTU_CONFIG_EVT");
+        (*bta_av_cb.p_cback)(BTA_AV_MTU_CONFIG_EVT, (tBTA_AV *) &mtu_config);
         if(open.starting)
         {
             bta_av_ssm_execute(p_scb, BTA_AV_AP_START_EVT, NULL);
@@ -2461,7 +2468,6 @@ void bta_av_data_path (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
     */
     //Always get the current number of bufs que'd up
     p_scb->l2c_bufs = (UINT8)L2CA_FlushChannel (p_scb->l2c_cid, L2CAP_FLUSH_CHANS_GET);
-
     if (!list_is_empty(p_scb->a2d_list)) {
         p_buf = (BT_HDR *)list_front(p_scb->a2d_list);
         list_remove(p_scb->a2d_list, p_buf);
@@ -2478,7 +2484,9 @@ void bta_av_data_path (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
         if (p_buf)
         {
             /* use the offset area for the time stamp */
-            *(UINT32 *)(p_buf + 1) = timestamp;
+            if(!pump_encoded_data){
+                *(UINT32 *)(p_buf + 1) = timestamp;
+            }
 
             /* dup the data to other channels */
             bta_av_dup_audio_buf(p_scb, p_buf);
@@ -2501,6 +2509,10 @@ void bta_av_data_path (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
             if (p_scb->no_rtp_hdr)
             {
                 opt |= AVDT_DATA_OPT_NO_RTP;
+            }
+            if(is_pump_encoded_data_supported())
+            {
+                opt |= BTA_AV_FEAT_ENCODED_DATA;
             }
 
             AVDT_WriteReqOpt(p_scb->avdt_handle, p_buf, timestamp, m_pt, opt);

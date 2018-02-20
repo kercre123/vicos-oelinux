@@ -784,7 +784,7 @@ extern void bta_av_delay_co (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data);
 extern void bta_av_open_at_inc (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data);
 extern void bta_av_offload_req (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data);
 extern void bta_av_offload_rsp (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data);
-
+extern BOOLEAN is_pump_encoded_data_supported();
 
 /* ssm action functions - vdp specific */
 extern void bta_av_do_disc_vdp (tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data);

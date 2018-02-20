@@ -167,6 +167,27 @@ void BTA_DmSetDeviceName(char *p_name)
 
 /*******************************************************************************
 **
+** Function         BTA_DmSetLeDeviceName
+**
+** Description      This function sets the Bluetooth LE name of local device
+**
+**
+** Returns          void
+**
+*******************************************************************************/
+void BTA_DmSetLeDeviceName(char *p_name)
+{
+    tBTA_DM_API_SET_LE_NAME *p_msg =
+        (tBTA_DM_API_SET_LE_NAME *)osi_malloc(sizeof(tBTA_DM_API_SET_LE_NAME));
+
+    p_msg->hdr.event = BTA_DM_API_SET_LE_NAME_EVT;
+    strlcpy((char*)p_msg->name, p_name, BD_NAME_LEN);
+
+    bta_sys_sendmsg(p_msg);
+}
+
+/*******************************************************************************
+**
 ** Function         BTA_DmSetVisibility
 **
 ** Description      This function sets the Bluetooth connectable,

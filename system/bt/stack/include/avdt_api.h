@@ -427,7 +427,7 @@ typedef struct {
 #define AVDT_DATA_OPT_NONE      0x00         /* No option still add RTP header */
 #define AVDT_DATA_OPT_NO_RTP   (0x01 << 0)   /* Skip adding RTP header */
 
-typedef UINT8 tAVDT_DATA_OPT_MASK;
+typedef UINT16 tAVDT_DATA_OPT_MASK;
 
 
 

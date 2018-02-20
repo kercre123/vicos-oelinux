@@ -618,6 +618,21 @@ void bta_dm_set_dev_name (tBTA_DM_MSG *p_data)
 
 /*******************************************************************************
 **
+** Function         bta_dm_set_dev_le_name
+**
+** Description      Sets local device LE name
+**
+**
+** Returns          void
+**
+*******************************************************************************/
+void bta_dm_set_dev_le_name (tBTA_DM_MSG *p_data)
+{
+    BTM_SetLocalLeDeviceName((char*)p_data->set_le_name.name);
+}
+
+/*******************************************************************************
+**
 ** Function         bta_dm_set_visibility
 **
 ** Description      Sets discoverability, connectability and pairability

@@ -463,6 +463,7 @@ typedef struct {
 #endif
     UINT8       m_pt;
     tAVDT_DATA_OPT_MASK     opt;
+    BOOLEAN     encoded_data_enabled;
 } tAVDT_SCB_APIWRITE;
 
 /* type for AVDT_SCB_TC_CLOSE_EVT */

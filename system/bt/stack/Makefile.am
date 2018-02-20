@@ -1,5 +1,7 @@
 # sources and intermediate files are separated
 
+external_bt_path := $(top_srcdir)/../../vendor/qcom/opensource/bluetooth
+
 AM_CFLAGS = -Wall \
         -Wundef \
         -Wstrict-prototypes \
@@ -40,8 +42,8 @@ AM_CPPFLAGS = \
         -I../bta/include \
         -I../bta/sys \
         -I../utils/include \
-        -I$(WORKSPACE)/vendor/qcom/opensource/bluetooth/system_bt_ext \
-        -I${WORKSPACE}/vendor/qcom/opensource/bluetooth/system_bt_ext/bta/ar
+        -I$(external_bt_path)/system_bt_ext \
+        -I$(external_bt_path)/system_bt_ext/bta/ar
 
 
 c_sources:= \

@@ -496,6 +496,34 @@ tBTM_STATUS BTM_SetLocalDeviceName (char *p_name)
         return (BTM_NO_RESOURCES);
 }
 
+/*******************************************************************************
+**
+** Function         BTM_SetLocalDeviceLeName
+**
+** Description      This function is called to set the local device le name.
+**
+** Returns          status of the operation
+**
+*******************************************************************************/
+tBTM_STATUS BTM_SetLocalLeDeviceName (char *p_name)
+{
+    UINT8   *p;
+    if (!p_name || !p_name[0] || (strlen ((char *)p_name) > BD_NAME_LEN))
+        return (BTM_ILLEGAL_VALUE);
+
+    if (!controller_get_interface()->get_is_ready())
+        return (BTM_DEV_RESET);
+
+#if BTM_MAX_LOC_BD_NAME_LEN > 0
+    /* Save the device name if local storage is enabled */
+    p = (UINT8 *)btm_cb.cfg.le_name;
+    if (p != (UINT8 *)p_name)
+        strlcpy(btm_cb.cfg.le_name, p_name, BTM_MAX_LOC_BD_NAME_LEN);
+#else
+    p = (UINT8 *)p_name;
+#endif
+    BTM_TRACE_DEBUG("BTM_SetLocalLeDeviceName : name %s",btm_cb.cfg.le_name);
+}
 
 
 /*******************************************************************************
@@ -515,6 +543,30 @@ tBTM_STATUS BTM_ReadLocalDeviceName (char **p_name)
 {
 #if BTM_MAX_LOC_BD_NAME_LEN > 0
     *p_name = btm_cb.cfg.bd_name;
+    return(BTM_SUCCESS);
+#else
+    *p_name = NULL;
+    return(BTM_NO_RESOURCES);
+#endif
+}
+
+/*******************************************************************************
+**
+** Function         BTM_ReadLocalLeDeviceName
+**
+** Description      This function is called to read the local LE device name.
+**
+** Returns          status of the operation
+**                  If success, BTM_SUCCESS is returned and p_name points stored
+**                              local LE device name
+**                  If BTM doesn't store local LE device name, BTM_NO_RESOURCES is
+**                              is returned and p_name is set to NULL
+**
+*******************************************************************************/
+tBTM_STATUS BTM_ReadLocalLeDeviceName (char **p_name)
+{
+#if BTM_MAX_LOC_BD_NAME_LEN > 0
+    *p_name = btm_cb.cfg.le_name;
     return(BTM_SUCCESS);
 #else
     *p_name = NULL;
