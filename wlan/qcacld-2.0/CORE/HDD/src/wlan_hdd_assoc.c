@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -313,10 +313,17 @@ static int hdd_set_beacon_filter(hdd_adapter_t *adapter)
 	int i;
 	uint32_t ie_map[8] = {0};
 	VOS_STATUS vos_status = VOS_STATUS_E_FAILURE;
+	tHalHandle hal_ptr = WLAN_HDD_GET_HAL_CTX(adapter);
+	tpAniSirGlobal mac_ptr = PMAC_STRUCT(hal_ptr);
 
 	for (i = 0; i < ARRAY_SIZE(beacon_filter_table); i++)
 		__set_bit(beacon_filter_table[i],
 			  (unsigned long int *)ie_map);
+
+
+	if (TRUE == mac_ptr->sta_change_cc_via_beacon &&
+	    adapter->device_mode == WLAN_HDD_INFRA_STATION)
+		__set_bit(SIR_MAC_COUNTRY_EID, (unsigned long int *)ie_map);
 
 	vos_status = sme_set_beacon_filter(adapter->sessionId, ie_map);
 	if (!VOS_IS_STATUS_SUCCESS(vos_status)) {
@@ -1088,7 +1095,7 @@ static void hdd_SendNewAPChannelInfo(struct net_device *dev, hdd_adapter_t *pAda
     if (descriptor == NULL)
     {
         hddLog(LOGE,
-            "%s: pCsrRoamInfo->pBssDesc=%p",
+            "%s: pCsrRoamInfo->pBssDesc=%pK",
             __func__, descriptor);
         return;
     }
@@ -1180,6 +1187,7 @@ static void hdd_SendAssociationEvent(struct net_device *dev,tCsrRoamInfo *pCsrRo
     int type = -1;
     v_MACADDR_t peerMacAddr;
 
+    hdd_adapter_t *mon_adapter = NULL;
 #if defined (WLAN_FEATURE_VOWIFI_11R)
     // Added to find the auth type on the fly at run time
     // rather than with cfg to see if FT is enabled
@@ -1296,6 +1304,16 @@ static void hdd_SendAssociationEvent(struct net_device *dev,tCsrRoamInfo *pCsrRo
         spin_unlock_bh(&pHddCtx->bus_bw_lock);
         hdd_start_bus_bw_compute_timer(pAdapter);
 #endif
+        if (pHddCtx->cfg_ini->mon_on_sta_enable &&
+            (pAdapter->device_mode == WLAN_HDD_INFRA_STATION)) {
+            /* monitor mode interface should be ready */
+            mon_adapter = hdd_get_adapter(pHddCtx, WLAN_HDD_MONITOR);
+
+            if (mon_adapter && (WLAN_HDD_ADAPTER_MAGIC == mon_adapter->magic) &&
+                tlshim_get_rxmon_cbk()) {
+               wlan_hdd_monitor_mode_enable(pHddCtx, true);
+           }
+        }
     }
     else if (eConnectionState_IbssConnected == pHddStaCtx->conn_info.connState) // IBss Associated
     {
@@ -1351,6 +1369,11 @@ static void hdd_SendAssociationEvent(struct net_device *dev,tCsrRoamInfo *pCsrRo
         spin_unlock_bh(&pHddCtx->bus_bw_lock);
         hdd_stop_bus_bw_compute_timer(pAdapter);
 #endif
+        if (pHddCtx->cfg_ini->mon_on_sta_enable &&
+            (pAdapter->device_mode == WLAN_HDD_INFRA_STATION) &&
+            (true == pHddCtx->is_mon_enable)) {
+            wlan_hdd_monitor_mode_enable(pHddCtx, false);
+        }
     }
     hdd_dump_concurrency_info(pHddCtx);
 
@@ -2151,6 +2174,7 @@ static int hdd_change_sta_state_authenticated(hdd_adapter_t *adapter,
 			hdd_is_roam_sync_in_progress(roaminfo));
 	hdd_connSetAuthenticated(adapter, VOS_TRUE);
 	if (hddctx->cfg_ini->enablePowersaveOffload &&
+		(false == hddctx->is_mon_enable) &&
 		((WLAN_HDD_INFRA_STATION == adapter->device_mode) ||
 		(WLAN_HDD_P2P_CLIENT == adapter->device_mode))) {
 		sme_PsOffloadEnableDeferredPowerSave(
@@ -4121,7 +4145,7 @@ static void iw_full_power_cbfn (void *pContext, eHalStatus status)
     if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
     {
         hddLog(VOS_TRACE_LEVEL_ERROR,
-             "%s: Bad param, pAdapter [%p]",
+             "%s: Bad param, pAdapter [%pK]",
                __func__, pAdapter);
         return;
     }
@@ -5082,6 +5106,7 @@ static tANI_S32 hdd_ProcessGENIE(hdd_adapter_t *pAdapter,
     tDot11fIERSN dot11RSNIE;
     tDot11fIEWPA dot11WPAIE;
     tANI_U32 i;
+    tANI_U32 status;
     tANI_U8 *pRsnIe;
     tANI_U16 RSNIeLen;
     tPmkidCacheInfo PMKIDCache[4]; // Local transfer memory
@@ -5108,10 +5133,17 @@ static tANI_S32 hdd_ProcessGENIE(hdd_adapter_t *pAdapter,
         pRsnIe = gen_ie + 2;
         RSNIeLen = gen_ie_len - 2;
         // Unpack the RSN IE
-        dot11fUnpackIeRSN((tpAniSirGlobal) halHandle,
+        status = dot11fUnpackIeRSN((tpAniSirGlobal) halHandle,
                             pRsnIe,
                             RSNIeLen,
                             &dot11RSNIE);
+        if (DOT11F_FAILED(status))
+        {
+            hddLog(LOGE,
+                       FL("Parse failure in hdd_ProcessGENIE (0x%08x)"),
+                       status);
+            return -EINVAL;
+        }
         // Copy out the encryption and authentication types
         hddLog(LOG1, FL("%s: pairwise cipher suite count: %d"),
                 __func__, dot11RSNIE.pwise_cipher_suite_count );

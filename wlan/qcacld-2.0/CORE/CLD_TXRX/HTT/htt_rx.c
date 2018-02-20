@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1291,6 +1291,13 @@ htt_rx_frag_pop_hl(
 }
 
 int
+htt_rx_offload_msdu_cnt_ll(
+    htt_pdev_handle pdev)
+{
+    return htt_rx_ring_elems(pdev);
+}
+
+int
 htt_rx_offload_msdu_pop_ll(
     htt_pdev_handle pdev,
     adf_nbuf_t offload_deliver_msg,
@@ -1911,6 +1918,107 @@ htt_rx_mon_amsdu_pop_hl(
 	rtap_len = adf_nbuf_update_radiotap(&rx_status, *head_msdu, 0);
 
 	adf_nbuf_set_next(*tail_msdu, NULL);
+	return 0;
+}
+
+int
+htt_rx_offload_msdu_cnt_hl(
+    htt_pdev_handle pdev)
+{
+    return 1;
+}
+
+int
+htt_rx_mac_header_mon_process(
+		htt_pdev_handle pdev,
+		adf_nbuf_t rx_ind_msg,
+		adf_nbuf_t *head_msdu,
+		adf_nbuf_t *tail_msdu)
+{
+	struct htt_hw_rx_desc_base *hw_desc;
+	struct ieee80211_frame_addr4 *mac_array;
+	uint8_t rtap_buf[sizeof(struct ieee80211_radiotap_header) + 100] = {0};
+	uint16_t rtap_len;
+	uint32_t *msg_word;
+	uint8_t *rx_ind_data;
+	adf_nbuf_t msdu = NULL;
+
+	/* num of mac header in rx_ind_msg */
+	int num_elems;
+	int elem;
+	uint32_t tsf;
+	uint32_t rssi_comb;
+
+	rx_ind_data = adf_nbuf_data(rx_ind_msg);
+	msg_word = (uint32_t *)rx_ind_data;
+	msg_word++;
+	num_elems = HTT_T2H_MONITOR_MAC_HEADER_NUM_MPDU_GET(*msg_word);
+
+	/* what's the num_elem max value? */
+	if (num_elems <= 0)
+		return 0;
+
+	/* get htt_hw_rx_desc_base_rx_desc pointer */
+	hw_desc = (struct htt_hw_rx_desc_base *)
+			(rx_ind_data + HTT_T2H_MONITOR_MAC_HEADER_IND_HDR_SIZE);
+
+	rssi_comb = hw_desc->ppdu_start.rssi_comb;
+	tsf = hw_desc->ppdu_end.tsf_timestamp;
+
+	/* construct one radiotap header */
+	rtap_len = adf_nbuf_construct_radiotap(
+					rtap_buf,
+					tsf,
+					rssi_comb);
+
+	/* get ieee80211_frame_addr4 array pointer*/
+	mac_array = (struct ieee80211_frame_addr4 *)
+			(rx_ind_data + HTT_T2H_MONITOR_MAC_HEADER_IND_HDR_SIZE +
+			 sizeof(struct htt_hw_rx_desc_base));
+
+	for (elem = 0; elem < num_elems; elem++) {
+		uint8_t *dest = NULL;
+		/*
+		 * copy each mac header +
+		 * radiotap header into single msdu buff
+		 */
+		msdu = adf_nbuf_alloc(
+			pdev->osdev,
+			rtap_len + sizeof(struct ieee80211_frame_addr4),
+			0, 4, TRUE);
+		if (!msdu)
+			return A_NO_MEMORY;
+
+		dest = adf_nbuf_put_tail(msdu, rtap_len);
+		if (!dest) {
+			adf_os_print("%s: No buffer to save radiotap len %d\n",
+				     __func__, rtap_len);
+			return	A_NO_MEMORY;
+		}
+		adf_os_mem_copy(dest, rtap_buf, rtap_len);
+
+		dest = adf_nbuf_put_tail(msdu,
+					 sizeof(struct ieee80211_frame_addr4));
+		if (!dest) {
+			adf_os_print("%s: No buffer for mac header %u\n",
+				     __func__,
+				     (unsigned int)
+				     sizeof(struct ieee80211_frame_addr4));
+			return	A_NO_MEMORY;
+		}
+		adf_os_mem_copy(dest, &mac_array[elem],
+				sizeof(struct ieee80211_frame_addr4));
+
+		adf_nbuf_set_next(msdu, NULL);
+		if (*head_msdu == NULL) {
+			*head_msdu = msdu;
+			*tail_msdu = msdu;
+		} else {
+			adf_nbuf_set_next(*tail_msdu, msdu);
+			*tail_msdu = msdu;
+		}
+	}
+
 	return 0;
 }
 
@@ -2577,6 +2685,10 @@ int (*htt_rx_frag_pop)(
     adf_nbuf_t *tail_msdu);
 
 int
+(*htt_rx_offload_msdu_cnt)(
+    htt_pdev_handle pdev);
+
+int
 (*htt_rx_offload_msdu_pop)(
     htt_pdev_handle pdev,
     adf_nbuf_t offload_deliver_msg,
@@ -3084,7 +3196,7 @@ htt_rx_hash_list_insert(struct htt_pdev_t *pdev, u_int32_t paddr,
     htt_list_add_tail(&pdev->rx_ring.hash_table[i]->listhead,
                        &hash_element->listnode);
 
-    RX_HASH_LOG(adf_os_print("rx hash: %s: paddr 0x%x netbuf %p bucket %d\n",
+    RX_HASH_LOG(adf_os_print("rx hash: %s: paddr 0x%x netbuf %pK bucket %d\n",
                              __FUNCTION__, paddr, netbuf,(int)i));
 
     HTT_RX_HASH_COUNT_INCR(pdev->rx_ring.hash_table[i]);
@@ -3141,7 +3253,7 @@ htt_rx_hash_list_lookup(struct htt_pdev_t *pdev, u_int32_t paddr)
         }
     }
 
-    RX_HASH_LOG(adf_os_print("rx hash: %s: paddr 0x%x, netbuf %p, bucket %d\n",
+    RX_HASH_LOG(adf_os_print("rx hash: %s: paddr 0x%x, netbuf %pK, bucket %d\n",
                               __FUNCTION__, paddr, netbuf,(int)i));
     HTT_RX_HASH_COUNT_PRINT(pdev->rx_ring.hash_table[i]);
 
@@ -3279,7 +3391,7 @@ htt_rx_hash_dump_table(struct htt_pdev_t *pdev)
             hash_entry =
                  (struct htt_rx_hash_entry *)((char *)list_iter -
                                                pdev->rx_ring.listnode_offset);
-            adf_os_print("hash_table[%d]: netbuf %p paddr 0x%x\n",
+            adf_os_print("hash_table[%d]: netbuf %pK paddr 0x%x\n",
                           i, hash_entry->netbuf, hash_entry->paddr);
         }
     }
@@ -3404,6 +3516,7 @@ htt_rx_attach(struct htt_pdev_t *pdev)
         if (VOS_MONITOR_MODE == vos_get_conparam())
             htt_rx_amsdu_pop = htt_rx_mon_amsdu_rx_in_order_pop_ll;
 
+        htt_rx_offload_msdu_cnt = htt_rx_offload_msdu_cnt_ll;
         htt_rx_offload_msdu_pop = htt_rx_offload_msdu_pop_ll;
         htt_rx_mpdu_desc_retry = htt_rx_mpdu_desc_retry_ll;
         htt_rx_mpdu_desc_seq_num = htt_rx_mpdu_desc_seq_num_ll;
@@ -3430,6 +3543,7 @@ htt_rx_attach(struct htt_pdev_t *pdev)
         if (VOS_MONITOR_MODE == vos_get_conparam())
             htt_rx_amsdu_pop = htt_rx_mon_amsdu_pop_hl;
         htt_rx_frag_pop = htt_rx_frag_pop_hl;
+        htt_rx_offload_msdu_cnt = htt_rx_offload_msdu_cnt_hl;
         htt_rx_offload_msdu_pop = htt_rx_offload_msdu_pop_hl;
         htt_rx_mpdu_desc_list_next = htt_rx_mpdu_desc_list_next_hl;
         htt_rx_mpdu_desc_retry = htt_rx_mpdu_desc_retry_hl;
