@@ -58,7 +58,7 @@ inline static QMMFCameraParams* params_cast(void *priv)
 int CameraParams::writeObject(std::ostream& ps) const
 
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
     return EXIT_FAILURE;
 }
 
@@ -243,13 +243,13 @@ int CameraParams::commit()
 string CameraParams::get(const string& key) const
 {
     string str;
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
     return str;
 }
 
 void CameraParams::set(const string& key, const string& value)
 {
-	//CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
     return;
 }
 
@@ -331,6 +331,31 @@ std::map<std::string,camera_metadata_enum_android_tonemap_mode> camString2ToneMa
     {TONEMAP_HIGH_QUALITY, ANDROID_TONEMAP_MODE_HIGH_QUALITY },
     {TONEMAP_GAMMA_VALUE, ANDROID_TONEMAP_MODE_GAMMA_VALUE },
     {TONEMAP_PRESET_CURVE, ANDROID_TONEMAP_MODE_PRESET_CURVE }
+};
+
+
+std::map<qcamera3_ext_iso_mode,std::string> camISOModeEnum2StringMap =
+{
+    {QCAMERA3_ISO_MODE_AUTO,  ISO_AUTO },
+    {QCAMERA3_ISO_MODE_DEBLUR, ISO_HJR },
+    {QCAMERA3_ISO_MODE_100,    ISO_100 },
+    {QCAMERA3_ISO_MODE_200,    ISO_200 },
+    {QCAMERA3_ISO_MODE_400,    ISO_400 },
+    {QCAMERA3_ISO_MODE_800,    ISO_800 },
+    {QCAMERA3_ISO_MODE_1600,   ISO_1600 },
+    {QCAMERA3_ISO_MODE_3200,   ISO_3200 }
+};
+
+std::map<std::string,qcamera3_ext_iso_mode> camString2ISOModeEnumMap =
+{
+    {ISO_AUTO, QCAMERA3_ISO_MODE_AUTO },
+    {ISO_HJR, QCAMERA3_ISO_MODE_DEBLUR },
+    {ISO_100, QCAMERA3_ISO_MODE_100 },
+    {ISO_200, QCAMERA3_ISO_MODE_200 },
+    {ISO_400, QCAMERA3_ISO_MODE_400 } ,
+    {ISO_800, QCAMERA3_ISO_MODE_800 },
+    {ISO_1600, QCAMERA3_ISO_MODE_1600 } ,
+    {ISO_3200, QCAMERA3_ISO_MODE_3200 }
 };
 
 vector<string> CameraParams::getSupportedFocusModes() const
@@ -466,18 +491,70 @@ void CameraParams::setWhiteBalance(const string& value)
 
 vector<string> CameraParams::getSupportedISO() const
 {
-    vector<string> string_vector_temp;
-    return string_vector_temp;
+    vector<string> iso_modes;
+	qcamera3_ext_iso_mode iso_mode;
+
+	params_cast(priv_)->mutexLock();
+	camera_metadata_entry_t entry;
+	if (params_cast(priv_)->static_default_meta_info.exists(QCAMERA3_ISO_AVAILABLE_MODES)) {
+	   entry = params_cast(priv_)->static_default_meta_info.find(QCAMERA3_ISO_AVAILABLE_MODES);
+	   for (uint32_t i = 0 ; i < entry.count; i++) {
+			CAM_DBG("%s:%d QCAMERA3_ISO_AVAILABLE_MODES %d currently supported.",__func__,__LINE__,entry.data.i32[i]);
+			iso_mode = (qcamera3_ext_iso_mode)entry.data.i32[i];
+			auto it = camISOModeEnum2StringMap.find(iso_mode);
+			if (it != camISOModeEnum2StringMap.end()) {
+				CAM_DBG("%s:%d Get ISO mode : %d - %s   \n",__func__,__LINE__,iso_mode,it->second.c_str());
+				iso_modes.emplace_back(it->second);
+			}else{
+				CAM_PRINT("%s:%d Unknown ISO mode: %d \n",__func__,__LINE__,iso_mode);
+			}
+	   }
+	 }else{
+	   CAM_ERR("%s:%d QCAMERA3_ISO_AVAILABLE_MODES does not exist",__func__,__LINE__);
+	}
+	params_cast(priv_)->mutexUnlock();
+    return iso_modes;
 }
 
 string CameraParams::getISO() const
 {
     string str;
+	qcamera3_ext_iso_mode iso_mode;
+
+      params_cast(priv_)->mutexLock();
+
+	 if ( (params_cast(priv_)->static_session_meta_info.exists(QCAMERA3_USE_ISO_EXP_PRIORITY)) ){
+	   iso_mode = static_cast<qcamera3_ext_iso_mode>(params_cast(priv_)->static_session_meta_info.find(QCAMERA3_USE_ISO_EXP_PRIORITY).data.i64[0]);
+		auto it = camISOModeEnum2StringMap.find(iso_mode);
+		if (it != camISOModeEnum2StringMap.end()) {
+			str = it->second;
+			CAM_DBG("%s:%s:%d Get ISO mode : %d - %s   \n",TAG,__func__,__LINE__,iso_mode,str.c_str());
+		}else{
+			CAM_ERR("%s:%d Unknown ISO mode: %d \n",__func__,__LINE__,iso_mode);
+		}
+	 }
+    params_cast(priv_)->mutexUnlock();
     return str;
 }
 
 void CameraParams::setISO(const string& value)
 {
+	int32_t use_exp_priority = 0;
+	int64_t iso_mode;
+
+	auto it = camString2ISOModeEnumMap.find(value);
+	if (it != camString2ISOModeEnumMap.end()) {
+	 iso_mode = it->second;
+	 params_cast(priv_)->mutexLock();
+	 params_cast(priv_)->static_session_meta_info.update(QCAMERA3_SELECT_PRIORITY, &use_exp_priority, 4);
+	 params_cast(priv_)->static_session_meta_info.update(QCAMERA3_USE_ISO_EXP_PRIORITY, &iso_mode, 8);
+	 CAM_DBG("%s:%s:%d Set ISO mode : %lld - %s \n",TAG,__func__,__LINE__,iso_mode,value.c_str());
+	 params_cast(priv_)->static_session_meta_info_updated_flag = true;
+	 params_cast(priv_)->mutexUnlock();
+	}else{
+	 CAM_ERR("%s:%d Invalid ISO mode: %s \n",__func__,__LINE__, value.c_str());
+	}
+
     return;
 }
 
@@ -621,20 +698,20 @@ void CameraParams::setSharpness(int value)
 Range CameraParams::getSupportedBrightness() const
 {
     Range range;
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
     return range;
 }
 
 int CameraParams::getBrightness() const
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
     return EXIT_FAILURE;
 
 }
 
 void CameraParams::setBrightness(int value)
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
 	return;
 }
 
@@ -707,18 +784,18 @@ void CameraParams::setToneMapMode(const string& value)
 Range CameraParams::getSupportedContrast() const
 {
     Range range;
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
     return range;
 }
 int CameraParams::getContrast() const
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
 	return EXIT_FAILURE;
 }
 
 void CameraParams::setContrast(int value)
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
 }
 Tonemap_RBG CameraParams::getContrastTone() const
 {
@@ -957,7 +1034,7 @@ void CameraParams::setVideoFPS(VideoFPS value)
 string CameraParams::toString() const
 {
     string tempReturn;
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
     return tempReturn;
 }
 
@@ -1145,12 +1222,12 @@ Range CameraParams::getManualGainRange(ImageSize size, int fps){
 
 void CameraParams::setVerticalFlip(bool value)
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
 }
 
 void CameraParams::setHorizontalMirror(bool value)
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
 }
 
 void CameraParams::setAntibanding(const string& value)
@@ -1161,7 +1238,7 @@ void CameraParams::setAntibanding(const string& value)
 
 void CameraParams::setStatsLoggingMask(int value)
 {
-	CAM_PRINT("%s API is deprecated for this target \n",__func__);
+	CAM_PRINT("%s API is not available for this target \n",__func__);
 }
 
 uint64_t CameraParams::getFrameExposureTime(ICameraFrame* frame)
