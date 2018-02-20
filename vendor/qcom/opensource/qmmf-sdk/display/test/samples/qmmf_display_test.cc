@@ -27,11 +27,13 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "DisplayTest"
+#define LOG_TAG "DisplayTest"
 
 #include <utils/Log.h>
 #include <utils/String8.h>
 #include <assert.h>
+#include <cutils/properties.h>
+#include <common/utils/qmmf_log.h>
 
 #include "qmmf_display_test.h"
 
@@ -46,44 +48,43 @@
 #endif
 
 DisplayTest::DisplayTest() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   display_= new Display();
   assert(display_ != nullptr);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
 DisplayTest::~DisplayTest() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   if (display_ != nullptr) {
     delete display_;
     display_ = nullptr;
   }
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
 int32_t DisplayTest::Connect() {
-
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   auto ret = display_->Connect();
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
 
   return ret;
 }
 
 int32_t DisplayTest::Disconnect() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   auto ret = display_->Disconnect();
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return ret;
 }
 
 int32_t DisplayTest::CreateDisplay(DisplayType display_type) {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   DisplayCb display_status_cb;
   display_status_cb.EventCb = [&] ( DisplayEventType event_type,
@@ -94,22 +95,22 @@ int32_t DisplayTest::CreateDisplay(DisplayType display_type) {
       { DisplayVSyncHandler(time_stamp); };
 
   auto ret = display_->CreateDisplay(display_type, display_status_cb);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
 
   return ret;
 }
 
 int32_t DisplayTest::DestroyDisplay(DisplayType display_type) {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   auto ret = display_->DestroyDisplay(display_type);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return ret;
 }
 
 int32_t DisplayTest::CreateSurface() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   memset(&surface_config, 0x0, sizeof surface_config);
 
@@ -121,29 +122,29 @@ int32_t DisplayTest::CreateSurface() {
   surface_config.use_buffer=0;
   auto ret = display_->CreateSurface(surface_config, &surface_id);
   if(ret != 0) {
-      TEST_ERROR("%s:%s CreateSurface Failed!!", TAG, __func__);
+      TEST_ERROR("%s CreateSurface Failed!!", __func__);
   }
-  TEST_INFO("%s:%s: surface_id: %u", TAG, __func__, surface_id);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: surface_id: %u", __func__, surface_id);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 int32_t DisplayTest::DestroySurface() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   auto ret = display_->DestroySurface(surface_id);
   if(ret != 0) {
-    TEST_ERROR("%s:%s DestroySurface Failed!!", TAG, __func__);
+    TEST_ERROR("%s DestroySurface Failed!!", __func__);
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 int32_t DisplayTest::DequeueSurfaceBuffer() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   memset(&surface_buffer, 0x0, sizeof surface_buffer);
 
   surface_buffer.format = SurfaceFormat::kFormatBGRA8888;
@@ -152,11 +153,11 @@ int32_t DisplayTest::DequeueSurfaceBuffer() {
 
   auto ret = display_->DequeueSurfaceBuffer(surface_id, surface_buffer);
   if(ret != 0) {
-    TEST_ERROR("%s:%s DequeueSurfaceBuffer Failed!!", TAG, __func__);
+    TEST_ERROR("%s DequeueSurfaceBuffer Failed!!", __func__);
   }
   file = fopen("/data/misc/qmmf/Images/fasimo_352x288_bgra_8888.rgb", "r");
   if (!file) {
-    TEST_ERROR("%s:%s: Unable to open file", TAG, __func__);
+    TEST_ERROR("%s: Unable to open file", __func__);
   }
   int32_t offset=0;
   for(uint32_t i=0;i<surface_buffer.plane_info[0].height;i++) {
@@ -169,13 +170,13 @@ int32_t DisplayTest::DequeueSurfaceBuffer() {
   }
   fclose (file);
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 int32_t DisplayTest::QueueSurfaceBuffer() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   memset(&surface_param, 0x0, sizeof surface_param);
 
@@ -190,16 +191,16 @@ int32_t DisplayTest::QueueSurfaceBuffer() {
   auto ret = display_->QueueSurfaceBuffer(surface_id, surface_buffer,
       surface_param);
   if(ret != 0) {
-    TEST_ERROR("%s:%s QueueSurfaceBuffer Failed!!", TAG, __func__);
+    TEST_ERROR("%s QueueSurfaceBuffer Failed!!", __func__);
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 int32_t DisplayTest::GetDisplayParam() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   DisplayParamType param_type;
   void *param;
@@ -209,16 +210,16 @@ int32_t DisplayTest::GetDisplayParam() {
   param_type = DisplayParamType::kContrast;
   auto ret = display_->GetDisplayParam(param_type, param, param_size);
   if(ret != 0) {
-    TEST_ERROR("%s:%s GetDisplayParam Failed!!", TAG, __func__);
+    TEST_ERROR("%s GetDisplayParam Failed!!", __func__);
   }
   operator delete(param);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 int32_t DisplayTest::SetDisplayParam() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   DisplayParamType param_type;
   void *param;
   size_t param_size = 0;
@@ -226,48 +227,48 @@ int32_t DisplayTest::SetDisplayParam() {
   param_type = DisplayParamType::kSaturation;
   auto ret = display_->SetDisplayParam(param_type, param, param_size);
   if(ret != 0) {
-    TEST_ERROR("%s:%s SetDisplayParam Failed!!", TAG, __func__);
+    TEST_ERROR("%s SetDisplayParam Failed!!", __func__);
   }
   operator delete(param);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
 
   return 0;
 }
 
 int32_t DisplayTest::DequeueWBSurfaceBuffer() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   //TBD
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 int32_t DisplayTest::QueueWBSurfaceBuffer() {
 
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   //TBD
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 void DisplayTest::DisplayCallbackHandler(DisplayEventType event_type,
     void *event_data, size_t event_data_size)
 {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
 void DisplayTest::SessionCallbackHandler(DisplayEventType event_type,
     void *event_data, size_t event_data_size)
 {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
 void DisplayTest::DisplayVSyncHandler(int64_t time_stamp)
 {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
 void CmdMenu::PrintMenu()
@@ -305,7 +306,8 @@ CmdMenu::Command CmdMenu::GetCommand()
 
 int main(int argc,char *argv[])
 {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_GET_LOG_LEVEL();
+  TEST_INFO("%s: Enter", __func__);
 
   DisplayTest test_context;
   CmdMenu cmd_menu(test_context);

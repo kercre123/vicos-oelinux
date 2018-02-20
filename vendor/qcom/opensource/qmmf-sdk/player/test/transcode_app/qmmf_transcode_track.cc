@@ -29,7 +29,8 @@
 
 #include "qmmf_transcode_track.h"
 
-#define TAG "TranscoderTrack"
+#undef LOG_TAG
+#define LOG_TAG "TranscoderTrack"
 
 namespace qmmf {
 namespace transcode {
@@ -49,30 +50,30 @@ TranscoderTrack::TranscoderTrack(const string& file)
       stop_thread_(nullptr),
       num_delivered_frames_(0),
       num_received_frames_(0) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   if (!file.empty())
     params_.track_file = file;
   else {
-    QMMF_ERROR("%s:%s Track fileName not Provided", TAG, __func__);
+    QMMF_ERROR("%s Track fileName not Provided", __func__);
     assert(0);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 TranscoderTrack::~TranscoderTrack() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t TranscoderTrack::PreparePipeline() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   ret = ParseFile(params_.track_file);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to parse file", TAG, __func__);
+    QMMF_ERROR("%s Failed to parse file", __func__);
     return ret;
   }
 
@@ -86,33 +87,33 @@ status_t TranscoderTrack::PreparePipeline() {
 
   ret = transcoder_source_->PreparePipeline();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Prepare pipeline on core side", TAG, __func__);
+    QMMF_ERROR("%s Failed to Prepare pipeline on core side", __func__);
     goto release_resources;
   }
 
   ret = transcoder_sink_->PreparePipeline();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Prepare pipeline on sink side", TAG, __func__);
+    QMMF_ERROR("%s Failed to Prepare pipeline on sink side", __func__);
     goto release_resources;
   }
 
   ret = transcoder_pipe_->PreparePipeline();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Prepare pipeline on pipe side", TAG, __func__);
+    QMMF_ERROR("%s Failed to Prepare pipeline on pipe side", __func__);
     goto release_resources;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 
 release_resources:
   ReleaseResources();
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 void TranscoderTrack::ReleaseResources() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   if (transcoder_source_ != nullptr) {
     transcoder_source_->ReleaseResources();
@@ -134,16 +135,19 @@ void TranscoderTrack::ReleaseResources() {
     m_pIStreamPort_ = nullptr;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t TranscoderTrack::FillParams() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   CreateDataSource();
 
   ::qmmf::player::AudioTrackCreateParam audio_track_param_;
   ::qmmf::player::VideoTrackCreateParam video_track_param_;
+
+  memset(&audio_track_param_, 0x0, sizeof(audio_track_param_));
+  memset(&video_track_param_, 0x0, sizeof(video_track_param_));
 
   if (track_type_ == TrackTypes::kAudioVideo ||
       track_type_ == TrackTypes::kAudioOnly) {
@@ -152,22 +156,22 @@ status_t TranscoderTrack::FillParams() {
     audio_track_param_.bit_depth = 16;  // TODO: m_sTrackInfo_.sAudio.ulBitDepth;
 
     if (m_sTrackInfo_.sAudio.ulCodecType == FILE_SOURCE_MN_TYPE_AAC) {
-      audio_track_param_.codec = ::qmmf::player::AudioCodecType::kAAC;
+      audio_track_param_.codec = ::qmmf::AudioFormat::kAAC;
       audio_track_param_.codec_params.aac.bit_rate =
           m_sTrackInfo_.sAudio.ulBitRate;
       audio_track_param_.codec_params.aac.format = AACFormat::kRaw;
       audio_track_param_.codec_params.aac.mode = AACMode::kAALC;
     } else if (m_sTrackInfo_.sAudio.ulCodecType == FILE_SOURCE_MN_TYPE_CONC_AMR) {
-      audio_track_param_.codec = ::qmmf::player::AudioCodecType::kAMR;
+      audio_track_param_.codec = ::qmmf::AudioFormat::kAMR;
       audio_track_param_.codec_params.amr.isWAMR = 0;
     } else if (m_sTrackInfo_.sAudio.ulCodecType == FILE_SOURCE_MN_TYPE_AMR_WB) {
-      audio_track_param_.codec = ::qmmf::player::AudioCodecType::kAMR;
+      audio_track_param_.codec = ::qmmf::AudioFormat::kAMR;
       audio_track_param_.codec_params.amr.isWAMR = 1;
     }
     audio_track_param_.out_device = AudioOutSubtype::kBuiltIn;
 
-    QMMF_INFO("%s:%s sample rate : %d channel %d bitdepth %d, bitrate %d ",
-              TAG, __func__,
+    QMMF_INFO("%s sample rate : %d channel %d bitdepth %d, bitrate %d ",
+              __func__,
               audio_track_param_.sample_rate,
               audio_track_param_.channels,
               audio_track_param_.bit_depth,
@@ -189,8 +193,8 @@ status_t TranscoderTrack::FillParams() {
     video_track_param_.num_buffers = 1;
     video_track_param_.out_device = VideoOutSubtype::kHDMI;
 
-    QMMF_INFO("%s:%s height : %d width %d frame_rate %d, bitrate %d ",
-              TAG, __func__,
+    QMMF_INFO("%s height : %d width %d frame_rate %d, bitrate %d ",
+              __func__,
               video_track_param_.height, video_track_param_.width,
               video_track_param_.frame_rate,
               video_track_param_.bitrate);
@@ -199,39 +203,39 @@ status_t TranscoderTrack::FillParams() {
   if (params_.track_type == TranscodeType::kVideoDecodeVideoEncode)
     params_.source_params.video_dec_param = video_track_param_;
   else {
-    QMMF_ERROR("%s:%s Demuxer can only be used in case of "
-               "VideoDecodeVideoEncode", TAG, __func__);
+    QMMF_ERROR("%s Demuxer can only be used in case of "
+               "VideoDecodeVideoEncode",  __func__);
     return -1;
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return 0;
 }
 
 status_t TranscoderTrack::CreateDataSource() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   int32_t eErr = MM_STATUS_ErrorNone;
   m_pDemux_ = CMM_MediaDemuxInt::New(*m_pIStreamPort_, FILE_SOURCE_MPEG4);
 
   if (m_pDemux_ == nullptr) {
-    QMMF_ERROR("%s %s DataSource CreationFAILURE!!", TAG, __func__);
+    QMMF_ERROR("%s DataSource CreationFAILURE!!", __func__);
     BAIL_ON_ERROR(MM_STATUS_ErrorDefault);
   }
 
-  QMMF_INFO("%s:%s: DataSource Creation SUCCESS!!", TAG, __func__);
+  QMMF_INFO("%s: DataSource Creation SUCCESS!!", __func__);
 
   // Read file meta-data
   eErr = ReadMediaInfo();
   BAIL_ON_ERROR(eErr);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 
 ERROR_BAIL:
   return eErr;
 }
 
 status_t TranscoderTrack::ReadMediaInfo() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   status_t eErr = 0;
   FileSourceTrackIdInfoType aTrackList[MM_SOURCE_MAX_TRACKS];
@@ -242,7 +246,7 @@ status_t TranscoderTrack::ReadMediaInfo() {
 
   // Get total number of tracks available.
   m_sTrackInfo_.ulNumTracks = m_pDemux_->GetWholeTracksIDList(aTrackList);
-  QMMF_INFO("%s:%s: NumTracks = %u", TAG, __func__, m_sTrackInfo_.ulNumTracks);
+  QMMF_INFO("%s: NumTracks = %u", __func__, m_sTrackInfo_.ulNumTracks);
 
   for (uint32 ulIdx = 0; ulIdx < m_sTrackInfo_.ulNumTracks; ulIdx++) {
     FileSourceTrackIdInfoType sTrackInfo = aTrackList[ulIdx];
@@ -250,17 +254,17 @@ status_t TranscoderTrack::ReadMediaInfo() {
     // Get MimeType
     eFS_Status = m_pDemux_->GetMimeType(sTrackInfo.id, eMjType, eMnType);
     if (FILE_SOURCE_SUCCESS != eFS_Status) {
-      QMMF_INFO("%s:%s: Unable to get MIME_TYPE = %u",
-                TAG, __func__, eFS_Status);
+      QMMF_INFO("%s: Unable to get MIME_TYPE = %u",
+                __func__, eFS_Status);
       continue;
     }
 
     if (FILE_SOURCE_SUCCESS == eFS_Status) {
       if (FILE_SOURCE_MJ_TYPE_AUDIO == eMjType) {
-        QMMF_INFO("%s:%s: TRACK_AUDIO @MIME_TYPE = %u", TAG, __func__, eMnType);
+        QMMF_INFO("%s: TRACK_AUDIO @MIME_TYPE = %u", __func__, eMnType);
         m_sTrackInfo_.sAudio.bTrackSelected = sTrackInfo.selected;
 
-        QMMF_INFO("%s : %s id:%d ", __func__, TAG, sTrackInfo.id);
+        QMMF_INFO("%s id:%d ", __func__, sTrackInfo.id);
 
         eErr = ReadAudioTrackMediaInfo(sTrackInfo.id, eMnType);
         if (m_sTrackInfo_.ulNumTracks == 1) {
@@ -268,11 +272,11 @@ status_t TranscoderTrack::ReadMediaInfo() {
         }
 
       } else if (FILE_SOURCE_MJ_TYPE_VIDEO == eMjType) {
-        QMMF_INFO("%s:%s: TRACK_VIDEO @MIME_TYPE = %u", TAG, __func__, eMnType);
+        QMMF_INFO("%s: TRACK_VIDEO @MIME_TYPE = %u", __func__, eMnType);
 
         m_sTrackInfo_.sVideo.bTrackSelected = sTrackInfo.selected;
 
-        QMMF_INFO("%s : %s id:%d ", __func__, TAG, sTrackInfo.id);
+        QMMF_INFO("%s id:%d ", __func__, sTrackInfo.id);
 
         eErr = ReadVideoTrackMediaInfo(sTrackInfo.id, eMnType);
         if (m_sTrackInfo_.ulNumTracks == 1) {
@@ -281,13 +285,13 @@ status_t TranscoderTrack::ReadMediaInfo() {
       }
     } else {
       eErr = MM_STATUS_ErrorStreamCorrupt;
-      QMMF_ERROR("%s %s Failed to identify Tracks Error= %u",
-                 TAG, __func__, eFS_Status);
+      QMMF_ERROR("%s: Failed to identify Tracks Error= %u",
+                 __func__, eFS_Status);
       BAIL_ON_ERROR(eErr);
     }
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 
 ERROR_BAIL:
   return eErr;
@@ -296,7 +300,7 @@ ERROR_BAIL:
 status_t TranscoderTrack::ReadAudioTrackMediaInfo(
     const uint32 ulTkId,
     const FileSourceMnMediaType eTkMnType) {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   MM_STATUS_TYPE eErr = MM_STATUS_ErrorNone;
   FileSourceStatus eFS_Status = FILE_SOURCE_FAIL;
@@ -321,10 +325,10 @@ status_t TranscoderTrack::ReadAudioTrackMediaInfo(
     m_sTrackInfo_.sAudio.ullDuration = sMediaInfo.audioTrackInfo.duration;
     m_sTrackInfo_.sAudio.ulTimeScale = sMediaInfo.audioTrackInfo.timeScale;
 
-    QMMF_INFO("%s:%s:Audio CodecType is = %u ", TAG, __func__,
+    QMMF_INFO("%s: Audio CodecType is = %u ", __func__,
               m_sTrackInfo_.sAudio.ulCodecType);
 
-    QMMF_INFO("%s:%s: TkId = %u CH= %u  SR= %u BD=%u", TAG, __func__, ulTkId,
+    QMMF_INFO("%s: TkId = %u CH= %u  SR= %u BD=%u", __func__, ulTkId,
               m_sTrackInfo_.sAudio.ulChCount, m_sTrackInfo_.sAudio.ulSampleRate,
               m_sTrackInfo_.sAudio.ulBitDepth);
 
@@ -336,8 +340,8 @@ status_t TranscoderTrack::ReadAudioTrackMediaInfo(
 
     // Get track CSD data if CSD len is valid
     if (0 != m_sTrackInfo_.sAudio.sCSD.ulLen) {
-      QMMF_INFO("%s:%s: CSD Len = %u",
-                TAG, __func__, m_sTrackInfo_.sAudio.sCSD.ulLen);
+      QMMF_INFO("%s: CSD Len = %u",
+                __func__, m_sTrackInfo_.sAudio.sCSD.ulLen);
 
       m_sTrackInfo_.sAudio.sCSD.pucData =
           reinterpret_cast<uint8*>
@@ -354,20 +358,20 @@ status_t TranscoderTrack::ReadAudioTrackMediaInfo(
     }
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 
 ERROR_BAIL:
   if (FILE_SOURCE_SUCCESS != eFS_Status) {
     eErr = MM_STATUS_ErrorDefault;
   }
-  QMMF_ERROR("%s:%s: Return Status %u", TAG, __func__, eErr);
+  QMMF_ERROR("%s: Return Status %u", __func__, eErr);
   return eErr;
 }
 
 status_t TranscoderTrack::ReadVideoTrackMediaInfo(
     const uint32 ulTkId,
     const FileSourceMnMediaType eTkMnType) {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   MM_STATUS_TYPE eErr = MM_STATUS_ErrorNone;
   FileSourceStatus eFS_Status = FILE_SOURCE_FAIL;
@@ -387,11 +391,11 @@ status_t TranscoderTrack::ReadVideoTrackMediaInfo(
     m_sTrackInfo_.sVideo.ullDuration = sMediaInfo.videoTrackInfo.duration;
     m_sTrackInfo_.sVideo.ulTimeScale = sMediaInfo.videoTrackInfo.timeScale;
 
-    QMMF_INFO("%s:%s:Video CodecType is = %u ",
-              TAG, __func__, m_sTrackInfo_.sVideo.ulCodecType);
+    QMMF_INFO("%s:Video CodecType is = %u ",
+              __func__, m_sTrackInfo_.sVideo.ulCodecType);
 
-    QMMF_INFO("%s:%s: TkId = %u Width= %u  Height= %u FR=%f bitrate = %u"
-              "duration  = %llu", TAG, __func__, ulTkId,
+    QMMF_INFO("%s: TkId = %u Width= %u  Height= %u FR=%f bitrate = %u"
+              "duration  = %llu",  __func__, ulTkId,
               m_sTrackInfo_.sVideo.ulWidth, m_sTrackInfo_.sVideo.ulHeight,
               m_sTrackInfo_.sVideo.fFrameRate,
               m_sTrackInfo_.sVideo.ulBitRate,
@@ -403,7 +407,7 @@ status_t TranscoderTrack::ReadVideoTrackMediaInfo(
                                            FALSE);
     BAIL_ON_ERROR(eFS_Status);
     if (0 != m_sTrackInfo_.sVideo.sCSD.ulLen) {
-      QMMF_INFO("%s:%s: CSD Len = %u", TAG, __func__,
+      QMMF_INFO("%s: CSD Len = %u", __func__,
                 m_sTrackInfo_.sVideo.sCSD.ulLen);
 
       m_sTrackInfo_.sVideo.sCSD.pucData =
@@ -412,7 +416,7 @@ status_t TranscoderTrack::ReadVideoTrackMediaInfo(
                                      m_sTrackInfo_.sVideo.sCSD.ulLen));
       if (m_sTrackInfo_.sVideo.sCSD.pucData == nullptr) {
         eErr = MM_STATUS_ErrorMemAllocFail;
-        QMMF_ERROR("%s %s CSD Alloc failure", TAG, __func__);
+        QMMF_ERROR("%s CSD Alloc failure", __func__);
         BAIL_ON_ERROR(eErr);
       }
       eFS_Status = m_pDemux_->GetFormatBlock(ulTkId,
@@ -423,30 +427,30 @@ status_t TranscoderTrack::ReadVideoTrackMediaInfo(
     }
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 
 ERROR_BAIL:
   if (FILE_SOURCE_SUCCESS != eFS_Status) {
     eErr = MM_STATUS_ErrorDefault;
   }
 
-  QMMF_ERROR("%s:%s: Return Status %u", TAG, __func__, eErr);
+  QMMF_ERROR("%s: Return Status %u", __func__, eErr);
   return eErr;
 }
 
 status_t TranscoderTrack::Start() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   ret = transcoder_source_->StartCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Start on core side", TAG, __func__);
+    QMMF_ERROR("%s Failed to Start on core side", __func__);
     return ret;
   }
 
   ret = transcoder_sink_->StartCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Start on pipe side", TAG, __func__);
+    QMMF_ERROR("%s Failed to Start on pipe side", __func__);
     return ret;
   }
 
@@ -458,23 +462,23 @@ status_t TranscoderTrack::Start() {
   deliver_thread_ = new thread(TranscoderTrack::DeliverInput,
                                reinterpret_cast<void*>(this));
   if (deliver_thread_ == nullptr) {
-    QMMF_ERROR("%s:%s unable to allocate thread", TAG, __func__);
+    QMMF_ERROR("%s unable to allocate thread", __func__);
     return -ENOMEM;
   }
 
   receiver_thread_ = new thread(TranscoderTrack::ReceiveOutput,
                                 reinterpret_cast<void*>(this));
   if (receiver_thread_ == nullptr) {
-    QMMF_ERROR("%s:%s unable to allocate thread", TAG, __func__);
+    QMMF_ERROR("%s unable to allocate thread", __func__);
     return -ENOMEM;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 void* TranscoderTrack::DeliverInput(void* arg) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   TranscoderTrack* track = reinterpret_cast<TranscoderTrack*>(arg);
   status_t ret = 0;
@@ -493,7 +497,7 @@ void* TranscoderTrack::DeliverInput(void* arg) {
           nullptr,
           &csd_data_size);
 
-      QMMF_INFO("%s:%s Video CSD data Size = %u", TAG, __func__, csd_data_size);
+      QMMF_INFO("%s Video CSD data Size = %u", __func__, csd_data_size);
       assert(FILE_SOURCE_SUCCESS == status);
 
       status = track->m_pDemux_->m_pFileSource->GetFormatBlock(
@@ -519,7 +523,7 @@ void* TranscoderTrack::DeliverInput(void* arg) {
     buffer.SetOffset(0x0);
 
     if (FILE_SOURCE_DATA_END == eMediaStatus || track->IsInputPortStop()) {
-      QMMF_INFO("%s:%s: File read completed", TAG, __func__);
+      QMMF_INFO("%s: File read completed", __func__);
       buffer.SetFilledSize(0);
       buffer.SetFlag(static_cast<uint32_t>(BufferFlags::kFlagEOS));
       buffer.SetOffset(0x0);
@@ -527,8 +531,8 @@ void* TranscoderTrack::DeliverInput(void* arg) {
       track->isLastFrame_ = true;
       track->num_delivered_frames_++;
 
-      QMMF_INFO("%s:%s  Video Ts[%llu] filled_size[%u] flags[0x%x]  fd[%d]"
-                " frames_delivered[%d]", TAG, __func__,
+      QMMF_INFO("%s  Video Ts[%llu] filled_size[%u] flags[0x%x]  fd[%d]"
+                " frames_delivered[%d]",  __func__,
                 (buffer.GetTimestamp()) / 1000,
                 buffer.GetFilledSize(),
                 buffer.GetFlag(), buffer.GetFd(),
@@ -541,7 +545,7 @@ void* TranscoderTrack::DeliverInput(void* arg) {
         track->stop_thread_ = new thread(TranscoderTrack::StopTransCoding,
                                          reinterpret_cast<void*>(track));
         if (track->stop_thread_ == nullptr) {
-          QMMF_ERROR("%s:%s unable to allocate thread", TAG, __func__);
+          QMMF_ERROR("%s unable to allocate thread", __func__);
           assert(0);
         }
       }
@@ -550,8 +554,8 @@ void* TranscoderTrack::DeliverInput(void* arg) {
 
     track->num_delivered_frames_++;
 
-    QMMF_INFO("%s:%s  Video Ts[%llu] filled_size[%u] flags[0x%x]  fd[%d]"
-              " frames_delivered[%d]", TAG, __func__,
+    QMMF_INFO("%s  Video Ts[%llu] filled_size[%u] flags[0x%x]  fd[%d]"
+              " frames_delivered[%d]",  __func__,
               (buffer.GetTimestamp()) / 1000,
               buffer.GetFilledSize(),
               buffer.GetFlag(), buffer.GetFd(),
@@ -561,12 +565,12 @@ void* TranscoderTrack::DeliverInput(void* arg) {
     assert(ret == 0);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return nullptr;
 }
 
 void* TranscoderTrack::ReceiveOutput(void* arg) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   TranscoderTrack* track = reinterpret_cast<TranscoderTrack*>(arg);
@@ -577,8 +581,8 @@ void* TranscoderTrack::ReceiveOutput(void* arg) {
     assert(ret == 0);
     track->num_received_frames_++;
 
-    QMMF_INFO("%s:%s Video Ts[%llu] filled_size[%u] flags[0x%x]  fd[%d]"
-              " frames_received[%d]", TAG, __func__,
+    QMMF_INFO("%s Video Ts[%llu] filled_size[%u] flags[0x%x]  fd[%d]"
+              " frames_received[%d]",  __func__,
               buffer.GetTimestamp(), buffer.GetFilledSize(),
               buffer.GetFlag(), buffer.GetFd(), track->num_received_frames_);
 
@@ -596,32 +600,32 @@ void* TranscoderTrack::ReceiveOutput(void* arg) {
     }
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return nullptr;
 }
 
 void* TranscoderTrack::StopTransCoding(void* arg) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   TranscoderTrack* track = reinterpret_cast<TranscoderTrack*>(arg);
   ret = track->Stop();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Automatic stop failed", TAG, __func__);
+    QMMF_ERROR("%s Automatic stop failed", __func__);
     assert(0);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return nullptr;
 }
 
 status_t TranscoderTrack::Stop() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   if (IsInputPortStop()) {
-    QMMF_WARN("%s:%s Stop is already done", TAG, __func__);
-    QMMF_INFO("%s:%s Exit", TAG, __func__);
+    QMMF_WARN("%s Stop is already done", __func__);
+    QMMF_INFO("%s Exit", __func__);
     return ret;
   }
 
@@ -640,22 +644,22 @@ status_t TranscoderTrack::Stop() {
 
   ret = transcoder_source_->StopCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to stop on core side", TAG, __func__);
+    QMMF_ERROR("%s Failed to stop on core side", __func__);
     return ret;
   }
 
   ret = transcoder_sink_->StopCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to stop on pipe side", TAG, __func__);
+    QMMF_ERROR("%s Failed to stop on pipe side", __func__);
     return ret;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderTrack::Delete() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   if (stop_thread_ != nullptr) {
@@ -666,19 +670,19 @@ status_t TranscoderTrack::Delete() {
 
   ret = transcoder_source_->DeleteCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to delete on core side", TAG, __func__);
+    QMMF_ERROR("%s Failed to delete on core side", __func__);
     goto release_resources;
   }
 
   ret = transcoder_sink_->DeleteCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to delete on pipe side", TAG, __func__);
+    QMMF_ERROR("%s Failed to delete on pipe side", __func__);
     goto release_resources;
   }
 
   ret = transcoder_pipe_->RemovePipe();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to remove Pipe", TAG, __func__);
+    QMMF_ERROR("%s Failed to remove Pipe", __func__);
     goto release_resources;
   }
 
@@ -691,12 +695,12 @@ status_t TranscoderTrack::Delete() {
     m_pIStreamPort_ = nullptr;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 
 release_resources:
   ReleaseResources();
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
@@ -708,11 +712,11 @@ release_resources:
 will be filled by demuxer
 */
 status_t TranscoderTrack::ParseFile(const string& fileName) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   if (fileName.empty()) {
-    QMMF_ERROR("%s:%s Invalid Parameters", TAG, __func__);
+    QMMF_ERROR("%s Invalid Parameters", __func__);
     return -1;
   }
 
@@ -728,8 +732,8 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
   bool readTrackParams = false;
 
   if (!(fp = fopen(fileName.c_str(), "r"))) {
-    QMMF_ERROR("%s:%s failed to open config file: %s",
-               TAG, __func__, fileName.c_str());
+    QMMF_ERROR("%s failed to open config file: %s",
+               __func__, fileName.c_str());
     return -1;
   }
 
@@ -817,34 +821,34 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
           m_pIStreamPort_ = new CMM_MediaSourcePort(
               const_cast<char*>((params_).input_file.c_str()));
           if (m_pIStreamPort_ == nullptr) {
-            QMMF_ERROR("%s:%s Failed to allocate demuxer", TAG, __func__);
+            QMMF_ERROR("%s Failed to allocate demuxer", __func__);
             goto READ_FAILED;
           }
           ret = FillParams();
           if (ret != 0) {
-            QMMF_ERROR("%s:%s Failed to get videodecoder params from demuxer",
-                       TAG, __func__);
+            QMMF_ERROR("%s Failed to get videodecoder params from demuxer",
+                       __func__);
             goto READ_FAILED;
           }
         } else {
-          QMMF_ERROR("%s:%s Input file name not found", TAG, __func__);
+          QMMF_ERROR("%s Input file name not found", __func__);
           goto READ_FAILED;
         }
       } else {
-        QMMF_ERROR("%s:%s Unknown TranscodeType(%s)", TAG, __func__, value);
+        QMMF_ERROR("%s Unknown TranscodeType(%s)", __func__, value);
         goto READ_FAILED;
       }
     } else if (!strncmp("EnableVQzip", key, strlen("EnableVQzip"))) {
       params_.enable_vqzip = atoi(value);
       if (params_.track_type == TranscodeType::kVideoDecodeVideoEncode &&
           params_.enable_vqzip) {
-        QMMF_INFO("%s:%s Opening VQZipInfoExtractor", TAG, __func__);
+        QMMF_INFO("%s Opening VQZipInfoExtractor", __func__);
         VQZipInfoExtractor* vqzip_extractor =
             new VQZipInfoExtractor(params_.source_params.video_dec_param,
                                    m_sTrackInfo_, m_pDemux_);
         ret = vqzip_extractor->Init();
         if (ret != 0) {
-          QMMF_ERROR("%s:%s VQZipInfoExtractor Init Failed", TAG, __func__);
+          QMMF_ERROR("%s VQZipInfoExtractor Init Failed", __func__);
           delete vqzip_extractor;
           vqzip_extractor = nullptr;
           goto READ_FAILED;
@@ -854,14 +858,14 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
         ret = vqzip_extractor->ExtractVQZipInfo(
             &params_.sink_params.video_enc_param.vqzip_params);
         if (ret != 0) {
-          QMMF_ERROR("%s:%s VQZipInfo Extraction Failed", TAG, __func__);
+          QMMF_ERROR("%s VQZipInfo Extraction Failed", __func__);
           delete vqzip_extractor;
           vqzip_extractor = nullptr;
           goto READ_FAILED;
         }
         ret = vqzip_extractor->DeInit();
          if (ret != 0) {
-          QMMF_ERROR("%s:%s VQZipInfoExtractor DeInit Failed", TAG, __func__);
+          QMMF_ERROR("%s VQZipInfoExtractor DeInit Failed", __func__);
           delete vqzip_extractor;
           vqzip_extractor = nullptr;
           goto READ_FAILED;
@@ -875,12 +879,12 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
 
       } else if (params_.track_type != TranscodeType::kVideoDecodeVideoEncode &&
                  params_.enable_vqzip) {
-        QMMF_ERROR("%s:%s Wrong combination of TransCodeType and VQZip",
-                   TAG, __func__);
+        QMMF_ERROR("%s Wrong combination of TransCodeType and VQZip",
+                   __func__);
         goto READ_FAILED;
       }
     } else {
-      QMMF_ERROR("%s:%s Unknown Key %s found", TAG, __func__, key);
+      QMMF_ERROR("%s Unknown Key %s found", __func__, key);
       goto READ_FAILED;
     }
     continue;
@@ -896,7 +900,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
     } else if (!strncmp("Downscale_Height", key, strlen("Downscale_Height"))) {
       params_.source_params.video_dec_param.output_height = atoi(value);
     } else {
-      QMMF_ERROR("%s:%s Unknown Key %s found", TAG, __func__, key);
+      QMMF_ERROR("%s Unknown Key %s found", __func__, key);
       goto READ_FAILED;
     }
     continue;
@@ -928,7 +932,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
         params_.sink_params.video_enc_param.codec_param.hevc.sar_width = 0;
         params_.sink_params.video_enc_param.codec_param.hevc.sar_height = 0;
       } else {
-        QMMF_ERROR("%s:%s Unknown Video CodecType(%s)", TAG, __func__, value);
+        QMMF_ERROR("%s Unknown Video CodecType(%s)", __func__, value);
         goto READ_FAILED;
       }
     } else if (!strncmp("IFR", key, strlen("IFR"))) {
@@ -957,7 +961,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
           params_.sink_params.video_enc_param.codec_param.avc.profile =
               AVCProfileType::kHigh;
         else {
-          QMMF_ERROR("%s:%s Unknown AVC Profile(%s)", TAG, __func__, value);
+          QMMF_ERROR("%s Unknown AVC Profile(%s)", __func__, value);
           goto READ_FAILED;
         }
       } else {
@@ -965,7 +969,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
           params_.sink_params.video_enc_param.codec_param.hevc.profile =
               HEVCProfileType::kMain;
         else {
-          QMMF_ERROR("%s:%s Unknown HEVC Profile(%s)", TAG, __func__, value);
+          QMMF_ERROR("%s Unknown HEVC Profile(%s)", __func__, value);
           goto READ_FAILED;
         }
       }
@@ -1011,7 +1015,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
           params_.sink_params.video_enc_param.codec_param.avc.level =
               AVCLevelType::kLevel5_2;
         else {
-          QMMF_ERROR("%s:%s Unknown AVC Level(%s)", TAG, __func__, value);
+          QMMF_ERROR("%s Unknown AVC Level(%s)", __func__, value);
           goto READ_FAILED;
         }
       } else {
@@ -1031,7 +1035,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
           params_.sink_params.video_enc_param.codec_param.hevc.level =
               HEVCLevelType::kLevel5_2;
         else {
-          QMMF_ERROR("%s:%s Unknown HEVC Level(%s)", TAG, __func__, value);
+          QMMF_ERROR("%s Unknown HEVC Level(%s)", __func__, value);
           goto READ_FAILED;
         }
       }
@@ -1059,7 +1063,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
           params_.sink_params.video_enc_param.codec_param.avc
               .ratecontrol_type = VideoRateControlType::kMaxBitrateSkipFrames;
         else {
-          QMMF_ERROR("%s:%s Unknown RC Mode(%s)", TAG, __func__, value);
+          QMMF_ERROR("%s Unknown RC Mode(%s)", __func__, value);
           goto READ_FAILED;
         }
       } else {
@@ -1085,7 +1089,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
           params_.sink_params.video_enc_param.codec_param.hevc
               .ratecontrol_type = VideoRateControlType::kMaxBitrateSkipFrames;
         else {
-          QMMF_ERROR("%s:%s Unknown RC Mode(%s)", TAG, __func__, value);
+          QMMF_ERROR("%s Unknown RC Mode(%s)", __func__, value);
           goto READ_FAILED;
         }
       }
@@ -1206,7 +1210,7 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
         params_.sink_params.video_enc_param.codec_param.hevc.hier_layer =
             atoi(value);
     } else {
-      QMMF_ERROR("%s:%s Unknown Key %s found", TAG, __func__, key);
+      QMMF_ERROR("%s Unknown Key %s found", __func__, key);
       goto READ_FAILED;
     }
     continue;
@@ -1219,8 +1223,8 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
         (params_.sink_params.video_enc_param.codec_param.avc.level !=
          params_.sink_params.video_enc_param.vqzip_params.avc_vqzip_info
          .level)) {
-      QMMF_WARN("%s:%s Using Profile and Level Values as the ones from VQZipInfoExtractor",
-                TAG, __func__);
+      QMMF_WARN("%s Using Profile and Level Values as the ones from VQZipInfoExtractor",
+                __func__);
       params_.sink_params.video_enc_param.codec_param.avc.profile =
           params_.sink_params.video_enc_param.vqzip_params.avc_vqzip_info.profile;
       params_.sink_params.video_enc_param.codec_param.avc.level =
@@ -1229,23 +1233,23 @@ status_t TranscoderTrack::ParseFile(const string& fileName) {
 
     if (params_.sink_params.video_enc_param.codec_param.avc.ratecontrol_type !=
         VideoRateControlType::kDisable) {
-      QMMF_WARN("%s:%s Disabling the RC for VQZIP", TAG, __func__);
+      QMMF_WARN("%s Disabling the RC for VQZIP", __func__);
       params_.sink_params.video_enc_param.codec_param.avc.ratecontrol_type =
           VideoRateControlType::kDisable;
     }
   }
 
   // Print all the parameters
-  QMMF_INFO("%s:%s TransCodeParams[%s]",
-            TAG, __func__, params_.ToString().c_str());
+  QMMF_INFO("%s TransCodeParams[%s]",
+            __func__, params_.ToString().c_str());
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 
 READ_FAILED:
   fclose(fp);
   ReleaseResources();
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return -1;
 }
 

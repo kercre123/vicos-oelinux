@@ -30,7 +30,6 @@
 #pragma once
 
 #include <functional>
-#include <utils/RefBase.h>
 #include <vector>
 #include <set>
 
@@ -38,7 +37,7 @@
 
 #include "include/qmmf-sdk/qmmf_codec.h"
 
-#include "common/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils.h"
 
 #include "recorder/src/service/post-process/interface/qmmf_postproc.h"
 
@@ -69,6 +68,7 @@ struct PostProcIOParam {
   BufferFormat format;
   int32_t      gralloc_flags;
   uint32_t     buffer_count;
+  uint32_t     buffer_max;
 };
 
 /** PostProcCaps:
@@ -132,7 +132,7 @@ class IPostProcEventListener {
   virtual void OnError(RuntimeError err) = 0;
 };
 
-class IPostProcModule : public RefBase {
+class IPostProcModule {
 
  public:
 
@@ -157,6 +157,8 @@ class IPostProcModule : public RefBase {
    virtual status_t Start(const int32_t stream_id) = 0;
 
    virtual status_t Stop() = 0;
+
+   virtual status_t Abort(std::shared_ptr<void> &abort) = 0;
 
    virtual PostProcIOParam GetInput(const PostProcIOParam &out) = 0;
 

@@ -47,8 +47,8 @@
 #include <linux/msm_ion.h>
 #include <utils/Log.h>
 
-#include "common/qmmf_common_utils.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_common_utils.h"
+#include "common/utils/qmmf_log.h"
 #include "player/test/demuxer/qmmf_demuxer_intf.h"
 #include "player/test/demuxer/qmmf_demuxer_mediadata_def.h"
 #include "player/test/demuxer/qmmf_demuxer_sourceport.h"

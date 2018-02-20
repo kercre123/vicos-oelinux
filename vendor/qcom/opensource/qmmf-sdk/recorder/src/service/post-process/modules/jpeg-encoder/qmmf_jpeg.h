@@ -29,8 +29,6 @@
 
 #pragma once
 
-#include <utils/KeyedVector.h>
-
 #include "../../interface/qmmf_postproc_module.h"
 
 #include "qmmf_jpeg_core.h"
@@ -67,6 +65,8 @@ class PostProcJpeg : public IPostProcModule {
 
   status_t Stop() override;
 
+  status_t Abort(std::shared_ptr<void> &abort) override;
+
   PostProcIOParam GetInput(const PostProcIOParam &out) override;
 
   status_t ValidateOutput(const PostProcIOParam &output) override;
@@ -75,8 +75,25 @@ class PostProcJpeg : public IPostProcModule {
 
  private:
 
+  enum class State {
+    CREATED,
+    INITIALIZED,
+    ACTIVE,
+    RUNING,
+    ABORTED
+  };
+
+  static const int32_t kBufCount = 3; // count for buffer rotation
+
   reprocjpegencoder::JpegEncoder *jpeg_encoder_;
   IPostProcEventListener         *listener_;
+
+  std::vector<reprocjpegencoder::JpegEncoder::jpeg_thumbnail> thumbnail_data_;
+  uint32_t                       image_quality_;
+
+  std::mutex                     state_lock_;
+  State                          state_;
+  std::shared_ptr<void>          abort_;
 
   static const uint32_t          kMinWidth;
   static const uint32_t          kMinHeight;

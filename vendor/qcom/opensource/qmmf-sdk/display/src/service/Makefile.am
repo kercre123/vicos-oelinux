@@ -14,9 +14,8 @@ libqmmf_display_service_la_SOURCES = $(source_files)
 
 libqmmf_display_service_la_CPPFLAGS = -I$(top_srcdir)/include
 libqmmf_display_service_la_CPPFLAGS += -I$(top_srcdir)/
-libqmmf_display_service_la_CPPFLAGS += -I$(LIBGRALLOC)
 libqmmf_display_service_la_CPPFLAGS += -I$(MMCORE_CFLAGS)
-libqmmf_display_service_la_CPPFLAGS += -I${WORKSPACE}/display/display-hal/sdm/include/
+libqmmf_display_service_la_CPPFLAGS += -I$(DISPLAYSYNC_CFLAGS)
 libqmmf_display_service_la_LDFLAGS  = -llog -lbinder -lutils -lcutils
-libqmmf_display_service_la_LDFLAGS  += -lsdmcore -lsdmutils -lmemalloc
+libqmmf_display_service_la_LDFLAGS  += -lsdmcore -lsdmutils -lmemalloc -lsync
 

@@ -39,7 +39,7 @@
 #include "qmmf-sdk/qmmf_system_params.h"
 #include "system/src/service/qmmf_system_service_interface.h"
 #include "system/src/service/qmmf_system_common.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 namespace qmmf {
 namespace system {
@@ -54,7 +54,8 @@ class SystemClient {
 
   status_t LoadSoundModel(const SoundModel& soundmodel);
   status_t UnloadSoundModel();
-  status_t EnableSoundTrigger(const TriggerCb& callback);
+  status_t EnableSoundTrigger(const TriggerConfig& config,
+                              const TriggerCb& callback);
   status_t DisableSoundTrigger();
 
   status_t RegisterForDeviceEvents(const DeviceCb& callback);
@@ -68,9 +69,11 @@ class SystemClient {
                     const Tone& tone,
                     const ToneCb& callback);
 
+  status_t Mute(const DeviceId device, const bool mute);
+
   // callbacks from service
   void NotifySystemEvent(const int32_t error);
-  void NotifyTriggerEvent(const int32_t error);
+  void NotifyTriggerEvent(const int32_t error, const BufferDescriptor& buffer);
   void NotifyDeviceEvent(const DeviceInfo& device);
   void NotifyToneEvent(const int32_t error);
 
@@ -115,7 +118,7 @@ class ServiceCallbackHandler : public BnSystemServiceCallback {
  private:
   // methods of BnSystemServiceCallback
   void NotifySystemEvent(const int32_t error);
-  void NotifyTriggerEvent(const int32_t error);
+  void NotifyTriggerEvent(const int32_t error, const BufferDescriptor& buffer);
   void NotifyDeviceEvent(const DeviceInfo& device);
   void NotifyToneEvent(const int32_t error);
 

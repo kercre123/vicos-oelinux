@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "DisplayRemoteCallBack"
+#define LOG_TAG "DisplayRemoteCallBack"
 
 #include "display/src/service/qmmf_display_common.h"
 #include "display/src/service/qmmf_remote_cb.h"
@@ -39,14 +39,14 @@ namespace display {
 RemoteCallBack::RemoteCallBack(const sp<IDisplayServiceCallback>&
     remote_client): client_cb_handle_(remote_client) {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit (0x%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter ", __func__);
+  QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
 
 RemoteCallBack::~RemoteCallBack() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit (0x%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter ", __func__);
+  QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
 
 void RemoteCallBack::notifyDisplayEvent(DisplayEventType event_type,

@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "AudioIon"
+#define LOG_TAG "AudioIon"
 
 #include "common/audio/src/service/qmmf_audio_ion.h"
 
@@ -45,7 +45,7 @@
 #include <linux/msm_ion.h>
 
 #include "common/audio/inc/qmmf_audio_definitions.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 namespace qmmf {
 namespace common {
@@ -56,11 +56,11 @@ using ::std::map;
 static const char* ion_filename = "/dev/ion";
 
 AudioIon::AudioIon() : ion_device_(-1) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 AudioIon::~AudioIon() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   int result;
 
   if (ion_device_ == -1)
@@ -69,34 +69,34 @@ AudioIon::~AudioIon() {
   for (AudioIonClientMap::value_type& client_value : client_map_) {
     result = Release(client_value.first);
     if (result < 0)
-      QMMF_ERROR("%s: %s() unable to release buffers for client[%d]: %d", TAG,
+      QMMF_ERROR("%s() unable to release buffers for client[%d]: %d",
                  __func__, client_value.first, result);
   }
 
   result = close(ion_device_);
   if (result < 0)
-    QMMF_ERROR("%s: %s() error closing ion device[%d]: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() error closing ion device[%d]: %d[%s]", __func__,
                ion_device_, errno, strerror(errno));
-  QMMF_DEBUG("%s: %s() closed ion device[%d]", TAG, __func__, ion_device_);
+  QMMF_DEBUG("%s() closed ion device[%d]", __func__, ion_device_);
 }
 
 int32_t AudioIon::Associate(const AudioHandle audio_handle,
                             AudioBuffer* buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: audio_handle[%d]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: audio_handle[%d]", __func__,
                audio_handle);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer->ToString().c_str());
   int result;
 
   if (ion_device_ == -1) {
     ion_device_ = open(ion_filename, O_RDONLY);
     if (ion_device_ < 0) {
-      QMMF_ERROR("%s: %s() error opening ion device: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() error opening ion device: %d[%s]", __func__,
                  errno, strerror(errno));
       return -ENODEV;
     }
-    QMMF_DEBUG("%s: %s() opened ion device[%d]", TAG, __func__, ion_device_);
+    QMMF_DEBUG("%s() opened ion device[%d]", __func__, ion_device_);
   }
 
   AudioIonClientMap::iterator client_iterator = client_map_.find(audio_handle);
@@ -106,9 +106,9 @@ int32_t AudioIon::Associate(const AudioHandle audio_handle,
     if (buffer_iterator != client_iterator->second.end()) {
       result = close(buffer->ion_fd);
       if (result < 0) {
-        QMMF_ERROR("%s: %s() error closing ion_fd[%d]: %d[%s]", TAG, __func__,
+        QMMF_ERROR("%s() error closing ion_fd[%d]: %d[%s]", __func__,
                    buffer->ion_fd, errno, strerror(errno));
-        QMMF_ERROR("%s: %s() [CRITICAL] ion fd has leaked", TAG, __func__);
+        QMMF_ERROR("%s() [CRITICAL] ion fd has leaked", __func__);
       }
 
       buffer->data = buffer_iterator->second.data;
@@ -128,7 +128,7 @@ int32_t AudioIon::Associate(const AudioHandle audio_handle,
 
   result = ioctl(ion_device_, ION_IOC_IMPORT, &ion_buffer.share_data);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() ION_IOC_IMPORT ioctl command failed: %d[%s]", TAG,
+    QMMF_ERROR("%s() ION_IOC_IMPORT ioctl command failed: %d[%s]",
                __func__, errno, strerror(errno));
     return errno;
   }
@@ -138,19 +138,19 @@ int32_t AudioIon::Associate(const AudioHandle audio_handle,
   ion_buffer.data = mmap(NULL, ion_buffer.capacity, PROT_READ | PROT_WRITE,
                          MAP_SHARED, ion_buffer.share_data.fd, 0);
   if (ion_buffer.data == MAP_FAILED) {
-    QMMF_ERROR("%s: %s() unable to map buffer[%d]: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() unable to map buffer[%d]: %d[%s]", __func__,
                ion_buffer.share_data.fd, errno, strerror(errno));
     result = close(ion_buffer.share_data.fd);
     if (result < 0) {
-      QMMF_ERROR("%s: %s() error closing mapping fd[%d]: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() error closing mapping fd[%d]: %d[%s]", __func__,
                  ion_buffer.share_data.fd, errno, strerror(errno));
-      QMMF_ERROR("%s: %s() [CRITICAL] ion fd has leaked", TAG, __func__);
+      QMMF_ERROR("%s() [CRITICAL] ion fd has leaked", __func__);
     }
     return errno;
   }
   buffer->data = ion_buffer.data;
 
-  QMMF_VERBOSE("%s: %s() mapped ion buffer[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() mapped ion buffer[%s]", __func__,
                ion_buffer.ToString().c_str());
 
   client_iterator->second.insert({buffer->buffer_id, ion_buffer});
@@ -159,36 +159,36 @@ int32_t AudioIon::Associate(const AudioHandle audio_handle,
 }
 
 int32_t AudioIon::Release(const AudioHandle audio_handle) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: audio_handle[%d]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: audio_handle[%d]", __func__,
                audio_handle);
   int result = 0;
 
   if (ion_device_ == -1) {
-    QMMF_ERROR("%s: %s() ion device is not opened", TAG, __func__);
+    QMMF_ERROR("%s() ion device is not opened", __func__);
     return -ENODEV;
   }
 
   AudioIonClientMap::iterator client_iterator = client_map_.find(audio_handle);
   if (client_iterator == client_map_.end()) {
-    QMMF_INFO("%s: %s() no ion buffers for audio client[%d]", TAG, __func__,
+    QMMF_INFO("%s() no ion buffers for audio client[%d]", __func__,
               audio_handle);
     return 0;
   }
 
   for (AudioIonBufferMap::value_type& buffer_value : client_iterator->second) {
-    QMMF_VERBOSE("%s: %s() releasing ion buffer[%s]", TAG, __func__,
+    QMMF_VERBOSE("%s() releasing ion buffer[%s]", __func__,
                  buffer_value.second.ToString().c_str());
 
     result = munmap(buffer_value.second.data, buffer_value.second.capacity);
     if (result < 0)
-      QMMF_ERROR("%s: %s() unable to unmap buffer[%d]: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() unable to unmap buffer[%d]: %d[%s]", __func__,
                  buffer_value.second.share_data.fd, errno, strerror(errno));
     buffer_value.second.data = nullptr;
 
     result = close(buffer_value.second.share_data.fd);
     if (result < 0) {
-      QMMF_ERROR("%s: %s() error closing shared fd[%d]: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() error closing shared fd[%d]: %d[%s]", __func__,
                  buffer_value.second.share_data.fd, errno, strerror(errno));
       return errno;
     }
@@ -196,24 +196,24 @@ int32_t AudioIon::Release(const AudioHandle audio_handle) {
 
     result = ioctl(ion_device_, ION_IOC_FREE, &buffer_value.second.free_data);
     if (result < 0) {
-      QMMF_ERROR("%s: %s() ION_IOC_FREE ioctl command failed: %d[%s]", TAG,
+      QMMF_ERROR("%s() ION_IOC_FREE ioctl command failed: %d[%s]",
                   __func__, errno, strerror(errno));
-      QMMF_ERROR("%s: %s() [CRITICAL] ion memory has leaked", TAG, __func__);
+      QMMF_ERROR("%s() [CRITICAL] ion memory has leaked", __func__);
     }
   }
 
   client_iterator->second.clear();
-  QMMF_INFO("%s: %s() released all ion buffers", TAG, __func__);
+  QMMF_INFO("%s() released all ion buffers", __func__);
 
   client_map_.erase(client_iterator->first);
 
   if (client_map_.empty()) {
     result = close(ion_device_);
     if (result < 0)
-      QMMF_ERROR("%s: %s() error closing ion device[%d]: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() error closing ion device[%d]: %d[%s]", __func__,
                  ion_device_, errno, strerror(errno));
     else
-      QMMF_DEBUG("%s: %s() closed ion device[%d]", TAG, __func__, ion_device_);
+      QMMF_DEBUG("%s() closed ion device[%d]", __func__, ion_device_);
     ion_device_ = -1;
   }
 

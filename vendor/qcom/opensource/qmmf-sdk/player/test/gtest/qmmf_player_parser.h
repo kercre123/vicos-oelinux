@@ -34,7 +34,6 @@
 #include <sys/ioctl.h>
 #include <utils/Log.h>
 #include <linux/msm_ion.h>
-#include <utils/Condition.h>
 #include <utils/KeyedVector.h>
 #include <cutils/native_handle.h>
 #include <media/msm_media_info.h>

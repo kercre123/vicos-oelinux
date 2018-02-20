@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "ReprocessPlugin"
+#define LOG_TAG "ReprocessPlugin"
 
 #include "recorder/src/service/qmmf_recorder_utils.h"
 

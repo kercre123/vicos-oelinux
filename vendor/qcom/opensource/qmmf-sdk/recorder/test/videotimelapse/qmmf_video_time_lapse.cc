@@ -298,7 +298,7 @@ int32_t TimeLapse::StartTimeLapseModeTwo() {
 int32_t TimeLapse::StartCamera() {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
   int32_t ret;
-  CameraStartParam camera_start_params{false, 0, 0, 0, 30, 0};
+  CameraStartParam camera_start_params{false, false, 0, 0, 0, 30, 0};
 
   ret = recorder_.StartCamera(params_.camera_id, camera_start_params);
   if (NO_ERROR != ret) {
@@ -408,7 +408,7 @@ int32_t TimeLapse::StopAVCodec() {
 
   encoder_source_->SetEOS();
 
-  ret = avcodec_->StopCodec();
+  ret = avcodec_->StopCodec(true);
   if (NO_ERROR != ret) {
     ALOGE("%s: StopCodec Failed", __func__);
     return ret;
@@ -683,10 +683,9 @@ int32_t TimeLapse::AllocateBuffer(uint32_t index) {
   void *vaddr = nullptr;
 
   for (uint32_t i = 0; i < count; i++) {
-    BufferDescriptor buffer;
+    BufferDescriptor buffer{};
     vaddr = nullptr;
 
-    memset(&buffer, 0x0, sizeof(buffer));
     memset(&alloc, 0x0, sizeof(ion_allocation_data));
     memset(&ionFdData, 0x0, sizeof(ion_fd_data));
 
@@ -822,7 +821,7 @@ void EncoderSource::ConsumeBuffer(BufferDescriptor &buffer) {
            buffer.size);
 
   input_free_buffer_list_.push_back(buffer);
-  wait_for_frame_.notify_one();
+  wait_for_frame_.Signal();
 
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: Exit", __func__);
 }
@@ -836,7 +835,7 @@ int32_t EncoderSource::GetBuffer(BufferDescriptor &codec_buffer,
   while (input_free_buffer_list_.size() <= 0) {
     ALOGW("EncoderSource:%s: No sanpshot available wait for snapshot",
           __func__);
-    wait_for_frame_.wait(lock);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor &buffer = *input_free_buffer_list_.begin();
@@ -986,7 +985,7 @@ int32_t EncoderSink::GetBuffer(BufferDescriptor &codec_buffer,
   std::unique_lock<mutex> lock(wait_for_frame_lock_);
   while (output_free_buffer_list_.size() <= 0) {
     ALOGW("%s: No buffer available to notify. Wait for new buffer", __func__);
-    wait_for_frame_.wait(lock);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor &buffer = *output_free_buffer_list_.begin();
@@ -1036,7 +1035,7 @@ int32_t EncoderSink::ReturnBuffer(BufferDescriptor &codec_buffer,
       if (((*it).data) == (codec_buffer.data)) {
         output_free_buffer_list_.push_back(*it);
         output_occupy_buffer_list_.erase(it);
-        wait_for_frame_.notify_one();
+        wait_for_frame_.Signal();
         found = true;
         break;
       }

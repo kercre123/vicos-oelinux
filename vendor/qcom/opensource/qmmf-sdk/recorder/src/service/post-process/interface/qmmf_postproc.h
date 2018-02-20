@@ -30,8 +30,7 @@
 #pragma once
 
 #include <functional>
-#include <utils/RefBase.h>
-#include "common/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils.h"
 #include "common/cameraadaptor/qmmf_camera3_types.h"
 
 namespace qmmf {
@@ -46,8 +45,7 @@ public:
 
   virtual status_t CreateDeviceStream(CameraStreamParameters& params,
                                       uint32_t frame_rate,
-                                      int32_t* stream_id,
-                                      bool is_pp_enabled) = 0;
+                                      int32_t* stream_id) = 0;
 
   virtual status_t CreateDeviceInputStream(CameraInputStreamParameters& params,
                                            int32_t* stream_id) = 0;

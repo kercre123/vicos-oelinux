@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderPostProcMemPool"
+#define LOG_TAG "RecorderPostProcMemPool"
 
 #include <dlfcn.h>
 #include <hardware/hardware.h>
@@ -45,27 +45,12 @@ MemPool::MemPool()
     : buffers_allocated_(0),
       pending_buffer_count_(0) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter", __func__);
+  QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 MemPool::~MemPool() {
-
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
-
-  if (!gralloc_buffers_.isEmpty()) {
-    for (uint32_t i = 0; i < gralloc_buffers_.size(); i++) {
-      FreeGrallocBuffer(gralloc_buffers_.keyAt(i));
-    }
-    gralloc_buffers_.clear();
-  }
-  delete[] gralloc_slots_;
-
-  if (nullptr != gralloc_device_) {
-    gralloc_device_->common.close(&gralloc_device_->common);
-  }
-
-  QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter", __func__);
 }
 
 int32_t MemPool::Initialize(const MemPoolParams &params) {
@@ -76,7 +61,7 @@ int32_t MemPool::Initialize(const MemPoolParams &params) {
 
   ret = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
   if ((NO_ERROR != ret) || (nullptr == module)) {
-    QMMF_ERROR("%s:%s: Unable to load GrallocHal module: %d", TAG,
+    QMMF_ERROR("%s: Unable to load GrallocHal module: %d",
                __func__, ret);
     return ret;
   }
@@ -84,13 +69,13 @@ int32_t MemPool::Initialize(const MemPoolParams &params) {
   ret = module->methods->open(module, GRALLOC_HARDWARE_GPU0,
                               (struct hw_device_t **)&gralloc_device_);
   if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s: Could not open Gralloc module: %s (%d)", TAG,
+    QMMF_ERROR("%s: Could not open Gralloc module: %s (%d)",
                __func__, strerror(-ret), ret);
     goto FAIL;
   }
 
-  QMMF_INFO("%s:%s: Gralloc Module author: %s, version: %d name: %s",
-            TAG, __func__,
+  QMMF_INFO("%s: Gralloc Module author: %s, version: %d name: %s",
+            __func__,
             gralloc_device_->common.module->author,
             gralloc_device_->common.module->hal_api_version,
             gralloc_device_->common.module->name);
@@ -99,7 +84,7 @@ int32_t MemPool::Initialize(const MemPoolParams &params) {
   if (params_.max_buffer_count > 0) {
     gralloc_slots_ = new buffer_handle_t[params_.max_buffer_count];
     if (gralloc_slots_ == nullptr) {
-      QMMF_ERROR("%s:%s: Unable to allocate buffer handles!", TAG, __func__);
+      QMMF_ERROR("%s: Unable to allocate buffer handles!", __func__);
       ret = NO_MEMORY;
       goto FAIL;
     }
@@ -116,25 +101,46 @@ FAIL:
   return -1;
 }
 
+status_t MemPool::Delete() {
+  QMMF_INFO("%s: Enter", __func__);
+
+  if (!gralloc_buffers_.empty()) {
+    for (auto& it : gralloc_buffers_) {
+      FreeGrallocBuffer(it.first);
+    }
+    gralloc_buffers_.clear();
+  }
+  delete[] gralloc_slots_;
+
+  if (nullptr != gralloc_device_) {
+    gralloc_device_->common.close(&gralloc_device_->common);
+  }
+  buffers_allocated_ = 0;
+  pending_buffer_count_ = 0;
+
+  QMMF_INFO("%s: Exit (%p)", __func__, this);
+
+  return NO_ERROR;
+}
+
 status_t MemPool::ReturnBufferLocked(const StreamBuffer &buffer) {
 
   if (pending_buffer_count_ == 0) {
-    QMMF_ERROR("%s:%s: Not expecting any buffers!", TAG, __func__);
+    QMMF_ERROR("%s: Not expecting any buffers!", __func__);
     return INVALID_OPERATION;
   }
   std::lock_guard<std::mutex> lock(buffer_lock_);
 
-  int32_t idx = gralloc_buffers_.indexOfKey(buffer.handle);
-  if (-ENOENT == idx) {
-    QMMF_ERROR("%s:%s: Buffer %p returned that wasn't allocated by this node",
-        TAG, __func__, buffer.handle);
+  if (gralloc_buffers_.count(buffer.handle) == 0) {
+    QMMF_ERROR("%s: Buffer %p returned that wasn't allocated by this node",
+        __func__, buffer.handle);
     return BAD_VALUE;
   }
 
-  gralloc_buffers_.replaceValueFor(buffer.handle, true);
+  gralloc_buffers_[buffer.handle] = true;
   pending_buffer_count_--;
 
-  wait_for_buffer_.notify_one();
+  wait_for_buffer_.Signal();
   return NO_ERROR;
 }
 
@@ -146,24 +152,24 @@ status_t MemPool::GetBuffer(StreamBuffer* buffer) {
   buffer->fd = -1;
 
   if (gralloc_slots_ == nullptr) {
-    QMMF_ERROR("%s:%s: Error gralloc slots!", TAG, __func__);
+    QMMF_ERROR("%s: Error gralloc slots!", __func__);
     return NO_ERROR;
   }
 
   if (pending_buffer_count_ == params_.max_buffer_count) {
-    QMMF_VERBOSE("%s:%s: Already retrieved maximum buffers (%d), waiting"
-        " on a free one", TAG, __func__, params_.max_buffer_count);
+    QMMF_VERBOSE("%s: Already retrieved maximum buffers (%d), waiting"
+        " on a free one",  __func__, params_.max_buffer_count);
 
-    auto ret = wait_for_buffer_.wait_for(lock, wait_time);
-    if (ret == std::cv_status::timeout) {
-      QMMF_ERROR("%s:%s: Wait for output buffer return timed out", TAG,
+    auto ret = wait_for_buffer_.WaitFor(lock, wait_time);
+    if (ret != 0) {
+      QMMF_ERROR("%s: Wait for output buffer return timed out",
                  __func__);
       return TIMED_OUT;
     }
   }
   auto ret = GetBufferLocked(buffer);
   if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s: Failed to retrieve output buffer", TAG, __func__);
+    QMMF_ERROR("%s: Failed to retrieve output buffer", __func__);
     return ret;
   }
 
@@ -179,10 +185,10 @@ status_t MemPool::GetBufferLocked(StreamBuffer* buffer) {
   //Only pre-allocate buffers in case no valid streamBuffer
   //is passed as an argument.
   if (nullptr != buffer) {
-    for (uint32_t i = 0; i < gralloc_buffers_.size(); i++) {
-      if (gralloc_buffers_.valueAt(i)) {
-        handle = gralloc_buffers_.keyAt(i);
-        gralloc_buffers_.replaceValueAt(i, false);
+    for (auto& it : gralloc_buffers_) {
+      if (it.second) {
+        handle = it.first;
+        it.second = false;
         break;
       }
     }
@@ -203,12 +209,12 @@ status_t MemPool::GetBufferLocked(StreamBuffer* buffer) {
     }
     idx = buffers_allocated_;
     gralloc_slots_[idx] = handle;
-    gralloc_buffers_.add(gralloc_slots_[idx], (nullptr == buffer));
+    gralloc_buffers_.emplace(gralloc_slots_[idx], (nullptr == buffer));
     buffers_allocated_++;
   }
 
   if ((nullptr == handle) || (0 > idx)) {
-    QMMF_ERROR("%s:%s: Unable to allocate or find a free buffer!", TAG,
+    QMMF_ERROR("%s: Unable to allocate or find a free buffer!",
                __func__);
     return INVALID_OPERATION;
   }
@@ -218,7 +224,7 @@ status_t MemPool::GetBufferLocked(StreamBuffer* buffer) {
         gralloc_slots_[idx];
     ret = PopulateMetaInfo(buffer->info, priv_handle);
     if (NO_ERROR != ret) {
-      QMMF_ERROR("%s:%s: Failed to populate buffer meta info", TAG, __func__);
+      QMMF_ERROR("%s: Failed to populate buffer meta info", __func__);
       return ret;
     }
     buffer->handle = gralloc_slots_[idx];
@@ -234,7 +240,7 @@ status_t MemPool::PopulateMetaInfo(CameraBufferMetaData &info,
                                    struct private_handle_t *priv_handle) {
 
   if (nullptr == priv_handle) {
-    QMMF_ERROR("%s:%s: Invalid private handle!\n", TAG, __func__);
+    QMMF_ERROR("%s: Invalid private handle!\n", __func__);
     return BAD_VALUE;
   }
 
@@ -246,7 +252,7 @@ status_t MemPool::PopulateMetaInfo(CameraBufferMetaData &info,
       priv_handle, &alignedW, &alignedH);
 
   if (0 != ret) {
-    QMMF_ERROR("%s:%s: Unable to query stride&scanline: %d\n", TAG, __func__,
+    QMMF_ERROR("%s: Unable to query stride&scanline: %d\n", __func__,
                ret);
     return ret;
   }
@@ -322,7 +328,7 @@ status_t MemPool::PopulateMetaInfo(CameraBufferMetaData &info,
       info.plane_info[0].scanline = alignedH;
       break;
     default:
-      QMMF_ERROR("%s:%s: Unsupported format: %d", TAG, __func__,
+      QMMF_ERROR("%s: Unsupported format: %d", __func__,
                  priv_handle->format);
       return NAME_NOT_FOUND;
   }
@@ -359,7 +365,7 @@ status_t MemPool::AllocGrallocBuffer(buffer_handle_t *buf) {
                                  static_cast<int>(usage), buf, &stride);
   }
   if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s: Failed to allocate gralloc buffer", TAG, __func__);
+    QMMF_ERROR("%s: Failed to allocate gralloc buffer", __func__);
   }
   return ret;
 }

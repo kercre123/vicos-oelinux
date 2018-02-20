@@ -49,7 +49,6 @@ struct SoundModelInternal : public SoundModel {
 
   void ToParcel(::android::Parcel* parcel,
                 ::android::Parcel::WritableBlob* blob) const {
-    parcel->writeInt32(static_cast<int32_t>(device));
     parcel->writeUint32(keywords);
     parcel->writeUint32(size);
     parcel->writeBlob(size, false, blob);
@@ -58,11 +57,34 @@ struct SoundModelInternal : public SoundModel {
 
   SoundModelInternal& FromParcel(const ::android::Parcel& parcel,
                                  ::android::Parcel::ReadableBlob* blob) {
-    device = static_cast<DeviceId>(parcel.readInt32());
     keywords = parcel.readUint32();
     size = parcel.readUint32();
     parcel.readBlob(size, blob);
     data = const_cast<void*>(blob->data());
+    return *this;
+  }
+};
+
+struct TriggerConfigInternal : public TriggerConfig {
+  TriggerConfigInternal() {}
+  TriggerConfigInternal(TriggerConfig& base) : TriggerConfig(base) {}
+  TriggerConfigInternal(const TriggerConfig& base)
+      : TriggerConfig(const_cast<TriggerConfig&>(base)) {}
+
+  void ToParcel(::android::Parcel* parcel) const {
+    parcel->writeInt32(static_cast<int32_t>(device));
+    parcel->writeInt32(static_cast<int32_t>(request_capture));
+    parcel->writeUint32(capture_duration);
+    parcel->writeInt32(static_cast<int32_t>(with_keyword));
+    parcel->writeUint32(keyword_duration);
+  }
+
+  TriggerConfigInternal& FromParcel(const ::android::Parcel& parcel) {
+    device = static_cast<DeviceId>(parcel.readInt32());
+    request_capture = static_cast<bool>(parcel.readInt32());
+    capture_duration = parcel.readUint32();
+    with_keyword = static_cast<bool>(parcel.readInt32());
+    keyword_duration = parcel.readUint32();
     return *this;
   }
 };
@@ -76,6 +98,7 @@ struct ToneInternal : public Tone {
                 ::android::Parcel::WritableBlob* blob) const {
     parcel->writeUint32(delay);
     parcel->writeUint32(loop_num);
+    parcel->writeUint32(volume);
     parcel->writeUint32(size);
     parcel->writeBlob(size, false, blob);
     memcpy(blob->data(), buffer, size);
@@ -85,6 +108,7 @@ struct ToneInternal : public Tone {
                                  ::android::Parcel::ReadableBlob* blob) {
     delay = parcel.readUint32();
     loop_num = parcel.readUint32();
+    volume = parcel.readUint32();
     size = parcel.readUint32();
     parcel.readBlob(size, blob);
     buffer = const_cast<void*>(blob->data());

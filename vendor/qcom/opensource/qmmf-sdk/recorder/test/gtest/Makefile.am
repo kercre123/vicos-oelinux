@@ -12,6 +12,7 @@ recorder_gtest_LDFLAGS  = -lutils -lcutils -llog -lcairo -lgtest -lgtest_main
 recorder_gtest_LDFLAGS  += -lcamera_client -lcamera_metadata
 recorder_gtest_LDADD    = ../../src/client/libqmmf_recorder_client.la
 recorder_gtest_LDADD    += ../../../common/avqueue/libav_queue.la
+recorder_gtest_LDADD    += ../../../display/src/client/libqmmf_display_client.la
 
 
 if ENABLE_360

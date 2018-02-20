@@ -1,31 +1,31 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions are
-* met:
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*     * Neither the name of The Linux Foundation nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of The Linux Foundation nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #pragma once
 
@@ -39,18 +39,12 @@
 namespace qmmf {
 namespace player {
 
-using namespace android;
-
-
-typedef int32_t status_t;
-
 class PlayerClient;
 
 class Player
 {
  public:
   Player();
-
   ~Player();
 
   status_t Connect(PlayerCb& cb);
@@ -84,17 +78,20 @@ class Player
                             size_t meta_size,
                             TrackMetaBufferType meta_type);
 
-  // starts track playback. This is an async API and returns immediately without
-  // waiting for actual playback to start. An event callback is called when the
-  // first track buffer is rendered
+  // Starts track playback
   status_t Start();
 
-  // stops track playback. do_flush param can be set to true for flushing the
-  // buffers in the queue, else player will wait till all buffers are drained
-  // An async callback is called when the stop is completed
-  status_t Stop(bool do_flush);
+  // Stops track playback. Optionally grabs the last video frame rendered to
+  // display and returns the buffer
+  status_t Stop(const PictureCallback& handler = {nullptr, nullptr},
+                const PictureParam& params = {false, VideoCodecType::kYUV,
+                                              0, 0, 0});
 
-  status_t Pause();
+  // Pauses track playback. Optionally grabs the last video frame rendered to
+  // display and returns the buffer
+  status_t Pause(const PictureCallback& handler = {nullptr, nullptr},
+                 const PictureParam& params = {false, VideoCodecType::kYUV,
+                                               0, 0, 0});
 
   // Resumes the currently paused playback
   status_t Resume();
@@ -105,11 +102,6 @@ class Player
 
   // set playback rate and direction of playback.
   status_t SetTrickMode(TrickModeSpeed speed, TrickModeDirection dir);
-
-  //This API can be called only in pause state. This would grab the last
-  //video frame rendered to display and do a jpeg encode and returns
-  //the encoded buffer
-  status_t GrabPicture(PictureParam param, PictureCallback& cb);
 
   status_t SetAudioTrackParam(uint32_t track_id,
                               CodecParamType type,
@@ -125,5 +117,5 @@ class Player
   PlayerClient* player_client_;
 };
 
-};  // namespace player
-};  // namespace qmmf
+}; // namespace player
+}; // namespace qmmf

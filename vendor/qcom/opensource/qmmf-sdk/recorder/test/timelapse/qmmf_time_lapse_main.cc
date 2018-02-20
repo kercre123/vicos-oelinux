@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -29,7 +29,6 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <utils/String8.h>
 
 #include "qmmf_time_lapse.h"
 
@@ -89,19 +88,21 @@ const UsageDescription kDescription [] = {
 };
 
 void print_usage() {
-  String8 usage_str("Usage: ");
-  String8 defaults_str("\nDefaults:\n");
+  std::string usage_str("Usage: ");
+  std::string defaults_str("\nDefaults:\n");
   size_t arg_count = sizeof(kDescription) / sizeof(kDescription[0]);
   for (size_t i = 0; i < arg_count; i++) {
-    defaults_str.appendFormat("%s - default value: {%u}\n",
-                              kDescription[i].desc,
-                              kDescription[i].default_value);
-    usage_str.appendFormat("-%c %s ", kDescription[i].arg,
-                           kDescription[i].desc);
+    defaults_str += kDescription[i].desc;
+    defaults_str += " - default value: {";
+    defaults_str += std::to_string(kDescription[i].default_value) + "}\n";
+    usage_str += "-" + std::to_string(kDescription[i].arg) + " ";
+    usage_str += kDescription[i].desc;
+    usage_str += " ";
   }
-  usage_str.append(defaults_str);
+  usage_str += defaults_str;
 
-  printf("%s\n", usage_str.string());
+
+  printf("%s\n", usage_str.c_str());
 }
 
 void print_params(const TimeLapseParams &params) {

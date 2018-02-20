@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -34,7 +34,6 @@
 #include <sys/ioctl.h>
 #include <utils/Log.h>
 #include <linux/msm_ion.h>
-#include <utils/Condition.h>
 #include <utils/KeyedVector.h>
 #include <cutils/native_handle.h>
 #include <media/msm_media_info.h>
@@ -44,6 +43,8 @@
 #include <cstdint>
 #include <bitset>
 #include <iostream>
+#include <string>
+
 #include <qmmf-sdk/qmmf_player_params.h>
 
 using namespace std;
@@ -75,6 +76,106 @@ struct __attribute__((__packed__)) g711_header {
 
 typedef  struct ion_allocation_data IonHandleData;
 
+class PCMfileIO
+{
+ public:
+  PCMfileIO(const char* filename);
+  ~PCMfileIO();
+
+  status_t Fillparams(AudioTrackCreateParam* params);
+
+  status_t GetFrames(void* buffer, uint32_t size_buffer, uint32_t* bytes_read);
+
+ private:
+  struct __attribute__((packed)) WavRiffHeader {
+    uint32_t riff_id;
+    uint32_t riff_size;
+    uint32_t wave_id;
+
+    ::std::string ToString() const {
+      ::std::stringstream stream;
+      stream << "riff_id[" << ::std::setbase(16) << riff_id
+             << ::std::setbase(10) << "] ";
+      stream << "riff_size[" << riff_size << "] ";
+      stream << "wave_id[" << ::std::setbase(16) << wave_id
+             << ::std::setbase(10) << "] ";
+      return stream.str();
+    }
+  };
+
+  struct __attribute__((packed)) WavChunkHeader {
+    uint32_t format_id;
+    uint32_t format_size;
+
+    ::std::string ToString() const {
+      ::std::stringstream stream;
+      stream << "format_id[" << ::std::setbase(16) << format_id
+             << ::std::setbase(10) << "] ";
+      stream << "format_size[" << format_size << "] ";
+      return stream.str();
+    }
+  };
+
+  struct __attribute__((packed)) WavChunkFormat {
+    uint16_t audio_format;
+    uint16_t num_channels;
+    uint32_t sample_rate;
+    uint32_t byte_rate;
+    uint16_t block_align;
+    uint16_t bits_per_sample;
+
+    ::std::string ToString() const {
+      ::std::stringstream stream;
+      stream << "audio_format[" << audio_format << "] ";
+      stream << "num_channels[" << num_channels << "] ";
+      stream << "sample_rate[" << sample_rate << "] ";
+      stream << "byte_rate[" << byte_rate << "] ";
+      stream << "block_align[" << block_align << "] ";
+      stream << "bits_per_sample[" << bits_per_sample << "] ";
+      return stream.str();
+    }
+  };
+
+  struct __attribute__((packed)) WavDataHeader {
+    uint32_t data_id;
+    uint32_t data_size;
+
+    ::std::string ToString() const {
+      ::std::stringstream stream;
+      stream << "data_id[" << ::std::setbase(16) << data_id
+             << ::std::setbase(10) << "] ";
+      stream << "data_size[" << data_size << "] ";
+      return stream.str();
+    }
+  };
+
+  struct __attribute__((packed)) WavHeader {
+    WavRiffHeader riff_header;
+    WavChunkHeader chunk_header;
+    WavChunkFormat chunk_format;
+    WavDataHeader data_header;
+
+    ::std::string ToString() const {
+      ::std::stringstream stream;
+      stream << "riff_header[" << riff_header.ToString() << "] ";
+      stream << "chunk_header[" << chunk_header.ToString() << "] ";
+      stream << "chunk_format[" << chunk_format.ToString() << "] ";
+      stream << "data_header[" << data_header.ToString() << "] ";
+      return stream.str();
+    }
+  };
+
+  WavHeader header_;
+  ::std::ifstream input_;
+  int32_t remaining_bytes_;
+
+  // disable copy, assignment, and move
+  PCMfileIO(const PCMfileIO&) = delete;
+  PCMfileIO(PCMfileIO&&) = delete;
+  PCMfileIO& operator=(const PCMfileIO&) = delete;
+  PCMfileIO& operator=(const PCMfileIO&&) = delete;
+};
+
 class AACfileIO {
  public:
 
@@ -82,10 +183,6 @@ class AACfileIO {
 
   status_t GetFrames(void*buffer,uint32_t size_buffer,
                          int32_t* num_frames_read,uint32_t* bytes_read);
-
-  bool isfileopen(){return infile.is_open();}
-
-  status_t writeRaw();
 
   AACfileIO(const char* file);
 
@@ -122,10 +219,6 @@ class G711fileIO {
 
   status_t GetFrames(void*buffer,uint32_t size_buffer,uint32_t* bytes_read);
 
-  bool isfileopen(){return infile.is_open();}
-
-  status_t writeRaw();
-
   G711fileIO(const char* file);
 
   ~G711fileIO();
@@ -155,10 +248,6 @@ class AMRfileIO {
   status_t GetFrames(void*buffer,uint32_t size_buffer,
                          int32_t* num_frames_read,uint32_t* bytes_read);
 
-  bool isfileopen(){return infile.is_open();}
-
-  status_t writeRaw();
-
   AMRfileIO(const char* file);
 
   ~AMRfileIO();
@@ -187,4 +276,34 @@ class AMRfileIO {
   uint64_t duration;
   bool read_completed;
   bool mIsWide;
+};
+
+class MP3fileIO {
+ public:
+  MP3fileIO(const char* file);
+  ~MP3fileIO();
+
+  status_t Fillparams(AudioTrackCreateParam* params);
+
+  status_t GetFrames(void* buffer, uint32_t size_buffer, uint32_t* bytes_read);
+
+ private:
+  struct __attribute__((packed)) MP3Header {
+    uint32_t sync        : 11;
+    uint32_t id          : 2;
+    uint32_t layer       : 2;
+    uint32_t crc         : 1;
+    uint32_t bitrate     : 4;
+    uint32_t sample_rate : 2;
+    uint32_t padding     : 1;
+    uint32_t private_bit : 1;
+    uint32_t channels    : 2;
+    uint32_t extension   : 2;
+    uint32_t copyright   : 1;
+    uint32_t original    : 1;
+    uint32_t emphasis    : 2;
+  };
+
+  ::std::string filename_;
+  ::std::ifstream input_;
 };

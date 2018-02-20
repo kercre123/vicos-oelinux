@@ -29,9 +29,7 @@
 
 #pragma once
 
-#include <utils/KeyedVector.h>
-
-#include "common/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils.h"
 
 #include "../../interface/qmmf_postproc_module.h"
 
@@ -66,6 +64,8 @@ class PostProcTest : public IPostProcModule {
    status_t Start(const int32_t stream_id) override;
 
    status_t Stop() override;
+
+   status_t Abort(std::shared_ptr<void> &abort) override;
 
    PostProcIOParam GetInput(const PostProcIOParam &out) override;
 

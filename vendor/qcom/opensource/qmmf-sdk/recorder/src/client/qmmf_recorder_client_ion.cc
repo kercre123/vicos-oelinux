@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderClientIon"
+#define LOG_TAG "RecorderClientIon"
 
 #include "recorder/src/client/qmmf_recorder_client_ion.h"
 
@@ -44,7 +44,7 @@
 
 #include <linux/msm_ion.h>
 
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 #include "include/qmmf-sdk/qmmf_recorder_params.h"
 #include "recorder/src/client/qmmf_recorder_params_internal.h"
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
@@ -57,34 +57,34 @@ using ::std::map;
 static const char* ion_filename = "/dev/ion";
 
 RecorderClientIon::RecorderClientIon() : ion_device_(-1) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   // open ion device
   ion_device_ = open(ion_filename, O_RDONLY);
   if (ion_device_ < 0)
-    QMMF_ERROR("%s: %s() error opening ion device: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() error opening ion device: %d[%s]", __func__,
                errno, strerror(errno));
 }
 
 RecorderClientIon::~RecorderClientIon() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   int32_t result;
 
   if (ion_device_ == -1)
-    QMMF_WARN("%s: %s() ion device is not opened", TAG, __func__);
+    QMMF_WARN("%s() ion device is not opened", __func__);
 
   // release all ion buffers
   for (auto& client_map : buffer_map_) {
     result = Release(client_map.first);
     if (result < 0) {
-      QMMF_ERROR("%s: %s() unable to release buffers for client[%d]: %d", TAG,
+      QMMF_ERROR("%s() unable to release buffers for client[%d]: %d",
           __func__, client_map.first, result);
     }
   }
   // close ion device
   result = close(ion_device_);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() error closing ion device[%d]: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() error closing ion device[%d]: %d[%s]", __func__,
         ion_device_, errno, strerror(errno));
   }
 }
@@ -92,45 +92,50 @@ RecorderClientIon::~RecorderClientIon() {
 int32_t RecorderClientIon::Associate(uint32_t track_id,
                                      const BnBuffer& bn_buffer,
                                      BufferDescriptor* buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: track_id[%d]", TAG, __func__, track_id);
-  QMMF_VERBOSE("%s: %s() INPARAM: bn_buffer[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: track_id[%d]", __func__, track_id);
+  QMMF_VERBOSE("%s() INPARAM: bn_buffer[%s]", __func__,
                bn_buffer.ToString().c_str());
   int result;
+  std::map<uint32_t, RecorderClientIonBufferMap>::iterator client_map;
 
   if (ion_device_ == -1) {
-    QMMF_ERROR("%s: %s() ion device is not opened", TAG, __func__);
+    QMMF_ERROR("%s() ion device is not opened", __func__);
     return -ENODEV;
   }
 
-  auto client_map = buffer_map_.find(track_id);
-  if (client_map != buffer_map_.end()) {
-    auto ion_buffer = client_map->second.find(bn_buffer.buffer_id);
-    if (ion_buffer != client_map->second.end()) {
-      // found the ion buffer
-      result = close(bn_buffer.ion_fd);
-      if (result < 0) {
-        QMMF_ERROR("%s: %s() error closing ion_fd[%d]: %d[%s]", TAG, __func__,
-                   bn_buffer.ion_fd, errno, strerror(errno));
-        QMMF_ERROR("%s: %s() [CRITICAL] ion fd has leaked", TAG, __func__);
-      }
-
-      buffer->data = ion_buffer->second.data;
-      buffer->size = bn_buffer.size;
-      buffer->timestamp = bn_buffer.timestamp;
-      buffer->flag = bn_buffer.flag;
-      buffer->buf_id = bn_buffer.buffer_id;
-      buffer->capacity = bn_buffer.capacity;
-      buffer->fd = ion_buffer->second.share_data.fd;
-      QMMF_VERBOSE("%s: %s() OUTPARAM: buffer[%s]", TAG, __func__,
-                   buffer->ToString().c_str());
-      return 0;
-    }
-  } else {
-    // create new client map
-    buffer_map_.insert({track_id, RecorderClientIonBufferMap()});
+  {
+    std::lock_guard<std::mutex> l(buffer_map_mutex_);
     client_map = buffer_map_.find(track_id);
+    if (client_map != buffer_map_.end()) {
+      auto ion_buffer = client_map->second.find(bn_buffer.buffer_id);
+      if (ion_buffer != client_map->second.end()) {
+        // found the ion buffer
+        result = close(bn_buffer.ion_fd);
+        if (result < 0) {
+          QMMF_ERROR("%s() error closing ion_fd[%d]: %d[%s]", __func__,
+                     bn_buffer.ion_fd, errno, strerror(errno));
+          QMMF_ERROR("%s() [CRITICAL] ion fd has leaked", __func__);
+        }
+
+        buffer->data = ion_buffer->second.data;
+        buffer->size = bn_buffer.size;
+        buffer->timestamp = bn_buffer.timestamp;
+        buffer->flag = bn_buffer.flag;
+        buffer->buf_id = bn_buffer.buffer_id;
+        buffer->capacity = bn_buffer.capacity;
+        buffer->fd = ion_buffer->second.share_data.fd;
+        QMMF_VERBOSE("%s() OUTPARAM: buffer[%s]", __func__,
+                     buffer->ToString().c_str());
+        return 0;
+      }
+    } else {
+      // create new client map
+      buffer_map_.insert({track_id, RecorderClientIonBufferMap()});
+      client_map = buffer_map_.find(track_id);
+    }
   }
+
 
   RecorderClientIonBuffer ion_buffer;
 
@@ -141,7 +146,7 @@ int32_t RecorderClientIon::Associate(uint32_t track_id,
   // import ion handle from shared fd
   result = ioctl(ion_device_, ION_IOC_IMPORT, &ion_buffer.share_data);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() ION_IOC_IMPORT ioctl command failed: %d[%s]", TAG,
+    QMMF_ERROR("%s() ION_IOC_IMPORT ioctl command failed: %d[%s]",
                __func__, errno, strerror(errno));
     return errno;
   }
@@ -152,7 +157,7 @@ int32_t RecorderClientIon::Associate(uint32_t track_id,
   ion_buffer.data = mmap(NULL, ion_buffer.capacity, PROT_READ | PROT_WRITE,
                          MAP_SHARED, ion_buffer.share_data.fd, 0);
   if (ion_buffer.data == MAP_FAILED) {
-    QMMF_ERROR("%s: %s() unable to map buffer[%d]: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() unable to map buffer[%d]: %d[%s]", __func__,
                ion_buffer.share_data.fd, errno, strerror(errno));
     return errno;
   }
@@ -164,44 +169,50 @@ int32_t RecorderClientIon::Associate(uint32_t track_id,
   buffer->capacity = bn_buffer.capacity;
   buffer->fd = bn_buffer.ion_fd;
 
-  QMMF_VERBOSE("%s: %s() mapped ion buffer[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() mapped ion buffer[%s]", __func__,
                ion_buffer.ToString().c_str());
 
+  std::lock_guard<std::mutex> l(buffer_map_mutex_);
   // save ion buffer
   client_map->second.insert({bn_buffer.buffer_id, ion_buffer});
 
-  QMMF_VERBOSE("%s: %s() OUTPARAM: buffer[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() OUTPARAM: buffer[%s]", __func__,
                buffer->ToString().c_str());
   return 0;
 }
 
 int32_t RecorderClientIon::Release(uint32_t track_id) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: track_id[%u]", TAG, __func__, track_id);
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: track_id[%u]", __func__, track_id);
 
-  auto client_map = buffer_map_.find(track_id);
-  if (client_map == buffer_map_.end()) {
-    QMMF_INFO("%s: %s() no ion buffers for track_id", TAG, __func__);
-    return 0;
+  std::map<uint32_t, RecorderClientIonBufferMap>::iterator client_map;
+
+  {
+    std::lock_guard<std::mutex> l(buffer_map_mutex_);
+    client_map = buffer_map_.find(track_id);
+    if (client_map == buffer_map_.end()) {
+      QMMF_INFO("%s() no ion buffers for track_id", __func__);
+      return 0;
+    }
   }
 
   for (auto& buffer : client_map->second) {
     int result;
 
-    QMMF_VERBOSE("%s: %s() releasing ion buffer[%s]", TAG, __func__,
+    QMMF_VERBOSE("%s() releasing ion buffer[%s]", __func__,
                  buffer.second.ToString().c_str());
 
     // unmap buffer from address space
     result = munmap(buffer.second.data, buffer.second.capacity);
     if (result < 0)
-      QMMF_ERROR("%s: %s() unable to unmap buffer[%d]: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() unable to unmap buffer[%d]: %d[%s]", __func__,
                  buffer.second.share_data.fd, errno, strerror(errno));
     buffer.second.data = nullptr;
 
     // close fd
     result = close(buffer.second.share_data.fd);
     if (result < 0) {
-      QMMF_ERROR("%s: %s() error closing shared fd[%d]: %d[%s]", TAG, __func__,
+      QMMF_ERROR("%s() error closing shared fd[%d]: %d[%s]", __func__,
                  buffer.second.share_data.fd, errno, strerror(errno));
       return errno;
     }
@@ -210,15 +221,16 @@ int32_t RecorderClientIon::Release(uint32_t track_id) {
     // free ion buffer
     result = ioctl(ion_device_, ION_IOC_FREE, &buffer.second.free_data);
     if (result < 0) {
-      QMMF_ERROR("%s: %s() ION_IOC_FREE ioctl command failed: %d[%s]", TAG,
+      QMMF_ERROR("%s() ION_IOC_FREE ioctl command failed: %d[%s]",
                  __func__, errno, strerror(errno));
       return errno;
     }
   }
 
+  std::lock_guard<std::mutex> l(buffer_map_mutex_);
   client_map->second.clear();
   buffer_map_.erase(client_map->first);
-  QMMF_INFO("%s: %s() released all ion buffers", TAG, __func__);
+  QMMF_INFO("%s() released all ion buffers", __func__);
 
   return 0;
 }

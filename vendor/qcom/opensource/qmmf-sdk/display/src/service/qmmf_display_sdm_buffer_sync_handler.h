@@ -29,10 +29,11 @@
 
 #pragma once
 
-#include "sys/mman.h"
-#include "fcntl.h"
-#include "sdm/include/core/sdm_types.h"
-#include "sdm/include/core/buffer_sync_handler.h"
+#include <sys/mman.h>
+#include <fcntl.h>
+
+#include <sdm/core/sdm_types.h>
+#include <sdm/core/buffer_sync_handler.h>
 
 using namespace sdm;
 

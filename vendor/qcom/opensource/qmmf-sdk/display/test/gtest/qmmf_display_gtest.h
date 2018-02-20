@@ -29,27 +29,35 @@
 
 #pragma once
 
-#include <fcntl.h>
+#include <cutils/properties.h>
 #include <dirent.h>
-#include <functional>
+#include <fcntl.h>
 #include <gtest/gtest.h>
-#include <vector>
+#include <functional>
 #include <map>
+#include <mutex>
+#include <thread>
+#include <vector>
 
+#include <hardware/gralloc.h>
 #include <qmmf-sdk/qmmf_display.h>
 #include <qmmf-sdk/qmmf_display_params.h>
-#include <hardware/gralloc.h>
 #include "display/test/gtest/qmmf_display_buffer_allocator.h"
 
 using namespace qmmf;
 using namespace display;
 using namespace android;
 
+#define DEFAULT_ITERATIONS "2"
+
+// Prop to set no of iterations
+#define PROP_N_ITERATIONS "persist.qmmf.display.gtest.iter"
+
 class DisplayGtest : public ::testing::Test {
  public:
-  DisplayGtest() : display_() {};
+  DisplayGtest() : display_(){};
 
-  ~DisplayGtest() {};
+  ~DisplayGtest(){};
 
  protected:
   const ::testing::TestInfo* test_info_;
@@ -72,45 +80,45 @@ class DisplayGtest : public ::testing::Test {
 
   void Test1YUV_1RGB_ExternalBuffer();
 
-  void DisplayCallbackHandler(DisplayEventType event_type, void *event_data,
-                               size_t event_data_size);
+  void DisplayCallbackHandler(DisplayEventType event_type, void* event_data,
+                              size_t event_data_size);
 
-  void SessionCallbackHandler(DisplayEventType event_type, void *event_data,
-                               size_t event_data_size);
+  void SessionCallbackHandler(DisplayEventType event_type, void* event_data,
+                              size_t event_data_size);
 
   void DisplayVSyncHandler(int64_t time_stamp);
 
-
-  Display*              display_;
-  DisplayCb            display_status_cb_;
-  uint32_t             iteration_count_;
+  Display* display_;
+  DisplayCb display_status_cb_;
+  uint32_t iteration_count_;
   DisplayBufferAllocator buffer_allocator_;
-  pthread_mutex_t thread_lock_;
-  pthread_t                    pid_;
+  std::mutex lock_;
+  ::std::thread* display_thread_;
   bool running_;
-  static void* DisplayVSync(void *ptr);
+
+  static void DisplayThreadEntry(DisplayGtest* ptr);
+
+  void DisplayThread();
 
   typedef struct BufInfo {
     BufferInfo buffer_info;
     void* buf;
-    int32_t buf_id;
   } BufInfo;
 
   typedef struct SurfaceData {
-  uint32_t   surface_id;
-  FILE* file;
-  SurfaceParam surface_param;
-  SurfaceBuffer surface_buffer;
-  bool buffer_ready;
+    uint32_t surface_id;
+    FILE* file;
+    SurfaceParam surface_param;
+    SurfaceBuffer surface_buffer;
+    bool buffer_ready;
   } SurfaceData;
 
-  //Mapping of surface_id and BufInfo
+  // Mapping of surface_id and BufInfo
   std::map<uint32_t, std::vector<BufInfo*>> buf_info;
 
-  //Mapping of surface_id and SurfaceData
-  typedef std::map <uint32_t , SurfaceData* > surface_data_map;
+  // Mapping of surface_id and SurfaceData
+  typedef std::map<uint32_t, SurfaceData*> surface_data_map;
   surface_data_map surface_data_;
 
-  std::map <uint32_t , std::vector<uint32_t> > sessions_;
+  std::map<uint32_t, std::vector<uint32_t>> sessions_;
 };
-

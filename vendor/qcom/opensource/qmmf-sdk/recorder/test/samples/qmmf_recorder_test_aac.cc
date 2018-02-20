@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderTestAac"
+#define LOG_TAG "RecorderTestAac"
 
 #include "recorder/test/samples/qmmf_recorder_test_aac.h"
 
@@ -40,9 +40,12 @@
 #include <mutex>
 #include <string>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "include/qmmf-sdk/qmmf_codec.h"
 #include "include/qmmf-sdk/qmmf_recorder_params.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 using ::qmmf::AACMode;
 using ::qmmf::AACFormat;
@@ -60,31 +63,34 @@ using ::std::to_string;
 static const char *kFilenameSuffix = ".aac";
 
 RecorderTestAac::RecorderTestAac() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 RecorderTestAac::~RecorderTestAac() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 int32_t RecorderTestAac::Configure(const string& filename_prefix,
                                    const uint32_t track_id,
                                    const AudioTrackCreateParam& params) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: filename_prefix[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: filename_prefix[%s]", __func__,
                filename_prefix.c_str());
-  QMMF_VERBOSE("%s: %s() INPARAM: track_id[%u]", TAG, __func__, track_id);
-  QMMF_VERBOSE("%s: %s() INPARAM: params[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() INPARAM: track_id[%u]", __func__, track_id);
+  QMMF_VERBOSE("%s() INPARAM: params[%s]", __func__,
                params.ToString().c_str());
   lock_guard<mutex> lock(lock_);
 
   if (params.format != AudioFormat::kAAC) {
-    QMMF_ERROR("%s: %s() non-AAC format given: %d", TAG, __func__,
+    QMMF_ERROR("%s() non-AAC format given: %d", __func__,
                static_cast<int>(params.format));
     return -EINVAL;
   }
 
   filename_ = filename_prefix;
+  filename_.append("_");
+  filename_.append(to_string(getpid()));
+  filename_.append("_");
   filename_.append(to_string(track_id));
   filename_.append(kFilenameSuffix);
 
@@ -94,17 +100,17 @@ int32_t RecorderTestAac::Configure(const string& filename_prefix,
 }
 
 int32_t RecorderTestAac::Open() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   lock_guard<mutex> lock(lock_);
 
   if (filename_.empty()) {
-    QMMF_ERROR("%s: %s() called in unconfigured state", TAG, __func__);
+    QMMF_ERROR("%s() called in unconfigured state", __func__);
     return -EPERM;
   }
 
   output_.open(filename_.c_str(), ios::out | ios::binary | ios::trunc);
   if (!output_.is_open()) {
-    QMMF_ERROR("%s: %s() error opening file[%s]", TAG, __func__,
+    QMMF_ERROR("%s() error opening file[%s]", __func__,
                filename_.c_str());
     return -EBADF;
   }
@@ -112,7 +118,7 @@ int32_t RecorderTestAac::Open() {
 }
 
 void RecorderTestAac::Close() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   lock_guard<mutex> lock(lock_);
 
   if (output_.is_open())
@@ -120,23 +126,22 @@ void RecorderTestAac::Close() {
 }
 
 int32_t RecorderTestAac::Write(const BufferDescriptor& buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer.ToString().c_str());
   lock_guard<mutex> lock(lock_);
 
   if (buffer.size == 0) {
-    QMMF_WARN("%s: %s() buffer size is 0", TAG, __func__);
+    QMMF_WARN("%s() buffer size is 0", __func__);
     return 0;
   }
   if (!output_.is_open()) {
-    QMMF_WARN("%s: %s() handle is not open, skipping", TAG, __func__);
+    QMMF_WARN("%s() handle is not open, skipping", __func__);
     return 0;
   }
 
   if (params_.codec_params.aac.format == AACFormat::kRaw) {
-    AacRawHeader header;
-    memset(&header, 0x0, sizeof header);
+    AacRawHeader header{};
 
     header.sync = 0xFFF;
     header.id = 1;
@@ -177,12 +182,12 @@ int32_t RecorderTestAac::Write(const BufferDescriptor& buffer) {
     header.fullness = 0x660; // CBR
     header.raw_data = 0;
 
-QMMF_VERBOSE("%s: %s() sizeof aac header[%zu]", TAG, __func__, sizeof header);
+QMMF_VERBOSE("%s() sizeof aac header[%zu]", __func__, sizeof header);
     streampos before = output_.tellp();
     output_.write(reinterpret_cast<const char*>(&header), 7);
     streampos after = output_.tellp();
     if (after - before != 7) {
-      QMMF_ERROR("%s: %s() failed to write AAC header", TAG, __func__);
+      QMMF_ERROR("%s() failed to write AAC header", __func__);
       return -EIO;
     }
   }
@@ -191,8 +196,8 @@ QMMF_VERBOSE("%s: %s() sizeof aac header[%zu]", TAG, __func__, sizeof header);
   output_.write(reinterpret_cast<const char*>(buffer.data), buffer.size);
   streampos after = output_.tellp();
   if (after - before != buffer.size)
-    QMMF_WARN("%s: %s() failed to write AAC data: size[%u] written[%llu]",
-              TAG, __func__, buffer.size, after - before);
+    QMMF_WARN("%s() failed to write AAC data: size[%u] written[%llu]",
+              __func__, buffer.size, after - before);
 
   return 0;
 }

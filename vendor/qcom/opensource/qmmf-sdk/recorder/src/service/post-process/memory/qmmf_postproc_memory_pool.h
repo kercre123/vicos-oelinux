@@ -29,13 +29,11 @@
 
 #pragma once
 
-#include <libgralloc/gralloc_priv.h>
-#include <utils/KeyedVector.h>
-#include <utils/Mutex.h>
 #include <memory>
+#include <qcom/display/gralloc_priv.h>
 
-#include "common/qmmf_common_utils.h"
-
+#include "common/utils/qmmf_common_utils.h"
+#include "common/utils/qmmf_condition.h"
 #include "../plugin/qmmf_postproc_plugin.h"
 
 namespace qmmf {
@@ -51,7 +49,7 @@ struct MemPoolParams {
   uint32_t max_size;
 };
 
-class MemPool : public RefBase {
+class MemPool {
 
  public:
 
@@ -60,6 +58,8 @@ class MemPool : public RefBase {
    ~MemPool();
 
    int32_t Initialize(const MemPoolParams &params);
+
+   status_t Delete();
 
    status_t ReturnBufferLocked(const StreamBuffer &buffer);
 
@@ -80,12 +80,12 @@ class MemPool : public RefBase {
    buffer_handle_t              *gralloc_slots_;
    uint32_t                      buffers_allocated_;
    uint32_t                      pending_buffer_count_;
-   KeyedVector<buffer_handle_t, bool> gralloc_buffers_;
+   std::map<buffer_handle_t, bool> gralloc_buffers_;
 
    MemPoolParams            params_;
 
    std::mutex               buffer_lock_;
-   std::condition_variable  wait_for_buffer_;
+   QCondition               wait_for_buffer_;
 
    static const uint32_t kBufferWaitTimeout = 1000000000; // 1 s.
 };

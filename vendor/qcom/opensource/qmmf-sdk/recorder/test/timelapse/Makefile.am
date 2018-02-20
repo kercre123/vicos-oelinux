@@ -8,4 +8,5 @@ recorder_timelapse_CPPFLAGS += -I$(top_srcdir)/
 recorder_timelapse_LDFLAGS  = -lutils -lcutils -llog
 recorder_timelapse_LDFLAGS  += -lcamera_client -lcamera_metadata
 recorder_timelapse_LDADD    = ../../src/client/libqmmf_recorder_client.la
+recorder_timelapse_LDADD    += ../../../common/utils/libqmmf_utils.la
 recorder_timelapse_LDADD    += ../../../display/src/client/libqmmf_display_client.la

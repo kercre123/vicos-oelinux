@@ -29,27 +29,21 @@
 
 #pragma once
 
-#include <utils/Mutex.h>
-
-#include "qmmf-sdk/qmmf_recorder_params.h"
+#include "common/utils/qmmf_common_utils.h"
 
 #include "../../interface/qmmf_postproc_module.h"
 
-#include "common/cameraadaptor/qmmf_camera3_device_client.h"
-
 namespace qmmf {
-
-using namespace cameraadaptor;
 
 namespace recorder {
 
-class PostProcHalJpeg : public IPostProcModule {
+class PostProcFrameSkip : public IPostProcModule {
 
  public:
 
-   PostProcHalJpeg(IPostProc* context);
+   PostProcFrameSkip();
 
-   ~PostProcHalJpeg();
+   ~PostProcFrameSkip();
 
    status_t Initialize(const PostProcIOParam &in_param,
                        const PostProcIOParam &out_param) override;
@@ -63,13 +57,15 @@ class PostProcHalJpeg : public IPostProcModule {
    status_t Process(const std::vector<StreamBuffer> &in_buffers,
                     const std::vector<StreamBuffer> &out_buffers) override;
 
-   void AddResult(const void* result) override;
+   void AddResult(const void* result) override {};
 
-   status_t ReturnBuff(StreamBuffer &buffer) override;
+   status_t ReturnBuff(StreamBuffer &buffer) override { return NO_ERROR; };
 
    status_t Start(const int32_t stream_id) override;
 
    status_t Stop() override;
+
+   status_t Abort(std::shared_ptr<void> &abort) override;
 
    PostProcIOParam GetInput(const PostProcIOParam &out) override;
 
@@ -79,49 +75,23 @@ class PostProcHalJpeg : public IPostProcModule {
 
  private:
 
-   struct BurstData {
-     StreamBuffer   buffer;
-     CameraMetadata result;
-     int64_t        timestamp;
+   enum class State {
+     CREATED,
+     INITIALIZED,
+     ACTIVE,
+     ABORTED
    };
 
-   void AddBuff(StreamBuffer in_buff);
+   bool SkipFrame(void);
 
-   void ReturnAllInputBuffers();
+   IPostProcEventListener         *Listener_;
 
-   void ReturnInputBuffer(StreamBuffer &buffer);
+   std::mutex                     state_lock_;
+   State                          state_;
 
-   void GetInputBuffer(StreamBuffer &buffer);
+   uint32_t                       frame_skip_;
+   uint32_t                       frame_counter_;
 
-   void StreamCallback(StreamBuffer Buffer);
-
-   void ReprocessCallback(StreamBuffer buffer);
-
-   status_t ValidateInput(const PostProcIOParam& input,
-                          const PostProcIOParam& output);
-
-   status_t StartProcessing();
-
-   IPostProc*               context_;
-
-   List<StreamBuffer>       input_buffer_;
-   List<StreamBuffer>       input_buffer_done_;
-
-   int32_t                  input_stream_id_;
-   Camera3Request           reprocess_request_;
-
-   Mutex                    reprocess_lock_;
-   bool                     reprocess_flag_;
-   bool                     ready_to_start_;
-
-   PostProcIOParam          input_param_;
-   PostProcIOParam          output_param_;
-
-   List<BurstData>          burst_queue_;
-   List<BurstData>          input_burst_queue_;
-   Mutex                    burst_queue_lock_;
-   uint32_t                 burst_cnt_;
-   IPostProcEventListener   *Listener_;
 };
 
 }; //namespace recorder

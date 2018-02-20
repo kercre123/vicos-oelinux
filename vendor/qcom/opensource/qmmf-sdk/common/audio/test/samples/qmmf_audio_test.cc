@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "AudioTest"
+#define LOG_TAG "AudioTest"
 
 #include "common/audio/test/samples/qmmf_audio_test.h"
 
@@ -44,7 +44,7 @@
 #include "common/audio/inc/qmmf_audio_definitions.h"
 #include "common/audio/inc/qmmf_audio_endpoint.h"
 #include "common/audio/test/samples/qmmf_audio_test_ion.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 namespace qmmf_test {
 namespace common {
@@ -60,6 +60,7 @@ using ::qmmf::common::audio::AudioEventHandler;
 using ::qmmf::common::audio::AudioMetadata;
 using ::qmmf::common::audio::AudioEventType;
 using ::qmmf::common::audio::AudioEventData;
+using ::qmmf::common::audio::AudioParamType;
 using ::qmmf::common::audio::BufferFlags;
 using ::std::cin;
 using ::std::condition_variable;
@@ -79,17 +80,17 @@ AudioTest::AudioTest()
       buffer_number_(kDefaultNumberOfBuffers),
       filename_prefix_(kDefaultFilePrefix),
       thread_(nullptr) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_INFO("%s: %s() test instantiated", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_INFO("%s() test instantiated", __func__);
 }
 
 AudioTest::~AudioTest() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_INFO("%s: %s() test destroyed", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_INFO("%s() test destroyed", __func__);
 }
 
 void AudioTest::Connect() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   AudioEventHandler audio_handler =
     [this] (const AudioEventType event_type,
@@ -101,6 +102,9 @@ void AudioTest::Connect() {
         case AudioEventType::kBuffer:
           BufferHandler(event_data.buffer);
           break;
+        case AudioEventType::kStopped:
+          StoppedHandler();
+          break;
       }
     };
 
@@ -109,7 +113,7 @@ void AudioTest::Connect() {
 }
 
 void AudioTest::Disconnect() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   int32_t result = end_point_.Disconnect();
   assert(result == 0);
@@ -119,7 +123,7 @@ void AudioTest::Disconnect() {
 }
 
 void AudioTest::ConfigureSource() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   int32_t result;
 
   type_ = AudioEndPointType::kSource;
@@ -143,11 +147,11 @@ void AudioTest::ConfigureSource() {
   int32_t latency;
   result = end_point_.GetLatency(&latency);
   assert(result == 0);
-  QMMF_INFO("%s: %s() latency is %d", TAG, __func__, latency);
+  QMMF_INFO("%s() latency is %d", __func__, latency);
 
   result = end_point_.GetBufferSize(&buffer_size_);
   assert(result == 0);
-  QMMF_INFO("%s: %s() buffer_size is %d", TAG, __func__, buffer_size_);
+  QMMF_INFO("%s() buffer_size is %d", __func__, buffer_size_);
 
   result = ion_.Allocate(buffer_number_, buffer_size_);
   if (result < 0) {
@@ -157,7 +161,7 @@ void AudioTest::ConfigureSource() {
 }
 
 void AudioTest::ConfigureSink() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   int32_t result;
 
   type_ = AudioEndPointType::kSink;
@@ -176,23 +180,30 @@ void AudioTest::ConfigureSink() {
   int32_t latency;
   result = end_point_.GetLatency(&latency);
   assert(result == 0);
-  QMMF_INFO("%s: %s() latency is %d", TAG, __func__, latency);
+  QMMF_INFO("%s() latency is %d", __func__, latency);
 
   result = end_point_.GetBufferSize(&buffer_size_);
   assert(result == 0);
-  QMMF_INFO("%s: %s() buffer_size is %d", TAG, __func__, buffer_size_);
+  QMMF_INFO("%s() buffer_size is %d", __func__, buffer_size_);
 
   result = ion_.Allocate(buffer_number_, buffer_size_);
   if (result < 0) {
     result = ion_.Deallocate();
     assert(false);
   }
+
+  result = end_point_.SetParam(AudioParamType::kVolume, 20);
+  assert(result == 0);
 }
 
 void AudioTest::Start() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
-  assert(thread_ == nullptr);
+  if (thread_ != nullptr) {
+    thread_->join();
+    delete thread_;
+    thread_ = nullptr;
+  }
 
   int result = end_point_.Start();
   assert(result == 0);
@@ -205,7 +216,7 @@ void AudioTest::Start() {
 }
 
 void AudioTest::Stop() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   AudioMessage message;
   message.type = AudioMessageType::kMessageStop;
@@ -215,7 +226,7 @@ void AudioTest::Stop() {
   message_lock_.unlock();
   signal_.notify_one();
 
-  int32_t result = end_point_.Stop(false);
+  int32_t result = end_point_.Stop();
   assert(result == 0);
 
   if (thread_ != nullptr) {
@@ -229,7 +240,7 @@ void AudioTest::Stop() {
 }
 
 void AudioTest::Pause() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   AudioMessage message;
   message.type = AudioMessageType::kMessagePause;
@@ -244,7 +255,7 @@ void AudioTest::Pause() {
 }
 
 void AudioTest::Resume() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   int32_t result = end_point_.Resume();
   assert(result == 0);
@@ -259,15 +270,15 @@ void AudioTest::Resume() {
 }
 
 void AudioTest::ErrorHandler(const int32_t error) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: error[%d]", TAG, __func__, error);
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: error[%d]", __func__, error);
 
   assert(false);
 }
 
 void AudioTest::BufferHandler(const AudioBuffer& buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer.ToString().c_str());
 
   AudioMessage message;
@@ -280,14 +291,30 @@ void AudioTest::BufferHandler(const AudioBuffer& buffer) {
   signal_.notify_one();
 }
 
+void AudioTest::StoppedHandler() {
+  QMMF_DEBUG("%s() TRACE", __func__);
+
+  if (thread_ != nullptr) {
+    thread_->join();
+    delete thread_;
+    thread_ = nullptr;
+  }
+
+  while (!messages_.empty())
+    messages_.pop();
+
+  cout << endl << "Playback has finished" << endl;
+  cout << endl << "Selection: ";
+}
+
 void AudioTest::StaticThreadEntry(AudioTest* test) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   test->ThreadEntry();
 }
 
 void AudioTest::ThreadEntry() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 
   wav_.Open();
 
@@ -297,10 +324,12 @@ void AudioTest::ThreadEntry() {
   }
 
   wav_.Close();
+
+  QMMF_DEBUG("%s() thread execution finished", __func__);
 }
 
 void AudioTest::SourceThread() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   vector<AudioBuffer> buffers;
   bool paused = false;
 
@@ -326,29 +355,29 @@ void AudioTest::SourceThread() {
 
       switch (message.type) {
         case AudioMessageType::kMessagePause:
-          QMMF_DEBUG("%s: %s-MessagePause() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessagePause() TRACE", __func__);
           paused = true;
           break;
 
         case AudioMessageType::kMessageResume:
-          QMMF_DEBUG("%s: %s-MessageResume() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessageResume() TRACE", __func__);
           paused = false;
           break;
 
         case AudioMessageType::kMessageStop:
-          QMMF_DEBUG("%s: %s-MessageStop() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessageStop() TRACE", __func__);
           paused = false;
           stop_received = true;
           break;
 
         case AudioMessageType::kMessageBuffer:
-          QMMF_DEBUG("%s: %s-MessageBuffer() TRACE", TAG, __func__);
-          QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s] to queue[%u]",
-                       TAG, __func__, message.buffer.ToString().c_str(),
+          QMMF_DEBUG("%s-MessageBuffer() TRACE", __func__);
+          QMMF_VERBOSE("%s() INPARAM: buffer[%s] to queue[%u]",
+                       __func__, message.buffer.ToString().c_str(),
                        buffers.size());
           buffers.push_back(message.buffer);
-          QMMF_VERBOSE("%s: %s() buffers queue is now %u deep",
-                       TAG, __func__, buffers.size());
+          QMMF_VERBOSE("%s() buffers queue is now %u deep",
+                       __func__, buffers.size());
           break;
       }
       messages_.pop();
@@ -358,8 +387,8 @@ void AudioTest::SourceThread() {
     if (!buffers.empty() && !paused && keep_running) {
       // write the data to file and reset the buffers
       for (AudioBuffer& buffer : buffers) {
-        QMMF_VERBOSE("%s: %s() processing next buffer[%s] for queue[%u]",
-                     TAG, __func__, buffer.ToString().c_str(), buffers.size());
+        QMMF_VERBOSE("%s() processing next buffer[%s] for queue[%u]",
+                     __func__, buffer.ToString().c_str(), buffers.size());
 
         ion_.Associate(&buffer);
         wav_.Write(buffer);
@@ -382,7 +411,7 @@ void AudioTest::SourceThread() {
 }
 
 void AudioTest::SinkThread() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   vector<AudioBuffer> buffers;
   bool paused = false;
   bool keep_running = true;
@@ -415,24 +444,24 @@ void AudioTest::SinkThread() {
 
       switch (message.type) {
         case AudioMessageType::kMessagePause:
-          QMMF_DEBUG("%s: %s-MessagePause() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessagePause() TRACE", __func__);
           paused = true;
           break;
 
         case AudioMessageType::kMessageResume:
-          QMMF_DEBUG("%s: %s-MessageResume() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessageResume() TRACE", __func__);
           paused = false;
           break;
 
         case AudioMessageType::kMessageStop:
-          QMMF_DEBUG("%s: %s-MessageStop() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessageStop() TRACE", __func__);
           paused = false;
           keep_running = false;
           break;
 
         case AudioMessageType::kMessageBuffer:
-          QMMF_DEBUG("%s: %s-MessageBuffer() TRACE", TAG, __func__);
-          QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+          QMMF_DEBUG("%s-MessageBuffer() TRACE", __func__);
+          QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                        message.buffer.ToString().c_str());
           buffers.push_back(message.buffer);
           break;
@@ -444,7 +473,7 @@ void AudioTest::SinkThread() {
     if (!buffers.empty() && !paused && keep_running) {
       // reset the buffers and read data from file
       for (AudioBuffer& buffer : buffers) {
-        QMMF_VERBOSE("%s: %s() processing next buffer[%s]", TAG, __func__,
+        QMMF_VERBOSE("%s() processing next buffer[%s]", __func__,
                      buffer.ToString().c_str());
 
         ion_.Associate(&buffer);
@@ -454,6 +483,8 @@ void AudioTest::SinkThread() {
 
         int32_t result = wav_.Read(&buffer);
         if (result == AudioTestWav::kEOF) {
+          QMMF_DEBUG("%s() hit the end of file", __func__);
+          buffer.flags |= static_cast<uint32_t>(BufferFlags::kFlagEOS);
           keep_running = false;
           break;
         }
@@ -503,8 +534,10 @@ using ::qmmf_test::common::audio::CommandMenu;
 using ::std::cout;
 using ::std::endl;
 
-int main(const int argc, const char * const argv[]) {
-  QMMF_INFO("%s: %s() TRACE", TAG, __func__);
+int main(const int argc, const char* const argv[]) {
+  QMMF_GET_LOG_LEVEL();
+
+  QMMF_INFO("%s:() TRACE", __func__);
   AudioTest test;
   CommandMenu menu;
 

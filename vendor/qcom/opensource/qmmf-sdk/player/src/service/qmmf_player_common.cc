@@ -27,12 +27,12 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "PlayerCommon"
+#define LOG_TAG "PlayerCommon"
 
 #include <string.h>
 #include <cutils/properties.h>
 
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 #include "player/src/service/qmmf_player_common.h"
 
 namespace qmmf {
@@ -41,30 +41,34 @@ namespace player {
 extern "C" void DebugAudioTrackCreateParam (const char* _func_,
                                             AudioTrackCreateParam& track_params)
 {
-  QMMF_VERBOSE("%s:%s bit_depth = %u", TAG, _func_, track_params.bit_depth);
-  QMMF_VERBOSE("%s:%s channels = %u", TAG, _func_, track_params.channels);
-  QMMF_VERBOSE("%s:%s codec = %u", TAG, _func_, track_params.codec);
-  QMMF_VERBOSE("%s:%s sample_rate = %u", TAG, _func_, track_params.sample_rate);
-  QMMF_VERBOSE("%s:%s out_device = %u", TAG, _func_, track_params.out_device);
+  QMMF_VERBOSE("%s bit_depth = %u", _func_, track_params.bit_depth);
+  QMMF_VERBOSE("%s channels = %u", _func_, track_params.channels);
+  QMMF_VERBOSE("%s codec = %u", _func_, track_params.codec);
+  QMMF_VERBOSE("%s sample_rate = %u", _func_, track_params.sample_rate);
+  QMMF_VERBOSE("%s out_device = %u", _func_, track_params.out_device);
 }
 
 extern "C" void DebugVideoTrackCreateParam (const char* _func_,
                                             VideoTrackCreateParam& track_params)
 {
-  QMMF_VERBOSE("%s:%s width = %u", TAG, _func_, track_params.width);
-  QMMF_VERBOSE("%s:%s height = %u", TAG, _func_, track_params.height);
-  QMMF_VERBOSE("%s:%s codec = %u", TAG, _func_, track_params.codec);
-  QMMF_VERBOSE("%s:%s out_device = %u", TAG, _func_, track_params.out_device);
+  QMMF_VERBOSE("%s width = %u", _func_, track_params.width);
+  QMMF_VERBOSE("%s height = %u", _func_, track_params.height);
+  QMMF_VERBOSE("%s dest start_x = %.1f", _func_, track_params.destRect.start_x);
+  QMMF_VERBOSE("%s dest start_y = %.1f", _func_, track_params.destRect.start_y);
+  QMMF_VERBOSE("%s dest width = %u", _func_, track_params.destRect.width);
+  QMMF_VERBOSE("%s dest height = %u", _func_, track_params.destRect.height);
+  QMMF_VERBOSE("%s codec = %u", _func_, track_params.codec);
+  QMMF_VERBOSE("%s out_device = %u", _func_, track_params.out_device);
 }
 
 extern "C" void DebugAudioSinkParam (const char* _func_,
                                      AudioTrackParams& track_params)
 {
-  QMMF_VERBOSE("%s:%s INPARAM: bit_depth[%u]", TAG, __func__,
+  QMMF_VERBOSE("%s INPARAM: bit_depth[%u]", __func__,
       track_params.params.bit_depth);
-  QMMF_VERBOSE("%s:%s INPARAM: channels[%u]", TAG, __func__,
+  QMMF_VERBOSE("%s INPARAM: channels[%u]", __func__,
       track_params.params.channels);
-  QMMF_VERBOSE("%s:%s INPARAM: sample_rate[%u]", TAG, __func__,
+  QMMF_VERBOSE("%s INPARAM: sample_rate[%u]", __func__,
       track_params.params.sample_rate);
 }
 
@@ -73,10 +77,10 @@ extern "C" void DebugQueueInputBuffer(const char* _func_,
 {
   for (uint32_t i =0 ; i<buffers.size(); i++)
   {
-    QMMF_DEBUG("%s:%s: fd %d", TAG, __func__,buffers[i].buf_id);
-    QMMF_DEBUG("%s:%s: filled_length %d", TAG, __func__,buffers[i].filled_length);
-    QMMF_DEBUG("%s:%s: frame_length %d", TAG, __func__,buffers[i].frame_length);
-    QMMF_DEBUG("%s:%s: vaddr 0x%p", TAG, __func__,buffers[i].data);
+    QMMF_DEBUG("%s: fd %d", __func__,buffers[i].buf_id);
+    QMMF_DEBUG("%s: filled_length %d", __func__,buffers[i].filled_length);
+    QMMF_DEBUG("%s: frame_length %d", __func__,buffers[i].frame_length);
+    QMMF_DEBUG("%s: vaddr 0x%p", __func__,buffers[i].data);
   }
 }
 

@@ -30,15 +30,16 @@
 #pragma once
 
 #include <mutex>
-#include <condition_variable>
 
 #include <camera/CameraMetadata.h>
-#include <libgralloc/gralloc_priv.h>
+#include <qcom/display/gralloc_priv.h>
+#include <qmmf-sdk/qmmf_recorder_params.h>
+#include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 
-#include "qmmf-sdk/qmmf_recorder_params.h"
+#include "common/utils/qmmf_condition.h"
+#include "common/cameraadaptor/qmmf_camera3_device_client.h"
 #include "recorder/src/service/post-process/interface/qmmf_postproc_module.h"
 #include "recorder/src/service/qmmf_camera_reprocess.h"
-#include "common/cameraadaptor/qmmf_camera3_device_client.h"
 
 #include "qmmf_jpeg_encoder.h"
 #include "qmmf_exif_generator.h"
@@ -68,6 +69,8 @@ class CameraJpeg : public Camera3Thread , public ICameraPostProcess, public exif
                   const PostProcCb& cb,
                   const void* context) override;
   status_t Delete() override;
+
+  status_t Configure(const std::vector<ImageThumbnail> &thumbs);
 
   void Process(StreamBuffer& in_buffer, StreamBuffer& out_buffer);
 
@@ -131,17 +134,19 @@ class CameraJpeg : public Camera3Thread , public ICameraPostProcess, public exif
   JpegEncoder*             jpeg_encoder_;
   PostProcCb               capture_client_cb_;
 
-  std::condition_variable  wait_for_buffer_;
+  std::vector<jpeg_thumbnail> thumbnails;
+
+  QCondition               wait_for_buffer_;
   std::mutex               buffer_lock_;
 
-  std::condition_variable  wait_for_result_;
+  QCondition               wait_for_result_;
   std::mutex               result_lock_;
 
   List<Buff>              input_buffer_;
   std::map<int64_t, CameraMetadata> results_;
 
   //IExifGenerator*                    exif_generator_;
-  Vector<qmmf_exif_tag_t> exif_entities_;
+  std::vector<qmmf_exif_tag_t> exif_entities_;
   uint32_t  exif_ifd_ptr_offset_;
   uint32_t  interop_ifd_ptr_offset_;
   uint32_t  gps_ifd_ptr_offset_;

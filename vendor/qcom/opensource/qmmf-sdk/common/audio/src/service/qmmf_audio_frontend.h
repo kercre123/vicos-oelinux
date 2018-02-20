@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,9 @@
 #include <map>
 #include <vector>
 
+#include <mm-audio/qahw_api/inc/qahw_api.h>
+#include <mm-audio/qahw_api/inc/qahw_defs.h>
+
 #include "common/audio/inc/qmmf_audio_definitions.h"
 #include "common/audio/src/service/qmmf_audio_backend.h"
 #include "common/audio/src/service/qmmf_audio_common.h"
@@ -47,6 +50,7 @@ class AudioFrontend {
 
   void RegisterErrorHandler(const AudioErrorHandler& handler);
   void RegisterBufferHandler(const AudioBufferHandler& handler);
+  void RegisterStoppedHandler(const AudioStoppedHandler& handler);
 
   int32_t Connect(AudioHandle* audio_handle);
   int32_t Disconnect(const AudioHandle audio_handle);
@@ -56,7 +60,7 @@ class AudioFrontend {
                     const AudioMetadata& metadata);
 
   int32_t Start(const AudioHandle audio_handle);
-  int32_t Stop(const AudioHandle audio_handle, const bool flush);
+  int32_t Stop(const AudioHandle audio_handle);
   int32_t Pause(const AudioHandle audio_handle);
   int32_t Resume(const AudioHandle audio_handle);
 
@@ -78,7 +82,9 @@ class AudioFrontend {
   AudioHandle current_handle_;
   AudioErrorHandler error_handler_;
   AudioBufferHandler buffer_handler_;
+  AudioStoppedHandler stopped_handler_;
   AudioBackendMap backends_;
+  qahw_module_handle_t* modules_[AudioHAL::kNum];
 
   // disable copy, assignment, and move
   AudioFrontend(const AudioFrontend&) = delete;

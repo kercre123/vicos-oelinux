@@ -29,7 +29,10 @@
 
 #pragma once
 
-#include <hardware/sound_trigger.h>
+#include <thread>
+
+#include <mm-audio/qsthw_api/qsthw_defs.h>
+#include <mm-audio/qsthw_api/qsthw_api.h>
 
 #include "qmmf-sdk/qmmf_system_params.h"
 #include "system/src/service/qmmf_system_common.h"
@@ -46,20 +49,35 @@ class SystemTrigger {
                           const SoundModel& soundmodel);
   status_t UnloadSoundModel(const SystemHandle system_handle);
   status_t EnableSoundTrigger(const SystemHandle system_handle,
+                              const TriggerConfig& trigger_config,
                               const SystemTriggerHandler& handler);
   status_t DisableSoundTrigger(const SystemHandle system_handle);
 
-  void EventCallback(const int32_t error);
-
  private:
+  struct keyword_buffer_config {
+    int32_t  version;
+    uint32_t kb_duration;
+  } __packed;
+
+  static const sound_trigger_uuid_t kQcUuid;
+
+  static void EventCallbackEntry(struct sound_trigger_recognition_event* event,
+                                 void* object);
+  void EventCallback(struct sound_trigger_recognition_event* event);
+  static void CaptureThreadEntry(SystemTrigger* backend);
+  void CaptureThread();
+
+  ::std::thread* thread_;
+
   SystemHandle current_handle_;
   SystemTriggerHandler trigger_handler_;
 
-  const hw_module_t* hw_module_;
-  sound_trigger_hw_device_t* hw_device_;
+  const qsthw_module_handle_t* module_;
   sound_trigger_phrase_sound_model* sound_model_;
   sound_model_handle_t sm_handle_;
-  sound_trigger_recognition_config rc_config_;
+  sound_trigger_recognition_config* rc_config_;
+  struct qsthw_phrase_recognition_event qsthw_event_;
+  uint32_t capture_duration_;
 
   // disable copy, assignment, and move
   SystemTrigger(const SystemTrigger&) = delete;

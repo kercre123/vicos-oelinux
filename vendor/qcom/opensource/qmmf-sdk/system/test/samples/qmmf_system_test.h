@@ -35,6 +35,7 @@
 #include <string>
 #include <thread>
 
+#include "qmmf-sdk/qmmf_buffer.h"
 #include "qmmf-sdk/qmmf_device.h"
 #include "qmmf-sdk/qmmf_system.h"
 #include "qmmf-sdk/qmmf_system_params.h"
@@ -55,8 +56,11 @@ class SystemTest
   void EnableDeviceEvents();
   void QueryDevices();
   void EnableSoundTrigger();
+  void EnableSoundTriggerLAB();
   void DisableSoundTrigger();
   void PlayTone(const bool multi_tone);
+  void AdjustToneVolume(const int32_t adjustment);
+  void ToggleMicMute();
 
  private:
   enum class SystemMessageType {
@@ -69,8 +73,9 @@ class SystemTest
   };
 
   void ErrorHandler(const int32_t error);
-  void DeviceHandler(const qmmf::DeviceInfo& device);
-  void TriggerHandler(const int32_t error);
+  void DeviceHandler(const ::qmmf::DeviceInfo& device);
+  void TriggerHandler(const int32_t error,
+                      const ::qmmf::BufferDescriptor& buffer);
   void ToneHandler(const int32_t error);
 
   static void StaticThreadEntry(SystemTest* test);
@@ -81,6 +86,8 @@ class SystemTest
   SystemTestWav wav_;
   ::std::string filename_prefix_;
   bool multi_tone_;
+  int32_t tone_volume_;
+  bool mic_mute_;
 
   ::std::thread* thread_;
   ::std::mutex message_lock_;
@@ -97,16 +104,20 @@ class SystemTest
 class CommandMenu {
  public:
   enum class Command {
-    kConnect             = '1',
-    kDisconnect          = '2',
-    kEnableDeviceEvents  = '3',
-    kQueryDevices        = '4',
-    kEnableSoundTrigger  = '5',
-    kDisableSoundTrigger = '6',
-    kPlayTone            = '7',
-    kPlayMultiTone       = '8',
-    kExit                = 'X',
-    kInvalid             = '0'
+    kConnect               = '1',
+    kDisconnect            = '2',
+    kEnableDeviceEvents    = '3',
+    kQueryDevices          = '4',
+    kEnableSoundTrigger    = '5',
+    kEnableSoundTriggerLAB = '6',
+    kDisableSoundTrigger   = '7',
+    kPlayTone              = '8',
+    kPlayMultiTone         = '9',
+    kToneVolumeUp          = 'U',
+    kToneVolumeDown        = 'D',
+    kToggleMicMute         = 'M',
+    kExit                  = 'X',
+    kInvalid               = '0'
   };
 
   CommandMenu() {};

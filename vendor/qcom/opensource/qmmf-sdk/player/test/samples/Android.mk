@@ -19,6 +19,9 @@ LOCAL_SRC_FILES := qmmf_player_test.cc
 
 LOCAL_SHARED_LIBRARIES += libqmmf_demuxer libmmosal libmmparser_lite
 LOCAL_SHARED_LIBRARIES += libqmmf_player_client
+ifneq ($(DISABLE_DISPLAY),1)
+LOCAL_SHARED_LIBRARIES += libqmmf_display_client
+endif
 
 LOCAL_MODULE = qmmf_player_test
 

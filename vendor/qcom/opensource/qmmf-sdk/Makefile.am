@@ -1,4 +1,5 @@
 BUILD_COMPONENTS =
+BUILD_COMPONENTS += common/utils
 BUILD_COMPONENTS += common/cameraadaptor
 BUILD_COMPONENTS += common/overlay
 BUILD_COMPONENTS += common/audio/src/client
@@ -10,10 +11,10 @@ BUILD_COMPONENTS += plugins
 BUILD_COMPONENTS += avcodec
 BUILD_COMPONENTS += display/src/client
 BUILD_COMPONENTS += recorder/src/service/post-process/modules/algo
-BUILD_COMPONENTS += recorder/src/service/post-process/modules/camera-hal-jpeg
 BUILD_COMPONENTS += recorder/src/service/post-process/modules/camera-hal-reproc
 BUILD_COMPONENTS += recorder/src/service/post-process/modules/jpeg-encoder
 BUILD_COMPONENTS += recorder/src/service/post-process/modules/test
+BUILD_COMPONENTS += recorder/src/service/post-process/modules/frame-skip
 BUILD_COMPONENTS += display/src/service
 BUILD_COMPONENTS += display/test/samples
 BUILD_COMPONENTS += display/test/gtest

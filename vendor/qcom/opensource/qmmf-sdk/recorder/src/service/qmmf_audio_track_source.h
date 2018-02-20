@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,11 +29,12 @@
 
 #pragma once
 
-#include <condition_variable>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 
+#include "common/utils/qmmf_condition.h"
 #include "common/audio/inc/qmmf_audio_definitions.h"
 #include "common/audio/inc/qmmf_audio_endpoint.h"
 #include "common/codecadaptor/src/qmmf_avcodec.h"
@@ -55,7 +56,10 @@ class IAudioTrackSource {
   virtual status_t PauseTrack() = 0;
   virtual status_t ResumeTrack() = 0;
 
-  virtual status_t ReturnTrackBuffer(const std::vector<BnBuffer>& buffers) = 0;
+  virtual status_t SetParameter(const ::std::string& key,
+                                const ::std::string& value) = 0;
+
+  virtual status_t ReturnTrackBuffer(const ::std::vector<BnBuffer>& buffers) = 0;
 };
 
 class AudioRawTrackSource : public IAudioTrackSource {
@@ -70,6 +74,8 @@ class AudioRawTrackSource : public IAudioTrackSource {
   status_t StopTrack() override;
   status_t PauseTrack() override;
   status_t ResumeTrack() override;
+  status_t SetParameter(const ::std::string& key,
+                        const ::std::string& value) override;
   status_t ReturnTrackBuffer(const std::vector<BnBuffer>& buffers) override;
 
  private:
@@ -102,7 +108,7 @@ class AudioRawTrackSource : public IAudioTrackSource {
   ::std::thread* thread_;
   ::std::mutex message_lock_;
   ::std::queue<AudioMessage> messages_;
-  ::std::condition_variable signal_;
+  QCondition signal_;
 
   // disable copy, assignment, and move
   AudioRawTrackSource(const AudioRawTrackSource&) = delete;
@@ -127,6 +133,8 @@ class AudioEncodedTrackSource : public ::qmmf::avcodec::ICodecSource,
   status_t StopTrack() override;
   status_t PauseTrack() override;
   status_t ResumeTrack() override;
+  status_t SetParameter(const ::std::string& key,
+                        const ::std::string& value) override;
   status_t ReturnTrackBuffer(const std::vector<BnBuffer>& buffers) override;
 
   // methods of IInputCodecSource
@@ -150,8 +158,8 @@ class AudioEncodedTrackSource : public ::qmmf::avcodec::ICodecSource,
   bool stop_called_;
   bool stop_notify_received_;
 
-  ::std::mutex mutex_;
-  ::std::condition_variable signal_;
+  std::mutex mutex_;
+  QCondition signal_;
 
   // disable copy, assignment, and move
   AudioEncodedTrackSource(const AudioEncodedTrackSource&) = delete;

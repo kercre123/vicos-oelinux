@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -47,7 +47,6 @@ class PlayerService: public BnInterface<IPlayerService> {
  public:
 
   PlayerService();
-
   ~PlayerService();
 
  private:
@@ -71,48 +70,36 @@ class PlayerService: public BnInterface<IPlayerService> {
                                Parcel* reply, uint32_t flags = 0) override;
 
   status_t Connect(const sp<IPlayerServiceCallback>& service_cb) override;
-
   status_t Disconnect() override;
 
   status_t CreateAudioTrack(uint32_t track_id,
-                          AudioTrackCreateParam& param) override;
-
+                            AudioTrackCreateParam& param) override;
   status_t CreateVideoTrack(uint32_t track_id,
-                          VideoTrackCreateParam& param) override;
-
+                            VideoTrackCreateParam& param) override;
   status_t DeleteAudioTrack(uint32_t track_id) override;
   status_t DeleteVideoTrack(uint32_t track_id) override;
 
-  status_t Prepare() override;
-
   status_t DequeueInputBuffer(uint32_t track_id,
-                            std::vector<AVCodecBuffer>& buffers) override;
-
+                              std::vector<AVCodecBuffer>& buffers) override;
   status_t QueueInputBuffer(uint32_t track_id,
-                          std::vector<AVCodecBuffer>& buffers,
-                          void *meta_param,
-                          size_t meta_size,
-                          TrackMetaBufferType meta_type) override;
+                            std::vector<AVCodecBuffer>& buffers,
+                            void *meta_param,
+                            size_t meta_size,
+                            TrackMetaBufferType meta_type) override;
 
+  status_t Prepare() override;
   status_t Start() override;
-
-  status_t Stop(bool do_flush) override;
-
-  status_t Pause() override;
-
+  status_t Stop(const PictureParam& params) override;
+  status_t Pause(const PictureParam& params) override;
   status_t Resume() override;
 
   status_t SetPosition(int64_t seek_time) override;
-
   status_t SetTrickMode(TrickModeSpeed speed, TrickModeDirection dir) override;
-
-  status_t GrabPicture(PictureParam param) override;
 
   status_t SetAudioTrackParam(uint32_t track_id,
                             CodecParamType type,
                             void *param,
                             size_t param_size) override;
-
   status_t SetVideoTrackParam(uint32_t track_id,
                             CodecParamType type,
                             void *param,

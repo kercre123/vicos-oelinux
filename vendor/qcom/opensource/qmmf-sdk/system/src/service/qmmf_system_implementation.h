@@ -57,7 +57,8 @@ class SystemImplementation {
   status_t LoadSoundModel(const SystemHandle system_handle,
                           const SoundModel& soundmodel);
   status_t UnloadSoundModel(const SystemHandle system_handle);
-  status_t EnableSoundTrigger(const SystemHandle system_handle);
+  status_t EnableSoundTrigger(const SystemHandle system_handle,
+                              const TriggerConfig& config);
   status_t DisableSoundTrigger(const SystemHandle system_handle);
 
   status_t RegisterForDeviceEvents(const SystemHandle system_handle);
@@ -73,6 +74,10 @@ class SystemImplementation {
   status_t PlayTone(const SystemHandle system_handle,
                     const ::std::vector<DeviceId>& devices,
                     const Tone& tone);
+
+  status_t Mute(const SystemHandle system_handle,
+                const DeviceId device,
+                const bool mute);
 
  private:
   static const SystemHandle kSystemHandleMax;

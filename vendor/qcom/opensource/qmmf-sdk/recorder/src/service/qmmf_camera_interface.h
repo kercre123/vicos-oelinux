@@ -29,9 +29,7 @@
 
 #pragma once
 
-#include <utils/KeyedVector.h>
 #include <utils/Log.h>
-#include <libgralloc/gralloc_priv.h>
 
 #include "recorder/src/service/qmmf_recorder_common.h"
 
@@ -41,7 +39,7 @@ namespace recorder {
 
 class IBufferConsumer;
 
-class CameraInterface : public virtual RefBase {
+class CameraInterface {
  public:
 
   virtual ~CameraInterface() {};
@@ -91,7 +89,7 @@ class CameraInterface : public virtual RefBase {
 
   virtual CameraStartParam& GetCameraStartParam() = 0;
 
-  virtual Vector<int32_t>& GetSupportedFps() = 0;
+  virtual std::vector<int32_t>& GetSupportedFps() = 0;
 
 };
 

@@ -53,9 +53,8 @@ namespace recorder {
 
 #define MAX_IN_DEVICES 4
 
-#define SENSOR_VENDOR_MODE_OFFSET (24)
-#define SENSOR_VENDOR_MODE_MASK (0xff)
 #define MAX_AUDIO_INPUT_DEVICES (10)
+#define MAX_AUDIO_PROFILE (80)
 #define MAX_THUMBNAIL_IMAGE_PARAM (2)
 
 typedef int32_t status_t;
@@ -222,10 +221,15 @@ struct AudioTrackCreateParam {
   uint32_t                sample_rate;
   uint32_t                channels;
   uint32_t                bit_depth;
+  char                    profile[MAX_AUDIO_PROFILE];
   AudioFormat             format;
   AudioCodecParams        codec_params;
   DeviceId                out_device;
   uint32_t                flags;
+
+  AudioTrackCreateParam() {
+    memset(profile, 0x0, sizeof(profile));
+  }
 
   ::std::string ToString() const {
     ::std::stringstream stream;
@@ -236,6 +240,7 @@ struct AudioTrackCreateParam {
     stream << "sample_rate[" << sample_rate << "] ";
     stream << "channels[" << channels << "] ";
     stream << "bit_depth[" << bit_depth << "] ";
+    stream << "profile[" << ::std::string(profile) << "] ";
     stream << "format["
            << static_cast<::std::underlying_type<AudioFormat>::type>(format)
            << "] ";
@@ -279,15 +284,19 @@ struct VideoTrackCreateParam {
       case VideoFormat::kHEVC:
         setHEVCDefaultVideoParam();
         break;
+      case VideoFormat::kJPEG:
+        setJPEGDefaultParam();
+        break;
       default: {
         // Nothing to do for other formats
+        codec_param = {};
       }
     }
 
     // Setting LPM,VQZipInfo parameters
     low_power_mode = false;
     do_vqzip = false;
-    memset(&vqzip_params, 0x00, sizeof(vqzip_params));
+    vqzip_params = {};
   }
 
   ::std::string ToString() const {
@@ -336,6 +345,8 @@ struct VideoTrackCreateParam {
     codec_param.avc.sar_enabled = false;
     codec_param.avc.sar_width = 0;
     codec_param.avc.sar_height = 0;
+    codec_param.avc.slice_enabled = false;
+    codec_param.avc.slice_header_spacing = 1024;
   }
 
   void setHEVCDefaultVideoParam() {
@@ -361,12 +372,23 @@ struct VideoTrackCreateParam {
     codec_param.hevc.qp_params.qp_IBP_range.min_BQP = 10;
     codec_param.hevc.qp_params.qp_IBP_range.max_BQP = 51;
     codec_param.hevc.ltr_count = 0;
+    codec_param.hevc.insert_aud_delimiter = true;
     codec_param.hevc.hier_layer = 0;
     codec_param.hevc.prepend_sps_pps_to_idr = false;
     codec_param.hevc.sar_enabled = false;
     codec_param.hevc.sar_width = 0;
     codec_param.hevc.sar_height = 0;
   }
+
+  void setJPEGDefaultParam() {
+
+    codec_param.jpeg.enable_thumbnail = false;
+    codec_param.jpeg.quality = 95;
+    codec_param.jpeg.thumbnail_quality = 75;
+    codec_param.jpeg.thumbnail_height = 240;
+    codec_param.jpeg.thumbnail_width = 320;
+  }
+
 };
 
 /// \brief Result callback passed to StartCamera API
@@ -388,6 +410,7 @@ typedef std::function<void(uint32_t camera_id,
 /// parameter to camera
 struct CameraStartParam {
   bool     zsl_mode;
+  bool     enable_partial_metadata;
   uint32_t zsl_queue_depth;
   uint32_t zsl_width;
   uint32_t zsl_height;
@@ -396,15 +419,18 @@ struct CameraStartParam {
 
   CameraStartParam()
       : zsl_mode(false),
+        enable_partial_metadata(false),
         zsl_queue_depth(10),
         zsl_width(3840),
         zsl_height(2160),
         frame_rate(30),
         flags(0) {}
 
-  CameraStartParam(bool zsl_mode, uint32_t zsl_queue_depth, uint32_t zsl_width,
+  CameraStartParam(bool zsl_mode, bool enable_partial_metadata,
+                   uint32_t zsl_queue_depth, uint32_t zsl_width,
                    uint32_t zsl_height, uint32_t frame_rate, uint32_t flags)
       : zsl_mode(zsl_mode),
+        enable_partial_metadata(enable_partial_metadata),
         zsl_queue_depth(zsl_queue_depth),
         zsl_width(zsl_width),
         zsl_height(zsl_height),
@@ -415,6 +441,8 @@ struct CameraStartParam {
     ::std::stringstream stream;
     stream << "zsl_mode[" << ::std::boolalpha << zsl_mode << ::std::noboolalpha
            << "]";
+    stream << "enable_partial_metadata[" << ::std::boolalpha
+        << enable_partial_metadata << ::std::noboolalpha << "]";
     stream << "zsl_queue_depth[" << zsl_queue_depth << "] ";
     stream << "zsl_width[" << zsl_width << "] ";
     stream << "zsl_height[" << zsl_height << "] ";
@@ -422,15 +450,6 @@ struct CameraStartParam {
     stream << "flags[" << flags << "]";
     return stream.str();
   };
-
-  void setSensorVendorMode(int32_t sensor_vendor_mode) {
-    flags &= ~(SENSOR_VENDOR_MODE_MASK);
-    flags |= sensor_vendor_mode << SENSOR_VENDOR_MODE_OFFSET;
-  };
-
-  int32_t getSensorVendorMode() const {
-    return flags >> SENSOR_VENDOR_MODE_OFFSET;
-  }
 };
 
 /// \brief For thumbnail images only kJPEG is supported

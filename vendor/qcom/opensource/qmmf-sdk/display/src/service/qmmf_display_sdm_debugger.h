@@ -29,11 +29,12 @@
 
 #pragma once
 
-#include "sdm/include/core/sdm_types.h"
-#include "sdm/include/core/debug_interface.h"
-#include "cutils/log.h"
-#include "utils/Trace.h"
-#include "bitset"
+#include <bitset>
+
+#include <cutils/log.h>
+#include <utils/Trace.h>
+#include <sdm/core/sdm_types.h>
+#include <sdm/core/debug_interface.h>
 
 using namespace sdm;
 

@@ -8,6 +8,7 @@ player_test_CPPFLAGS += -I$(top_srcdir)/
 player_test_LDFLAGS  = -lutils -lcutils -llog -lpthread
 player_test_LDADD    = ../../src/client/libqmmf_player_client.la
 player_test_LDADD    += ../demuxer/libdemuxer.la
+player_test_LDADD    += ../../../display/src/client/libqmmf_display_client.la
 
 # Build player test application binary
 bin_PROGRAMS += player_parser_test

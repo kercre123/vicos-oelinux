@@ -27,11 +27,11 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "sync/sync.h"
-#include "sdm/include/utils/constants.h"
-#include "utils/Errors.h"
-#include "sdm/include/utils/debug.h"
-#include "string.h"
+#include <cstring>
+#include <sync.h>
+#include <utils/Errors.h>
+#include <sdm/utils/constants.h>
+#include <sdm/utils/debug.h>
 
 #include "display/src/service/qmmf_display_common.h"
 #include "display/src/service/qmmf_display_sdm_debugger.h"
@@ -45,7 +45,7 @@ DisplayError DisplayBufferSyncHandler::SyncWait(int fd) {
   int error = 0;
 
   if (fd >= 0) {
-    //error = sync_wait(fd, 1000);
+    error = sync_wait(fd, 1000);
     if (error < 0) {
       QMMF_ERROR("sync_wait error errno = %d, desc = %s", errno,
           strerror(errno));
@@ -64,11 +64,11 @@ DisplayError DisplayBufferSyncHandler::SyncMerge(int fd1, int fd2,
   // TODO(user): "SyncMerge"string should be replaced with user-defined string
   // to represent why it is merged.
   if (fd1 >= 0 && fd2 >= 0) {
-    //*merged_fd = sync_merge("SyncMerge", fd1, fd2);
+    *merged_fd = sync_merge("SyncMerge", fd1, fd2);
   } else if (fd1 >= 0) {
-    //*merged_fd = sync_merge("SyncMerge", fd1, fd1);
+    *merged_fd = sync_merge("SyncMerge", fd1, fd1);
   } else if (fd2 >= 0) {
-    //*merged_fd = sync_merge("SyncMerge", fd2, fd2);
+    *merged_fd = sync_merge("SyncMerge", fd2, fd2);
   } else {
     QMMF_ERROR("Invalid arguments passed");
     return kErrorParameters;
@@ -82,8 +82,7 @@ DisplayError DisplayBufferSyncHandler::SyncMerge(int fd1, int fd2,
 }
 
 bool DisplayBufferSyncHandler::IsSyncSignaled(int fd) {
-  //if (sync_wait(fd, 0) < 0) {
-      if (0) {
+  if (sync_wait(fd, 0) < 0) {
     return false;
   } else {
     return true;

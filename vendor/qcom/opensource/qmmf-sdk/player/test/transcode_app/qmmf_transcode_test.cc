@@ -29,7 +29,8 @@
 
 #include "qmmf_transcode_test.h"
 
-#define TAG "TranscodeTest"
+#undef LOG_TAG
+#define LOG_TAG "TranscodeTest"
 
 using ::qmmf::transcode::TranscoderTrack;
 using ::qmmf::transcode::status_t;
@@ -40,34 +41,34 @@ TranscodeTest* TranscodeTest::Connect() {
   if (instance_ == nullptr) {
     instance_ = new TranscodeTest;
     if (instance_) {
-      QMMF_INFO("%s:%s Created Transcode Instance(%p) successfully", TAG,
+      QMMF_INFO("%s Created Transcode Instance(%p) successfully",
                 __func__, instance_);
       return instance_;
     } else {
-      QMMF_ERROR("%s:%s Failed to Crate Transcode(%p)", TAG, __func__,
+      QMMF_ERROR("%s Failed to Crate Transcode(%p)", __func__,
                  instance_);
       assert(0);
     }
   } else {
-    QMMF_WARN("%s:%s Transcode is Already Created(%p)", TAG, __func__,
+    QMMF_WARN("%s Transcode is Already Created(%p)", __func__,
               instance_);
     return instance_;
   }
 }
 
 status_t TranscodeTest::Disconnect() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
   if (instance_ != nullptr) {
     delete instance_;
     instance_ = nullptr;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
 status_t TranscodeTest::CreateTrack() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
   status_t ret = 0;
 
   int32_t track_id;
@@ -78,7 +79,7 @@ status_t TranscodeTest::CreateTrack() {
   TranscoderTrack* track = new TranscoderTrack;
 
   if (track == nullptr) {
-    QMMF_ERROR("%s:%s TranscoderTrack Creation Failed track_id(%u)", TAG,
+    QMMF_ERROR("%s TranscoderTrack Creation Failed track_id(%u)",
                __func__, track_id);
     assert(0);
   }
@@ -87,7 +88,7 @@ status_t TranscodeTest::CreateTrack() {
 
   ret = track->PreparePipeline();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Prepare Pipeline for track_id(%u)", TAG,
+    QMMF_ERROR("%s Failed to Prepare Pipeline for track_id(%u)",
                __func__, track_id);
     track->ReleaseResources();
     track_map_.erase(track_id);
@@ -96,12 +97,12 @@ status_t TranscodeTest::CreateTrack() {
     assert(0);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscodeTest::StartTrack() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
   status_t ret = 0;
   int32_t track_id;
   // TODO: Read the track id info from user input
@@ -109,17 +110,17 @@ status_t TranscodeTest::StartTrack() {
   TranscoderTrack* track = track_map_[track_id];
   ret = track->Start();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Start Track track_id(%u)", TAG, __func__,
+    QMMF_ERROR("%s Failed to Start Track track_id(%u)", __func__,
                track_id);
     assert(0);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscodeTest::StopTrack() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
   status_t ret = 0;
   int32_t track_id;
   // TODO: Read the track id info from user input
@@ -127,17 +128,17 @@ status_t TranscodeTest::StopTrack() {
   TranscoderTrack* track = track_map_[track_id];
   ret = track->Stop();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Stop Track track_id(%u)", TAG, __func__,
+    QMMF_ERROR("%s Failed to Stop Track track_id(%u)", __func__,
                track_id);
     assert(0);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscodeTest::DeleteTrack() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
   status_t ret = 0;
   int32_t track_id;
   // TODO: Read the track id info from user input
@@ -145,7 +146,7 @@ status_t TranscodeTest::DeleteTrack() {
   TranscoderTrack* track = track_map_[track_id];
   ret = track->Delete();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to Delete Track track_id(%u)", TAG, __func__,
+    QMMF_ERROR("%s Failed to Delete Track track_id(%u)", __func__,
                track_id);
     track->ReleaseResources();
     track_map_.erase(track_id);
@@ -158,13 +159,13 @@ status_t TranscodeTest::DeleteTrack() {
   delete track;
   track = nullptr;
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscodeTest::SetTrackParams() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
@@ -189,7 +190,8 @@ CmdMenu::Command CmdMenu::GetCommand() {
 }
 
 int main() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_GET_LOG_LEVEL();
+  QMMF_INFO("%s Enter", __func__);
 
   TranscodeTest* test_context_ptr = nullptr;
   CmdMenu cmd_menu;
@@ -219,7 +221,7 @@ int main() {
         TranscodeTest::Disconnect();
         break;
       case CmdMenu::EXIT_CMD:
-        QMMF_INFO("%s:%s exit from test", TAG, __func__);
+        QMMF_INFO("%s exit from test", __func__);
         testRunning = false;
         break;
       default:
@@ -227,6 +229,6 @@ int main() {
     }
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }

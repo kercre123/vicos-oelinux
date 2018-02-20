@@ -31,13 +31,12 @@
 
 #include <mutex>
 #include <list>
-#include <condition_variable>
 
-#include "qmmf-sdk/qmmf_recorder_params.h"
+#include <qmmf-sdk/qmmf_recorder_params.h>
 
-#include "../../interface/qmmf_postproc_module.h"
-
+#include "common/utils/qmmf_condition.h"
 #include "common/cameraadaptor/qmmf_camera3_device_client.h"
+#include "../../interface/qmmf_postproc_module.h"
 
 namespace qmmf {
 
@@ -48,6 +47,15 @@ namespace recorder {
 enum class PostProcHalMode {
   kJpegEncode,
   kRawReprocess,
+};
+
+enum class PostProcHalState {
+  CREATED,
+  INITIALIZED,
+  STARTING,
+  ACTIVE,
+  ABORTED,
+  STOPPING,
 };
 
 class CameraContext;
@@ -80,6 +88,8 @@ class CameraHalReproc : public IPostProcModule {
 
    status_t Stop() override;
 
+   status_t Abort(std::shared_ptr<void> &abort) override;
+
    PostProcIOParam GetInput(const PostProcIOParam &out) override;
 
    status_t ValidateOutput(const PostProcIOParam &output) override;
@@ -89,6 +99,8 @@ class CameraHalReproc : public IPostProcModule {
  private:
 
    static const int64_t kMetaTimeout = 1000000000; // 1 second
+
+   static const int32_t kBufCount = 3; // count for buffer rotation
 
    struct ReprocessBundle {
      StreamBuffer   buffer;
@@ -104,10 +116,12 @@ class CameraHalReproc : public IPostProcModule {
 
    void ReprocessCallback(StreamBuffer buffer);
 
+   status_t ValidateFormat(BufferFormat fmt);
+
+   status_t ValidateDimensions(uint32_t width, uint32_t height);
+
    status_t ValidateInput(const PostProcIOParam& input,
                           const PostProcIOParam& output);
-
-   status_t StartProcessing();
 
    void StreamCb(StreamBuffer &in_buff);
 
@@ -115,12 +129,22 @@ class CameraHalReproc : public IPostProcModule {
 
    void AddMeta(const CameraMetadata &metadata);
 
+   status_t StartProcessing(bool from_cp);
+
+   status_t CreateDeviceStreams();
+
+   status_t DeleteDeviceStreams();
+
    IPostProc*                   context_;
    IPostProcEventListener       *listener_;
 
+   CameraMetadata               static_meta_;
+
    std::mutex                   module_lock_;
-   bool                         ready_to_start_;
-   int32_t                      input_stream_id_;
+   PostProcHalState             state_;
+   std::mutex                   abort_lock_;
+   std::shared_ptr<void>        abort_;
+   bool                         frame_processing_;
 
    Camera3Request               reprocess_request_;
 
@@ -129,6 +153,7 @@ class CameraHalReproc : public IPostProcModule {
 
    std::list<StreamBuffer>      input_buffer_;
    std::list<StreamBuffer>      input_buffer_done_;
+   std::mutex                   input_buffer_lock_;
 
    std::list<ReprocessBundle>   reproc_partial_list_;
    std::list<ReprocessBundle>   reproc_ready_list_;

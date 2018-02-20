@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -63,6 +63,7 @@ enum class AudioServiceCommand {
 enum class AudioServiceCallbackCommand {
   kAudioNotifyError = ::android::IBinder::FIRST_CALL_TRANSACTION,
   kAudioNotifyBuffer,
+  kAudioNotifyStopped,
 };
 
 #define QMMF_AUDIO_SERVICE_NAME "qmmf_audio.service"
@@ -74,6 +75,7 @@ class IAudioServiceCallback : public ::android::IInterface {
 
   virtual void NotifyErrorEvent(const int32_t error) = 0;
   virtual void NotifyBufferEvent(const AudioBuffer& buffer) = 0;
+  virtual void NotifyStoppedEvent() = 0;
 };
 
 class IAudioService : public ::android::IInterface {
@@ -90,7 +92,7 @@ class IAudioService : public ::android::IInterface {
                             const AudioMetadata& metadata) = 0;
 
   virtual int32_t Start(const AudioHandle audio_handle) = 0;
-  virtual int32_t Stop(const AudioHandle audio_handle, const bool flush) = 0;
+  virtual int32_t Stop(const AudioHandle audio_handle) = 0;
   virtual int32_t Pause(const AudioHandle audio_handle) = 0;
   virtual int32_t Resume(const AudioHandle audio_handle) = 0;
 

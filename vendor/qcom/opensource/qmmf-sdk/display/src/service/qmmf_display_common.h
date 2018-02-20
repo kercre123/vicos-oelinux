@@ -33,7 +33,7 @@
 #include <utils/Mutex.h>
 
 #include "qmmf-sdk/qmmf_display_params.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 namespace qmmf {
 
