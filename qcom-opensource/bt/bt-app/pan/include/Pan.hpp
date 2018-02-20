@@ -124,6 +124,7 @@ class Pan {
         ~Pan();
         bool HandleEnablePan();
         bool HandleDisablePan();
+        bool HandleAPIDisablePan();
         void ProcessEvent(BtEvent* pEvent);
 };
 

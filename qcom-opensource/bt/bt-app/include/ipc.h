@@ -26,6 +26,7 @@
 #include <hardware/bt_gatt_types.h>
 #include <hardware/bt_sdp.h>
 #include <hardware/bt_rc.h>
+#include <hardware/vendor.h>
 
 
 extern thread_t *g_gap_thread;
@@ -379,7 +380,7 @@ typedef enum {
     GAP_API_SSP_REPLY,
     GAP_API_PIN_REPLY,
     GAP_API_SET_BDNAME,
-
+    GAP_API_SET_LE_BDNAME,
     GAP_EVENT_ADAPTER_STATE,
     GAP_EVENT_ACL_STATE_CHANGED,
     GAP_EVENT_DISCOVERY_STATE_CHANGED,
@@ -412,9 +413,11 @@ typedef enum {
     PAN_EVENT_DEVICE_CONNECT_REQ,
     PAN_EVENT_DEVICE_DISCONNECT_REQ,
     PAN_EVENT_DEVICE_CONNECTED_LIST_REQ,
+    PAN_EVENT_API_DISABLE,
 
     //GATTS EVENTS
-    BTGATTS_REGISTER_APP_EVENT = GATT_MSG_BASE,
+    GEN_GATT_EVENT = GATT_MSG_BASE,
+    BTGATTS_REGISTER_APP_EVENT,
     BTGATTS_CONNECTION_EVENT,
     BTGATTS_SERVICE_ADDED_EVENT,
     BTGATTS_INCLUDED_SERVICE_ADDED_EVENT,
@@ -725,6 +728,16 @@ typedef struct {
     BluetoothEventId event_id;
     bt_property_t prop;
 } SetDeviceName;
+
+/**
+ * API to set BT LE Name
+ */
+typedef struct {
+    BluetoothEventId event_id;
+    btvendor_lename_t name;
+    bool gattsEnabled;
+}SetDeviceLeName;
+
 /**
  * Event for notifying Profile stop status
  */
@@ -1384,6 +1397,7 @@ typedef union {
     DeviceFoundEvent                        device_found_event;
     DeviceFoundEventInt                     device_found_event_int;
     SetDeviceName                           set_device_name_event;
+    SetDeviceLeName                         set_device_le_name_event;
     RemotePropertiesEvent                   remote_properties_event;
     AdapterPropertiesEvent                  adapater_properties_event;
     DeviceDiscoverRequest                   discover_request;

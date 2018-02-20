@@ -156,6 +156,7 @@ class A2dp_Source {
     char* dump_message(BluetoothEventId event_id);
     pthread_mutex_t lock;
     bool enable_delay_report;
+    bool pump_encoded_data;
     bt_bdaddr_t mConnectingDevice;
     bt_bdaddr_t mConnectedDevice;
     bt_bdaddr_t mConnectedAvrcpDevice;
@@ -191,6 +192,9 @@ class A2dp_Source {
     void SendAppSettingChange();
     void updateResetNotification(btrc_event_id_t noti);
     void UpdateSupportedCodecs(uint8_t num_codecs);
+    void SendEncodedData();
+    void SendStartStreamReq();
+    void SendSuspendStreamReq();
     list<MediaPlayerInfo> pMediaPlayerList;
 };
 

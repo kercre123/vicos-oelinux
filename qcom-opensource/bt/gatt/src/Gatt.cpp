@@ -523,7 +523,7 @@ void btgattc_scan_parameter_setup_completed_cb(int client_if, btgattc_error_t st
 
 void btgattc_get_gatt_db_cb(int conn_id, btgatt_db_element_t *db, int count)
 {
-    ALOGD(LOGTAG "(%s) conn_id (%d)",__FUNCTION__,conn_id);
+    ALOGD(LOGTAG "(%s) conn_id (%d \n)",__FUNCTION__,conn_id);
 
     BtEvent *event = new BtEvent;
     CHECK_PARAM_VOID(event)
@@ -578,6 +578,13 @@ void btgatts_register_app_cb(int status, int server_if, bt_uuid_t *uuid)
 {
     ALOGD(LOGTAG "\n (%s) status (%d) server_if (%d) \n",__FUNCTION__, status, server_if);
 
+ALOGD(LOGTAG"printing uuid \n");
+int itr;
+    for (itr = 0; itr < 16; itr++) {
+        ALOGD(LOGTAG " uuid is %d \n",uuid->uu[itr]);
+
+    }
+
     BtEvent *event = new BtEvent;
     CHECK_PARAM_VOID(event)
     event->event_id = BTGATTS_REGISTER_APP_EVENT;
@@ -585,7 +592,6 @@ void btgatts_register_app_cb(int status, int server_if, bt_uuid_t *uuid)
     event->gatts_register_app_event.server_if = server_if;
     event->gatts_register_app_event.uuid = (bt_uuid_t *) osi_malloc (sizeof(bt_uuid_t));
     memcpy(event->gatts_register_app_event.uuid, uuid, sizeof(bt_uuid_t));
-    
     PostMessage(THREAD_ID_GATT, event);
     ALOGD(LOGTAG "exiting btgatts_register_app_cb \n");
 }
@@ -767,8 +773,8 @@ void btgatts_request_write_cb(int conn_id, int trans_id, bt_bdaddr_t *bda, int a
             bda->address[0], bda->address[1], bda->address[2],
            bda->address[3], bda->address[4], bda->address[5]);
 
-    ALOGD(LOGTAG "(%s) connid:(%d) bdaddr:(%s) value (%s) need_rsp (%d)\n",__FUNCTION__, conn_id,
-            c_address, value, need_rsp);
+    ALOGD(LOGTAG "(%s) connid:(%d) bdaddr:(%s) need_rsp (%d)\n",__FUNCTION__, conn_id,
+            c_address, need_rsp);
 
     BtEvent *event = new BtEvent;
     CHECK_PARAM_VOID(event)
@@ -968,6 +974,13 @@ void Gatt::HandleGattsRegisterAppEvent(GattsRegisterAppEvent *event)
     for (it = serverCbUuidMap.begin(); it != serverCbUuidMap.end(); ++it) {
         if (it->first &&  event->uuid->uu) {
            ALOGD(LOGTAG "checking \n");
+           for (itr = 0; itr < 16; itr++) {
+             ALOGD(LOGTAG " saved uuid is %d \n",it->first[itr]);  
+           }
+
+           for (itr = 0; itr < 16; itr++) {
+             ALOGD(LOGTAG " received uuid is %d \n",event->uuid->uu[itr]);
+           } 
            itr = 0;
            for (itr = 0; itr < 16; itr++) {
                ALOGD(LOGTAG " it->first is %d, uuid is %d \n",it->first[itr], event->uuid->uu[itr]);
@@ -1121,7 +1134,7 @@ void Gatt::HandleGattsRequestWriteEvent(GattsRequestWriteEvent *event)
 
     it = serverCbSifMap.find(ConnidServerifMap[event->conn_id]);
     if (it != serverCbSifMap.end()) {
-        ALOGD(LOGTAG "found \n");
+        ALOGD(LOGTAG "found in the connection server map\n");
         it->second->btgatts_request_write_cb(event->conn_id,event->trans_id, event->bda, event->attr_handle,
                                     event->offset, event->length, event->need_rsp, event->is_prep,
                                     event->value);
@@ -1909,6 +1922,7 @@ void Gatt::UnRegisterServerCallback( int serverif)
      it2 = serverCbSifMap.find(serverif);
      if (it2 != serverCbSifMap.end())
      serverCbSifMap.erase (it2);
+
      it3 = ConnidServerifMap.find(serverif);
      if (it3 != ConnidServerifMap.end())
      ConnidServerifMap.erase(it3);
@@ -1934,6 +1948,7 @@ void Gatt::UnRegisterClientCallback( int clientif)
      it2 = clientCbCifMap.find(clientif);
      if (it2 != clientCbCifMap.end())
      clientCbCifMap.erase (it2);
+
      it3 = ConnidClientifMap.find(clientif);
      if (it3 != ConnidClientifMap.end())
      ConnidClientifMap.erase(it3);
@@ -1982,6 +1997,7 @@ bool Gatt::HandleDisableGatt()
 
 bt_status_t Gatt::register_client( bt_uuid_t *client_uuid ) {
 
+            ALOGD(LOGTAG"gatt register_client \n");
             if (gatt_interface) {
                 return gatt_interface->client->register_client(client_uuid);
             }

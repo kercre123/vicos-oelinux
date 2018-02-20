@@ -4,7 +4,8 @@ AM_CFLAGS = -Wall \
     -Wundef \
     -Wstrict-prototypes \
     -Wno-trigraphs \
-    -std=c99
+    -std=c99 \
+    -D_POSIX_SOURCE
 
 AM_CPPFLAGS= \
     -Iinclude/

@@ -317,6 +317,15 @@ class Gap {
      * @return bool
      */
     bool IsDeviceBonded(bt_bdaddr_t device);
+
+    /**
+     * @brief SetLeBtName
+     *
+     * It will set the local bluetooth LE name
+     *
+     * @return status
+     */
+    void SetLeBtName(btvendor_lename_t *name);
 };
 
 #endif

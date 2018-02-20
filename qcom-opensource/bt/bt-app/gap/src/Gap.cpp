@@ -34,8 +34,10 @@
 #include "oi_wrapper.h"
 #include "oi_osinterface.h"
 #endif
+#include "GattsTest.hpp"
 
 const char *BT_LOCAL_DEV_NAME = "BtLocalDeviceName";
+const char *BT_LOCAL_DEV_LE_NAME = "BtLocalDeviceLeName";
 const char *BT_SCAN_MODE_TYPE = "BtScanMode";
 const char *BT_USR_INPUT     = "UserInteractionNeeded";
 const char *BT_A2DP_SINK_ENABLED_STRING  = "BtA2dpSinkEnable";
@@ -64,6 +66,7 @@ Gap *g_gap = NULL;
 #ifdef __cplusplus
 extern "C" {
 #endif
+extern GattsTest *gattstest;
 
 static bool SetWakeAlarm(uint64_t delay_millis, bool should_wake, alarm_cb cb,
                                                                     void *data) {
@@ -270,10 +273,20 @@ static void SsrCleanupCb() {
     PostMessage(THREAD_ID_GAP, event);
 }
 
+static void VendorAclStateChangedCb(bt_status_t status,
+                                       bt_bdaddr_t *remote_bd_addr,
+                                       bt_acl_state_t state,
+                                       uint8_t reason,
+                                       uint8_t transport_type) {
+
+    ALOGV (LOGTAG " VendorAclStateChangedCb :");
+}
+
 static btvendor_callbacks_t sVendorCallbacks = {
     sizeof(sVendorCallbacks),
     NULL,
     SsrCleanupCb,
+    VendorAclStateChangedCb,
 };
 
 void BtGapMsgHandler(void *msg) {
@@ -476,6 +489,12 @@ int Gap::SetBtName(bt_property_t *prop) {
     return adapter_properties_obj_->SetBtName(prop);
 }
 
+void Gap::SetLeBtName(btvendor_lename_t *name) {
+    if (sBtVendorInterface != NULL) {
+        sBtVendorInterface->setLeBtName(name);
+    } else
+        ALOGD(LOGTAG "sBtVendorInterface is nULL");
+}
 
 bool Gap::IsDeviceBonded(bt_bdaddr_t device) {
     return adapter_properties_obj_->IsDeviceBonded(device);
@@ -484,6 +503,8 @@ void Gap::ProcessEvent(BtEvent* event) {
     bt_property_t prop;
     bt_scan_mode_t scan_mode;
     bt_bdname_t bd_name;
+    bt_lename_t le_name;
+    btvendor_lename_t name;
     BtEvent  *bt_event  = NULL;
     int profile_id, profile_count = 0;
 
@@ -512,6 +533,14 @@ void Gap::ProcessEvent(BtEvent* event) {
                 prop.val = &bd_name;
                 prop.len = strlen((char*)bd_name.name);
                 bluetooth_interface_->set_adapter_property(&prop);
+
+                /*Set Default BT_LE_NAME*/
+                strlcpy((char*)&le_name.name[0], config_get_string (config_,
+                 CONFIG_DEFAULT_SECTION, BT_LOCAL_DEV_LE_NAME, "MDM_LE_Fluoride"), sizeof(le_name));
+                name.val = &le_name;
+                name.len = strlen((char*)le_name.name);
+                sBtVendorInterface->setLeBtName(&name);
+                /*********************************************************************/
 
                 //Sending update to the Main thread
                 bt_event = new BtEvent;
@@ -699,6 +728,12 @@ void Gap::ProcessEvent(BtEvent* event) {
                 break;
 
             }
+            if(profile_config[PROFILE_ID_PAN].is_enabled)
+            {
+                bt_event = new BtEvent;
+                bt_event->event_id = PAN_EVENT_API_DISABLE;
+                PostMessage(profile_config[PROFILE_ID_PAN].thread_id, bt_event);
+            }
             if (profile_config[PROFILE_ID_A2DP_SINK].is_enabled)
             {
                 bt_event = new BtEvent;
@@ -746,6 +781,17 @@ void Gap::ProcessEvent(BtEvent* event) {
         case GAP_API_SET_BDNAME:
             SetBtName(&event->set_device_name_event.prop);
             config_set_string(config_,CONFIG_DEFAULT_SECTION,BT_LOCAL_DEV_NAME,(char *)event->set_device_name_event.prop.val);
+            break;
+
+        case GAP_API_SET_LE_BDNAME:
+            SetLeBtName(&event->set_device_le_name_event.name);
+            ALOGD(LOGTAG "set le bt name : %s",(char*)event->set_device_le_name_event.name.val);
+            config_set_string(config_,CONFIG_DEFAULT_SECTION,BT_LOCAL_DEV_LE_NAME,
+                                (char *)event->set_device_le_name_event.name.val);
+            if (event->set_device_le_name_event.gattsEnabled && gattstest->getIsAdvertising()) {
+                 gattstest->ClientSetAdvData("Remote Start Profile");
+                 gattstest->StartAdvertisement();
+            }
             break;
 
         case GAP_EVENT_DEVICE_FOUND_INT:

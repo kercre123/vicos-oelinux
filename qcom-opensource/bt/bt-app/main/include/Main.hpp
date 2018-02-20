@@ -30,6 +30,8 @@
 #include <hardware/bluetooth.h>
 #include "include/ipc.h"
 #include "utils.h"
+#include "GattcTest.hpp"
+#include "GattsTest.hpp"
 #include "Rsp.hpp"
 
 #include <cutils/sockets.h>
@@ -136,6 +138,7 @@ typedef enum {
     GET_BT_NAME,
     GET_BT_ADDR,
     SET_BT_NAME,
+    SET_LE_BT_NAME,
     UNPAIR,
     GET_BT_STATE,
     TEST_MODE,
@@ -220,6 +223,16 @@ typedef enum {
     OPP_SEND,
     OPP_ABORT,
 #endif
+    GATTCTEST_OPTION,
+    GATTCTEST_INIT,
+    GATTCTEST_START_SCAN,
+    GATTCTEST_STOP_SCAN,
+    GATTCTEST_CONNECT,
+    GATTCTEST_DISCONNECT,
+    GATTCTEST_ALERT,
+    GATTSTEST_OPTION,
+    GATTSTEST_INIT,
+    GATTSTEST_START,
     HFP_CLIENT,
     CREATE_SCO_CONN,
     DESTROY_SCO_CONN,
@@ -277,6 +290,8 @@ typedef enum {
     HFP_CLIENT_MENU,
     PAN_MENU,
     RSP_MENU,
+    GATTCTEST_MENU,
+    GATTSTEST_MENU,
 #ifdef USE_BT_OBEX
     PBAP_CLIENT_MENU,
     OPP_MENU,
@@ -319,6 +334,8 @@ UserMenuList GapMenu[] = {
     {GET_BT_ADDR,           "get_bt_address",   ZERO_PARAM,    "get_bt_address"},
     {SET_BT_NAME,           "set_bt_name",      ONE_PARAM,    "set_bt_name<space><bt name> \
     eg. set_bt_name MDM_Fluoride"},
+    {SET_LE_BT_NAME,        "set_le_bt_name",   ONE_PARAM,    "set_le_bt_name<space><bt name> \
+    eg. set_le_bt_name MDM_LE_Fluoride"},
     {BACK_TO_MAIN,          "main_menu",        ZERO_PARAM,    "main_menu"},
 };
 
@@ -329,6 +346,8 @@ UserMenuList MainMenu[] = {
     {GAP_OPTION,            "gap_menu",         ZERO_PARAM,   "gap_menu"},
     {PAN_OPTION,            "pan_menu",         ZERO_PARAM,   "pan_menu"},
     {RSP_OPTION,            "rsp_menu",         ZERO_PARAM,   "rsp_menu"},
+    {GATTCTEST_OPTION,            "gattctest_menu",         ZERO_PARAM,   "gattctest_menu"},
+    {GATTSTEST_OPTION,            "gattstest_menu",         ZERO_PARAM,   "gattstest_menu"},
     {TEST_MODE,             "test_menu",        ZERO_PARAM,   "test_menu"},
     {A2DP_SINK,             "a2dp_sink_menu",   ZERO_PARAM,   "a2dp_sink_menu"},
     {HFP_CLIENT,            "hfp_client_menu",  ZERO_PARAM,   "hfp_client_menu"},
@@ -373,6 +392,34 @@ UserMenuList RspMenu[] = {
 };
 
 /**
+ * list of supported commands for GATTCTEST Menu
+ */
+UserMenuList GattcTestMenu[] = {
+    {GATTCTEST_INIT,              "gattctest_init",       ZERO_PARAM,    "gattctest_init (only for Init time)"},
+    {GATTCTEST_START_SCAN,        "gattctest_start_scan", ZERO_PARAM,    "gattctest_start_scan"},
+    {GATTCTEST_STOP_SCAN,         "gattctest_stop_scan",  ZERO_PARAM,    "gattctest_stop_scan"},
+    {BACK_TO_MAIN,          "main_menu",      ZERO_PARAM,    "main_menu"},
+    {GATTCTEST_CONNECT,           "gattctest_connect",    ONE_PARAM,     "gattctest_connect<space><bt_address> \
+         eg. gattctest_connect 00:11:22:33:44:55"},
+    {GATTCTEST_DISCONNECT,           "gattctest_disconnect", ONE_PARAM,     "gattctest_disconnect<space><bt_address> \
+          eg.gattctest_connect 00:11:22:33:44:55"},
+    {GATTCTEST_ALERT,             "gattctest_alert",      ONE_PARAM,    "gattctest_alert<space><alert_level> \
+         rg. gattctest_alert 1"},
+
+};
+
+/**
+ * list of supported commands for GATTSTEST Menu
+ */
+UserMenuList GattsTestMenu[] = {
+    {GATTSTEST_INIT,              "gattstest_init",  ZERO_PARAM,    "gattstest_init (only for Init time)"},
+    {GATTSTEST_START,             "gattstest_start", ZERO_PARAM,    "gattstest_start would (re)start adv"},
+    {BACK_TO_MAIN,          "main_menu",  ZERO_PARAM, "main_menu"},
+};
+
+
+
+/**
  * list of supported commands for A2DP_SINK Menu
  */
 UserMenuList A2dpSinkMenu[] = {
@@ -395,7 +442,7 @@ UserMenuList A2dpSinkMenu[] = {
     {LIST_PALYER_SETTING_VALUE,     "listplayersettingvalue",  TWO_PARAM,    "listplayersettingvalue<space><bt_address><space><attri_ID>"},
     {GET_PALYER_APP_SETTING,    "getplayersetting",  TWO_PARAM,  "getplayersetting<space><bt_address><space><attri_IDs>"},
     {SET_PALYER_APP_SETTING,    "setplayersetting",  THREE_PARAM,  "setplayersetting<space><bt_address><space><attri_IDs><space><attri_Values>"},
-    {GET_ELEMENT_ATTR,  "getelementattr",  TWO_PARAM,  "getelementattr<space><bt_address><space><attribute_IDs>"},
+    {GET_ELEMENT_ATTR,  "getelementattr",  THREE_PARAM,  "getelementattr<space><bt_address><space><num_attrb><space><attribute_IDs>"},
     {GET_PLAY_STATUS,   "getplayerstatus",  ONE_PARAM,  "getplayerstatus<space><bt_address>"},
     {REG_NOTIFICATION,  "regnotification",  TWO_PARAM,  "regnotification<space><bt_address><space><event_ID>"},
     {SET_ADDRESSED_PLAYER,  "setaddressedplayer",  TWO_PARAM,  "setaddressedplayer<space><bt_address><space><player_ID>"},
@@ -624,6 +671,28 @@ static void HandleTestCommand(int cmd_id, char user_cmd[][COMMAND_ARG_SIZE]);
  * @return none
  */
 static void HandleRspCommand(int cmd_id, char user_cmd[][COMMAND_ARG_SIZE]);
+
+/**
+ * @brief HandleGattcTestCommand
+ *
+ *  This function will handle all the commands in @ref RspMenu
+ *
+ * @param[in] cmd_id It has command id from @ref CommandList
+ * @param[in] user_cmd It has parsed commands with arguments passed by user
+ * @return none
+ */
+static void HandleGattcTestCommand(int cmd_id, char user_cmd[][COMMAND_ARG_SIZE]);
+
+/**
+ * @brief HandleGattcTestCommand
+ *
+ *  This function will handle all the commands in @ref RspMenu
+ *
+ * @param[in] cmd_id It has command id from @ref CommandList
+ * @param[in] user_cmd It has parsed commands with arguments passed by user
+ * @return none
+ */
+static void HandleGattsTestCommand(int cmd_id, char user_cmd[][COMMAND_ARG_SIZE]);
 
 
 /**
