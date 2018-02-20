@@ -2650,7 +2650,7 @@ eHalStatus csrNeighborRoamIssueBgScanRequest(tpAniSirGlobal pMac,
 
     vos_mem_free(scanReq.SSIDs.SSIDList);
     if (1 == pBgScanParams->ChannelInfo.numOfChannels)
-        NEIGHBOR_ROAM_DEBUG(pMac, LOG1, FL("Channel List Address = %p, Actual index = %d"),
+        NEIGHBOR_ROAM_DEBUG(pMac, LOG1, FL("Channel List Address = %pK, Actual index = %d"),
                 &pMac->roam.neighborRoamInfo.roamChannelInfo.currentChannelListInfo.ChannelList[0], 
                 pMac->roam.neighborRoamInfo.roamChannelInfo.currentChanIndex);
 
@@ -2697,7 +2697,7 @@ eHalStatus csrNeighborRoamPerformBgScan(tpAniSirGlobal pMac, tANI_U32 sessionId)
     if ( pNeighborRoamInfo->roamChannelInfo.currentChannelListInfo.ChannelList &&
          pNeighborRoamInfo->roamChannelInfo.currentChannelListInfo.numOfChannels )
     {
-        NEIGHBOR_ROAM_DEBUG(pMac, LOG1, FL("Channel List Address = %p"), &pNeighborRoamInfo->roamChannelInfo.currentChannelListInfo.ChannelList[0]);
+        NEIGHBOR_ROAM_DEBUG(pMac, LOG1, FL("Channel List Address = %pK"), &pNeighborRoamInfo->roamChannelInfo.currentChannelListInfo.ChannelList[0]);
     }
     else 
     {
@@ -5396,6 +5396,13 @@ eHalStatus csrNeighborRoamCandidateFoundIndHdlr(tpAniSirGlobal pMac, void* pMsg)
 {
     tpCsrNeighborRoamControlInfo    pNeighborRoamInfo = &pMac->roam.neighborRoamInfo;
     eHalStatus status = eHAL_STATUS_SUCCESS;
+
+    if (vos_check_monitor_state())
+    {
+        smsLog(pMac, LOGW, FL("Ignore raom candidate when roam started"));
+        return eHAL_STATUS_FAILURE;
+    }
+
     /* we must be in connected state, if not ignore it */
     if ((eCSR_NEIGHBOR_ROAM_STATE_CONNECTED != pNeighborRoamInfo->neighborRoamState)
         || (pNeighborRoamInfo->uOsRequestedHandoff))
