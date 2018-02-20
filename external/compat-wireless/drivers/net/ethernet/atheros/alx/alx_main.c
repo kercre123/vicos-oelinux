@@ -38,6 +38,11 @@ static const char alx_drv_description[] =
 	"Qualcomm Atheros(R) "
 	"AR813x/AR815x/AR816x PCI-E Ethernet Network Driver";
 
+static bool ipa_enable = 1;
+bool module_ipa_enable = 1;
+module_param(module_ipa_enable, bool, S_IRUGO);
+MODULE_PARM_DESC(module_ipa_enable, "PSB enable/disable");
+
 // ProjE change
 u32 mac_addr_hi16=0xFFFFFFFFUL;
 module_param(mac_addr_hi16, uint, 0);
@@ -83,7 +88,6 @@ static int alx_ipa_setup_rm(struct alx_adapter *adpt);
 
 /* Global CTX PTR which can be used for debugging */
 static struct alx_adapter *galx_adapter_ptr = NULL;
-static  s8 debugfs_ipa_enable = 1;
 const mode_t read_write_mode = S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR | S_IWGRP;
 
 static inline char *alx_ipa_rm_state_to_str(enum alx_ipa_rm_state state)
@@ -1123,23 +1127,33 @@ static bool alx_handle_rx_irq(struct alx_msix_param *msix,
 		}
 		alx_clean_rfdesc(rxque, &srrd);
 		skb_put(skb, srrd.genr.pkt_len - ETH_FCS_LEN);
-#ifndef	MDM_PLATFORM
+#ifdef MDM_PLATFORM
+		/*Don't strip off MAC Header if sending through IPA*/
+		if (!ipa_enable) {
+			skb->protocol = eth_type_trans(skb, adpt->netdev);
+		}
+#else
 		skb->protocol = eth_type_trans(skb, adpt->netdev);
 #endif
+
 		skb_checksum_none_assert(skb);
 
-		/*the HW rrd->vlan_flag is still true when vlan stripping disabled, correct it here */
+		/*the HW rrd->vlan_flag is still true when vlan stripping disabled,
+		correct it here */
 		if (!CHK_HW_FLAG(VLANSTRIP_EN))
 			srrd.genr.vlan_flag = false;
 
-#ifdef	MDM_PLATFORM
-                alx_receive_skb_ipa(adpt, skb, (u16)srrd.genr.vlan_tag,
+#ifdef MDM_PLATFORM
+		/* Use IPA path only if VLAN stripping is not done and IPA is
+		 * enabled */
+		if (ipa_enable && !srrd.genr.vlan_flag)
+			alx_receive_skb_ipa(adpt, skb, (u16)srrd.genr.vlan_tag,
 					(bool)srrd.genr.vlan_flag,
 					(uint8_t)srrd.genr.proto);
-#else
-		alx_receive_skb(adpt, skb, (u16)srrd.genr.vlan_tag,
-				(bool)srrd.genr.vlan_flag);
+		else
 #endif
+			alx_receive_skb(adpt, skb, (u16)srrd.genr.vlan_tag,
+					(bool)srrd.genr.vlan_flag);
 
 		num_consume_pkts--;
 		count++;
@@ -1160,10 +1174,15 @@ static bool alx_handle_tx_irq(struct alx_msix_param *msix,
 	struct alx_adapter *adpt = msix->adpt;
 	struct alx_hw *hw = &adpt->hw;
 	struct alx_buffer *tpbuf;
+	struct alx_ipa_ctx *alx_ipa;
+	int num_tx_comp;
 	u16 consume_data;
+
 #ifdef MDM_PLATFORM
-	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
-	int num_tx_comp = 0;
+	if (ipa_enable) {
+		alx_ipa = adpt->palx_ipa;
+		num_tx_comp = 0;
+	}
 #endif
 
 	alx_mem_r16(hw, txque->consume_reg, &consume_data);
@@ -1192,21 +1211,24 @@ static bool alx_handle_tx_irq(struct alx_msix_param *msix,
 			txque->tpq.consume_idx = 0;
 
 #ifdef MDM_PLATFORM
-		/* Update TX Completetion Recieved */
-		num_tx_comp++;
+		if (ipa_enable)
+			/* Update TX Completetion Recieved */
+			num_tx_comp++;
 #endif
 	}
 
 #ifdef MDM_PLATFORM
-	/* Release Wakelock if all TX Completion is done */
-	spin_lock_bh(&alx_ipa->rm_ipa_lock);
-	alx_ipa->alx_tx_completion -= num_tx_comp;
-	if (!alx_ipa->ipa_rx_completion && !alx_ipa->alx_tx_completion &&
-		(alx_ipa->acquire_wake_src == true)) {
-		__pm_relax(&alx_ipa->rm_ipa_wait);
-		alx_ipa->acquire_wake_src = false;
+	if (ipa_enable) {
+		/* Release Wakelock if all TX Completion is done */
+		spin_lock_bh(&alx_ipa->rm_ipa_lock);
+		alx_ipa->alx_tx_completion -= num_tx_comp;
+		if (!alx_ipa->ipa_rx_completion && !alx_ipa->alx_tx_completion &&
+			(alx_ipa->acquire_wake_src == true)) {
+			__pm_relax(&alx_ipa->rm_ipa_wait);
+			alx_ipa->acquire_wake_src = false;
+		}
+		spin_unlock_bh(&alx_ipa->rm_ipa_lock);
 	}
-	spin_unlock_bh(&alx_ipa->rm_ipa_lock);
 #endif
 
 	if (netif_queue_stopped(adpt->netdev) &&
@@ -2504,10 +2526,11 @@ static int __devinit alx_init_adapter(struct alx_adapter *adpt)
 	hw->smb_timer = 400; /* 400ms */
 	hw->mtu = adpt->netdev->mtu;
 #ifdef MDM_PLATFORM
-	hw->imt = 500;       /* For MDM set it to 1ms */
-#else
-	hw->imt = 100;       /* set to 200us */
+	if (ipa_enable)
+		hw->imt = 500;       /* For MDM set it to 1ms */
+	else
 #endif
+		hw->imt = 100;       /* set to 200us */
 
 	/* set default for wrr */
 	hw->wrr_prio0 = 4;
@@ -3161,14 +3184,16 @@ static int alx_open(struct net_device *netdev)
 	}
 
 #ifdef  MDM_PLATFORM
-	/* Allocate Nodes and List for storing flow control packets*/
-	retval = alx_alloc_flow_ctrl_desc(adpt);
-	if (retval) {
-		alx_err(adpt, "Error in allocating Flow Control Buffers \n");
-		goto err_alloc_flow_ctrl;
+	if (ipa_enable) {
+		/* Allocate Nodes and List for storing flow control packets*/
+		retval = alx_alloc_flow_ctrl_desc(adpt);
+		if (retval) {
+			alx_err(adpt, "Error in allocating Flow Control Buffers \n");
+			goto err_alloc_flow_ctrl;
+		}
+		pr_info("%s -- %d Flow Control Buffer Allocated \n",
+						__func__, adpt->freeq_cnt);
 	}
-	pr_info("%s -- %d Flow Control Buffer Allocated \n",
-					__func__, adpt->freeq_cnt);
 #endif
 
 	retval = alx_open_internal(adpt, ALX_OPEN_CTRL_IRQ_EN);
@@ -3181,7 +3206,8 @@ err_open_internal:
 	alx_stop_internal(adpt, ALX_OPEN_CTRL_IRQ_EN);
 #ifdef MDM_PLATFORM
 err_alloc_flow_ctrl:
-	alx_free_flow_ctrl_desc(adpt);
+	if (ipa_enable)
+		alx_free_flow_ctrl_desc(adpt);
 #endif
 err_alloc_rtx:
 	alx_free_all_rtx_descriptor(adpt);
@@ -3206,25 +3232,27 @@ static int alx_stop(struct net_device *netdev)
 				ALX_OPEN_CTRL_RESET_MAC);
 	alx_free_all_rtx_descriptor(adpt);
 #ifdef  MDM_PLATFORM
-	/* Flush any pending packets */
-	pr_info("ALX - Flush %d Pending Packets \n", adpt->pendq_cnt);
-	spin_lock_bh(&adpt->flow_ctrl_lock);
-	while (adpt->pendq_cnt) {
-		node = list_first_entry(&adpt->pend_queue_head,
-			struct alx_ipa_rx_desc_node, link);
-		list_del(&node->link);
-		list_add_tail(&node->link, &adpt->free_queue_head);
-		adpt->pendq_cnt--;
-		adpt->freeq_cnt++;
+	if (ipa_enable) {
+		/* Flush any pending packets */
+		pr_info("ALX - Flush %d Pending Packets \n", adpt->pendq_cnt);
+		spin_lock_bh(&adpt->flow_ctrl_lock);
+		while (adpt->pendq_cnt) {
+			node = list_first_entry(&adpt->pend_queue_head,
+				struct alx_ipa_rx_desc_node, link);
+			list_del(&node->link);
+			list_add_tail(&node->link, &adpt->free_queue_head);
+			adpt->pendq_cnt--;
+			adpt->freeq_cnt++;
+		}
+		spin_unlock_bh(&adpt->flow_ctrl_lock);
+		if ((adpt->freeq_cnt != ALX_IPA_SYS_PIPE_DNE_PKTS) ||
+			(adpt->pendq_cnt != 0)) {
+			pr_err("%s -- Memory leak detected freeq_cnt %d, pendq_cnt %d",
+				__func__, adpt->freeq_cnt, adpt->pendq_cnt);
+			BUG();
+		}
+		alx_free_flow_ctrl_desc(adpt);
 	}
-	spin_unlock_bh(&adpt->flow_ctrl_lock);
-	if ((adpt->freeq_cnt != ALX_IPA_SYS_PIPE_DNE_PKTS) ||
-		(adpt->pendq_cnt != 0)) {
-		pr_err("%s -- Memory leak detected freeq_cnt %d, pendq_cnt %d",
-			__func__, adpt->freeq_cnt, adpt->pendq_cnt);
-		BUG();
-	}
-	alx_free_flow_ctrl_desc(adpt);
 #endif
 	return 0;
 }
@@ -3360,8 +3388,10 @@ static int alx_suspend(struct device *dev)
 		return retval;
 
 #ifndef APQ_PLATFORM
-	if(alx_ipa_rm_try_release(adpt))
-		pr_err("%s -- ODU PROD Release unsuccessful \n",__func__);
+	if (ipa_enable) {
+		if(alx_ipa_rm_try_release(adpt))
+			pr_err("%s -- ODU PROD Release unsuccessful \n",__func__);
+	}
 #endif
 
 	if (wakeup) {
@@ -3637,21 +3667,23 @@ static void alx_link_task_routine(struct alx_adapter *adpt)
 		netif_tx_wake_all_queues(netdev);
 
 #ifdef MDM_PLATFORM
-		/* Enable ODU Bridge */
-		if (alx_ipa->ipa_ready == true && CHK_ADPT_FLAG(2, ODU_INIT)) {
-			ret = odu_bridge_connect();
-			if (ret)
-				pr_err("Could not connect to ODU bridge %d \n",
-					ret);
-			else
-				SET_ADPT_FLAG(2, ODU_CONNECT);
-			/* Request for IPA Resources */
-			spin_lock_bh(&alx_ipa->ipa_rm_state_lock);
-			if (alx_ipa->ipa_prod_rm_state == ALX_IPA_RM_RELEASED) {
-				spin_unlock_bh(&alx_ipa->ipa_rm_state_lock);
-				alx_ipa_rm_request(adpt);
-			} else {
-				spin_unlock_bh(&alx_ipa->ipa_rm_state_lock);
+		if (ipa_enable) {
+			/* Enable ODU Bridge */
+			if (alx_ipa->ipa_ready == true && CHK_ADPT_FLAG(2, ODU_INIT)) {
+				ret = odu_bridge_connect();
+				if (ret)
+					pr_err("Could not connect to ODU bridge %d \n",
+						ret);
+				else
+					SET_ADPT_FLAG(2, ODU_CONNECT);
+				/* Request for IPA Resources */
+				spin_lock_bh(&alx_ipa->ipa_rm_state_lock);
+				if (alx_ipa->ipa_prod_rm_state == ALX_IPA_RM_RELEASED) {
+					spin_unlock_bh(&alx_ipa->ipa_rm_state_lock);
+					alx_ipa_rm_request(adpt);
+				} else {
+					spin_unlock_bh(&alx_ipa->ipa_rm_state_lock);
+				}
 			}
 		}
 #endif
@@ -3677,16 +3709,17 @@ static void alx_link_task_routine(struct alx_adapter *adpt)
 		alx_link_mac_restore(adpt);
 #endif
 #ifdef MDM_PLATFORM
-		/* Disable ODU Bridge */
-		ret = odu_bridge_disconnect();
-		if (ret) {
-			pr_err("Could not connect to ODU bridge %d \n", ret);
-		} else {
-			CLI_ADPT_FLAG(2, ODU_CONNECT);
-			adpt->palx_ipa->alx_ipa_perf_requested = false;
-			if(alx_ipa_rm_try_release(adpt))
-                           pr_err("%s -- ODU PROD Release unsuccessful \n",
-                                                                     __func__);
+		if (ipa_enable) {
+			/* Disable ODU Bridge */
+			ret = odu_bridge_disconnect();
+			if (ret) {
+				pr_err("Could not connect to ODU bridge %d \n", ret);
+			} else {
+				CLI_ADPT_FLAG(2, ODU_CONNECT);
+				adpt->palx_ipa->alx_ipa_perf_requested = false;
+				if(alx_ipa_rm_try_release(adpt))
+					pr_err("%s -- ODU PROD Release unsuccessful \n", __func__);
+			}
 		}
 #endif
 	}
@@ -4039,8 +4072,10 @@ static netdev_tx_t alx_start_xmit_frame(struct alx_adapter *adpt,
 	struct alx_hw     *hw = &adpt->hw;
 	unsigned long     flags = 0;
 	union alx_sw_tpdesc stpd; /* normal*/
+	struct alx_ipa_ctx *alx_ipa;
 #ifdef MDM_PLATFORM
-	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
+	if (ipa_enable)
+		alx_ipa = adpt->palx_ipa;
 #endif
 
 	if (CHK_ADPT_FLAG(1, STATE_DOWN) ||
@@ -4101,14 +4136,16 @@ static netdev_tx_t alx_start_xmit_frame(struct alx_adapter *adpt,
 	spin_unlock_irqrestore(&adpt->tx_lock, flags);
 
 #ifdef MDM_PLATFORM
-	/* Hold on to the wake lock for TX Completion Event */
-	spin_lock_bh(&alx_ipa->rm_ipa_lock);
-	if (alx_ipa->acquire_wake_src == false) {
-		 __pm_stay_awake(&alx_ipa->rm_ipa_wait);
-		alx_ipa->acquire_wake_src = true;
+	if (ipa_enable) {
+		/* Hold on to the wake lock for TX Completion Event */
+		spin_lock_bh(&alx_ipa->rm_ipa_lock);
+		if (alx_ipa->acquire_wake_src == false) {
+			 __pm_stay_awake(&alx_ipa->rm_ipa_wait);
+			alx_ipa->acquire_wake_src = true;
+		}
+		alx_ipa->alx_tx_completion++;
+		spin_unlock_bh(&alx_ipa->rm_ipa_lock);
 	}
-	alx_ipa->alx_tx_completion++;
-	spin_unlock_bh(&alx_ipa->rm_ipa_lock);
 #endif
 
 	return NETDEV_TX_OK;
@@ -4376,17 +4413,17 @@ static void alx_ipa_tx_dl(void *priv, struct sk_buff *skb)
          }
 }
 
-static void alx_ipa_ready_cb(void *padpt)
+static void alx_ipa_ready_work(struct work_struct *work)
 {
-        struct alx_adapter *adpt = (struct alx_adapter *)padpt;
-        struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
-        struct odu_bridge_params *params_ptr, params;
+	struct alx_adapter *adpt = container_of(work, struct alx_adapter, ipa_ready_task);
+	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
+	struct odu_bridge_params *params_ptr, params;
 	int retval = 0;
 	struct alx_hw *hw = &adpt->hw;
-        params_ptr = &params;
+	params_ptr = &params;
 
 	pr_info("%s:%d --- IPA is ready --- \n",__func__,__LINE__);
-        alx_ipa->ipa_ready = true;
+	alx_ipa->ipa_ready = true;
 
 	/* Init IPA Resources */
 	if (alx_ipa_setup_rm(adpt)) {
@@ -4437,6 +4474,15 @@ static void alx_ipa_ready_cb(void *padpt)
 		}
 	}
 }
+
+static void alx_ipa_ready_cb(void *padpt)
+{
+	struct alx_adapter *adpt = (struct alx_adapter *)padpt;
+
+	/* Adding to work queue */
+	schedule_work(&adpt->ipa_ready_task);
+}
+
 
 static ssize_t alx_ipa_debugfs_read_ipa_stats(struct file *file,
                 char __user *user_buf, size_t count, loff_t *ppos)
@@ -4533,100 +4579,8 @@ static ssize_t alx_ipa_debugfs_read_ipa_stats(struct file *file,
         return ret_cnt;
 }
 
-static ssize_t alx_ipa_debugfs_disable_ipa(struct file *file,
-                const char __user *user_buf, size_t count, loff_t *ppos)
-{
-	struct alx_adapter *adpt = galx_adapter_ptr;
-	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
-	int ret = 0;
-        char *buf;
-        unsigned int buf_len = 100;
-	unsigned long missing;
-	s8 value;
-
-        if (unlikely(!alx_ipa)) {
-                pr_err(" %s NULL Pointer \n",__func__);
-                return -EINVAL;
-        }
-
-        if (!CHK_ADPT_FLAG(2, DEBUGFS_INIT))
-                return 0;
-
-        buf = kzalloc(buf_len, GFP_KERNEL);
-        if (!buf)
-                return -ENOMEM;
-
-	missing = copy_from_user(buf, user_buf, count);
-	if (missing)
-		return -EFAULT;
-
-	buf[count] = '\0';
-	if (kstrtos8(buf, 0, &value))
-		return -EFAULT;
-
-	/* Only Booloean values allowed */
-	if (value != 0 && value != 1)
-		return -EFAULT;
-
-	if ((value == 0) && CHK_ADPT_FLAG(2, ODU_CONNECT)) {
-		/* Disable ODU Bridge */
-		ret = odu_bridge_disconnect();
-		pr_info("ALX: Disabling IPA Data Path \n");
-		if (ret)
-			pr_err("Could not connect to ODU bridge %d \n", ret);
-		else
-			CLI_ADPT_FLAG(2, ODU_CONNECT);
-
-	}
-
-	if ((value == 1) && !CHK_ADPT_FLAG(2, ODU_CONNECT)) {
-		/* Enable ODU Bridge */
-		pr_info("ALX: Enabling IPA Data Path \n");
-		ret = odu_bridge_connect();
-		if (ret)
-			pr_err("Could not connect to ODU bridge %d \n",
-				ret);
-		else
-			SET_ADPT_FLAG(2, ODU_CONNECT);
-		/* Request for IPA Resources */
-		alx_ipa_rm_request(galx_adapter_ptr);
-	}
-        debugfs_ipa_enable = value;
-	return count;
-}
-
-static ssize_t alx_ipa_debugfs_disable_ipa_read(struct file *file,
-                char __user *user_buf, size_t count, loff_t *ppos)
-{
-	struct alx_adapter *adpt = file->private_data;
-	ssize_t ret_cnt;
-        char* buf = NULL;
-        unsigned int buf_len = 100;
-
-	if (unlikely(!adpt)) {
-		pr_err(" %s NULL Pointer \n",__func__);
-		return -EINVAL;
-	}
-	if (!CHK_ADPT_FLAG(2, DEBUGFS_INIT))
-		return 0;
-
-        buf = kzalloc(buf_len, GFP_KERNEL);
-        if ( !buf )
-           return -ENOMEM;
-        ret_cnt = scnprintf(buf, buf_len, "%d\n",debugfs_ipa_enable);
-        return simple_read_from_buffer(user_buf, count, ppos, buf, ret_cnt);
-}
-
 static const struct file_operations fops_ipa_stats = {
                 .read = alx_ipa_debugfs_read_ipa_stats,
-                .open = simple_open,
-                .owner = THIS_MODULE,
-                .llseek = default_llseek,
-};
-
-static const struct file_operations fops_ipa_disable = {
-                .write = alx_ipa_debugfs_disable_ipa,
-                .read = alx_ipa_debugfs_disable_ipa_read,
                 .open = simple_open,
                 .owner = THIS_MODULE,
                 .llseek = default_llseek,
@@ -4640,8 +4594,6 @@ static int alx_debugfs_init(struct alx_adapter *adpt)
 
 	debugfs_create_file("stats", S_IRUSR, adpt->palx_ipa->debugfs_dir,
 					adpt, &fops_ipa_stats);
-	debugfs_create_file("ipa_enable", read_write_mode, adpt->palx_ipa->debugfs_dir,
-					adpt, &fops_ipa_disable);
 
 	return 0;
 }
@@ -5082,33 +5034,37 @@ static int __devinit alx_init(struct pci_dev *pdev,
 	adpt = netdev_priv(netdev);
 
 #ifdef MDM_PLATFORM
-        /* Init IPA Context */
-        alx_ipa = kzalloc(sizeof(struct alx_ipa_ctx), GFP_KERNEL);
-        if (!alx_ipa) {
-                pr_err("kzalloc err.\n");
-                return -ENOMEM;
-        } else {
-		adpt->palx_ipa = alx_ipa;
+	if (ipa_enable) {
+		/* Initialize the work for the first time */
+		INIT_WORK(&adpt->ipa_ready_task, alx_ipa_ready_work);
+		/* Init IPA Context */
+		alx_ipa = kzalloc(sizeof(struct alx_ipa_ctx), GFP_KERNEL);
+		if (!alx_ipa) {
+			pr_err("kzalloc err.\n");
+			return -ENOMEM;
+		} else {
+			adpt->palx_ipa = alx_ipa;
+		}
+	    /* Reset all the flags */
+	    CLI_ADPT_FLAG(2, ODU_CONNECT);
+	    CLI_ADPT_FLAG(2, ODU_INIT);
+	    CLI_ADPT_FLAG(2, IPA_RM);
+	    CLI_ADPT_FLAG(2, DEBUGFS_INIT);
+		CLI_ADPT_FLAG(2, WQ_SCHED);
+
+		galx_adapter_ptr = adpt;
+
+		/* Initialize all the flow control variables */
+		adpt->pendq_cnt = 0;
+		adpt->freeq_cnt = 0;
+		adpt->ipa_free_desc_cnt = ALX_IPA_SYS_PIPE_MAX_PKTS_DESC;
+		adpt->ipa_high_watermark = ALX_IPA_SYS_PIPE_MAX_PKTS_DESC;
+		adpt->ipa_low_watermark = ALX_IPA_SYS_PIPE_MIN_PKTS_DESC;
+		alx_ipa->ipa_ready = false;
+		spin_lock_init(&adpt->flow_ctrl_lock);
+		INIT_LIST_HEAD(&adpt->pend_queue_head);
+		INIT_LIST_HEAD(&adpt->free_queue_head);
 	}
-        /* Reset all the flags */
-        CLI_ADPT_FLAG(2, ODU_CONNECT);
-        CLI_ADPT_FLAG(2, ODU_INIT);
-        CLI_ADPT_FLAG(2, IPA_RM);
-        CLI_ADPT_FLAG(2, DEBUGFS_INIT);
-	CLI_ADPT_FLAG(2, WQ_SCHED);
-
-	galx_adapter_ptr = adpt;
-
-	/* Initialize all the flow control variables */
-	adpt->pendq_cnt = 0;
-	adpt->freeq_cnt = 0;
-	adpt->ipa_free_desc_cnt = ALX_IPA_SYS_PIPE_MAX_PKTS_DESC;
-	adpt->ipa_high_watermark = ALX_IPA_SYS_PIPE_MAX_PKTS_DESC;
-	adpt->ipa_low_watermark = ALX_IPA_SYS_PIPE_MIN_PKTS_DESC;
-	alx_ipa->ipa_ready = false;
-	spin_lock_init(&adpt->flow_ctrl_lock);
-	INIT_LIST_HEAD(&adpt->pend_queue_head);
-	INIT_LIST_HEAD(&adpt->free_queue_head);
 #endif
 
 	pci_set_drvdata(pdev, adpt);
@@ -5119,34 +5075,36 @@ static int __devinit alx_init(struct pci_dev *pdev,
 	adpt->msg_enable = ALX_MSG_DEFAULT;
 
 #ifdef MDM_PLATFORM
-	retval = ipa_register_ipa_ready_cb(alx_ipa_ready_cb, (void *)adpt);
-	if (retval < 0) {
-		if (retval == -EEXIST) {
-			pr_info("%s:%d -- IPA is Ready retval %d \n",
-					__func__,__LINE__,retval);
-			alx_ipa->ipa_ready = true;
-		} else {
-			pr_info("%s:%d -- IPA is Not Ready retval %d \n",
-					__func__,__LINE__,retval);
-			alx_ipa->ipa_ready = false;
+	if (ipa_enable) {
+		retval = ipa_register_ipa_ready_cb(alx_ipa_ready_cb, (void *)adpt);
+		if (retval < 0) {
+			if (retval == -EEXIST) {
+				pr_info("%s:%d -- IPA is Ready retval %d \n",
+						__func__,__LINE__,retval);
+				alx_ipa->ipa_ready = true;
+			} else {
+				pr_info("%s:%d -- IPA is Not Ready retval %d \n",
+						__func__,__LINE__,retval);
+				alx_ipa->ipa_ready = false;
+			}
 		}
-	}
 
-	if (alx_ipa->ipa_ready == true)
-	{
-		if (alx_ipa_setup_rm(adpt)) {
-			pr_err("ALX: IPA Setup RM Failed \n");
-                        goto err_ipa_rm;
-		} else {
-			SET_ADPT_FLAG(2, IPA_RM);
+		if (alx_ipa->ipa_ready == true)
+		{
+			if (alx_ipa_setup_rm(adpt)) {
+				pr_err("ALX: IPA Setup RM Failed \n");
+	                        goto err_ipa_rm;
+			} else {
+				SET_ADPT_FLAG(2, IPA_RM);
+			}
 		}
+		if (alx_debugfs_init(adpt)) {
+			pr_err("ALX: Debugfs Init failed \n");
+		} else {
+			SET_ADPT_FLAG(2, DEBUGFS_INIT);
+		}
+		alx_ipa->alx_ipa_perf_requested = false;
 	}
-        if (alx_debugfs_init(adpt)) {
-		pr_err("ALX: Debugfs Init failed \n");
-	} else {
-		SET_ADPT_FLAG(2, DEBUGFS_INIT);
-	}
-        alx_ipa->alx_ipa_perf_requested = false;
 #endif
 
 	adpt->hw.hw_addr = ioremap(pci_resource_start(pdev, BAR_0),
@@ -5160,12 +5118,12 @@ static int __devinit alx_init(struct pci_dev *pdev,
 
 	/* set cb member of netdev structure*/
 #ifdef MDM_PLATFORM
-       netdev->netdev_ops = &alx_netdev_ops;
+	netdev->netdev_ops = &alx_netdev_ops;
 #else
 #ifndef APQ_PLATFORM
 	netdev_attach_ops(netdev, &alx_netdev_ops);
 #else
-       netdev->netdev_ops = &alx_netdev_ops;
+	netdev->netdev_ops = &alx_netdev_ops;
 #endif
 #endif
 	alx_set_ethtool_ops(netdev);
@@ -5380,29 +5338,31 @@ static int __devinit alx_init(struct pci_dev *pdev,
 	adpt->netdev_registered = true;
 
 #ifdef MDM_PLATFORM
-	/* Initialize the ODU bridge driver now: odu_bridge_init()*/
-	if (alx_ipa->ipa_ready == true) {
-		params_ptr->netdev_name = netdev->name;
-		params_ptr->priv = adpt;
-		params.tx_dp_notify = alx_ipa_tx_dp_cb;
-		params_ptr->send_dl_skb = (void *)&alx_ipa_tx_dl;
-		memcpy(params_ptr->device_ethaddr, netdev->dev_addr, ETH_ALEN);
-		/* The maximum number of descriptors that can be provided to a
-		 * BAM at once is one less than the total number of descriptors
-		 * that the buffer can contain. */
-		params_ptr->ipa_desc_size = (adpt->ipa_high_watermark + 1) *
-					sizeof(struct sps_iovec);
-		retval = odu_bridge_init(params_ptr);
-		if (retval) {
-			pr_err("Couldnt initialize ODU_Bridge Driver \n");
-			goto err_init_odu_bridge;
-		} else {
-			SET_ADPT_FLAG(2, ODU_INIT);
+	if (ipa_enable) {
+		/* Initialize the ODU bridge driver now: odu_bridge_init()*/
+		if (alx_ipa->ipa_ready == true) {
+			params_ptr->netdev_name = netdev->name;
+			params_ptr->priv = adpt;
+			params.tx_dp_notify = alx_ipa_tx_dp_cb;
+			params_ptr->send_dl_skb = (void *)&alx_ipa_tx_dl;
+			memcpy(params_ptr->device_ethaddr, netdev->dev_addr, ETH_ALEN);
+			/* The maximum number of descriptors that can be provided to a
+			 * BAM at once is one less than the total number of descriptors
+			 * that the buffer can contain. */
+			params_ptr->ipa_desc_size = (adpt->ipa_high_watermark + 1) *
+						sizeof(struct sps_iovec);
+			retval = odu_bridge_init(params_ptr);
+			if (retval) {
+				pr_err("Couldnt initialize ODU_Bridge Driver \n");
+				goto err_init_odu_bridge;
+			} else {
+				SET_ADPT_FLAG(2, ODU_INIT);
+			}
 		}
-	}
 
-	/* Initialize IPA Flow Control Work Task */
-	INIT_WORK(&adpt->ipa_send_task, alx_ipa_send_routine);
+		/* Initialize IPA Flow Control Work Task */
+		INIT_WORK(&adpt->ipa_send_task, alx_ipa_send_routine);
+	}
 
 	/* Register with MSM PCIe PM Framework */
 	adpt->msm_pcie_event.events = MSM_PCIE_EVENT_LINKDOWN;
@@ -5484,7 +5444,9 @@ err_alloc_pci_res_mem:
 err_alloc_device:
 	dev_err(&pdev->dev,
 		"error when probe device, error = %d\n", retval);
+#ifdef APQ_PLATFORM
 alx_smmu_init_fail:
+#endif
 	return retval;
 }
 
@@ -5528,38 +5490,42 @@ static void __devexit alx_remove(struct pci_dev *pdev)
 	free_netdev(netdev);
 
 #ifdef MDM_PLATFORM
-	if (CHK_ADPT_FLAG(2, ODU_CONNECT)) {
-		retval = odu_bridge_disconnect();
-		if (retval)
-			pr_err("Could not Disconnect to ODU bridge"
-				"or ODU Bridge already disconnected %d \n",
-				retval);
+	if (ipa_enable) {
+		if (CHK_ADPT_FLAG(2, ODU_CONNECT)) {
+			retval = odu_bridge_disconnect();
+			if (retval)
+				pr_err("Could not Disconnect to ODU bridge"
+					"or ODU Bridge already disconnected %d \n",
+					retval);
+		}
+
+		if (CHK_ADPT_FLAG(2, ODU_INIT)) {
+			retval = odu_bridge_cleanup();
+			if (retval)
+				pr_err("Couldnt cleanup ODU_Bridge Driver %d \n",
+					retval);
+		}
+
+		/* ALX IPA Specific Cleanup */
+		if (CHK_ADPT_FLAG(2, IPA_RM))
+			alx_ipa_cleanup_rm(adpt);
+
+		if (CHK_ADPT_FLAG(2, DEBUGFS_INIT))
+			alx_debugfs_exit(adpt);
+
+		/* Reset all the flags */
+		CLI_ADPT_FLAG(2, ODU_CONNECT);
+		CLI_ADPT_FLAG(2, ODU_INIT);
+		CLI_ADPT_FLAG(2, IPA_RM);
+		CLI_ADPT_FLAG(2, DEBUGFS_INIT);
+		CLI_ADPT_FLAG(2, WQ_SCHED);
+		kfree(adpt->palx_ipa);
+
+		/* Cancel ALX IPA Flow Control Work */
+		cancel_work_sync(&adpt->ipa_send_task);
+		/* Cancel ALX IPA Ready Callback */
+		cancel_work_sync(&adpt->ipa_ready_task);
 	}
-
-	if (CHK_ADPT_FLAG(2, ODU_INIT)) {
-		retval = odu_bridge_cleanup();
-		if (retval)
-			pr_err("Couldnt cleanup ODU_Bridge Driver %d \n",
-				retval);
-	}
-
-	/* ALX IPA Specific Cleanup */
-	if (CHK_ADPT_FLAG(2, IPA_RM))
-		alx_ipa_cleanup_rm(adpt);
-
-	if (CHK_ADPT_FLAG(2, DEBUGFS_INIT))
-		alx_debugfs_exit(adpt);
-
-	/* Reset all the flags */
-	CLI_ADPT_FLAG(2, ODU_CONNECT);
-	CLI_ADPT_FLAG(2, ODU_INIT);
-	CLI_ADPT_FLAG(2, IPA_RM);
-	CLI_ADPT_FLAG(2, DEBUGFS_INIT);
-	CLI_ADPT_FLAG(2, WQ_SCHED);
-	kfree(adpt->palx_ipa);
-
-	/* Cancel ALX IPA Flow Control Work */
-	cancel_work_sync(&adpt->ipa_send_task);
 #endif
 	/* Release wakelock to ensure that system can goto power collapse*/
 	pm_relax(&pdev->dev);
@@ -5696,6 +5662,10 @@ static int __init alx_init_module(void)
 
 	printk(KERN_INFO "%s\n", alx_drv_description);
 	/* printk(KERN_INFO "%s\n", "-----ALX_V1.0.0.2-----"); */
+	ipa_enable = module_ipa_enable;
+	ipa_enable? printk("ALX: Software Bridge is Enabled\n"):
+				printk("ALX: Software Bridge is Disabled\n");
+
 	retval = pci_register_driver(&alx_driver);
 
 	return retval;
