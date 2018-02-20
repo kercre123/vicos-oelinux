@@ -39,6 +39,7 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 
 #include <netinet/ether.h>
 #include <netinet/in.h>
+#include <net/ethernet.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <math.h>

@@ -10,8 +10,11 @@ LOCAL_SHARED_LIBRARIES := \
         libmedia libgui libcutils libui
 
 LOCAL_C_INCLUDES:= \
+        $(LOCAL_PATH) \
         frameworks/av/media/libstagefright \
         $(TOP)/frameworks/native/include/media/openmax
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_C_INCLUDES)
 
 LOCAL_CFLAGS += -Wno-multichar -Werror -Wall
 LOCAL_CLANG := true

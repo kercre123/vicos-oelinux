@@ -10,7 +10,10 @@ LOCAL_SHARED_LIBRARIES := \
         libstagefright_foundation libmedia libcutils
 
 LOCAL_C_INCLUDES:= \
+        $(LOCAL_PATH) \
         frameworks/av/media/libstagefright \
+
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_C_INCLUDES)
 
 LOCAL_CFLAGS += -Wall -Werror -Wunused -Wunreachable-code
 #LOCAL_CLANG := true

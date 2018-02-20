@@ -38,9 +38,9 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 #include "openavb_platform_pub.h"
 #include "openavb_types_base_pub.h"
 
-#define HAL_INIT_MCR_V2(packetRate, pushInterval, timestampInterval, recoveryInterval) halInitMCR(packetRate, pushInterval, timestampInterval, recoveryInterval)
-#define HAL_CLOSE_MCR_V2() halCloseMCR()
-#define HAL_PUSH_MCR_V2() halPushMCR()
+#define HAL_INIT_MCR_V2(packetRate, pushInterval, timestampInterval, recoveryInterval) (void)packetRate;(void)pushInterval;(void)timestampInterval;(void)recoveryInterval
+#define HAL_CLOSE_MCR_V2() void
+#define HAL_PUSH_MCR_V2() void
 
 // Initialize HAL MCR
 bool halInitMCR(U32 packetRate, U32 pushInterval, U32 timeStampInterval, U32 recoveryInterval);

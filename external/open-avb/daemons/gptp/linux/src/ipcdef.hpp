@@ -52,6 +52,8 @@ typedef struct {
 	uint32_t pdelay_count;			//!< pdelay messages count
 	PortState port_state;			//!< gPTP port state. It can assume values defined at ::PortState
 	pid_t  process_id;				//!< Process id number
+	uint8_t gmIdentifier[PTP_CLOCK_IDENTITY_LENGTH];
+	uint16_t portNumber;
 } gPtpTimeData;
 
 

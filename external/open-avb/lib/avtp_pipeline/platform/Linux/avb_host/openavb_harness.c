@@ -53,42 +53,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 
 bool bRunning = TRUE;
 
-// Platform indendent mapping modules
-extern bool openavbMapPipeInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapAVTPAudioInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapCtrlInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapH264Initialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapMjpegInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapMpeg2tsInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapNullInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapUncmpAudioInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-extern bool openavbMapClkRefInitialize(media_q_t *pMediaQ, openavb_map_cb_t *pMapCB, U32 inMaxTransitUsec);
-
-// Platform indendent interface modules
-extern bool openavbIntfEchoInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfCtrlInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfLoggerInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfNullInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfToneGenInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfViewerInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfClkRefInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-
-// Linux interface modules
-extern bool openavbIntfAlsaInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-#ifdef AVB_FEATURE_INTF_ALSA2
-extern bool openavbIntfAlsa2Initialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfAlsa2DualInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-#endif
-extern bool openavbIntfMjpegGstInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfMpeg2tsFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfMjpegFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfH264RtpFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfMpeg2tsGstInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfWavFileInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-extern bool openavbIntfH264RtpGstInitialize(media_q_t *pMediaQ, openavb_intf_cb_t *pIntfCB);
-
-
-
 /***********************************************
  * Signal handler - used to respond to signals.
  * Allows graceful cleanup.
@@ -192,42 +156,6 @@ int __attribute__ ((visibility ("default"))) main(int argc, char *argv[])
 	sa.sa_flags = 0; // not SA_RESTART
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGUSR1, &sa, NULL);
-
-	registerStaticMapModule(openavbMapPipeInitialize);
-	registerStaticMapModule(openavbMapAVTPAudioInitialize);
-	registerStaticMapModule(openavbMapCtrlInitialize);
-	registerStaticMapModule(openavbMapH264Initialize);
-	registerStaticMapModule(openavbMapMjpegInitialize);
-	registerStaticMapModule(openavbMapMpeg2tsInitialize);
-	registerStaticMapModule(openavbMapNullInitialize);
-	registerStaticMapModule(openavbMapUncmpAudioInitialize);
-	registerStaticMapModule(openavbMapClkRefInitialize);
-
-	registerStaticIntfModule(openavbIntfEchoInitialize);
-	registerStaticIntfModule(openavbIntfCtrlInitialize);
-	registerStaticIntfModule(openavbIntfLoggerInitialize);
-	registerStaticIntfModule(openavbIntfNullInitialize);
-	//registerStaticIntfModule(openavbIntfToneGenInitialize);
-	registerStaticIntfModule(openavbIntfViewerInitialize);
-	registerStaticIntfModule(openavbIntfClkRefInitialize);
-	registerStaticIntfModule(openavbIntfAlsaInitialize);
-#ifdef AVB_FEATURE_INTF_ALSA2
-	registerStaticIntfModule(openavbIntfAlsa2Initialize);
-	registerStaticIntfModule(openavbIntfAlsa2DualInitialize);
-#endif
-#ifdef AVB_FEATURE_GSTREAMER
-	registerStaticIntfModule(openavbIntfMjpegGstInitialize);
-#endif
-	registerStaticIntfModule(openavbIntfMpeg2tsFileInitialize);
-	registerStaticIntfModule(openavbIntfMjpegFileInitialize);
-	registerStaticIntfModule(openavbIntfH264RtpFileInitialize);
-#ifdef AVB_FEATURE_GSTREAMER
-	registerStaticIntfModule(openavbIntfMpeg2tsGstInitialize);
-#endif
-	registerStaticIntfModule(openavbIntfWavFileInitialize);
-#ifdef AVB_FEATURE_GSTREAMER
-	registerStaticIntfModule(openavbIntfH264RtpGstInitialize);
-#endif
 
 	// Process command line
 	programName = strrchr(argv[0], '/');

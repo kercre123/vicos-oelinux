@@ -46,6 +46,7 @@
 #include <math.h>
 
 #include <stdlib.h>
+#define PDELAY_REQ_OVERHEAD 5000000
 
 LinkLayerAddress IEEE1588Port::other_multicast(OTHER_MULTICAST);
 LinkLayerAddress IEEE1588Port::pdelay_multicast(PDELAY_MULTICAST);
@@ -69,8 +70,8 @@ IEEE1588Port::~IEEE1588Port()
 }
 
 IEEE1588Port::IEEE1588Port
-(IEEE1588Clock * clock, uint16_t index, bool forceSlave,
- int accelerated_sync_count, HWTimestamper * timestamper, int32_t offset,
+(IEEE1588Clock * clock, uint16_t index, bool bmca, bool forceSlave,
+ int accelerated_sync_count, LogMessageInterval_t * intervals, HWTimestamper * timestamper, int32_t offset,
  InterfaceLabel * net_label, OSConditionFactory * condition_factory,
  OSThreadFactory * thread_factory, OSTimerFactory * timer_factory,
  OSLockFactory * lock_factory)
@@ -94,10 +95,13 @@ IEEE1588Port::IEEE1588Port
 
 	pdelay_started = false;
 
-	log_mean_sync_interval = -3;
+	_bmca = bmca;
+
+
+	log_mean_sync_interval = intervals->sync_req_interval;
 	_accelerated_sync_count = accelerated_sync_count;
-	log_mean_announce_interval = 0;
-	log_min_mean_pdelay_req_interval = 0;
+	log_mean_announce_interval = intervals->announce_req_interval;
+	log_min_mean_pdelay_req_interval = intervals->pdelay_req_interval;
 
 	_current_clock_offset = _initial_clock_offset = offset;
 
@@ -165,7 +169,9 @@ void IEEE1588Port::startPDelay() {
 }
 
 void IEEE1588Port::startAnnounce() {
-	clock->addEventTimer( this, ANNOUNCE_INTERVAL_TIMEOUT_EXPIRES, 16000000 );
+	if (_bmca) {
+		clock->addEventTimer( this, ANNOUNCE_INTERVAL_TIMEOUT_EXPIRES, 16000000 );
+	}
 }
 
 bool IEEE1588Port::serializeState( void *buf, off_t *count ) {
@@ -394,7 +400,7 @@ void IEEE1588Port::processEvent(Event e)
 				_accelerated_sync_count = -1;
 			}
 
-			if( port_state != PTP_SLAVE && port_state != PTP_MASTER ) {
+			if( port_state != PTP_MASTER ) {
 				fprintf( stderr, "Starting PDelay\n" );
 				startPDelay();
 			}
@@ -404,14 +410,16 @@ void IEEE1588Port::processEvent(Event e)
 			} else if( port_state == PTP_MASTER ) {
 				becomeMaster( true );
 			} else {
+				if (_bmca) {
 				//e3 = SYNC_RECEIPT_TIMEOUT_EXPIRES;
-				e4 = ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES;
+					e4 = ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES;
+					interval4 = (unsigned long long)
+						(ANNOUNCE_RECEIPT_TIMEOUT_MULTIPLIER*
+						pow((double)2,getAnnounceInterval())*1000000000.0);
+				}
 				interval3 = (unsigned long long)
 					(SYNC_RECEIPT_TIMEOUT_MULTIPLIER*
-					 pow((double)2,getSyncInterval())*1000000000.0);
-				interval4 = (unsigned long long)
-					(ANNOUNCE_RECEIPT_TIMEOUT_MULTIPLIER*
-					 pow((double)2,getAnnounceInterval())*1000000000.0);
+					pow((double)2,getSyncInterval())*1000000000.0);
 			}
 
 			port_ready_condition->wait_prelock();
@@ -434,7 +442,9 @@ void IEEE1588Port::processEvent(Event e)
 
 		break;
 	case STATE_CHANGE_EVENT:
-		if ( clock->getPriority1() != 255 ) {
+		if (!_bmca) {
+			break;
+		} else if ( clock->getPriority1() != 255 ) {
 			int number_ports, j;
 			PTPMessageAnnounce *EBest = NULL;
 			char EBestClockIdentity[PTP_CLOCK_IDENTITY_LENGTH];
@@ -491,10 +501,14 @@ void IEEE1588Port::processEvent(Event e)
 				ClockIdentity clock_identity;
 				unsigned char priority1;
 				unsigned char priority2;
+				PortIdentity portId;
+				uint16_t portNumber = 0;
 				ClockQuality clock_quality;
 
+				getPortIdentity(portId);
+				portId.getPortNumber(&portNumber);
 				clock_identity = getClock()->getClockIdentity();
-				getClock()->setGrandmasterClockIdentity( clock_identity );
+				getClock()->setGrandmasterClockIdentity(clock_identity, portNumber);
 				priority1 = getClock()->getPriority1();
 				getClock()->setGrandmasterPriority1( priority1 );
 				priority2 = getClock()->getPriority2();
@@ -522,13 +536,17 @@ void IEEE1588Port::processEvent(Event e)
 						ClockIdentity clock_identity;
 						unsigned char priority1;
 						unsigned char priority2;
+						PortIdentity portId;
+						uint16_t portNumber = 0;
 						ClockQuality *clock_quality;
 
 						ports[j]->recommendState
 							( PTP_SLAVE, changed_external_master );
 
+						ports[j]->getPortIdentity(portId);
+						portId.getPortNumber(&portNumber);
 						clock_identity = EBest->getGrandmasterClockIdentity();
-						getClock()->setGrandmasterClockIdentity(clock_identity);
+						getClock()->setGrandmasterClockIdentity(clock_identity, portNumber);
 						priority1 = EBest->getGrandmasterPriority1();
 						getClock()->setGrandmasterPriority1( priority1 );
 						priority2 = EBest->getGrandmasterPriority2();
@@ -550,7 +568,7 @@ void IEEE1588Port::processEvent(Event e)
 		{
 			if( clock->getPriority1() == 255 ) {
 				// Restart timer
-				if( e == ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES ) {
+				if ((e == ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES) && _bmca) {
 					clock->addEventTimer
 						(this, ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES,
 						 (ANNOUNCE_RECEIPT_TIMEOUT_MULTIPLIER*
@@ -581,10 +599,14 @@ void IEEE1588Port::processEvent(Event e)
 				  ClockIdentity clock_identity;
 				  unsigned char priority1;
 				  unsigned char priority2;
+				  PortIdentity portId;
+				  uint16_t portNumber = 0;
 				  ClockQuality clock_quality;
 
+				  getPortIdentity(portId);
+				  portId.getPortNumber(&portNumber);
 				  clock_identity = getClock()->getClockIdentity();
-				  getClock()->setGrandmasterClockIdentity( clock_identity );
+				  getClock()->setGrandmasterClockIdentity(clock_identity, portNumber);
 				  priority1 = getClock()->getPriority1();
 				  getClock()->setGrandmasterPriority1( priority1 );
 				  priority2 = getClock()->getPriority2();
@@ -611,7 +633,6 @@ void IEEE1588Port::processEvent(Event e)
 				clock->addEventTimer
 					( this, SYNC_INTERVAL_TIMEOUT_EXPIRES, 16000000 );
 				startAnnounce();
-					//
 			}
 		}
 
@@ -711,7 +732,8 @@ void IEEE1588Port::processEvent(Event e)
 					interval =
 						((long long)
 						 (pow((double)2,getPDelayInterval())*1000000000.0)) -
-						wait_time*1000;
+						((wait_time*1000) - PDELAY_REQ_OVERHEAD);
+						//subtracting the processing overhead
 					interval = interval > EVENT_TIMER_GRANULARITY ?
 						interval : EVENT_TIMER_GRANULARITY;
 					clock->addEventTimer
@@ -850,6 +872,10 @@ void IEEE1588Port::processEvent(Event e)
 			}
 			break;
 	case ANNOUNCE_INTERVAL_TIMEOUT_EXPIRES:
+		if (!_bmca)
+		{
+			break;
+		}
 		if (asCapable) {
 			// Send an announce message
 			PTPMessageAnnounce *annc = new PTPMessageAnnounce(this);
@@ -931,37 +957,43 @@ void IEEE1588Port::becomeMaster( bool annc ) {
   port_state = PTP_MASTER;
   // Start announce receipt timeout timer
   // Start sync receipt timeout timer
-  clock->deleteEventTimer( this, ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES );
-  clock->deleteEventTimer( this, SYNC_RECEIPT_TIMEOUT_EXPIRES );
-  if( annc ) {
-    startAnnounce();
-  }
-  clock->addEventTimer( this, SYNC_INTERVAL_TIMEOUT_EXPIRES, 16000000 );
-  fprintf( stderr, "Switching to Master\n" );
+	clock->deleteEventTimer( this, SYNC_RECEIPT_TIMEOUT_EXPIRES );
+	if (_bmca) {
+		clock->deleteEventTimer( this, ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES );
+	}
+	if (annc) {
+		startAnnounce();
+	}
+	clock->addEventTimer( this, SYNC_INTERVAL_TIMEOUT_EXPIRES, 16000000 );
+	fprintf( stderr, "Switching to Master\n" );
 
   return;
 }
 
 void IEEE1588Port::becomeSlave( bool restart_syntonization ) {
-  clock->deleteEventTimer( this, ANNOUNCE_INTERVAL_TIMEOUT_EXPIRES );
-  clock->deleteEventTimer( this, SYNC_INTERVAL_TIMEOUT_EXPIRES );
+	if (_bmca) {
+		clock->deleteEventTimer( this, ANNOUNCE_INTERVAL_TIMEOUT_EXPIRES );
+	}
+	clock->deleteEventTimer( this, SYNC_INTERVAL_TIMEOUT_EXPIRES );
 
-  port_state = PTP_SLAVE;
+	port_state = PTP_SLAVE;
 
-  /*clock->addEventTimer
-	  ( this, SYNC_RECEIPT_TIMEOUT_EXPIRES,
-		(SYNC_RECEIPT_TIMEOUT_MULTIPLIER*
-		 (unsigned long long)(pow((double)2,getSyncInterval())*1000000000.0)));*/
-  clock->addEventTimer
-	  (this, ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES,
-	   (ANNOUNCE_RECEIPT_TIMEOUT_MULTIPLIER*
-		(unsigned long long)
-		(pow((double)2,getAnnounceInterval())*1000000000.0)));
-  fprintf( stderr, "Switching to Slave\n" );
-  if( restart_syntonization ) clock->newSyntonizationSetPoint();
+	/*clock->addEventTimer
+		  ( this, SYNC_RECEIPT_TIMEOUT_EXPIRES,
+			(SYNC_RECEIPT_TIMEOUT_MULTIPLIER*
+			 (unsigned long long)(pow((double)2,getSyncInterval())*1000000000.0)));*/
+	if (_bmca) {
+		clock->addEventTimer
+		    (this, ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES,
+		    (ANNOUNCE_RECEIPT_TIMEOUT_MULTIPLIER*
+			(unsigned long long)
+			(pow((double)2,getAnnounceInterval())*1000000000.0)));
+	}
+	fprintf( stderr, "Switching to Slave\n" );
+	if( restart_syntonization ) clock->newSyntonizationSetPoint();
 
-  return;
-}
+		return;
+	}
 
 void IEEE1588Port::recommendState
 ( PortState state, bool changed_external_master )

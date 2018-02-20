@@ -34,9 +34,10 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 #include <stdarg.h>
 #include <string.h>
 #include "openavb_queue.h"
-#include "openavb_tcal_pub.h"
 
 #include "openavb_log.h"
+
+#define LOG_EXTRA_NEWLINE 1
 
 #ifdef USE_GLIB
 #include <glib.h>
@@ -138,7 +139,7 @@ void avbLogRTRender(log_queue_item_t *pLogItem)
 				}
 
 				if (pLogRTItem->bEnd) {
-					if (OPENAVB_TCAL_LOG_EXTRA_NEWLINE)
+					if (LOG_EXTRA_NEWLINE)
 						strlcat((char *)pLogItem->msg, "\n", LOG_QUEUE_MSG_SIZE);
 					bMore = FALSE;
 				}
@@ -282,7 +283,7 @@ extern void DLL_EXPORT avbLogFn(
 		}
 
 		// using sprintf and puts allows using static buffers rather than heap.
-		if (OPENAVB_TCAL_LOG_EXTRA_NEWLINE)
+		if (LOG_EXTRA_NEWLINE)
 			/* S32 full_msg_len = */ snprintf(full_msg, LOG_FULL_MSG_LEN, "[%s%s%s%s %s %s%s] %s: %s\n", time_msg, timestamp_msg, proc_msg, thread_msg, company, component, file_msg, tag, msg);
 		else
 			/* S32 full_msg_len = */ snprintf(full_msg, LOG_FULL_MSG_LEN, "[%s%s%s%s %s %s%s] %s: %s", time_msg, timestamp_msg, proc_msg, thread_msg, company, component, file_msg, tag, msg);

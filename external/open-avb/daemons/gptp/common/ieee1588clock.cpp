@@ -245,6 +245,20 @@ void IEEE1588Clock::addEventTimerLocked
 
 
 
+void IEEE1588Clock::setGrandmasterClockIdentity(ClockIdentity id, uint16_t portNumber) {
+    if (id != grandmaster_clock_identity) {
+        fprintf(stderr, "New Grandmaster \"%s\" (previous \"%s\")\n",
+            id.getIdentityString().c_str(),
+            grandmaster_clock_identity.getIdentityString().c_str());
+
+        grandmaster_clock_identity = id;
+
+        if (ipc != NULL) {
+            ipc->updateGmId(grandmaster_clock_identity, portNumber);
+        }
+    }
+}
+
 void IEEE1588Clock::deleteEventTimer(IEEE1588Port * target, Event event)
 {
 	timerq->cancelEvent((int)event, NULL);

@@ -38,6 +38,7 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "openavb_platform_pub.h"
 #include "openavb_osal_pub.h"
 #include "openavb_types_pub.h"

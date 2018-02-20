@@ -21,8 +21,6 @@
 
 #include <inttypes.h>
 
-#include "igb.h"
-
 #define VALID		1
 #define INVALID		0
 
@@ -115,8 +113,6 @@ typedef struct {
 #ifndef false
 typedef enum { false = 0, true = 1 } bool;
 #endif
-
-int pci_connect(device_t * igb_dev);
 
 int gptpscaling(gPtpTimeData * td, char *memory_offset_buffer);
 

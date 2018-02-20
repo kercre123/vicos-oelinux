@@ -35,7 +35,6 @@ https://github.com/benhoyt/inih/commit/74d2ca064fb293bc60a77b0bd068075b293cf175.
 #ifndef AVB_TYPES_BASE_PUB_H
 #define AVB_TYPES_BASE_PUB_H 1
 
-#include "openavb_types_base_tcal_pub.h"
 #include <stdbool.h>
 #include <inttypes.h>
 

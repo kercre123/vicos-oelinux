@@ -86,18 +86,22 @@ bool parse_mac(const char *str, cfg_mac_t *mac)
 
 static bool openMapLib(tl_state_t *pTLState)
 {
-// OpenAVB using static mapping plugins therefore don't attempt to open a library
-#if 0
+	// clear dlerror
+	dlerror();
+	char *error;
+
 	// Opening library
 	if (pTLState->mapLib.libName) {
 		AVB_LOGF_INFO("Attempting to open library: %s", pTLState->mapLib.libName);
 		pTLState->mapLib.libHandle = dlopen(pTLState->mapLib.libName, RTLD_LAZY);
 		if (!pTLState->mapLib.libHandle) {
 			AVB_LOG_ERROR("Unable to open the mapping library.");
+			if ((error = dlerror()) != NULL)  {
+				AVB_LOGF_ERROR("error: %s.", error);
+			}
 			return FALSE;
 		}
 	}
-#endif
 
 	// Looking up function entry
 	if (!pTLState->mapLib.funcName) {
@@ -105,7 +109,7 @@ static bool openMapLib(tl_state_t *pTLState)
 		return FALSE;
 	}
 
-	char *error;
+
 	AVB_LOGF_INFO("Looking up symbol for function: %s", pTLState->mapLib.funcName);
 	if (pTLState->mapLib.libHandle) {
 		pTLState->cfg.pMapInitFn = dlsym(pTLState->mapLib.libHandle, pTLState->mapLib.funcName);
@@ -123,18 +127,22 @@ static bool openMapLib(tl_state_t *pTLState)
 
 static bool openIntfLib(tl_state_t *pTLState)
 {
-// OpenAVB using static interface plugins therefore don't attempt to open a library
-#if 0
+	// clear dlerror
+	dlerror();
+	char *error;
+
 	// Opening library
 	if (pTLState->intfLib.libName) {
 		AVB_LOGF_INFO("Attempting to open library: %s", pTLState->intfLib.libName);
 		pTLState->intfLib.libHandle = dlopen(pTLState->intfLib.libName, RTLD_LAZY);
 		if (!pTLState->intfLib.libHandle) {
 			AVB_LOG_ERROR("Unable to open the interface library.");
+			if ((error = dlerror()) != NULL)  {
+				AVB_LOGF_ERROR("error: %s.", error);
+			}
 			return FALSE;
 		}
 	}
-#endif
 
 	// Looking up function entry
 	if (!pTLState->intfLib.funcName) {
@@ -142,7 +150,6 @@ static bool openIntfLib(tl_state_t *pTLState)
 		return FALSE;
 	}
 
-	char *error;
 	AVB_LOGF_INFO("Looking up symbol for function: %s", pTLState->intfLib.funcName);
 	if (pTLState->intfLib.libHandle) {
 		pTLState->cfg.pIntfInitFn = dlsym(pTLState->intfLib.libHandle, pTLState->intfLib.funcName);

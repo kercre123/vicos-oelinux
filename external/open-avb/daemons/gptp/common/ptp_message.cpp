@@ -404,7 +404,9 @@ PTPMessageCommon *buildPTPMessage
 		}
 		break;
 	case ANNOUNCE_MESSAGE:
-		{
+		if (!(port->getBmcaStatus())) {
+			goto done;
+		} else {
 			PTPMessageAnnounce *annc = new PTPMessageAnnounce();
 			annc->messageType = messageType;
 			int tlv_length = size - PTP_COMMON_HDR_LENGTH + PTP_ANNOUNCE_LENGTH;
