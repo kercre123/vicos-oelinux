@@ -42,6 +42,8 @@ static char global_peer_mac_addr[ETH_ALEN];
 static char global_event_resp_buf[1024];
 static u8 global_publish_service_name[NAN_MAX_SERVICE_NAME_LEN];
 static u32 global_publish_service_name_len = 0;
+static u8 global_subscribe_service_name[NAN_MAX_SERVICE_NAME_LEN];
+static u32 global_subscribe_service_name_len = 0;
 
 static int nan_further_availability_tx(struct sigma_dut *dut,
 				       struct sigma_conn *conn,
@@ -62,7 +64,8 @@ void nan_hex_dump(struct sigma_dut *dut, uint8_t *data, size_t len)
 	ptr = data;
 	pos = 0;
 	for (index = 0; index < len; index++) {
-		pos += sprintf(&(buf[pos]), "%02x ", *ptr++);
+		pos += snprintf(&(buf[pos]), sizeof(buf) - pos,
+				"%02x ", *ptr++);
 		if (pos > 508)
 			break;
 	}
@@ -489,6 +492,17 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 	req.subscribe_match_indicator = NAN_MATCH_ALG_MATCH_CONTINUOUS;
 	req.subscribe_count = 0;
 
+	if (global_subscribe_service_name_len &&
+	    service_name &&
+	    strcasecmp((char *) global_subscribe_service_name,
+		       service_name) == 0 &&
+	    global_subscribe_id) {
+		req.subscribe_id = global_subscribe_id;
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"%s: updating subscribe_id = %d in subscribe request",
+				__func__, req.subscribe_id);
+	}
+
 	if (subscribe_type) {
 		if (strcasecmp(subscribe_type, "Active") == 0) {
 			req.subscribe_type = 1;
@@ -573,6 +587,10 @@ static int sigma_nan_subscribe_request(struct sigma_dut *dut,
 		strlcpy((char *) req.service_name, service_name,
 			strlen(service_name) + 1);
 		req.service_name_len = strlen(service_name);
+		strlcpy((char *) global_subscribe_service_name, service_name,
+			sizeof(global_subscribe_service_name));
+		global_subscribe_service_name_len =
+			strlen((char *) global_subscribe_service_name);
 	}
 
 #if NAN_CERT_VERSION >= 3
@@ -944,7 +962,7 @@ static int sigma_nan_range_request(struct sigma_dut *dut,
 
 	memset(&req, 0, sizeof(NanSubscribeRequest));
 	req.period = 1;
-	req.subscribe_type = NAN_SUBSCRIBE_TYPE_ACTIVE;
+	req.subscribe_type = NAN_SUBSCRIBE_TYPE_PASSIVE;
 	req.serviceResponseFilter = NAN_SRF_ATTR_BLOOM_FILTER;
 	req.serviceResponseInclude = NAN_SRF_INCLUDE_RESPOND;
 	req.ssiRequiredForMatchIndication = NAN_SSI_NOT_REQUIRED_IN_MATCH_IND;
@@ -1466,11 +1484,21 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 
 	if (requestor_id) {
 		/* int requestor_id_val = atoi(requestor_id); */
-		req.requestor_instance_id = global_match_handle;
+		if (global_match_handle != 0) {
+			req.requestor_instance_id = global_match_handle;
+		} else {
+			u32 requestor_id_val = atoi(requestor_id);
+			requestor_id_val =
+					(requestor_id_val << 24) | 0x0000FFFF;
+			req.requestor_instance_id = requestor_id_val;
+		}
 	}
 	if (local_id) {
 		/* int local_id_val = atoi(local_id); */
-		req.publish_subscribe_id = global_header_handle;
+		if (global_header_handle != 0)
+			req.publish_subscribe_id = global_header_handle;
+		else
+			req.publish_subscribe_id = atoi(local_id);
 	}
 
 	if (mac == NULL) {
@@ -1478,9 +1506,6 @@ int sigma_nan_transmit_followup(struct sigma_dut *dut,
 		return -1;
 	}
 	nan_parse_mac_address(dut, mac, req.addr);
-
-	if (requestor_id)
-		req.requestor_instance_id = strtoul(requestor_id, NULL, 0);
 
 	ret = nan_transmit_followup_request(0, global_interface_handle, &req);
 	if (ret != WIFI_SUCCESS) {
@@ -1536,8 +1561,9 @@ void nan_event_publish_replied(NanPublishRepliedInd *event)
 			MAC_ADDR_ARRAY(event->addr), event->rssi_value);
 	event_anyresponse = 1;
 	snprintf(global_event_resp_buf, sizeof(global_event_resp_buf),
-		 "EventName,Replied,RemoteInstanceID %d,mac," MAC_ADDR_STR,
+		 "EventName,Replied,RemoteInstanceID,%d,LocalInstanceID,%d,mac," MAC_ADDR_STR" ",
 		 (event->requestor_instance_id >> 24),
+		 (event->requestor_instance_id & 0xFFFF),
 		 MAC_ADDR_ARRAY(event->addr));
 }
 
@@ -1695,8 +1721,8 @@ void nan_event_followup(NanFollowupInd *event)
 			event->requestor_instance_id, event->dw_or_faw,
 			MAC_ADDR_ARRAY(event->addr));
 
-	global_match_handle = event->publish_subscribe_id;
-	global_header_handle = event->requestor_instance_id;
+	global_match_handle = event->requestor_instance_id;
+	global_header_handle = event->publish_subscribe_id;
 	sigma_dut_print(global_dut, DUT_MSG_INFO, "%s: Printing SSI", __func__);
 	nan_hex_dump(global_dut, event->service_specific_info,
 		     event->service_specific_info_len);
@@ -1885,6 +1911,8 @@ void nan_cmd_sta_reset_default(struct sigma_dut *dut, struct sigma_conn *conn,
 	sigma_nan_data_end(dut, cmd);
 	nan_data_interface_delete(0, global_interface_handle, (char *) "nan0");
 	sigma_nan_disable(dut, conn, cmd);
+	global_header_handle = 0;
+	global_match_handle = 0;
 }
 
 
@@ -1965,12 +1993,16 @@ int nan_cmd_sta_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
 					NAN_DATA_PATH_SUPPORT_DUAL_BAND);
 			}
 		} else if (strcasecmp(nan_op, "Off") == 0) {
+			nan_data_interface_delete(0,
+				global_interface_handle, (char *) "nan0");
 			sigma_nan_disable(dut, conn, cmd);
 			memset(global_publish_service_name, 0,
 			       sizeof(global_publish_service_name));
 			global_publish_service_name_len = 0;
 			global_publish_id = 0;
 			global_subscribe_id = 0;
+			global_header_handle = 0;
+			global_match_handle = 0;
 			send_resp(dut, conn, SIGMA_COMPLETE, "NULL");
 		}
 	}

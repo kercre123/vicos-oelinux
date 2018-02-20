@@ -219,6 +219,9 @@ void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
 	struct iovec iov[4];
 	size_t elems;
 
+	if (!conn)
+		return;
+
 	sigma_dut_print(dut, DUT_MSG_INFO, "resp: status=%d buf=%s",
 			status, buf ? buf : "N/A");
 
@@ -761,6 +764,7 @@ int main(int argc, char *argv[])
 	sigma_dut.debug_level = DUT_MSG_INFO;
 	sigma_dut.default_timeout = 120;
 	sigma_dut.dialog_token = 0;
+	sigma_dut.dpp_conf_id = -1;
 	set_defaults(&sigma_dut);
 
 	for (;;) {
@@ -1066,6 +1070,7 @@ int main(int argc, char *argv[])
 	free(sigma_dut.btm_query_cand_list);
 	sigma_dut.btm_query_cand_list = NULL;
 	free(sigma_dut.rsne_override);
+	free(sigma_dut.ap_sae_groups);
 	sigma_dut_unreg_cmds(&sigma_dut);
 
 	return 0;
