@@ -109,6 +109,12 @@ public:
     uint32_t mJammerBds;  // x10
     uint32_t mJammerGal;  // x11
     uint32_t mRecErrorRecovery; // x12
+    uint32_t mGloBpAmpI;  // x19
+    uint32_t mGloBpAmpQ;  // x1A
+    uint32_t mBdsBpAmpI;  // x1B
+    uint32_t mBdsBpAmpQ;  // x1C
+    uint32_t mGalBpAmpI;  // x1D
+    uint32_t mGalBpAmpQ;  // x1E
 };
 
 // parser
@@ -136,7 +142,13 @@ private:
         eJammerBds = 16,
         eJammerGal = 17,
         eRecErrorRecovery = 18,
-        eMax = eRecErrorRecovery
+        eGloBpAmpI = 25,
+        eGloBpAmpQ = 26,
+        eBdsBpAmpI = 27,
+        eBdsBpAmpQ = 28,
+        eGalBpAmpI = 29,
+        eGalBpAmpQ = 30,
+        eMax = eGalBpAmpQ
     };
     SystemStatusPQWM1 mM1;
 
@@ -159,6 +171,12 @@ public:
     inline uint32_t   getJammerBds()  { return mM1.mJammerBds;        }
     inline uint32_t   getJammerGal()  { return mM1.mJammerGal;        }
     inline uint32_t   getRecErrorRecovery() { return mM1.mRecErrorRecovery; }
+    inline uint32_t   getGloBpAmpI()  { return mM1.mGloBpAmpI; }
+    inline uint32_t   getGloBpAmpQ()  { return mM1.mGloBpAmpQ; }
+    inline uint32_t   getBdsBpAmpI()  { return mM1.mBdsBpAmpI; }
+    inline uint32_t   getBdsBpAmpQ()  { return mM1.mBdsBpAmpQ; }
+    inline uint32_t   getGalBpAmpI()  { return mM1.mGalBpAmpI; }
+    inline uint32_t   getGalBpAmpQ()  { return mM1.mGalBpAmpQ; }
 
     SystemStatusPQWM1parser(const char *str_in, uint32_t len_in)
         : SystemStatusNmeaBase(str_in, len_in)
@@ -185,6 +203,12 @@ public:
         mM1.mJammerBds = atoi(mField[eJammerBds].c_str());
         mM1.mJammerGal = atoi(mField[eJammerGal].c_str());
         mM1.mRecErrorRecovery = atoi(mField[eRecErrorRecovery].c_str());
+        mM1.mGloBpAmpI = atoi(mField[eGloBpAmpI].c_str());
+        mM1.mGloBpAmpQ = atoi(mField[eGloBpAmpQ].c_str());
+        mM1.mBdsBpAmpI = atoi(mField[eBdsBpAmpI].c_str());
+        mM1.mBdsBpAmpQ = atoi(mField[eBdsBpAmpQ].c_str());
+        mM1.mGalBpAmpI = atoi(mField[eGalBpAmpI].c_str());
+        mM1.mGalBpAmpQ = atoi(mField[eGalBpAmpQ].c_str());
     }
 
     inline SystemStatusPQWM1& get() { return mM1;} //getparser
@@ -683,7 +707,13 @@ SystemStatusRfAndParams::SystemStatusRfAndParams(const SystemStatusPQWM1& nmea) 
     mJammerGps(nmea.mJammerGps),
     mJammerGlo(nmea.mJammerGlo),
     mJammerBds(nmea.mJammerBds),
-    mJammerGal(nmea.mJammerGal)
+    mJammerGal(nmea.mJammerGal),
+    mGloBpAmpI(nmea.mGloBpAmpI),
+    mGloBpAmpQ(nmea.mGloBpAmpQ),
+    mBdsBpAmpI(nmea.mBdsBpAmpI),
+    mBdsBpAmpQ(nmea.mBdsBpAmpQ),
+    mGalBpAmpI(nmea.mGalBpAmpI),
+    mGalBpAmpQ(nmea.mGalBpAmpQ)
 {
 }
 
@@ -697,7 +727,13 @@ bool SystemStatusRfAndParams::equals(SystemStatusRfAndParams& peer)
         (mJammerGps != peer.mJammerGps) ||
         (mJammerGlo != peer.mJammerGlo) ||
         (mJammerBds != peer.mJammerBds) ||
-        (mJammerGal != peer.mJammerGal)) {
+        (mJammerGal != peer.mJammerGal) ||
+        (mGloBpAmpI != peer.mGloBpAmpI) ||
+        (mGloBpAmpQ != peer.mGloBpAmpQ) ||
+        (mBdsBpAmpI != peer.mBdsBpAmpI) ||
+        (mBdsBpAmpQ != peer.mBdsBpAmpQ) ||
+        (mGalBpAmpI != peer.mGalBpAmpI) ||
+        (mGalBpAmpQ != peer.mGalBpAmpQ)) {
         return false;
     }
     return true;

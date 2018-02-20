@@ -92,6 +92,12 @@ public:
     uint32_t mJammerGlo;
     uint32_t mJammerBds;
     uint32_t mJammerGal;
+    uint32_t mGloBpAmpI;
+    uint32_t mGloBpAmpQ;
+    uint32_t mBdsBpAmpI;
+    uint32_t mBdsBpAmpQ;
+    uint32_t mGalBpAmpI;
+    uint32_t mGalBpAmpQ;
     SystemStatusRfAndParams(const SystemStatusPQWM1& nmea);
     bool equals(SystemStatusRfAndParams& peer);
     void dump(void);

@@ -890,43 +890,59 @@ void LocEngReportSv::proc() const {
 
     LocGnssSvStatus gnssSvStatus;
     memcpy(&gnssSvStatus,&mSvStatus,sizeof(LocGnssSvStatus));
-    if (adapter->isGnssSvIdUsedInPosAvail())
+    GnssSvUsedInPosition gnssSvIdUsedInPosition =
+        adapter->getGnssSvUsedListData();
+    int numSv = gnssSvStatus.num_svs;
+    int16_t gnssSvId = 0;
+    uint64_t svUsedIdMask = 0;
+    for (int i=0; i < numSv; i++)
     {
-        GnssSvUsedInPosition gnssSvIdUsedInPosition =
-                            adapter->getGnssSvUsedListData();
-        int numSv = gnssSvStatus.num_svs;
-        int16_t gnssSvId = 0;
-        uint64_t svUsedIdMask = 0;
-        for (int i=0; i < numSv; i++)
-        {
-            gnssSvId = gnssSvStatus.gnss_sv_list[i].svid;
-            switch(gnssSvStatus.gnss_sv_list[i].constellation) {
-            case LOC_GNSS_CONSTELLATION_GPS:
-                svUsedIdMask = gnssSvIdUsedInPosition.gps_sv_used_ids_mask;
-                break;
-            case LOC_GNSS_CONSTELLATION_GLONASS:
-                svUsedIdMask = gnssSvIdUsedInPosition.glo_sv_used_ids_mask;
-                break;
-            case LOC_GNSS_CONSTELLATION_BEIDOU:
-                svUsedIdMask = gnssSvIdUsedInPosition.bds_sv_used_ids_mask;
-                break;
-            case LOC_GNSS_CONSTELLATION_GALILEO:
-                svUsedIdMask = gnssSvIdUsedInPosition.gal_sv_used_ids_mask;
-                break;
-            case LOC_GNSS_CONSTELLATION_QZSS:
-                svUsedIdMask = gnssSvIdUsedInPosition.qzss_sv_used_ids_mask;
-                break;
-            default:
-                svUsedIdMask = 0;
-                break;
-            }
-
-            // If SV ID was used in previous position fix, then set USED_IN_FIX
-            // flag, else clear the USED_IN_FIX flag.
-            if (svUsedIdMask & (1 << (gnssSvId - 1)))
+        gnssSvId = gnssSvStatus.gnss_sv_list[i].svid;
+        switch(gnssSvStatus.gnss_sv_list[i].constellation) {
+        case LOC_GNSS_CONSTELLATION_GPS:
+            if (adapter->isGnssSvIdUsedInPosAvail())
             {
-                gnssSvStatus.gnss_sv_list[i].flags |= LOC_GNSS_SV_FLAGS_USED_IN_FIX;
+                svUsedIdMask = gnssSvIdUsedInPosition.gps_sv_used_ids_mask;
             }
+            break;
+        case LOC_GNSS_CONSTELLATION_GLONASS:
+            if (adapter->isGnssSvIdUsedInPosAvail())
+            {
+                svUsedIdMask = gnssSvIdUsedInPosition.glo_sv_used_ids_mask;
+            }
+            break;
+        case LOC_GNSS_CONSTELLATION_BEIDOU:
+            if (adapter->isGnssSvIdUsedInPosAvail())
+            {
+                svUsedIdMask = gnssSvIdUsedInPosition.bds_sv_used_ids_mask;
+            }
+            break;
+        case LOC_GNSS_CONSTELLATION_GALILEO:
+            if (adapter->isGnssSvIdUsedInPosAvail())
+            {
+                svUsedIdMask = gnssSvIdUsedInPosition.gal_sv_used_ids_mask;
+            }
+            break;
+        case LOC_GNSS_CONSTELLATION_QZSS:
+            if (adapter->isGnssSvIdUsedInPosAvail())
+            {
+                svUsedIdMask = gnssSvIdUsedInPosition.qzss_sv_used_ids_mask;
+            }
+            // QZSS SV id's need to reported as it is to framework, since
+            // framework expects it as it is. See GnssStatus.java.
+            // SV id passed to here by LocApi is 1-based.
+            gnssSvStatus.gnss_sv_list[i].svid += (QZSS_SV_PRN_MIN - 1);
+            break;
+        default:
+            svUsedIdMask = 0;
+            break;
+        }
+
+        // If SV ID was used in previous position fix, then set USED_IN_FIX
+        // flag, else clear the USED_IN_FIX flag.
+        if (svUsedIdMask & (1 << (gnssSvId - 1)))
+        {
+            gnssSvStatus.gnss_sv_list[i].flags |= LOC_GNSS_SV_FLAGS_USED_IN_FIX;
         }
     }
 
@@ -1887,9 +1903,21 @@ static int loc_eng_reinit(loc_eng_data_s_type &loc_eng_data)
                                             gps_conf.LPPE_UP_TECHNOLOGY));
 
     if ( adapter->getEvtMask() & LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT) {
-        NmeaSentenceTypesMask typesMask = loc_eng_data.generateNmea ?
-                LOC_NMEA_MASK_DEBUG_V02 : LOC_NMEA_ALL_SUPPORTED_MASK;
-        adapter->sendMsg(new LocEngSetNmeaTypes(adapter,typesMask));
+        NmeaSentenceTypesMask typesMask = 0;
+        if (!loc_eng_data.generateNmea) {
+            // generate by modem, then enable all general sentences
+            typesMask |= LOC_NMEA_ALL_GENERAL_SUPPORTED_MASK;
+        }
+        if (adapter->isFeatureSupported(LOC_SUPPORTED_FEATURE_DEBUG_NMEA_V02)) {
+            typesMask |= LOC_NMEA_MASK_DEBUG_V02;
+        }
+        if (typesMask != 0) {
+            adapter->sendMsg(new LocEngSetNmeaTypes(adapter,typesMask));
+        } else {
+            // disable NMEA bit if no sentences needed
+            adapter->updateEvtMask(LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT,
+                    LOC_REGISTRATION_MASK_DISABLED);
+        }
     }
 
     /* Make sure at least one of the sensor property is specified by the user in the gps.conf file. */
