@@ -24,16 +24,14 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# DESCRIPTION:  DIAG + ADB + MBIM + GNSS + DUN
+# DESCRIPTION: RNDIS + DIAG + DPL + ADB (Android)
 
-echo "Switching to composition number 0x90D5" > /dev/kmsg
+echo "Switching to composition number 0x90C0" > /dev/kmsg
 
 if [ "$1" = "y" ]; then
 	num="1"
-	mode="hsic"
 else
 	num="0"
-	mode="hsusb"
 fi
 
 if [ "$#" -ge 2 ]; then
@@ -48,62 +46,30 @@ else
 	from_adb="n"
 fi
 
-run_9650() {
-	if [ $from_adb = "n" ]
-	then
-		pkill adbd
-	fi
-	echo 0 > /sys/class/android_usb/android$num/enable
-	echo 90D5 > /sys/class/android_usb/android$num/idProduct
-	echo 05C6 > /sys/class/android_usb/android$num/idVendor
-	echo 239 > /sys/class/android_usb/android$num/bDeviceClass
-	echo 2 > /sys/class/android_usb/android$num/bDeviceSubClass
-	echo 1 > /sys/class/android_usb/android$num/bDeviceProtocol
-	echo diag > /sys/class/android_usb/android0/f_diag/clients
-	echo smd > /sys/class/android_usb/android0/f_serial/transports
-	echo diag,ffs,mbim_gsi,gps,serial > /sys/class/android_usb/android$num/functions
-	echo 1 > /sys/class/android_usb/android$num/remote_wakeup
-	sleep $delay
-	echo 1 > /sys/class/android_usb/android$num/enable
-	if [ $from_adb = "n" ]
-	then
-		/etc/init.d/adbd start
-	fi
-}
-
 run_sdx20() {
 	if [ $from_adb = "n" ]
 	then
 		pkill adbd
 	fi
 	echo 0 > /sys/class/android_usb/android$num/enable
-	echo 90D5 > /sys/class/android_usb/android$num/idProduct
+	echo 90C0 > /sys/class/android_usb/android$num/idProduct
 	echo 05C6 > /sys/class/android_usb/android$num/idVendor
-	echo 239 > /sys/class/android_usb/android$num/bDeviceClass
-	echo 2 > /sys/class/android_usb/android$num/bDeviceSubClass
-	echo 1 > /sys/class/android_usb/android$num/bDeviceProtocol
-	echo diag > /sys/class/android_usb/android0/f_diag/clients
-	echo char_bridge > /sys/class/android_usb/android0/f_serial/transports
-	echo glink >  /sys/class/android_usb/android$num/f_gps/transport
-	echo diag,ffs,mbim_gsi,gps,serial > /sys/class/android_usb/android$num/functions
-	echo 1 > /sys/class/android_usb/android$num/remote_wakeup
+	echo 1 > /sys/class/android_usb/android$num/f_rndis/wceis
+	echo diag > /sys/class/android_usb/android$num/f_diag/clients
+	echo rndis_gsi,diag,dpl_gsi,adb > /sys/class/android_usb/android$num/functions
 	sleep $delay
 	echo 1 > /sys/class/android_usb/android$num/enable
 	if [ $from_adb = "n" ]
 	then
-		/etc/init.d/adbd start
+		/etc/launch_adbd start
 	fi
 }
 
 case `source /sbin/usb/target` in
-	*9650* )
-		run_9650 &
-		;;
-	*sdx20* )
+        *sdx20* )
 		run_sdx20 &
 		;;
 	* )
-		echo "This composition is not supported"
+		echo "This composition currently supported only for sdx20 "
 		;;
 esac
-

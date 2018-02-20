@@ -41,7 +41,13 @@ case "$1" in
             chmod 777 /dev/socket
         fi
         echo 600 > /proc/sys/net/unix/max_dgram_qlen
-        start-stop-daemon -S -b -a /sbin/logd
+        if [ -z $(pidof logd) ]; then
+            start-stop-daemon -S -b -a /sbin/logd
+        else
+            chmod 0666 /dev/socket/logd
+            chmod 0666 /dev/socket/logdr
+            chmod 0222 /dev/socket/logdw
+        fi
         echo "done"
         ;;
   stop)

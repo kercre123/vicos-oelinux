@@ -135,6 +135,7 @@ run_9650() {
 	echo 2 > /sys/class/android_usb/android$num/bDeviceSubClass
 	echo 1 > /sys/class/android_usb/android$num/bDeviceProtocol
 	echo diag > /sys/class/android_usb/android0/f_diag/clients
+	echo $1 >  /sys/class/android_usb/android$num/f_gps/transport
 	echo diag,ffs,mbim_gsi,gps > /sys/class/android_usb/android$num/functions
 	echo 1 > /sys/class/android_usb/android$num/remote_wakeup
 	sleep $delay
@@ -189,7 +190,10 @@ case `source /sbin/usb/target` in
 		run_9x35 &
 		;;
 	*9650* )
-		run_9650 &
+		run_9650 "smd" &
+		;;
+	*sdx20* )
+		run_9650 "glink" &
 		;;
 	*sdxpoorwills* )
 		udcname=`ls -1 /sys/class/udc | head -n 1`

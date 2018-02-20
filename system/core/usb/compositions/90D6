@@ -64,9 +64,29 @@ run_9650() {
 	echo 1 > /sys/class/android_usb/android$num/enable
 }
 
+run_sdx20() {
+	pkill adbd
+	echo 0 > /sys/class/android_usb/android$num/enable
+	echo 90D6 > /sys/class/android_usb/android$num/idProduct
+	echo 05C6 > /sys/class/android_usb/android$num/idVendor
+	echo 239 > /sys/class/android_usb/android$num/bDeviceClass
+	echo 2 > /sys/class/android_usb/android$num/bDeviceSubClass
+	echo 1 > /sys/class/android_usb/android$num/bDeviceProtocol
+	echo diag > /sys/class/android_usb/android0/f_diag/clients
+	echo char_bridge > /sys/class/android_usb/android0/f_serial/transports
+	echo glink >  /sys/class/android_usb/android$num/f_gps/transport
+	echo diag,mbim_gsi,gps,serial > /sys/class/android_usb/android$num/functions
+	echo 1 > /sys/class/android_usb/android$num/remote_wakeup
+	sleep $delay
+	echo 1 > /sys/class/android_usb/android$num/enable
+}
+
 case `source /sbin/usb/target` in
 	*9650* )
 		run_9650 &
+		;;
+	*sdx20* )
+		run_sdx20 &
 		;;
 	* )
 		echo "This composition is not supported"

@@ -12,3 +12,7 @@ leprop_service_LDFLAGS  = -llog -lcutils
 root_etcdir      := "/etc/"
 root_etc_SCRIPTS := proptrigger.sh
 root_etc_SCRIPTS += proptrigger.conf
+
+install-data-hook:
+	chmod  go-x $(DESTDIR)$(root_etcdir)/proptrigger.sh
+	chmod  go-x $(DESTDIR)$(root_etcdir)/proptrigger.conf
