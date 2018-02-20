@@ -94,6 +94,36 @@ typedef struct {
   size_t buf_filled_len[MAX_NUM_BUFS];
 } mm_jpeg_intf_test_t;
 
+static const int use_jpeg_mem = 1;
+void mm_jpeg_test_free(buffer_t *p_buffer);
+
+int get_jpeg_memory(omx_jpeg_ouput_buf_t *out_buf)
+{
+    CDBG_HIGH("%s: Allocating jpeg out buffer of size: %d",
+        __func__, out_buf->size);
+    mm_jpeg_intf_test_t *p_obj = out_buf->handle;
+    buffer_t *p_buffer = (buffer_t *)calloc(1, sizeof(buffer_t));
+    p_buffer->size = out_buf->size;
+    p_buffer->addr = buffer_allocate(p_buffer, 0);
+    out_buf->mem_hdl = p_buffer;
+    out_buf->vaddr = p_buffer->addr;
+    return 0;
+}
+
+int release_jpeg_memory(omx_jpeg_ouput_buf_t *out_buf)
+{
+    if (out_buf && out_buf->mem_hdl) {
+        CDBG_HIGH("%s: releasing jpeg out buffer of size: %d",
+            __func__, out_buf->size);
+        buffer_t *p_buffer = (buffer_t *)out_buf->mem_hdl;
+        mm_jpeg_test_free(p_buffer);
+        free(p_buffer);
+        out_buf->mem_hdl = NULL;
+        out_buf->vaddr = NULL;
+    }
+    return 0;
+}
+
 static void mm_jpeg_encode_callback(jpeg_job_status_t status,
   uint32_t client_hdl,
   uint32_t jobId,
@@ -123,7 +153,12 @@ static void mm_jpeg_encode_callback(jpeg_job_status_t status,
           __func__, __LINE__, p_obj->out_filename[i],
           p_output->buf_vaddr, p_output->buf_filled_len);
 
-      DUMP_TO_FILE(p_obj->out_filename[i], p_output->buf_vaddr, p_output->buf_filled_len);
+      if (use_jpeg_mem) {
+        omx_jpeg_ouput_buf_t *out_buf = (omx_jpeg_ouput_buf_t *)p_output->buf_vaddr;
+        void *p_addr = out_buf->vaddr;
+        DUMP_TO_FILE(p_obj->out_filename[i], p_addr, p_output->buf_filled_len);
+      } else
+        DUMP_TO_FILE(p_obj->out_filename[i], p_output->buf_vaddr, p_output->buf_filled_len);
     }
   }
   g_i++;
@@ -200,6 +235,7 @@ static int encode_init(jpeg_test_input_t *p_input, mm_jpeg_intf_test_t *p_obj)
 {
   int rc = -1;
   size_t size = (size_t)(p_input->width * p_input->height);
+  size_t out_size = size * 3/2;
   mm_jpeg_encode_params_t *p_params = &p_obj->params;
   mm_jpeg_encode_job_t *p_job_params = &p_obj->job.encode_job;
   uint32_t i = 0;
@@ -262,12 +298,22 @@ static int encode_init(jpeg_test_input_t *p_input, mm_jpeg_intf_test_t *p_obj)
     p_params->num_dst_bufs = p_obj->num_bufs;
   }
 
+  if (use_jpeg_mem) {
+    p_params->get_memory = get_jpeg_memory;
+    p_params->put_memory = release_jpeg_memory;
+    out_size = sizeof(omx_jpeg_ouput_buf_t);
+    p_params->num_dst_bufs = p_obj->num_bufs;
+  }
+
   for (i = 0; i < (uint32_t)p_params->num_dst_bufs; i++) {
-    p_obj->output[i].size = size * 3/2;
+    p_obj->output[i].size = out_size;
     rc = mm_jpeg_test_alloc(&p_obj->output[i], 0);
     if (rc) {
       CDBG_ERROR("%s:%d] Error",__func__, __LINE__);
       return -1;
+    }
+    if (use_jpeg_mem) {
+        ((omx_jpeg_ouput_buf_t *)p_obj->output[i].addr)->handle = p_obj;
     }
     /* dest buffer config */
     p_params->dest_buf[i].buf_size = p_obj->output[i].size;
@@ -390,8 +436,15 @@ end:
               __func__, __LINE__,jpeg_obj.out_filename[i],
               jpeg_obj.output[i].addr, jpeg_obj.buf_filled_len[i]);
 
-      DUMP_TO_FILE(jpeg_obj.out_filename[i], jpeg_obj.output[i].addr,
-              jpeg_obj.buf_filled_len[i]);
+      if (use_jpeg_mem) {
+        omx_jpeg_ouput_buf_t *out_buf =
+            (omx_jpeg_ouput_buf_t *)jpeg_obj.output[i].addr;
+        void *p_addr = out_buf->vaddr;
+        DUMP_TO_FILE(jpeg_obj.out_filename[i], p_addr,
+                  jpeg_obj.buf_filled_len[i]);
+      } else
+        DUMP_TO_FILE(jpeg_obj.out_filename[i], jpeg_obj.output[i].addr,
+                  jpeg_obj.buf_filled_len[i]);
     }
     mm_jpeg_test_free(&jpeg_obj.input[i]);
     mm_jpeg_test_free(&jpeg_obj.output[i]);
