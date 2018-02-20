@@ -5,8 +5,9 @@
     @brief
     Implements functions supported in core_event_lookup.h.
 
-    Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved.
-    Qualcomm Technologies Proprietary and Confidential.
+    Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
+    All Rights Reserved.
+    Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #include "hlos_core.h"
@@ -114,6 +115,18 @@ void* core_event_lookup_handler(core_handler_data_type *core_handler_data)
                                 (core_handler_data->event_data));
                 break;
 
+            case CORE_HANDLER_SERVICE_DOWN:
+                event_handler = cri_core_lookup_service_down_handler(
+                                (cri_core_service_down_event_data_type*)
+                                (core_handler_data->event_data));
+                break;
+
+            case CORE_HANDLER_SERVICE_UP:
+                event_handler = cri_core_lookup_service_up_handler(
+                                (cri_core_service_up_event_data_type*)
+                                (core_handler_data->event_data));
+                break;
+
             default:
                 //No action
                 break;
@@ -174,6 +187,14 @@ int core_get_event_id
             case CORE_HANDLER_TIMER_EVENT:
                 event_id =
                      ((timer_event_data_type*)core_handler_data->event_data)->timer_event_category;
+                break;
+
+            case CORE_HANDLER_SERVICE_DOWN:
+                event_id = ((cri_core_service_down_event_data_type*)core_handler_data->event_data)->event_id;
+                break;
+
+            case CORE_HANDLER_SERVICE_UP:
+                event_id = ((cri_core_service_up_event_data_type*)core_handler_data->event_data)->event_id;
                 break;
 
             default:

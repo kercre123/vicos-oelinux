@@ -1,7 +1,7 @@
 
 /* sensor.h
  *
- * Copyright (c) 2012-2015 Qualcomm Technologies, Inc. All Rights Reserved.
+ * Copyright (c) 2012-2015,2017 Qualcomm Technologies, Inc. All Rights Reserved.
  * Qualcomm Technologies Proprietary and Confidential.
  */
 
@@ -25,6 +25,7 @@ typedef enum {
 typedef struct {
   pthread_t td;
   pthread_mutex_t mutex;
+  pthread_condattr_t condattr;
   pthread_cond_t cond;
   int32_t readfd;
   int32_t writefd;

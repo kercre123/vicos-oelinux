@@ -182,6 +182,7 @@ static cpp_module_ctrl_t* cpp_module_create_cpp_ctrl(void)
   cpp_module_ctrl_t *ctrl = NULL;
   mct_queue_t *q;
   int32_t rc;
+  pthread_condattr_t cond_attr;
   ctrl = (cpp_module_ctrl_t *) malloc(sizeof(cpp_module_ctrl_t));
   if(!ctrl) {
     CPP_ERR("malloc failed");
@@ -233,7 +234,15 @@ static cpp_module_ctrl_t* cpp_module_create_cpp_ctrl(void)
     CPP_ERR("pipe() failed");
     goto error_pipe;
   }
-  pthread_cond_init(&(ctrl->th_start_cond), NULL);
+  rc = pthread_condattr_init(&cond_attr);
+  if (rc) {
+    CPP_ERR("%s: pthread_condattr_init failed", __func__);
+  }
+  rc = pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+  if (rc) {
+    CPP_ERR("%s: pthread_condattr_setclock failed!!!", __func__);
+  }
+  pthread_cond_init(&(ctrl->th_start_cond), &cond_attr);
   ctrl->session_count = 0;
 
   /* initialize cpp_mutex */
@@ -2556,6 +2565,7 @@ int32_t cpp_module_notify_remove_stream(mct_module_t* module, uint32_t identity)
 }
 
 int32_t cpp_module_get_and_update_buf_index(
+  mct_module_t *module,
   cpp_module_session_params_t *session_params,
   cpp_module_stream_params_t *stream_params,
   uint32_t frame_id)
@@ -2572,6 +2582,19 @@ int32_t cpp_module_get_and_update_buf_index(
   /* get the buffer index from per frame queue */
   uint32_t q_idx = frame_id % FRAME_CTRL_SIZE;
   if (stream_type != CAM_STREAM_TYPE_OFFLINE_PROC) {
+    for (i = 0; i < FRAME_CTRL_SIZE; i++) {
+      if ((stream_params->queue_frame_id[i] != 0) &&
+        (stream_params->queue_frame_id[i] < frame_id)) {
+        CPP_ERR("Divert for frame %d is missing, identity 0x%x",
+          stream_params->queue_frame_id[i], stream_params->identity);
+        mct_event_t event;
+        event.identity = stream_params->identity;
+        event.u.module_event.current_frame_id = stream_params->queue_frame_id[i];
+        cpp_module_handle_divert_drop(module, &event);
+        stream_params->queue_frame_id[i] = 0;
+      }
+    }
+    stream_params->queue_frame_id[q_idx] = 0;
     for (i = 0; i < session_params->valid_stream_ids[q_idx].num_streams; i++) {
       if (session_params->valid_stream_ids[q_idx].stream_request[i].streamID ==
         stream_id) {

@@ -57,6 +57,8 @@ typedef struct {
   cam_dimension_t changed_dim;
   cam_stream_type_t type;
   uint32_t pp_mask;
+  cam_dewarp_type_t dewarp_type;
+  cam_is_type_t is_type;
 } isp_util_stream_desc;
 
 extern uint32_t isp_modules_loglevel[ISP_LOG_MAX];

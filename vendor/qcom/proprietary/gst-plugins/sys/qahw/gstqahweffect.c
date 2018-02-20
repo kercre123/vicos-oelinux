@@ -21,6 +21,7 @@
 
 #include "gstqahweffect.h"
 #include "gstqahw-common.h"
+#include <stdio.h>
 
 GST_DEBUG_CATEGORY_EXTERN (qahw_debug);
 #define GST_CAT_DEFAULT qahw_debug
@@ -62,6 +63,8 @@ gst_qahw_effect_enable (GstQahwEffect * self)
   if (!self->effect_handle)
     return FALSE;
 
+  GST_DEBUG_OBJECT (self, "Calling effect enable\n");
+  printf("Calling effect enable\n");
   rc = qahw_effect_command (self->effect_handle, QAHW_EFFECT_CMD_ENABLE, 0,
       NULL, &reply_size, &reply);
   if (rc != 0) {
@@ -70,13 +73,17 @@ gst_qahw_effect_enable (GstQahwEffect * self)
     GST_ELEMENT_WARNING (self, LIBRARY, SETTINGS,
         ("Failed to enable equalizer effect."),
         ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+    printf("Failed to enable equalizer effect.Returned %s (%i)\n", g_strerror (-rc), rc);
     GST_OBJECT_LOCK (self);
     return FALSE;
   }
 
   if (klass->enable) {
+    GST_DEBUG_OBJECT (self, "Calling sphere effect enable");
+    printf("Calling sphere effect enable\n");
     if (!klass->enable (self))
       return FALSE;
+    GST_DEBUG_OBJECT (self, "Returned from sphere effect enable");
   }
 
   return TRUE;
@@ -94,6 +101,8 @@ gst_qahw_effect_disable (GstQahwEffect * self)
   if (!self->effect_handle)
     return FALSE;
 
+  GST_DEBUG_OBJECT (self, "Calling effect disable");
+  printf("Calling effect disable\n");
   rc = qahw_effect_command (self->effect_handle, QAHW_EFFECT_CMD_DISABLE, 0,
       NULL, &reply_size, &reply);
   if (rc != 0) {
@@ -101,13 +110,17 @@ gst_qahw_effect_disable (GstQahwEffect * self)
     GST_ELEMENT_WARNING (self, LIBRARY, SETTINGS,
         ("Failed to disable equalizer effect."),
         ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+    printf("Failed to disable equalizer effect.Returned %s (%i)\n", g_strerror (-rc), rc);
     GST_OBJECT_LOCK (self);
     return FALSE;
   }
 
   if (klass->disable) {
+    GST_DEBUG_OBJECT (self, "Calling sphere effect disable");
+    printf("Calling sphere effect disable\n");
     if (!klass->disable (self))
       return FALSE;
+    GST_DEBUG_OBJECT (self, "Returned from sphere effect disable");
   }
 
   return TRUE;
@@ -125,6 +138,7 @@ gst_qahw_effect_stream_created (GstQahwEffect * self, const GstStructure * s)
   if (!gst_structure_get_int (s, "io-handle", &audio_handle)) {
     GST_WARNING_OBJECT (self,
         "Missing \"io-handle\" in QahwStreamCreated event.");
+    printf("Missing io-handle in QahwStreamCreated event.\n");
     return;
   }
 
@@ -137,11 +151,14 @@ gst_qahw_effect_stream_created (GstQahwEffect * self, const GstStructure * s)
   GST_DEBUG_OBJECT (self,
       "Creating equalizer effect with io-handle=%i output-device=%i",
       audio_handle, output_device);
+  printf("Creating equalizer effect with io-handle=%i output-device=%i \n",
+      audio_handle, output_device);
 
   GST_OBJECT_LOCK (self);
 
   if (self->effect_handle) {
     GST_WARNING_OBJECT (self, "Effect is already created.");
+    printf("Effect is already created.\n");
     GST_OBJECT_UNLOCK (self);
     return;
   }
@@ -153,6 +170,7 @@ gst_qahw_effect_stream_created (GstQahwEffect * self, const GstStructure * s)
     GST_ELEMENT_ERROR (self, LIBRARY, INIT,
         ("Failed create equalizer effect."),
         ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+    printf("Failed create equalizer effect.Returned %s (%i)\n", g_strerror (-rc), rc);
     return;
   }
 
@@ -163,6 +181,7 @@ gst_qahw_effect_stream_created (GstQahwEffect * self, const GstStructure * s)
     GST_ELEMENT_ERROR (self, LIBRARY, SETTINGS,
         ("Failed to set effect output device."),
         ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+    printf ("Failed to set effect output device.Returned %s (%i)\n", g_strerror (-rc), rc);
     return;
   }
 
@@ -178,6 +197,7 @@ gst_qahw_effect_stream_created (GstQahwEffect * self, const GstStructure * s)
     GST_ELEMENT_ERROR (self, LIBRARY, SETTINGS,
         ("Failed to run offload command."),
         ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+    printf("Failed to run offload command.Returned %s (%i)\n", g_strerror (-rc), rc);
     return;
   }
 
@@ -202,7 +222,7 @@ gst_qahw_effect_stream_disposed (GstQahwEffect * self)
   guint32 rc;
 
   GST_DEBUG_OBJECT (self, "Received QahwStreamDisposed event.");
-
+  printf("Received QahwStreamDisposed event.\n");
   GST_OBJECT_LOCK (self);
 
   if (self->effect_handle) {
@@ -218,6 +238,7 @@ gst_qahw_effect_stream_disposed (GstQahwEffect * self)
       GST_ELEMENT_WARNING (self, LIBRARY, SETTINGS,
           ("Failed to release equalizer effect."),
           ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+      printf("Failed to release equalizer effect.Returned %s (%i)\n", g_strerror (-rc), rc);
       GST_OBJECT_LOCK (self);
     }
   }
@@ -235,12 +256,14 @@ gst_qahw_effect_start (GstBaseTransform * btrans)
   if (!klass->library) {
     GST_ELEMENT_ERROR (self, CORE, NOT_IMPLEMENTED,
         ("Effect subclass didn't set \"library\" class parameter."), (NULL));
+    printf("Effect subclass didn't set library class parameter.\n");
     return FALSE;
   }
 
   if (!klass->uuid) {
     GST_ELEMENT_ERROR (self, CORE, NOT_IMPLEMENTED,
         ("Effect subclass didn't set \"uuid\" class parameter."), (NULL));
+    printf("Effect subclass didn't set uuid class parameter.\n");
     return FALSE;
   }
 
@@ -248,6 +271,7 @@ gst_qahw_effect_start (GstBaseTransform * btrans)
   if (!self->lib_handle) {
     GST_ELEMENT_ERROR (self, LIBRARY, INIT,
         ("Failed to load %s effect library.", klass->library), (NULL));
+    printf("Failed to load %s effect library.\n", klass->library);
     return FALSE;
   }
 
@@ -257,11 +281,12 @@ gst_qahw_effect_start (GstBaseTransform * btrans)
     GST_ELEMENT_ERROR (self, LIBRARY, INIT,
         ("Failed to get effect descriptor."),
         ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+    printf("Failed to get effect descriptor.Returned %s (%i)\n", g_strerror (-rc), rc);
     return FALSE;
   }
 
   GST_DEBUG_OBJECT (self, "Loaded %s Effect library.", self->effect_desc.name);
-
+  printf("Loaded %s Effect library. \n", self->effect_desc.name);
   return TRUE;
 }
 
@@ -271,7 +296,7 @@ gst_qahw_effect_stop (GstBaseTransform * btrans)
   GstQahwEffect *self = GST_QAHW_EFFECT (btrans);
 
   GST_DEBUG_OBJECT (self, "Stopping %s effect ...", self->effect_desc.name);
-
+  printf("Stopping %s effect ...\n", self->effect_desc.name);
   gst_qahw_effect_stream_disposed (self);
 
   if (self->lib_handle) {
@@ -284,6 +309,7 @@ gst_qahw_effect_stop (GstBaseTransform * btrans)
       GST_ELEMENT_WARNING (self, LIBRARY, SHUTDOWN,
           ("Failed to unload effect library."),
           ("Returned \"%s\" (%i)", g_strerror (-rc), rc));
+      printf("Failed to unload effect library. Returned %s (%i)\n", g_strerror (-rc), rc);
     }
   }
 
@@ -366,6 +392,7 @@ gst_qahw_effect_get_property (GObject * object, guint prop_id,
 static void
 gst_qahw_effect_init (GstQahwEffect * self)
 {
+  self->effect_handle = NULL;
 }
 
 static void
@@ -415,6 +442,10 @@ gst_qahw_effect_get_param (GstQahwEffect * self, gint param_id, gsize psize,
       " param=%p vsize=%" G_GSIZE_FORMAT " value=%p", param_id, psize, param,
       vsize, value);
 
+  printf("Getting param: param_id=%i, psize=%" G_GSIZE_FORMAT
+      " param=%p vsize=%" G_GSIZE_FORMAT " value=%p \n", param_id, psize, param,
+      vsize, value);
+
   g_assert (psize + vsize + sizeof (gint32) <= 128);
 
   if (!self->effect_handle)
@@ -427,6 +458,8 @@ gst_qahw_effect_get_param (GstQahwEffect * self, gint param_id, gsize psize,
 
   GST_DEBUG_OBJECT (self, "qahw_effect_param_t: size=%" G_GSIZE_FORMAT
       " vsize=%u psize=%u param=%p", reply_size, p->vsize, p->psize, p);
+  printf( "qahw_effect_param_t: size=%" G_GSIZE_FORMAT
+      " vsize=%u psize=%u param=%p \n", reply_size, p->vsize, p->psize, p);
 
   rc = qahw_effect_command (self->effect_handle, QAHW_EFFECT_CMD_GET_PARAM,
       sizeof (buf), p, &reply_size, p);
@@ -436,6 +469,8 @@ gst_qahw_effect_get_param (GstQahwEffect * self, gint param_id, gsize psize,
 
   if (rc != 0) {
     GST_WARNING_OBJECT (self, "Failed to get effect parameter %i: %s (%i)",
+        param_id, g_strerror (-rc), rc);
+    printf("Failed to get effect parameter %i: %s (%i)\n",
         param_id, g_strerror (-rc), rc);
     return FALSE;
   }
@@ -459,7 +494,8 @@ gst_qahw_effect_set_param_async (GstElement * elem, gpointer data)
 
   GST_DEBUG_OBJECT (self, "qahw_effect_param_t: size=%" G_GSIZE_FORMAT
       " vsize=%u psize=%u param=%p", size, p->vsize, p->psize, p);
-
+  printf("qahw_effect_param_t: size=%" G_GSIZE_FORMAT
+      " vsize=%u psize=%u param=%p \n", size, p->vsize, p->psize, p);
   rc = qahw_effect_command (self->effect_handle, QAHW_EFFECT_CMD_SET_PARAM,
       size, p, &reply_size, &reply);
 
@@ -483,6 +519,9 @@ gst_qahw_effect_set_param (GstQahwEffect * self, gint param_id, gsize psize,
 
   GST_DEBUG_OBJECT (self, "Setting param: param_id=%i, psize=%" G_GSIZE_FORMAT
       " param=%p vsize=%" G_GSIZE_FORMAT " value=%p", param_id, psize, param,
+      vsize, value);
+  printf("Setting param: param_id=%i, psize=%" G_GSIZE_FORMAT
+      " param=%p vsize=%" G_GSIZE_FORMAT " value=%p\n", param_id, psize, param,
       vsize, value);
 
   if (!self->effect_handle)

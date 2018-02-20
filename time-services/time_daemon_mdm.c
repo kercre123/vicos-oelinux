@@ -668,7 +668,7 @@ void * genoff_modem_qmi_service_request()
 
 	TIME_LOGD("%s: Initiallizing QMI \n", __func__);
 
-	retry_count = 5;
+	retry_count = 10;
 
 	/* release any old handlers for client */
 	if (notifier) {
@@ -695,7 +695,7 @@ void * genoff_modem_qmi_service_request()
 	}
 
 	/* Check if the service is up, if not wait on a signal */
-	/* Max. wait time = 5 sec */
+	/* Max. wait time = 10 sec */
 	while(1){
 		rc = qmi_client_get_service_list( time_service_object, NULL,
 				NULL, &num_services);

@@ -106,6 +106,7 @@ AC_CONFIG_FILES([ \
         Makefile \
         ipc/Makefile \
         mcm_log_util/Makefile \
+        mcm_ssr_util/Makefile \
         client/Makefile \
         server/Makefile \
         mcm_data/Makefile \

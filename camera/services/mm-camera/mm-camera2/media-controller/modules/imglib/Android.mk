@@ -454,7 +454,6 @@ LOCAL_SRC_FILES += components/lib/faceproc/wrappers/facial_parts_wrapper.c
 LOCAL_SRC_FILES += components/frameproc/frameproc_comp.c
 LOCAL_SRC_FILES += components/frameproc/dual_frameproc_comp.c
 LOCAL_SRC_FILES += components/multiframeproc/multiframeproc_comp.c
-LOCAL_SRC_FILES += components/faceproc/dynamic_work_partition.c
 LOCAL_SRC_FILES += components/cac/cac_comp.c
 LOCAL_SRC_FILES += components/cac_v2/cac_v2_comp.c
 LOCAL_SRC_FILES += components/cac_v3/cac_v3_comp.c
@@ -941,6 +940,9 @@ endif
 
 ########################## PPEISCore ##############################
 include $(LOCAL_IMGLIB_PATH)/components/lib/ppeiscore/Android.mk
+
+########################## PPDGCore ##############################
+include $(LOCAL_IMGLIB_PATH)/components/lib/ppdgcore/Android.mk
 
 ########################## jpegdma v4l2 test app ##############################
 include $(LOCAL_IMGLIB_PATH)/components/jpegdma_test/Android.mk

@@ -8,9 +8,9 @@
   INITIALIZATION AND SEQUENCING REQUIREMENTS
   qmi_communication_init() should be called before the modem_request().
 
-  Copyright (c) 2011-2016 Qualcomm Technologies, Inc.  All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
-
+  Copyright (c) 2011-2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
 ===========================================================================*/
 #include <string.h>
 #include <unistd.h>
@@ -24,12 +24,13 @@
 #include "qmi_client.h"
 #include "qmi_idl_lib.h"
 #include "qmi_client_instance_defs.h"
+#include "devices_actions.h"
 
-#define QMI_MITIGATION_DEVICE_MODEM "pa"
+#define QMI_DEVICE_MODEM "pa"
 #define MAX_MODEM_MITIGATION_LEVEL  (3)
 #define QMI_DEVICE_VDD_RESTRICT "cpuv_restriction_cold"
-#define QMI_DEVICE_CPR_RESTRICT "cpr_cold"
 #define MAX_VDD_RESTRICT_LEVEL  (1)
+#define QMI_DEVICE_CPR_RESTRICT "cpr_cold"
 #define QMI_CX_VDD_LIMIT "cx_vdd_limit"
 #define MAX_CX_VDD_LIMIT_LEVEL  (3)
 #define QMI_MODEM_PROC "modem"
@@ -38,6 +39,8 @@
 #define MAX_MODEM_CURRENT_LEVEL  (3)
 #define QMI_MODEM_BW "modem_bw"
 #define MAX_MODEM_BW_LEVEL  (2)
+#define QMI_MODEM_SKIN "modem_skin"
+#define MAX_MODEM_SKIN_LEVEL  (3)
 
 struct qmi_dev_info {
 	char   *dev_name;
@@ -58,28 +61,36 @@ struct qmi_client_info {
 
 static struct qmi_dev_info modem_devs[] = {
 	{
-		.dev_name = QMI_MITIGATION_DEVICE_MODEM,
-		.debug_name = "Modem",
+		.dev_name = QMI_DEVICE_MODEM,
+		.debug_name = MODEM_DEV_NAME,
 	},
 	{
 		.dev_name = QMI_DEVICE_VDD_RESTRICT,
-		.debug_name = "Vdd_restriction",
+		.debug_name = VDD_RESTRICT_DEV_NAME,
 	},
 	{
 		.dev_name = QMI_CX_VDD_LIMIT,
-		.debug_name = "Modem_cx_limit",
+		.debug_name = MODEM_CX_DEV_NAME,
 	},
 	{
 		.dev_name = QMI_MODEM_PROC,
-		.debug_name = "Modem_proc",
+		.debug_name = MODEM_PROC_DEV_NAME,
 	},
 	{
 		.dev_name = QMI_MODEM_CURRENT,
-		.debug_name = "Modem_proc_current",
+		.debug_name = MODEM_PROC_CURRENT_DEV_NAME,
 	},
 	{
 		.dev_name = QMI_MODEM_BW,
-		.debug_name = "Modem_bw",
+		.debug_name = MODEM_BW_DEV_NAME,
+	},
+	{
+		.dev_name = QMI_DEVICE_CPR_RESTRICT,
+		.debug_name = CPR_BAND_DEV_NAME,
+	},
+	{
+		.dev_name = QMI_MODEM_SKIN,
+		.debug_name = MODEM_SKIN_DEV_NAME,
 	},
 };
 
@@ -93,8 +104,8 @@ static struct qmi_client_info modem_clnt = {
 
 static struct qmi_dev_info fusion_devs[] = {
 	{
-		.dev_name = QMI_MITIGATION_DEVICE_MODEM,
-		.debug_name = "Fusion",
+		.dev_name = QMI_DEVICE_MODEM,
+		.debug_name = FUSION_DEV_NAME,
 	},
 };
 
@@ -109,7 +120,7 @@ static struct qmi_client_info fusion_clnt = {
 static struct qmi_dev_info adsp_devs[] = {
 	{
 		.dev_name = QMI_DEVICE_VDD_RESTRICT,
-		.debug_name = "Vdd_restriction",
+		.debug_name = VDD_RESTRICT_DEV_NAME,
 	},
 };
 
@@ -126,20 +137,12 @@ static struct qmi_client_info *vdd_clnts[] = {
 	&adsp_clnt,
 };
 
-static struct qmi_dev_info cpr_cold_devs[] = {
-	{
-		.dev_name = QMI_DEVICE_CPR_RESTRICT,
-		.debug_name = "cpr_cold",
-	},
+static struct qmi_client_info *register_clnts[] = {
+	&modem_clnt,
+	&fusion_clnt,
+	&adsp_clnt,
 };
 
-static struct qmi_client_info cpr_cold_clnt = {
-	.name         = "MODEM",
-	.instance_id  = 0,
-	.mtx          = PTHREAD_MUTEX_INITIALIZER,
-	.dev_info     = cpr_cold_devs,
-	.dev_info_cnt = ARRAY_SIZE(cpr_cold_devs),
-};
 
 static qmi_idl_service_object_type tmd_service_object;
 
@@ -230,8 +233,8 @@ ARGUMENTS
 RETURN VALUE
 	0 on success, -1 on failure.
 ===========================================================================*/
-static int request_common_qmi(qmi_client_type clnt, char *mitigation_dev_id,
-			      int level)
+static int request_common_qmi(qmi_client_type clnt,
+			      const char *mitigation_dev_id, int level)
 {
 	int ret = -1;
 	tmd_set_mitigation_level_req_msg_v01 data_req;
@@ -342,19 +345,11 @@ static void *qmi_register(void *data)
 			    clnt_info->name, clnt_info->dev_info[idx].dev_name,
 			    ret, clnt_info->dev_info[idx].prev_req_lvl);
 		else {
-			info("ACTION: %s - Pending request: %s mitigation"
-			     " succeeded for level %d.", clnt_info->name,
-			     clnt_info->dev_info[idx].dev_name,
-			     clnt_info->dev_info[idx].prev_req_lvl);
-			if(!strncmp(clnt_info->dev_info[idx].dev_name, "pa", 2))
-				thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-					   "%s:Modem:%d\n", MITIGATION,
-					   clnt_info->dev_info[idx].prev_req_lvl);
-			else
-				thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-					   "%s:VDD[%s-%s]:%d\n",
-				           MITIGATION, clnt_info->name,
-					   clnt_info->dev_info[idx].dev_name,
+			thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT),
+				   "%s:%s[%s]:%d pending QMI request succeded\n",
+				   MITIGATION,
+				   clnt_info->dev_info[idx].debug_name,
+				   clnt_info->name,
 					   clnt_info->dev_info[idx].prev_req_lvl);
 		}
 	}
@@ -407,6 +402,59 @@ static void qmi_clnt_error_cb(qmi_client_type clnt,
 }
 
 /*===========================================================================
+FUNCTION generic_qmi_request
+
+ARGUMENTS
+	level - request level
+	max_level - cap on valid request level
+	clnt_info - QMI handle to make request to.
+	dev_name - QMI TMD device to make request on.
+	debug_name - thermal-engine action name.
+
+RETURN VALUE
+	0 on success, -1 on failure.
+===========================================================================*/
+static int generic_qmi_request(int level, int max_level,
+			       struct qmi_client_info *clnt_info,
+			       const char *dev_name, const char *debug_name)
+{
+	int ret = -1;
+
+	if (level < 0)
+		level = 0;
+
+	if (level > max_level)
+		level = max_level;
+
+	pthread_mutex_lock(&clnt_info->mtx);
+
+	if (!clnt_info->handle) {
+		info("%s[%s]:%d is recorded and waiting for "
+		     "completing QMI registration",
+		     debug_name, clnt_info->name, level);
+		ret = 0;
+		goto handle_clnt_done;
+	}
+
+	ret = request_common_qmi(clnt_info->handle, dev_name, level);
+	if (ret)
+		msg("%s[%s]:%d mitigation failed with %d",
+		    debug_name, clnt_info->name, level, ret);
+	else
+		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_TRACE),
+			   "%s:%s[%s]:%d\n",
+			   MITIGATION, debug_name, clnt_info->name, level);
+
+handle_clnt_done:
+	/* Save previous request to handle subsytem restart, and
+	   requests prior to QMI service being available. */
+	set_req_lvl(clnt_info, dev_name, level);
+	pthread_mutex_unlock(&clnt_info->mtx);
+
+	return ret;
+}
+
+/*===========================================================================
 FUNCTION vdd_restrict_qmi_request
 
 Action function to throttle modem functionality.
@@ -428,42 +476,13 @@ int vdd_restrict_qmi_request(int level)
 	 * 1 - Restrict to nominal voltage
 	 */
 
-	if (level < 0)
-		level = 0;
-
-	if (level > MAX_VDD_RESTRICT_LEVEL)
-		level = MAX_VDD_RESTRICT_LEVEL;
-
 	for (idx = 0; idx < ARRAY_SIZE(vdd_clnts); idx++) {
 		clnt_info = vdd_clnts[idx];
-		pthread_mutex_lock(&clnt_info->mtx);
-		if (!clnt_info->handle) {
-			info("%s: %s req level(%d) is recorded and waiting for "
-			     "completing QMI registration", __func__,
-			     clnt_info->name, level);
-			ret = 0;
-			goto handle_clnt_done;
-		}
 
-		ret = request_common_qmi(clnt_info->handle,
+		ret = generic_qmi_request(level, MAX_VDD_RESTRICT_LEVEL,
+					  clnt_info,
 					 QMI_DEVICE_VDD_RESTRICT,
-					 level);
-		if (ret)
-			msg("(%s) Vdd_restriction mitigation failed with %d "
-			    "for level %d", clnt_info->name, ret, level);
-		else {
-			info("ACTION: %s - Vdd_restriction mitigation "
-			     "succeeded for level %d.", clnt_info->name, level);
-			thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-				   "%s:VDD[%s]:%d\n", MITIGATION,
-				   clnt_info->name, level);
-		}
-
-handle_clnt_done:
-		/* Save previous request to handle subsytem restart, and
-		   requests prior to QMI service being available. */
-		set_req_lvl(clnt_info, QMI_DEVICE_VDD_RESTRICT, level);
-		pthread_mutex_unlock(&clnt_info->mtx);
+					  VDD_RESTRICT_DEV_NAME);
 	}
 
 	return ret;
@@ -489,37 +508,9 @@ RETURN VALUE
 ===========================================================================*/
 int cpr_band_qmi_request(int level)
 {
-	int ret = -1;
-	struct qmi_client_info *clnt_info = NULL;
-
-	clnt_info = &cpr_cold_clnt;
-	pthread_mutex_lock(&clnt_info->mtx);
-
-	if (!clnt_info->handle) {
-		info("%s: %s req level(%d) is recorded and waiting for "
-			"completing QMI registration", __func__,
-			clnt_info->name, level);
-		ret = 0;
-		goto handle_clnt_done;
-	}
-
-	ret = request_common_qmi(clnt_info->handle,
-		QMI_DEVICE_CPR_RESTRICT, level);
-	if (ret)
-		msg("(%s) cpr_restrict mitigation failed with %d "
-			"for level %d", clnt_info->name, ret, level);
-	else
-		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET
-			| LOG_TRACE), "%s:VDD[%s]:%d\n", MITIGATION,
-			clnt_info->name, level);
-
-handle_clnt_done:
-	/* Save previous request to handle subsytem restart, and
-	   requests prior to QMI service being available. */
-	set_req_lvl(clnt_info, QMI_DEVICE_CPR_RESTRICT, level);
-	pthread_mutex_unlock(&clnt_info->mtx);
-
-	return ret;
+	return generic_qmi_request(level, MAX_CPR_TEMPERATURE_BAND-1,
+				   &modem_clnt, QMI_DEVICE_CPR_RESTRICT,
+				   CPR_BAND_DEV_NAME);
 }
 
 /*===========================================================================
@@ -543,39 +534,9 @@ int modem_request(int level)
 	 * 		3 - Emergency
 	 */
 
-	if (level < 0)
-		level = 0;
-
-	if (level > MAX_MODEM_MITIGATION_LEVEL)
-		level = MAX_MODEM_MITIGATION_LEVEL;
-
-	pthread_mutex_lock(&modem_clnt.mtx);
-	if (!modem_clnt.handle) {
-		info("%s: Requested level(%d) is recorded and waiting for "
-		     "completing QMI registration", __func__, level);
-		ret = 0;
-		goto handle_return;
-	}
-
-	ret = request_common_qmi(modem_clnt.handle,
-				 QMI_MITIGATION_DEVICE_MODEM,
-				 level);
-	if (ret)
-		msg("Modem mitigation failed with %d for level %d",
-		    ret, level);
-	else {
-		info("ACTION: MODEM - "
-		     "Modem mitigation succeeded for level %d.", level);
-		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-			   "%s:Modem:%d\n", MITIGATION, level);
-	}
-
-handle_return:
-	/* Save previous request to handle subsytem restart, and
-	   requests prior to QMI service being available. */
-	set_req_lvl(&modem_clnt, QMI_MITIGATION_DEVICE_MODEM, level);
-	pthread_mutex_unlock(&modem_clnt.mtx);
-
+	ret = generic_qmi_request(level, MAX_MODEM_MITIGATION_LEVEL,
+				  &modem_clnt, QMI_DEVICE_MODEM,
+				  MODEM_DEV_NAME);
 	return ret;
 }
 
@@ -594,46 +555,15 @@ int fusion_modem_request(int level)
 {
 	int ret = -1;
 
-	/* Modem level: 0 - No action
+	/* Fusion level: 0 - No action
 	 * 		1 - Mitigation level 1
 	 * 		2 - Mitigation level 2
 	 * 		3 - Emergency
 	 */
 
-	if (level < 0)
-		level = 0;
-
-	if (level > MAX_MODEM_MITIGATION_LEVEL)
-		level = MAX_MODEM_MITIGATION_LEVEL;
-
-	pthread_mutex_lock(&fusion_clnt.mtx);
-
-	if (!fusion_clnt.handle) {
-		info("%s: Requested level(%d) is recorded and waiting for "
-		     "completing QMI registration", __func__, level);
-		ret = 0;
-		goto handle_return;
-	}
-
-	ret = request_common_qmi(fusion_clnt.handle,
-				 QMI_MITIGATION_DEVICE_MODEM,
-				 level);
-	if (ret)
-		msg("Fusion modem mitigation failed with %d for level %d", ret,
-		    level);
-	else {
-		info("ACTION: FUSION - "
-		     "Fusion modem mitigation succeeded for level %d.", level);
-		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-			   "%s:FusionModem:%d\n", MITIGATION, level);
-	}
-
-handle_return:
-	/* Save previous request to handle subsytem restart, and
-	   requests prior to QMI service being available. */
-	set_req_lvl(&fusion_clnt, QMI_MITIGATION_DEVICE_MODEM, level);
-	pthread_mutex_unlock(&fusion_clnt.mtx);
-
+	ret = generic_qmi_request(level, MAX_MODEM_MITIGATION_LEVEL,
+				  &fusion_clnt, QMI_DEVICE_MODEM,
+				  FUSION_DEV_NAME);
 	return ret;
 }
 
@@ -657,40 +587,9 @@ int modem_cx_limit_request(int level)
 	 *		2 - Mitigation level 2
 	 *		3 - Emergency
 	 */
-
-	if (level < 0)
-		level = 0;
-
-	if (level > MAX_CX_VDD_LIMIT_LEVEL)
-		level = MAX_CX_VDD_LIMIT_LEVEL;
-
-	pthread_mutex_lock(&modem_clnt.mtx);
-	if (!modem_clnt.handle) {
-		info("%s: Requested level(%d) is recorded and waiting for "
-		     "completing QMI registration", __func__, level);
-		ret = 0;
-		goto handle_return;
-	}
-
-	ret = request_common_qmi(modem_clnt.handle,
-				 QMI_CX_VDD_LIMIT,
-				 level);
-	if (ret)
-		msg("Modem CX limit mitigation failed with %d for level %d",
-		    ret, level);
-	else {
-		dbgmsg("ACTION: MODEM_CX_LIMIT - "
-		     "Modem CX limit succeeded for level %d.", level);
-		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-			   "%s:Modem_CX_limit:%d\n", MITIGATION, level);
-	}
-
-handle_return:
-	/* Save previous request to handle subsytem restart, and
-	   requests prior to QMI service being available. */
-	set_req_lvl(&modem_clnt, QMI_CX_VDD_LIMIT, level);
-	pthread_mutex_unlock(&modem_clnt.mtx);
-
+	ret = generic_qmi_request(level, MAX_CX_VDD_LIMIT_LEVEL,
+				  &modem_clnt, QMI_CX_VDD_LIMIT,
+				  MODEM_CX_DEV_NAME);
 	return ret;
 }
 
@@ -715,39 +614,9 @@ int modem_proc_request(int level)
 	 *		3 - Emergency
 	 */
 
-	if (level < 0)
-		level = 0;
-
-	if (level > MAX_MODEM_PROC_LEVEL)
-		level = MAX_MODEM_PROC_LEVEL;
-
-	pthread_mutex_lock(&modem_clnt.mtx);
-	if (!modem_clnt.handle) {
-		info("%s: Requested level(%d) is recorded and waiting for "
-		     "completing QMI registration", __func__, level);
-		ret = 0;
-		goto handle_return;
-	}
-
-	ret = request_common_qmi(modem_clnt.handle,
-				 QMI_MODEM_PROC,
-				 level);
-	if (ret) {
-		msg("Modem proc mitigation failed with %d for level %d",
-		    ret, level);
-	} else {
-		dbgmsg("ACTION: MODEM_PROC - "
-		     "Modem proc succeeded for level %d.", level);
-		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-			   "%s:modem_proc:%d\n", MITIGATION, level);
-	}
-
-handle_return:
-	/* Save previous request to handle subsytem restart, and
-	   requests prior to QMI service being available. */
-	set_req_lvl(&modem_clnt, QMI_MODEM_PROC, level);
-	pthread_mutex_unlock(&modem_clnt.mtx);
-
+	ret = generic_qmi_request(level, MAX_MODEM_PROC_LEVEL,
+				  &modem_clnt, QMI_MODEM_PROC,
+				  MODEM_PROC_DEV_NAME);
 	return ret;
 }
 
@@ -772,39 +641,9 @@ int modem_proc_current_request(int level)
 	 *		3 - Emergency
 	 */
 
-	if (level < 0)
-		level = 0;
-
-	if (level > MAX_MODEM_CURRENT_LEVEL)
-		level = MAX_MODEM_CURRENT_LEVEL;
-
-	pthread_mutex_lock(&modem_clnt.mtx);
-	if (!modem_clnt.handle) {
-		info("%s: Requested level(%d) is recorded and waiting for "
-		     "completing QMI registration", __func__, level);
-		ret = 0;
-		goto handle_return;
-	}
-
-	ret = request_common_qmi(modem_clnt.handle,
-				 QMI_MODEM_CURRENT,
-				 level);
-	if (ret) {
-		msg("Modem current mitigation failed with %d for level %d",
-		    ret, level);
-	} else {
-		dbgmsg("ACTION: MODEM_CURRENT - "
-		     "Modem current succeeded for level %d.", level);
-		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-			   "%s:Modem_current:%d\n", MITIGATION, level);
-	}
-
-handle_return:
-	/* Save previous request to handle subsytem restart, and
-	   requests prior to QMI service being available. */
-	set_req_lvl(&modem_clnt, QMI_MODEM_CURRENT, level);
-	pthread_mutex_unlock(&modem_clnt.mtx);
-
+	ret = generic_qmi_request(level, MAX_MODEM_CURRENT_LEVEL,
+				  &modem_clnt, QMI_MODEM_CURRENT,
+				  MODEM_PROC_CURRENT_DEV_NAME);
 	return ret;
 }
 
@@ -828,38 +667,36 @@ int modem_bw_request(int level)
 	 *		2 - Mitigation level 2
 	 */
 
-	if (level < 0)
-		level = 0;
+	ret = generic_qmi_request(level, MAX_MODEM_BW_LEVEL,
+				  &modem_clnt, QMI_MODEM_BW,
+				  MODEM_BW_DEV_NAME);
 
-	if (level > MAX_MODEM_BW_LEVEL)
-		level = MAX_MODEM_BW_LEVEL;
+	return ret;
+}
 
-	pthread_mutex_lock(&modem_clnt.mtx);
-	if (!modem_clnt.handle) {
-		info("%s: Requested level(%d) is recorded and waiting for "
-		     "completing QMI registration", __func__, level);
-		ret = 0;
-		goto handle_return;
-	}
+/*===========================================================================
+FUNCTION modem_skin_request
 
-	ret = request_common_qmi(modem_clnt.handle,
-				 QMI_MODEM_BW,
-				 level);
-	if (ret) {
-		msg("Modem bandwidth mitigation failed with %d for level %d",
-		    ret, level);
-	} else {
-		dbgmsg("ACTION: MODEM_BW - "
-		     "Modem bandwidth succeeded for level %d.", level);
-		thermalmsg(LOG_LVL_INFO, (LOG_LOGCAT | LOG_LOCAL_SOCKET),
-			   "%s:Modem_bw:%d\n", MITIGATION, level);
-	}
+Action function to throttle modem for skin mitigation.
 
-handle_return:
-	/* Save previous request to handle subsytem restart, and
-	   requests prior to QMI service being available. */
-	set_req_lvl(&modem_clnt, QMI_MODEM_BW, level);
-	pthread_mutex_unlock(&modem_clnt.mtx);
+ARGUMENTS
+	level - 0-3 throttling level for modem skin
+
+RETURN VALUE
+	0 on success, -1 on failure.
+===========================================================================*/
+int modem_skin_request(int level)
+{
+	int ret = -1;
+
+	/* Modem skin level: 0 - No action
+	 *		1 - Mitigation level 1
+	 *		2 - Mitigation level 2
+	 *		3 - Mitigation level 3
+	 */
+	ret = generic_qmi_request(level, MAX_MODEM_SKIN_LEVEL,
+				  &modem_clnt, QMI_MODEM_SKIN,
+				  MODEM_SKIN_DEV_NAME);
 
 	return ret;
 }
@@ -877,6 +714,7 @@ RETURN VALUE
 ===========================================================================*/
 int qmi_communication_init(void)
 {
+	unsigned int idx = 0;
 	/* Get the service object for the tmd API */
 	tmd_service_object = tmd_get_service_object_v01();
 	if (!tmd_service_object) {
@@ -886,24 +724,12 @@ int qmi_communication_init(void)
 
 	fusion_clnt.instance_id = get_fusion_qmi_client_type();
 
-	/* start thread to register with onchip Modem QMI services */
-	pthread_create(&(modem_clnt.thread), NULL, qmi_register,
-		       (void*)&modem_clnt);
-
-	/* start thread to register with fusion Modem QMI services */
-	pthread_create(&(fusion_clnt.thread), NULL, qmi_register,
-		       (void*)&fusion_clnt);
-
-	/* start thread to register with ADSP QMI services */
-	pthread_create(&(adsp_clnt.thread), NULL, qmi_register,
-		       (void*)&adsp_clnt);
-
-	/*
-	 * Start thread to register with onchip Modem QMI services for sending
-	 * CPR temperature band
-	 */
-	pthread_create(&(cpr_cold_clnt.thread), NULL, qmi_register,
-		       (void*)&cpr_cold_clnt);
+	for (idx = 0; idx < ARRAY_SIZE(register_clnts); idx++)
+	{
+		/* start thread to connect to remote QMI services */
+		pthread_create(&(register_clnts[idx]->thread), NULL, qmi_register,
+			       (void*)register_clnts[idx]);
+	}
 
 	return 0;
 }
@@ -923,29 +749,24 @@ RETURN VALUE
 int qmi_communication_release(void)
 {
 	int rc = 0;
+	int ret_val = 0;
+	unsigned int idx = 0;
 
-	pthread_join(modem_clnt.thread, NULL);
-	pthread_join(fusion_clnt.thread, NULL);
-	pthread_join(adsp_clnt.thread, NULL);
-
-	if (modem_clnt.handle) {
-		rc = qmi_client_release(modem_clnt.handle);
-		if (rc)
-			msg("qmi: qmi_client_release modem clnt failed.\n");
-		modem_clnt.handle = NULL;
-	}
-	if (fusion_clnt.handle) {
-		rc = qmi_client_release(fusion_clnt.handle);
-		if (rc)
-			msg("qmi: qmi_client_release fusion clnt failed.\n");
-		fusion_clnt.handle = NULL;
-	}
-	if (adsp_clnt.handle) {
-		rc = qmi_client_release(adsp_clnt.handle);
-		if (rc)
-			msg("qmi: qmi_client_release adsp clnt failed.\n");
-		adsp_clnt.handle = NULL;
+	for (idx = 0; idx < ARRAY_SIZE(register_clnts); idx++) {
+		pthread_join(register_clnts[idx]->thread, NULL);
 	}
 
-	return rc;
+	for (idx = 0; idx < ARRAY_SIZE(register_clnts); idx++) {
+		if (register_clnts[idx]->handle) {
+			rc = qmi_client_release(register_clnts[idx]->handle);
+			if (rc) {
+				msg("qmi: qmi_client_release %s clnt failed.\n",
+				    register_clnts[idx]->name);
+				ret_val = -1;
+			}
+			register_clnts[idx]->handle = NULL;
+		}
+	}
+
+	return ret_val;
 }

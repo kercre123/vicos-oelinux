@@ -115,6 +115,7 @@
 		<MobileAPBootUpCfg>
 			<MobileAPEnableAtBootup>0</MobileAPEnableAtBootup>
 			<WLANEnableAtBootup>0</WLANEnableAtBootup>
+	        	<DataPathOpt>0</DataPathOpt>
 	        </MobileAPBootUpCfg>
 		<Cradle>
 			<CradleMode>2</CradleMode>

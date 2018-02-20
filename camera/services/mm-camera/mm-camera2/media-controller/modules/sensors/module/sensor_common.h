@@ -173,7 +173,7 @@
     timeout_ptr, _ns_, rc) \
   do { \
     unsigned long ns = _ns_; \
-    clock_gettime(CLOCK_REALTIME, (timeout_ptr)); \
+    clock_gettime(CLOCK_MONOTONIC, (timeout_ptr)); \
     while (ns > 999999999) {\
       ns -= 1000000000; \
       (timeout_ptr)->tv_sec += 1; \
@@ -309,6 +309,7 @@ typedef enum {
   SENSOR_STANDBY_STREAM,
   SENSOR_SET_AEC_UPDATE_FOR_SLAVE,
   SENSOR_SET_ALTERNATIVE_SLAVE,
+  SENSOR_SET_FOCAL_LENGTH,
   SENSOR_ENUM_MAX, /* End of Sensor framework enums */
   /* End of Sensor framework enums */
 
@@ -482,6 +483,7 @@ typedef struct {
   boolean is_fast_aec_mode_on;
   cam_hfr_mode_t fast_aec_sensor_mode;
   uint32_t aspect_r;
+  float focal_length;
 } sensor_set_res_cfg_t;
 
 typedef struct {
@@ -1000,6 +1002,7 @@ typedef struct module_sensor_bundle_info_t {
   sensor_frame_ctrl_params_t     frame_ctrl;
   pthread_mutex_t                mutex;
   pthread_cond_t                 cond;
+  pthread_condattr_t             condattr;
   int32_t                        init_config_done;
   int32_t                        open_done;
   int32_t                        res_cfg_done;
@@ -1046,6 +1049,7 @@ typedef struct module_sensor_bundle_info_t {
   uint16_t                       ois_cmd_queue_mask;
   /* During fast aec mode, mctl thread will block on this thread */
   pthread_cond_t                 fast_aec_cond;
+  pthread_condattr_t             fast_aec_condattr;
   /* Mutex used for fast aec mode */
   pthread_mutex_t                fast_aec_mutex;
   /* number of frames to skip for fast AEC use case */

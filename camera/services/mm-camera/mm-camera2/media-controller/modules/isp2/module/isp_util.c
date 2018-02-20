@@ -953,7 +953,6 @@ boolean isp_util_forward_offline_event_modules(
   cam_effect_mode_type      *special_effect = NULL;
   int32_t                   *contrast = NULL;
   int32_t                   *saturation = NULL;
-  mct_stream_info_t         *offline_stream_info = NULL;
   mct_event_control_parm_t  hal_param;
   int32_t                   *tintless_enable = NULL;
   mct_event_t               copy_event;
@@ -964,60 +963,12 @@ boolean isp_util_forward_offline_event_modules(
     return FALSE;
   }
 
-  zoom_value = (int32_t *)
-  POINTER_OF_META(CAM_INTF_PARM_ZOOM, metadata);
-  /* forward zoom value */
-  if (zoom_value) {
-    hal_param.parm_data = zoom_value;
-    hal_param.type = CAM_INTF_PARM_ZOOM;
-    isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
-      &hal_param, event->identity);
-    ret = isp_util_forward_event_to_internal_pipeline(session_param,
-      &internel_event, hw_id);
-    if (ret == FALSE) {
-      ISP_ERR("failed: ret %d", ret);
-      return FALSE;
-    }
-  }
-
   special_effect = (cam_effect_mode_type *)
   POINTER_OF_META(CAM_INTF_PARM_EFFECT, metadata);
   /* forward special effect */
   if (special_effect) {
     hal_param.parm_data = special_effect;
     hal_param.type = CAM_INTF_PARM_EFFECT;
-    isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
-      &hal_param, event->identity);
-    ret = isp_util_forward_event_to_internal_pipeline(session_param,
-      &internel_event, hw_id);
-    if (ret == FALSE) {
-      ISP_ERR("failed: ret %d", ret);
-      return FALSE;
-    }
-  }
-
-  contrast = (int32_t *)
-  POINTER_OF_META(CAM_INTF_PARM_CONTRAST, metadata);
-  /* forward contrast value */
-  if (contrast && *contrast) {
-    hal_param.parm_data = contrast;
-    hal_param.type = CAM_INTF_PARM_CONTRAST;
-    isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
-      &hal_param, event->identity);
-    ret = isp_util_forward_event_to_internal_pipeline(session_param,
-      &internel_event, hw_id);
-    if (ret == FALSE) {
-      ISP_ERR("failed: ret %d", ret);
-      return FALSE;
-    }
-  }
-
-  saturation = (int32_t *)
-  POINTER_OF_META(CAM_INTF_PARM_SATURATION, metadata);
-  /* forward saturation value */
-  if (saturation && *saturation) {
-    hal_param.parm_data = saturation;
-    hal_param.type = CAM_INTF_PARM_SATURATION;
     isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
       &hal_param, event->identity);
     ret = isp_util_forward_event_to_internal_pipeline(session_param,
@@ -1058,6 +1009,77 @@ boolean isp_util_forward_offline_event_modules(
           &session_param->offline_tinltess_params;
         ret = isp_util_forward_event_to_internal_pipeline(session_param,
           &copy_event, hw_id);
+      }
+    }
+  }
+
+  if (session_param->hal_version == CAM_HAL_V1) {
+    /* Bellow meta tags are supported only by camera HAL1.
+     * Those values are not initialized for camera HAL3 */
+
+    zoom_value = (int32_t *)
+    POINTER_OF_META(CAM_INTF_PARM_ZOOM, metadata);
+    if (zoom_value && session_param->hal_version == CAM_HAL_V1) {
+      hal_param.parm_data = zoom_value;
+      hal_param.type = CAM_INTF_PARM_ZOOM;
+      isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
+        &hal_param, event->identity);
+      ret = isp_util_forward_event_to_internal_pipeline(session_param,
+        &internel_event, hw_id);
+      if (ret == FALSE) {
+        ISP_ERR("failed: ret %d", ret);
+        return FALSE;
+      }
+    }
+
+    contrast = (int32_t *)
+    POINTER_OF_META(CAM_INTF_PARM_CONTRAST, metadata);
+    /* forward contrast value */
+    if (contrast && *contrast) {
+      hal_param.parm_data = contrast;
+      hal_param.type = CAM_INTF_PARM_CONTRAST;
+      isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
+        &hal_param, event->identity);
+      ret = isp_util_forward_event_to_internal_pipeline(session_param,
+        &internel_event, hw_id);
+      if (ret == FALSE) {
+        ISP_ERR("failed: ret %d", ret);
+        return FALSE;
+      }
+    }
+
+    saturation = (int32_t *)
+    POINTER_OF_META(CAM_INTF_PARM_SATURATION, metadata);
+    /* forward saturation value */
+    if (saturation && *saturation) {
+      hal_param.parm_data = saturation;
+      hal_param.type = CAM_INTF_PARM_SATURATION;
+      isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
+        &hal_param, event->identity);
+      ret = isp_util_forward_event_to_internal_pipeline(session_param,
+        &internel_event, hw_id);
+      if (ret == FALSE) {
+        ISP_ERR("failed: ret %d", ret);
+        return FALSE;
+      }
+    }
+
+  } else if (session_param->hal_version == CAM_HAL_V3) {
+    /* Bellow meta tags are supported only by camera HAL3.
+     * Those values are not initialized for camera HAL1 */
+
+    cam_crop_region_t* crop_region = (cam_crop_region_t *)
+    POINTER_OF_META(CAM_INTF_META_SCALER_CROP_REGION, metadata);
+    if (crop_region) {
+      hal_param.parm_data = crop_region;
+      hal_param.type = CAM_INTF_META_SCALER_CROP_REGION;
+      isp_util_fill_hal_params(MCT_EVENT_CONTROL_SET_PARM, &internel_event,
+      &hal_param, event->identity);
+      ret = isp_util_forward_event_to_internal_pipeline(session_param,
+      &internel_event, hw_id);
+      if (ret == FALSE) {
+        ISP_ERR("failed: ret %d", ret);
+        return FALSE;
       }
     }
   }
@@ -4457,6 +4479,7 @@ boolean isp_util_broadcast_crop_info(mct_module_t *module,
   uint32_t                         i = 0;
   boolean                          ret = TRUE;
   mct_bus_msg_stream_crop_t        stream_crop;
+  mct_bus_msg_isp_config_t         isp_config;
   mct_event_t                      mct_event;
   isp_crop_window_info_t          *crop_window = NULL;
   isp_t                           *isp = NULL;
@@ -4488,6 +4511,7 @@ boolean isp_util_broadcast_crop_info(mct_module_t *module,
   memset(&mct_event, 0, sizeof(mct_event));
   memset(&stream_crop, 0, sizeof(stream_crop));
   memset(&session_crop_info, 0, sizeof(session_crop_info));
+  memset(&isp_config, 0, sizeof(isp_config));
 
   mct_event.u.module_event.type = MCT_EVENT_MODULE_STREAM_CROP;
   mct_event.u.module_event.module_event_data = (void *)&stream_crop;
@@ -4504,6 +4528,9 @@ boolean isp_util_broadcast_crop_info(mct_module_t *module,
   stream_crop.frame_id = frame_id;
   stream_crop.timestamp = *timestamp;
 
+  isp_config.frame_id = frame_id;
+  isp_config.timestamp = *timestamp;
+
   isp_id = session_param->hw_id[0];
 
   for (i = 0; i < ISP_MAX_STREAMS; i++) {
@@ -4515,6 +4542,9 @@ boolean isp_util_broadcast_crop_info(mct_module_t *module,
     stream_crop.session_id = ISP_GET_SESSION_ID(zoom_params_arr[i].identity);
     stream_crop.stream_id = ISP_GET_STREAM_ID(zoom_params_arr[i].identity);
 
+    isp_config.session_id = stream_crop.session_id;
+    isp_config.stream_id = stream_crop.stream_id;
+
     crop_window = &zoom_params_arr[i].crop_window;
     if(!crop_window) {
       ISP_ERR("failed: crop_window");
@@ -4525,12 +4555,21 @@ boolean isp_util_broadcast_crop_info(mct_module_t *module,
     stream_crop.x = crop_window->x;
     stream_crop.y = crop_window->y;
 
+    isp_config.camif_w = zoom_params_arr[i].camif_output.width;
+    isp_config.camif_h = zoom_params_arr[i].camif_output.height,
+    isp_config.scaler_output_w = zoom_params_arr[i].scaler_output.width;
+    isp_config.scaler_output_h = zoom_params_arr[i].scaler_output.height;
+    isp_config.fov_output_x= zoom_params_arr[i].fov_output.x;
+    isp_config.fov_output_y= zoom_params_arr[i].fov_output.y;
+    isp_config.fov_output_w= zoom_params_arr[i].fov_output.crop_out_x;
+    isp_config.fov_output_h= zoom_params_arr[i].fov_output.crop_out_y;
+
     ret = isp_resource_calculate_roi_map(&isp->isp_resource, isp_id,
       zoom_params_arr, &stream_crop, zoom_params_arr[i].identity);
     if (ret == FALSE) {
       ISP_ERR("failed: isp_resource_calculate_roi_map");
     }
-    ISP_DBG("ide %x camif %d %d scaler %d %d fov %d %d %d %d",
+    ISP_DBG("ide %x camif %d %d scaler %d %d fov window %d %d %d %d",
       mct_event.identity,
       zoom_params_arr[i].camif_output.width,
       zoom_params_arr[i].camif_output.height,
@@ -4552,6 +4591,17 @@ boolean isp_util_broadcast_crop_info(mct_module_t *module,
     }
     mct_event.direction = MCT_EVENT_UPSTREAM;
     isp_util_forward_event_from_module(module, &mct_event);
+
+    /* Forward the scaler and fov config to stats */
+    mct_event.u.module_event.type = MCT_EVENT_MODULE_ISP_CONFIG;
+    mct_event.u.module_event.module_event_data = (void *)&isp_config;
+    mct_event.type = MCT_EVENT_MODULE_EVENT;
+    mct_event.direction = MCT_EVENT_DOWNSTREAM;
+    ret = isp_util_forward_event_downstream_to_all_types(module, &mct_event);
+    if (ret == FALSE) {
+      ISP_ERR("failed: ide %x MCT_EVENT_MODULE_STREAM_CROP",
+        mct_event.identity);
+    }
 
     stream_param = NULL;
     ret = isp_util_get_stream_params(session_param, zoom_params_arr[i].identity,
@@ -5611,6 +5661,8 @@ static void isp_util_sort_streams(cam_stream_size_info_t *streams_desc,
     sorted_streams[i].dim = streams_desc->stream_sz_plus_margin[i];
     sorted_streams[i].orig_dim = streams_desc->stream_sizes[i];
     sorted_streams[i].pp_mask = streams_desc->postprocess_mask[i];
+    sorted_streams[i].dewarp_type = streams_desc->dewarp_type[i];
+    sorted_streams[i].is_type = streams_desc->is_type[i];
   }
 
   /* Put all raw streams at the end */
@@ -6073,6 +6125,8 @@ static boolean isp_util_map_streams(isp_session_param_t *session_param,
   uint32_t priority_user_streams_mask, priority_hw_streams_mask;
   int32_t max_streams_per_out;
   int32_t additional_hw_stream_required;
+  int32_t LDC_count = 0;
+  int32_t EIS_DG_count = 0;
 
   stream_map = session_param->stream_port_map.streams;
   sensor_dim.width = session_param->sensor_output_info.dim_output.width;
@@ -6252,6 +6306,24 @@ static boolean isp_util_map_streams(isp_session_param_t *session_param,
       sorted_streams, stream_map, isp_hw_limit->num_hw_streams, threshold,
       num_pix_streams, num_prior_streams, priority_hw_streams_mask,
       priority_user_streams_mask, priority_streams->stream_num);
+
+  /* When LDC is enabled, try to map all the streams to one port */
+  /* Count the streams with LDC parameters */
+  for (i = 0; i < (int32_t)streams_desc->num_streams; i++) {
+    ISP_DBG("stream_type %d dewrap type %d",streams_desc->type[i],
+      streams_desc->dewarp_type[i]);
+    if((int32_t)streams_desc->dewarp_type[i] == DEWARP_LDC)
+      LDC_count++;
+    if((int32_t)streams_desc->is_type[i] == IS_TYPE_EIS_DG)
+      EIS_DG_count++;
+  }
+
+   max_streams_per_out = MAX(max_streams_per_out, LDC_count);
+   max_streams_per_out = MAX(max_streams_per_out, EIS_DG_count);
+    if (max_streams_per_out > MAX_STREAMS_PER_PORT)
+      max_streams_per_out = MAX_STREAMS_PER_PORT;
+
+
   if (!max_streams_per_out || max_streams_per_out > MAX_STREAMS_PER_PORT) {
     ISP_ERR("failed: max_streams_per_out is: %d", max_streams_per_out);
     return FALSE;
@@ -6307,7 +6379,9 @@ static boolean isp_util_map_streams(isp_session_param_t *session_param,
       /* Map user streams with same size to same HW stream.
        * Check if next stream is not already mapped (priority stream case) */
       if (stream_num_per_out[hw_stream_id] > 0 && out > 0 && i > 0 &&
-          stream_map[i - 1].hw_stream == ISP_HW_STREAM_MAX) {
+          stream_map[i - 1].hw_stream == ISP_HW_STREAM_MAX &&
+          !(sorted_streams[i].dewarp_type == DEWARP_LDC) &&
+	  !(sorted_streams[i].dewarp_type == IS_TYPE_EIS_DG)) {
         dim1 = &sorted_streams[i].dim;
         dim2 = &sorted_streams[smaller_stream[hw_stream_id]].dim;
         /* Try mapping same stream dimensions together,
@@ -6330,7 +6404,7 @@ static boolean isp_util_map_streams(isp_session_param_t *session_param,
                 fit_in_port = check_dim_fit_in_ratio(&sorted_streams[j].dim,
                   &sorted_streams[j -1].dim,
                   PPROC_MAX_SCALERS_RATIO);
-                if(!fit_in_port || IS_PP_MASK_FIT(sorted_streams[j].pp_mask,
+                if(!fit_in_port || !IS_PP_MASK_FIT(sorted_streams[j].pp_mask,
                    sorted_streams[j -1].pp_mask)) {
                   additional_hw_stream_required++;
                 }

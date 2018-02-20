@@ -58,7 +58,7 @@ libmmcamera_target_la_CFLAGS += -DDISABLE_JPEG_ENCODING
 #libmmcamera_target_la_CFLAGS += -DOVERRIDE_SENSOR_SIZE
 
 
-libmmcamera_target_la_CFLAGS += -I ../common 
+libmmcamera_target_la_CFLAGS += -I ../common
 libmmcamera_target_la_CFLAGS += -I core/mctl -I core/config
 libmmcamera_target_la_CFLAGS += -I hardware/vfe/vfe_interface
 libmmcamera_target_la_CFLAGS += -I hardware/sensor
@@ -97,7 +97,7 @@ libmmcamera_target_la_CFLAGS += -I hardware/vfe/$(VFE_VERS)/common
 libmmcamera_target_la_CFLAGS += -I hardware/vfe/$(VFE_VERS)/common/eztune
 libmmcamera_target_la_CFLAGS += -I hardware/vfe/$(VFE_VERS)/test
 libmmcamera_target_la_CFLAGS += -I hardware/vfe/common
-libmmcamera_target_la_CFLAGS += -I hardware/vfe/vfe_modules/fovcrop -I hardware/vfe/vfe_modules/abf  -I hardware/vfe/vfe_modules/asf  -I hardware/vfe/vfe_modules/black_level  -I hardware/vfe/vfe_modules/bpc  -I hardware/vfe/vfe_modules/chroma_enhan  -I hardware/vfe/vfe_modules/chroma_subsample  -I hardware/vfe/vfe_modules/chroma_suppress  -I hardware/vfe/vfe_modules/clamp  -I hardware/vfe/vfe_modules/clf  -I hardware/vfe/vfe_modules/colorcorrect  -I hardware/vfe/vfe_modules/demosaic  -I hardware/vfe/vfe_modules/demux  -I hardware/vfe/vfe_modules/fovcrop  -I hardware/vfe/vfe_modules/frame_skip  -I hardware/vfe/vfe_modules/gamma  -I hardware/vfe/vfe_modules/linearization  -I hardware/vfe/vfe_modules/luma_adaptation  -I hardware/vfe/vfe_modules/mce  -I hardware/vfe/vfe_modules/rolloff -I hardware/vfe/vfe_modules/rolloff/mlro_to_plro -I hardware/vfe/vfe_modules/scaler  -I hardware/vfe/vfe_modules/sce  -I hardware/vfe/vfe_modules/stats -I hardware/vfe/vfe_modules/wb 
+libmmcamera_target_la_CFLAGS += -I hardware/vfe/vfe_modules/fovcrop -I hardware/vfe/vfe_modules/abf  -I hardware/vfe/vfe_modules/asf  -I hardware/vfe/vfe_modules/black_level  -I hardware/vfe/vfe_modules/bpc  -I hardware/vfe/vfe_modules/chroma_enhan  -I hardware/vfe/vfe_modules/chroma_subsample  -I hardware/vfe/vfe_modules/chroma_suppress  -I hardware/vfe/vfe_modules/clamp  -I hardware/vfe/vfe_modules/clf  -I hardware/vfe/vfe_modules/colorcorrect  -I hardware/vfe/vfe_modules/demosaic  -I hardware/vfe/vfe_modules/demux  -I hardware/vfe/vfe_modules/fovcrop  -I hardware/vfe/vfe_modules/frame_skip  -I hardware/vfe/vfe_modules/gamma  -I hardware/vfe/vfe_modules/linearization  -I hardware/vfe/vfe_modules/luma_adaptation  -I hardware/vfe/vfe_modules/mce  -I hardware/vfe/vfe_modules/rolloff -I hardware/vfe/vfe_modules/rolloff/mlro_to_plro -I hardware/vfe/vfe_modules/scaler  -I hardware/vfe/vfe_modules/sce  -I hardware/vfe/vfe_modules/stats -I hardware/vfe/vfe_modules/wb
 libmmcamera_target_la_CFLAGS += -I hardware/vpe1
 libmmcamera_target_la_CFLAGS += -I features/bestshot
 libmmcamera_target_la_CFLAGS += -I features/dis
@@ -259,7 +259,7 @@ libmmcamera_target_la_SOURCES += hardware/vfe/vfe_modules/scaler/scaler.c
 libmmcamera_target_la_SOURCES += hardware/vfe/vfe_modules/stats/aec_stats.c
 libmmcamera_target_la_SOURCES += hardware/vfe/vfe_modules/stats/af_stats.c
 libmmcamera_target_la_SOURCES += hardware/vfe/vfe_modules/stats/awb_stats.c
-else 
+else
 if VFE2X
 libmmcamera_target_la_SOURCES += hardware/vfe/vfe_modules/stats/aec_awb_7x27a.c
 libmmcamera_target_la_SOURCES += hardware/vfe/vfe_modules/stats/af_7x27a.c

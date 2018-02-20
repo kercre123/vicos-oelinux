@@ -20,3 +20,11 @@ SECURITY_CFLAGS_pn-loc-glue  = "${SECURITY_PIC_CFLAGS}"
 SECURITY_CFLAGS_pn-loc-hal-test-shim  = "${SECURITY_PIC_CFLAGS}"
 SECURITY_CFLAGS_pn-location-service  = "${SECURITY_PIC_CFLAGS}"
 SECURITY_CFLAGS_pn-data-items  = "${SECURITY_PIC_CFLAGS}"
+SECURITY_CFLAGS_pn-izat-remote-api-test  = "${SECURITY_PIC_CFLAGS}"
+
+# telephony-library to use -fPIC in security flags instead of -fpie
+SECURITY_CFLAGS_pn-telephony-library = "${SECURITY_PIC_CFLAGS}"
+
+# BT OSS packages to use -fPIC in security flags instead of -fpie
+SECURITY_CFLAGS_pn-hci-qcomm-init = "${SECURITY_PIC_CFLAGS}"
+SECURITY_CFLAGS_pn-qc-bt-daemon = "${SECURITY_PIC_CFLAGS}"

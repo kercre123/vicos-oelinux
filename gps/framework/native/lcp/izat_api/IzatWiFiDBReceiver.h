@@ -25,7 +25,7 @@ class WiFiDBUpdater : public IzatNotifier {
     static const char *const sAPLocCountTag;
 
 protected:
-    inline WiFiDBUpdater() : IzatNotifier(sName, nullptr) { }
+    WiFiDBUpdater();
     virtual inline ~WiFiDBUpdater() { }
 public:
     static const char sName[];

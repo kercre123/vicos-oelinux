@@ -21,8 +21,6 @@ public class IZatRfStateDebugReport implements Parcelable {
 
     private IZatUtcSpec mUtcTimeLastUpdated, mUtcTimeLastReported;
     private int mPGAGain;
-    private long mGPSBPAmpI;
-    private long mGPSBPAmpQ;
     private long mADCAmplitudeI;
     private long mADCAmplitudeQ;
     private long mJammerMetricGPS;
@@ -30,19 +28,27 @@ public class IZatRfStateDebugReport implements Parcelable {
     private long mJammerMetricBds;
     private long mJammerMetricGal;
     private long mErrorRecovery;
+    private long mGPSBPAmpI;
+    private long mGPSBPAmpQ;
+    private long mGLOBPAmpI;
+    private long mGLOBPAmpQ;
+    private long mBDSBPAmpI;
+    private long mBDSBPAmpQ;
+    private long mGALBPAmpI;
+    private long mGALBPAmpQ;
 
     public IZatRfStateDebugReport(IZatUtcSpec utcTimeLastUpdated,
         IZatUtcSpec utcTimeLastReported,
-        int pgaGain, long bpAmplI, long bpAmplQ, long adcAmplI, long adcAmplQ,
+        int pgaGain, long adcAmplI, long adcAmplQ,
         long jammermetricGps, long jammermetricGlonass,
-        long jammermetricBds, long jammermetricGal) {
+        long jammermetricBds, long jammermetricGal,
+        long gpsBpAmpI, long gpsBpAmpQ, long gloBpAmpI, long gloBpAmpQ,
+        long bdsBpAmpI, long bdsBpAmpQ, long galBpAmpI, long galBpAmpQ) {
 
         mUtcTimeLastUpdated = utcTimeLastUpdated;
         mUtcTimeLastReported = utcTimeLastReported;
 
         mPGAGain = pgaGain;
-        mGPSBPAmpI = bpAmplI;
-        mGPSBPAmpQ = bpAmplQ;
         mADCAmplitudeI = adcAmplI;
         mADCAmplitudeQ = adcAmplQ;
 
@@ -50,6 +56,15 @@ public class IZatRfStateDebugReport implements Parcelable {
         mJammerMetricGlonass = jammermetricGlonass;
         mJammerMetricBds = jammermetricBds;
         mJammerMetricGal = jammermetricGal;
+
+        mGPSBPAmpI = gpsBpAmpI;
+        mGPSBPAmpQ = gpsBpAmpQ;
+        mGLOBPAmpI = gloBpAmpI;
+        mGLOBPAmpQ = gloBpAmpQ;
+        mBDSBPAmpI = bdsBpAmpI;
+        mBDSBPAmpQ = bdsBpAmpQ;
+        mGALBPAmpI = galBpAmpI;
+        mGALBPAmpQ = galBpAmpQ;
     }
 
     public IZatRfStateDebugReport(Parcel source) {
@@ -57,8 +72,6 @@ public class IZatRfStateDebugReport implements Parcelable {
         mUtcTimeLastReported = source.readParcelable(IZatUtcSpec.class.getClassLoader());
 
         mPGAGain = source.readInt();
-        mGPSBPAmpI = source.readLong();
-        mGPSBPAmpQ = source.readLong();
         mADCAmplitudeI = source.readLong();
         mADCAmplitudeQ = source.readLong();
 
@@ -66,6 +79,15 @@ public class IZatRfStateDebugReport implements Parcelable {
         mJammerMetricGlonass = source.readLong();
         mJammerMetricBds = source.readLong();
         mJammerMetricGal = source.readLong();
+
+        mGPSBPAmpI = source.readLong();
+        mGPSBPAmpQ = source.readLong();
+        mGLOBPAmpI = source.readLong();
+        mGLOBPAmpQ = source.readLong();
+        mBDSBPAmpI = source.readLong();
+        mBDSBPAmpQ = source.readLong();
+        mGALBPAmpI = source.readLong();
+        mGALBPAmpQ = source.readLong();
     }
 
     /**
@@ -94,20 +116,6 @@ public class IZatRfStateDebugReport implements Parcelable {
         return mPGAGain;
     }
 
-
-    /**
-    * Get GPS Baseband Processor Amplitude I
-    */
-    public long getGPSBPAmpI() {
-        return  mGPSBPAmpI;
-    }
-
-    /**
-    * Get GPS Baseband Processor Amplitude Q
-    */
-    public long getGPSBPAmpQ() {
-        return mGPSBPAmpQ;
-    }
 
     /**
     * Get ADC Amplitude I
@@ -151,6 +159,63 @@ public class IZatRfStateDebugReport implements Parcelable {
         return mJammerMetricGal;
     }
 
+    /**
+    * Get GPS Baseband Processor Amplitude I
+    */
+    public long getGPSBPAmpI() {
+        return  mGPSBPAmpI;
+    }
+
+    /**
+    * Get GPS Baseband Processor Amplitude Q
+    */
+    public long getGPSBPAmpQ() {
+        return mGPSBPAmpQ;
+    }
+
+    /**
+    * Get GLONASS Baseband Processor Amplitude I
+    */
+    public long getGLOBPAmpI() {
+        return  mGLOBPAmpI;
+    }
+
+    /**
+    * Get GLONASS Baseband Processor Amplitude Q
+    */
+    public long getGLOBPAmpQ() {
+        return mGLOBPAmpQ;
+    }
+
+    /**
+    * Get BDS Baseband Processor Amplitude I
+    */
+    public long getBDSBPAmpI() {
+        return  mBDSBPAmpI;
+    }
+
+    /**
+    * Get BDS Baseband Processor Amplitude Q
+    */
+    public long getBDSBPAmpQ() {
+        return mBDSBPAmpQ;
+    }
+
+    /**
+    * Get GAL Baseband Processor Amplitude I
+    */
+    public long getGALBPAmpI() {
+        return  mGALBPAmpI;
+    }
+
+    /**
+    * Get GAL Baseband Processor Amplitude Q
+    */
+    public long getGALBPAmpQ() {
+        return mGALBPAmpQ;
+    }
+
+
     @Override
     public int describeContents() {
         return 0;
@@ -162,8 +227,6 @@ public class IZatRfStateDebugReport implements Parcelable {
         dest.writeParcelable(mUtcTimeLastReported, 0);
 
         dest.writeInt(mPGAGain);
-        dest.writeLong(mGPSBPAmpI);
-        dest.writeLong(mGPSBPAmpQ);
         dest.writeLong(mADCAmplitudeI);
         dest.writeLong(mADCAmplitudeQ);
 
@@ -171,6 +234,15 @@ public class IZatRfStateDebugReport implements Parcelable {
         dest.writeLong(mJammerMetricGlonass);
         dest.writeLong(mJammerMetricBds);
         dest.writeLong( mJammerMetricGal);
+
+        dest.writeLong(mGPSBPAmpI);
+        dest.writeLong(mGPSBPAmpQ);
+        dest.writeLong(mGLOBPAmpI);
+        dest.writeLong(mGLOBPAmpQ);
+        dest.writeLong(mBDSBPAmpI);
+        dest.writeLong(mBDSBPAmpQ);
+        dest.writeLong(mGALBPAmpI);
+        dest.writeLong(mGALBPAmpQ);
     }
 
     public static final Parcelable.Creator<IZatRfStateDebugReport> CREATOR =

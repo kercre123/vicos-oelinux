@@ -1020,7 +1020,14 @@ static void scm_nl_svc_fw_shutdown_handler(struct scm_data *sd, int cnss_driver_
 					WLAN_IF_STOP_CMD, sd->wif[i]->radio->idx);
 			}
 		}
-		scm_wlan_unload_module(sd, TUF_DEV);
+
+		if (wlan_radio_data[TUF_DEV].drv_loaded) {
+			scm_wlan_unload_module(sd, TUF_DEV);
+			wlan_radio_data[TUF_DEV].ssr_drv_restart = true;
+		}
+		else {
+			wlan_radio_data[TUF_DEV].ssr_drv_restart = false;
+		}
 	}
 }
 
@@ -1066,7 +1073,8 @@ static void scm_nl_svc_fw_crash_handler(struct scm_data *sd, int cnss_driver_idx
 	if (wlan_radio_data[ROME_DEV].cnss_driver_idx == cnss_driver_idx) {
 		scm_nl_restart_driver(sd, ROME_DEV);
 		scm_logd("ROME SSR, Restart TUF if in use..");
-		scm_nl_restart_driver(sd, TUF_DEV);
+		if (wlan_radio_data[TUF_DEV].ssr_drv_restart)
+			scm_nl_restart_driver(sd, TUF_DEV);
 	} else {
 		scm_nl_restart_driver(sd, TUF_DEV);
 	}

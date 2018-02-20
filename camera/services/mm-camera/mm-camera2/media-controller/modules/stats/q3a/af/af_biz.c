@@ -3231,7 +3231,7 @@ done:
 
   af->af_input.full_sweep_mode = AF_FULLSWEEP_SRCH_MODE_OFF;
   af->af_input.enable_mobicat = FALSE;
-#ifdef _ANDROID_
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   int full_sweep_flag = 0;
   char value[92] = { 0 };
   property_get("persist.camera.mobicat", value, "0");

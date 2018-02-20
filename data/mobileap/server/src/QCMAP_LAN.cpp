@@ -2261,10 +2261,19 @@ boolean QCMAP_LAN::EnableDNS()
 
   if ( pri_dns_addr )
   {
-    addr.s_addr = pri_dns_addr;
     #ifndef FEATURE_QTIMAP_OFFTARGET
-      snprintf(command, MAX_COMMAND_STR_LEN,
-               "echo 'nameserver %s' > %s", inet_ntoa(addr), DNSMASQ_RESOLV_FILE);
+      addr.s_addr = pri_dns_addr;
+      if((QcMapBackhaulWWAN && (QCMAP_CM_V6_WAN_CONNECTED == QcMapBackhaulWWAN->GetIPv6State())) &&
+         (QCMAP_MSGR_DHCPV6_MODE_UP_V01 != QcMapBackhaulWWAN->dhcpv6_dns_conf.dhcpv6_enable_state))
+      {
+        //append if IPv6 call is already up
+        snprintf(command, MAX_COMMAND_STR_LEN,
+                 "echo 'nameserver %s' >> %s", inet_ntoa(addr), DNSMASQ_RESOLV_FILE);
+      } else {
+        //overwrite if IPv6 call is not up
+        snprintf(command, MAX_COMMAND_STR_LEN,
+                 "echo 'nameserver %s' > %s", inet_ntoa(addr), DNSMASQ_RESOLV_FILE);
+      }
       LOG_MSG_INFO1("QCMAP PRI DNS %s\n", inet_ntoa(addr),0,0);
       ds_system_call(command, strlen(command));
 
@@ -2281,8 +2290,8 @@ boolean QCMAP_LAN::EnableDNS()
 
   if ( sec_dns_addr )
   {
-    addr.s_addr = sec_dns_addr;
     #ifndef FEATURE_QTIMAP_OFFTARGET
+      addr.s_addr = sec_dns_addr;
       snprintf(command, MAX_COMMAND_STR_LEN,
                "echo 'nameserver %s' >> %s", inet_ntoa(addr), DNSMASQ_RESOLV_FILE);
       LOG_MSG_INFO1("QCMAP SEC DNS %s\n", inet_ntoa(addr),0,0);
@@ -2294,6 +2303,159 @@ boolean QCMAP_LAN::EnableDNS()
   return true;
 }
 
+/*===========================================================================
+  FUNCTION AddDNSNameServers
+==========================================================================*/
+/*!
+@brief
+  Adds the IP addresses of nameservers
+
+@parameters
+- char* primary dns addr
+- char* secondary dns addr
+
+@return
+- None
+
+@note
+
+- Dependencies
+- None
+
+- Side Effects
+- None
+*/
+/*=========================================================================*/
+void QCMAP_LAN::AddDNSNameServers(char* pri_dns_addr, char* sec_dns_addr)
+{
+  char command[MAX_COMMAND_STR_LEN] = {0};
+
+  if(NULL == pri_dns_addr)
+  {
+    LOG_MSG_INFO1("primary dns addr given NULL!", 0, 0, 0);
+    return;
+  } else if(NULL == sec_dns_addr) {
+    LOG_MSG_INFO1("secondary dns addr given NULL!", 0, 0, 0);
+    return;
+  }
+
+  if(strlen(pri_dns_addr))
+  {
+    #ifndef FEATURE_QTIMAP_OFFTARGET
+      memset(command, 0, sizeof(command));
+      snprintf(command, MAX_COMMAND_STR_LEN, "echo 'nameserver %s' >> %s",
+               pri_dns_addr, DNSMASQ_RESOLV_FILE);
+      LOG_MSG_INFO1("Added QCMAP PRI DNS %s", pri_dns_addr, 0, 0);
+      ds_system_call(command, strlen(command));
+    #endif
+  }
+
+  if(strlen(sec_dns_addr))
+  {
+    #ifndef FEATURE_QTIMAP_OFFTARGET
+      memset(command, 0, sizeof(command));
+      snprintf(command, MAX_COMMAND_STR_LEN, "echo 'nameserver %s' >> %s",
+               sec_dns_addr, DNSMASQ_RESOLV_FILE);
+      LOG_MSG_INFO1("Added QCMAP PRI DNS %s", sec_dns_addr, 0, 0);
+      ds_system_call(command, strlen(command));
+    #endif
+  }
+
+  return;
+}
+
+/*===========================================================================
+  FUNCTION DeleteDNSNameServers
+==========================================================================*/
+/*!
+@brief
+  Deletes the IP addresses of nameservers
+
+@parameters
+- char* primary dns addr
+- char* secondary dns addr
+
+@return
+- None
+
+@note
+
+- Dependencies
+- None
+
+- Side Effects
+- None
+*/
+/*=========================================================================*/
+void QCMAP_LAN::DeleteDNSNameServers(char* pri_dns_addr, char* sec_dns_addr)
+{
+  FILE* fp = NULL;
+  char buffer[strlen("nameserver ") + INET6_ADDRSTRLEN + 1] = {0};
+  std::string temp, filtered_str;
+
+  if(NULL == pri_dns_addr)
+  {
+    LOG_MSG_INFO1("primary dns addr given NULL!", 0, 0, 0);
+    return;
+  } else if(NULL == sec_dns_addr) {
+    LOG_MSG_INFO1("secondary dns addr given NULL!", 0, 0, 0);
+    return;
+  }
+
+  #ifndef FEATURE_QTIMAP_OFFTARGET
+    //first filter out the IPv6 DNS addrs into filtered_str string
+    if((fp = fopen(DNSMASQ_RESOLV_FILE, "r")) == NULL)
+    {
+      LOG_MSG_INFO1("error opening %s: %s", DNSMASQ_RESOLV_FILE, strerror(errno), 0);
+      return;
+    }
+
+    filtered_str.clear();
+    memset(buffer, 0, sizeof(buffer));
+    while(fgets(buffer, strlen("nameserver ") + INET6_ADDRSTRLEN + 1, fp) != NULL)
+    {
+      temp.clear();
+      temp = buffer;
+
+      if(!((strlen(pri_dns_addr) &&
+           (std::string::npos != temp.find(pri_dns_addr))) ||
+           (strlen(sec_dns_addr) &&
+           (std::string::npos != temp.find(sec_dns_addr)))))
+      {
+        //save this line
+        filtered_str.append(temp);
+      }
+      memset(buffer, 0, sizeof(buffer));
+    }
+
+    if(fclose(fp))
+    {
+      LOG_MSG_INFO1("error closing %s: %s", DNSMASQ_RESOLV_FILE, strerror(errno), 0);
+    }
+    fp = NULL;
+
+    //write the filtered lines
+    if((fp = fopen(DNSMASQ_RESOLV_FILE, "w")) == NULL)
+    {
+      LOG_MSG_INFO1("error opening %s: %s", DNSMASQ_RESOLV_FILE, strerror(errno), 0);
+      return;
+    }
+
+    if(fputs(filtered_str.c_str(), fp) < 0)
+    {
+      LOG_MSG_INFO1("error fputs %s: %s", DNSMASQ_RESOLV_FILE, strerror(errno), 0);
+      goto end;
+    }
+
+    end:
+    if(fclose(fp))
+    {
+      LOG_MSG_INFO1("error closing %s: %s", DNSMASQ_RESOLV_FILE, strerror(errno), 0);
+    }
+  #endif
+
+  return;
+}
 
 /*===========================================================================
 FUNCTION CheckforAddrConflict
@@ -3794,6 +3956,7 @@ void QCMAP_LAN::InitBridge()
   qcmap_msgr_cradle_mode_v01 cradle_mode=QCMAP_MSGR_CRADLE_LAN_ROUTER_V01;
   QCMAP_Virtual_LAN* QcMapVLANMgr=QCMAP_Virtual_LAN::Get_Instance(false);
   QCMAP_L2TP* QcMapL2TPMgr=QCMAP_L2TP::Get_Instance(false);
+  qcmap_msgr_ethernet_mode_v01 ethernet_mode = QCMAP_MSGR_ETHERNET_LAN_ROUTER_V01;
 
   /* Create the Bridge Interface. */
   snprintf(command, MAX_COMMAND_STR_LEN, "brctl addbr %s", BRIDGE_IFACE);
@@ -3860,6 +4023,22 @@ void QCMAP_LAN::InitBridge()
   strlcat(command, " && echo 1 > /proc/sys/net/ipv4/neigh/default/gc_thresh1", MAX_COMMAND_STR_LEN);
   strlcat(command, " && echo 1 > /proc/sys/net/ipv6/neigh/default/gc_thresh1", MAX_COMMAND_STR_LEN);
   ds_system_call(command, strlen(command));
+
+  /*Check for eth interface is enabled, if enabled bind it to bridge, so that dhcp request
+    message are honoured earliest*/
+  ret = QCMAP_ConnectionManager::IsInterfaceEnabled(ETH_IFACE);
+  if( ret > 0 )
+  {
+    QCMAP_Backhaul_Ethernet::GetEthBackhaulMode(&ethernet_mode, &qmi_err_num);
+    if (ethernet_mode == QCMAP_MSGR_ETHERNET_LAN_ROUTER_V01)
+    {
+      LOG_MSG_INFO1("Ethernet is enabled in LAN Router",0,0,0);
+      snprintf(command, MAX_COMMAND_STR_LEN, "brctl addif %s %s",
+               BRIDGE_IFACE, ETH_IFACE);
+      ds_system_call(command, strlen(command));
+    }
+  }
+
 
   /*Check for rndis interface is enabled, if enabled bind it to bridge, so that dhcp request
     message are honoured earliest*/
@@ -4351,6 +4530,14 @@ boolean QCMAP_LAN::EnableIPPassthrough
   }
   root = xml_file.child(System_TAG).child(IPACM_TAG).child(IPPassthroughFlag_TAG);
   root.child(IPPassthroughMode_TAG).text() = 1;
+  /* If the device type is ethernet, update the mac address of the client for
+   * which passthrough is enabled. For usb client, mac will be updated
+   * dynamically.
+   */
+  if (dev_type == QCMAP_MSGR_DEVICE_TYPE_ETHERNET_V01)
+    root.child(IPPassthroughMacAddr_TAG).text() = mac;
+  else
+    root.child(IPPassthroughMacAddr_TAG).text() = 0;
   QcMapMgr->WriteConfigToXML(UPDATE_IPACFG_XML,&xml_file);
 #endif
 
@@ -4474,7 +4661,7 @@ boolean QCMAP_LAN::DisableIPPassthrough(bool default_route)
 
   /* Remove custom routing table ippastbl. */
   ds_system_call("sed -i '/200 ippastbl/d' /data/iproute2/rt_tables",
-                        strlen("sed -i '/200 ippastbl/d' /dat/iproute2/rt_tables"));
+                        strlen("sed -i '/200 ippastbl/d' /data/iproute2/rt_tables"));
   if (QcMapBackhaulMgr &&
       QCMAP_Backhaul::current_backhaul == BACKHAUL_TYPE_WWAN &&
       QcMapBackhaulMgr->QcMapBackhaulWWAN->GetState() == QCMAP_CM_WAN_CONNECTED )
@@ -4513,6 +4700,7 @@ boolean QCMAP_LAN::DisableIPPassthrough(bool default_route)
   }
   root = xml_file.child(System_TAG).child(IPACM_TAG).child(IPPassthroughFlag_TAG);
   root.child(IPPassthroughMode_TAG).text() = 0;
+  root.child(IPPassthroughMacAddr_TAG).text() = 0;
   QCMAP_ConnectionManager::WriteConfigToXML(UPDATE_IPACFG_XML,&xml_file);
 #endif
 

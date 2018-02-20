@@ -153,6 +153,15 @@ struct gbm_buf_resource {
   uint32_t magic;
 };
 
+/**
+ * The gbm buffer data object related
+ * information stored in hashmap
+ */
+struct msmgbm_private_info {
+   void* cpuaddr;           /* gbm bo cpu address */
+   void* mt_cpuaddr;        /* gbm bo meta data address */
+};
+
 /*
 * Function prototypes of all supported API's by backend
 *
@@ -308,6 +317,15 @@ struct gbm_bo* msmgbm_surface_get_free_bo(struct gbm_surface *surf);
   *
   */
 int msmgbm_surface_set_front_bo(struct gbm_surface *surf, struct gbm_bo *gbo);
+
+/** Returns the CPU address of metadata
+  * if fails returns NULL
+  */
+void* msmgbm_cpu_map_metafd(int meta_ion_fd, unsigned int metadata_size);
+/** Returns the cpu address of non secure bo
+  * if mmap fails or buffer is secure, returns NULL
+  */
+void* msmgbm_cpu_map_ionfd(int ion_fd, unsigned int size, struct meta_data_t *meta_data);
 /** Returns the CPU access address for the BO buffer
   * \Returns  CPU address on Success / Null on fail
   *

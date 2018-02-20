@@ -45,7 +45,7 @@ static boolean port_iface_free_mem_func(
   mct_port_t *port = (mct_port_t *)data;
 
   assert(port != NULL);
-  assert(port->private != NULL);
+  assert(port->port_private != NULL);
 
   if (port->port_private){
     free (port->port_private);

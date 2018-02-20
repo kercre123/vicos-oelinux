@@ -1,7 +1,7 @@
 
 /* sensor_fast_aec.c
  *
- * Copyright (c) 2015-2016 Qualcomm Technologies, Inc. All Rights Reserved.
+ * Copyright (c) 2015-2017 Qualcomm Technologies, Inc. All Rights Reserved.
  * Qualcomm Technologies Proprietary and Confidential.
  */
 
@@ -495,7 +495,7 @@ boolean port_sensor_handle_fast_aec_mode(mct_module_t *module,
 
   /* 4. Block this thread until AEC is converged */
   PTHREAD_MUTEX_LOCK(&bundle_info->s_bundle->fast_aec_mutex);
-  clock_gettime(CLOCK_REALTIME, &ts);
+  clock_gettime(CLOCK_MONOTONIC, &ts);
   ts.tv_sec  += FAST_AEC_TIMEOUT;
   SLOW("before pthread_cond_wait");
   pthread_cond_timedwait(&bundle_info->s_bundle->fast_aec_cond,

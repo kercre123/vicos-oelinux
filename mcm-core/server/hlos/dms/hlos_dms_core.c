@@ -1,5 +1,5 @@
 /*************************************************************************************
-   Copyright (c) 2013-2014 Qualcomm Technologies, Inc.
+   Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
    All rights reserved.
    Confidential and Proprietary - Qualcomm Technologies, Inc.
 **************************************************************************************/
@@ -413,3 +413,65 @@ cri_core_dms_op_mode_enum_type hlos_dms_convert_mcm_operting_mode_to_cri_mode( m
     return cri_operating_mode;
 }
 
+/***************************************************************************************************
+    @function
+    hlos_dms_core_initiate_radio_power_process
+
+    @brief
+    Notify radio state to client.
+
+    @param[in]
+
+    @param[out]
+        none
+
+    @retval
+    none
+***************************************************************************************************/
+void hlos_dms_core_initiate_radio_power_process(mcm_dm_radio_mode_t_v01 mcm_dms_radio_state)
+{
+    mcm_dm_radio_mode_changed_event_ind_msg_v01 radio_change_ind;
+
+    radio_change_ind.radio_mode_valid = TRUE;
+    radio_change_ind.radio_mode = mcm_dms_radio_state;
+
+    UTIL_LOG_MSG("Sending radio mode change indication to client");
+    hlos_core_send_indication(NIL,
+                            MCM_DM_RADIO_MODE_CHANGED_EVENT_IND_V01,
+                            &radio_change_ind,
+                            sizeof(radio_change_ind));
+}
+
+/***************************************************************************************************
+    @function
+    hlos_dms_core_query_radio_state_notify_to_client
+
+    @brief
+    Notify radio state to client.
+
+    @param[in]
+
+    @param[out]
+        none
+
+    @retval
+    none
+***************************************************************************************************/
+void hlos_dms_core_query_radio_state_notify_to_client(void)
+{
+    cri_core_dms_op_mode_enum_type modem_status_ptr;
+    cri_core_error_type ret_val;
+    mcm_dm_radio_mode_t_v01 mcm_dms_radio_state;
+
+    ret_val = cri_dms_core_get_modem_status_request_handler(&modem_status_ptr);
+    if(CRI_ERR_NONE_V01 != ret_val)
+    {
+        mcm_dms_radio_state = MCM_DM_RADIO_MODE_OFFLINE_V01;
+    }
+    else
+    {
+        mcm_dms_radio_state = hlos_dms_convert_cri_operting_mode_to_mcm_mode(modem_status_ptr);
+    }
+
+    hlos_dms_core_initiate_radio_power_process(mcm_dms_radio_state);
+}

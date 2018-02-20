@@ -42,6 +42,9 @@ GST_DEBUG_CATEGORY_EXTERN (qahw_debug);
 #define DEFAULT_PROP_AUDIO_INPUT_FLAGS  GST_AUDIO_INPUT_FLAG_NONE
 #define DEFAULT_PROP_DEVICE_ADDRESS     "input_stream"
 #define DEFAULT_PROP_AUDIO_HANDLE       0x999
+#define DEFAULT_PROP_FFV_STATE          0
+#define DEFAULT_PROP_FFV_EC_REF_DEVICE  2
+#define DEFAULT_PROP_FFV_CHANNEL_INDEX  0
 
 enum
 {
@@ -54,6 +57,9 @@ enum
   PROP_DEVICE_ADDRESS,
   PROP_AUDIO_HANDLE,
   PROP_KPI_MODE,
+  PROP_FFV_STATE,
+  PROP_FFV_EC_REF_DEVICE,
+  PROP_FFV_CHANNEL_INDEX,
   PROP_LAST
 };
 
@@ -309,6 +315,18 @@ gst_qahwsrc_class_init (GstQahwSrcClass * klass)
   g_object_class_install_property (gobject_class, PROP_KPI_MODE,
       g_param_spec_boolean ("kpi-mode", "kpi-mode", "Enable KPI mode",
           FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_FFV_STATE,
+      g_param_spec_int ("ffv-state", "ffv-state",
+          "FFV State ON/OFF", -1, G_MAXINT, DEFAULT_PROP_FFV_STATE,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_FFV_EC_REF_DEVICE,
+      g_param_spec_int ("ffv-ec-ref-dev", "ffv-ec-ref-dev",
+          "FFV EC Reference device", -1, G_MAXINT, DEFAULT_PROP_FFV_EC_REF_DEVICE,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_FFV_CHANNEL_INDEX,
+      g_param_spec_int ("ffv-channel", "ffv-channel",
+          "FFV Channel index", -1, G_MAXINT, DEFAULT_PROP_FFV_CHANNEL_INDEX,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
 
   /**
@@ -370,6 +388,15 @@ gst_qahwsrc_set_property (GObject * object, guint prop_id,
       qahw->kpi_mode = g_value_get_boolean (value);
       qahw->audio_input_flags = GST_AUDIO_INPUT_FLAG_FAST;
       break;
+    case PROP_FFV_STATE:
+      qahw->ffv_state = g_value_get_int (value);
+      break;
+    case PROP_FFV_EC_REF_DEVICE:
+      qahw->ffv_ec_ref_dev = g_value_get_int (value);
+      break;
+    case PROP_FFV_CHANNEL_INDEX:
+      qahw->ffv_channel_index = g_value_get_int (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -408,6 +435,15 @@ gst_qahwsrc_get_property (GObject * object, guint prop_id,
       break;
     case PROP_KPI_MODE:
       g_value_set_int (value, qahw->kpi_mode);
+      break;
+    case PROP_FFV_STATE:
+      g_value_set_int (value, qahw->ffv_state);
+      break;
+    case PROP_FFV_EC_REF_DEVICE:
+      g_value_set_int (value, qahw->ffv_ec_ref_dev);
+      break;
+    case PROP_FFV_CHANNEL_INDEX:
+      g_value_set_int (value, qahw->ffv_channel_index);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -561,6 +597,20 @@ gst_qahwsrc_prepare (GstAudioSrc * asrc, GstAudioRingBufferSpec * spec)
           fprintf(stdout, "debug node(%s) open failed!, handle(%d)", LATENCY_NODE, qahw->stream);
           goto open_failed;
       }
+  }
+
+  if(qahw->ffv_state)
+  {
+      /* set FFV params for the recording session */
+      params = g_strdup_printf ("ffvOn=true;ffv_ec_ref_dev=%d;ffv_channel_index=%d",
+                                qahw->ffv_ec_ref_dev, qahw->ffv_channel_index);
+
+      GST_DEBUG_OBJECT (qahw, "Setting module parameters: %s", params);
+      err = qahw_set_parameters(qahw->module, params);
+      g_free (params);
+
+      if (err)
+        goto set_parameters_failed;
   }
 
   err =

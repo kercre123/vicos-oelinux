@@ -1,6 +1,6 @@
 
 /*************************************************************************************
-   Copyright (c) 2013 Qualcomm Technologies, Inc.
+   Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
    All rights reserved.
    Confidential and Proprietary - Qualcomm Technologies, Inc.
 **************************************************************************************/
@@ -27,6 +27,8 @@
 int mcm_srv_qmi_client_init()
 {
     UTIL_LOG_MSG( "mcm_srv_qmi_client_init:");
+
+    hlos_core_mcm_ssr_init();
 
     hlos_core_ril_client_init();
 

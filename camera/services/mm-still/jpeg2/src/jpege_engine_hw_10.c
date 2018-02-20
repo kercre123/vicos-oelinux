@@ -845,7 +845,8 @@ static int jpege_engine_hw_init(
   STD_MEMSET(output_buf, 0, sizeof(struct jpege_hw_buf));
 
   // Initialize jpege driver library
-  jpege_hw_fd = jpege_lib_init(&gmn_obj,
+  // --- CHECK arguements for function call for jpege_lib_init ---
+  jpege_hw_fd = jpege_lib_init(&gmn_obj,p_engine,
     jpege_engine_hw_event_handler,
     jpege_engine_hw_output_handler,
     jpege_engine_hw_input_handler);
@@ -1094,8 +1095,8 @@ static int jpege_engine_hw_start(
                                 p_fragments[0].color.yuv.luma_buf);
       p_engine->p_input_chroma = ((jpeg_buf_t *)p_source->
                                 p_fragments[0].color.yuv.chroma_buf);
-      p_engine->p_input_cr = ((jpeg_buf_t *)p_source->
-                                p_fragments[0].color.yuv.cr_buf);
+      //p_engine->p_input_cr = ((jpeg_buf_t *)p_source->
+                                //p_fragments[0].color.yuv.cr_buf);
 
   //If scaling is enabled, pass the scaling parameters
    if(p_config->scale_cfg.enable) {
@@ -1163,7 +1164,8 @@ static void jpeg_engine_reencode(jpege_engine_hw_t *p_engine)
   int jpege_hw_fd = -1;
   p_engine->error_flag = false;
   p_engine->abort_flag = false;// Initialize gemini driver library
-  jpege_hw_fd = jpege_lib_init(&gmn_obj,
+  // --- CHECK arguements for function call for jpege_lib_init ---
+  jpege_hw_fd = jpege_lib_init(&gmn_obj,p_engine,
     jpege_engine_hw_event_handler,
     jpege_engine_hw_output_handler,
     jpege_engine_hw_input_handler);
@@ -1224,9 +1226,9 @@ static OS_THREAD_FUNC_RET_T OS_THREAD_FUNC_MODIFIER
     p_engine->num_of_input_planes,
   };
 
-  jpege_cmd_output_cfg output_cfg = { GEMINI_WE_BURST_LENGTH8,  /*  we_burst_length; */
-    0, // test_param.output_byte_ordering,  /*  byte_ordering */
-  };
+  //jpege_cmd_output_cfg output_cfg = { GEMINI_WE_BURST_LENGTH8,  /*  we_burst_length; */
+  //  0, // test_param.output_byte_ordering,  /*  byte_ordering */
+  //};
   jpege_huffmanDcTable sHuffmanTblYDcPtr;
   jpege_huffmanAcTable sHuffmanTblYAcPtr;
   jpege_huffmanDcTable sHuffmanTblCbcrDcPtr;
@@ -1314,8 +1316,8 @@ static OS_THREAD_FUNC_RET_T OS_THREAD_FUNC_MODIFIER
      p_engine->input_pmem_flag = false;
   }
 
-  rc = jpege_lib_hw_config (gmn_obj, &input_cfg, &output_cfg, &encode_cfg,
-    &scale_cfg);
+  rc = jpege_lib_hw_config (gmn_obj, &input_cfg, &encode_cfg, &scale_cfg);
+
   if (rc) {
     JPEG_DBG_HIGH("jpege_engine_hw_start: jpege_lib_hw_config failed\n");
     p_engine->error_flag = true;
@@ -1372,7 +1374,7 @@ static OS_THREAD_FUNC_RET_T OS_THREAD_FUNC_MODIFIER
   jpege_engine_hw_free_input_buf (p_engine);
   jpege_engine_hw_free_output_buf ();
 
-  jpege_lib_stop (gmn_obj, 0);
+  jpege_lib_stop (gmn_obj);
 
   // Notify event done
 err:

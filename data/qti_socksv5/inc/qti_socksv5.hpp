@@ -61,6 +61,10 @@
 
 #define TIME_TO_WAIT_FOR_CRITICAL_THREADS 10
 
+#define MAX_SOCKS_CONN_REQ 8
+
+#define MAX_NUM_EPOLL_EVENTS 2048
+
 #include <iostream>
 #include <atomic>
 #include <mutex>
@@ -69,11 +73,13 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <semaphore.h>
 #include <asm/types.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
+#include <sys/epoll.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/if.h>
@@ -92,8 +98,7 @@ struct relay_session_socket_splice
   int sock_remote; //remote fd for socket connected to remote server
   int cli_to_req_pipe[2]; //pipe used for cli -> req direction for socket splice
   int req_to_cli_pipe[2]; //pipe used for req -> cli direction for socket splice
-  unsigned char signalToDie[2]; //first signal is for relayClientToReq, second is relayReqToClient
-  unsigned char done; //flag for this relay session is done relaying packets
+  bool done;
 };
 
 void printUsage(void);
@@ -106,6 +111,7 @@ void* listenForSocks5Clientv6(void* addr);
 void* handleSocks5Client(void* arg);
 void cleanupLANThread(void* arg);
 void cleanupHandleSocks5Client(void* arg);
+void cleanupSocketSplice(void* arg);
 void handleSigPipe(int sig);
 void* relayClientToReq(void* sock_pair);
 void* relayReqToClient(void* sock_pair);

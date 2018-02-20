@@ -36,7 +36,7 @@ static unsigned int ar1335_real_to_register_gain(float real_gain, unsigned int *
   if (real_gain < AR1335_MIN_GAIN) {
     real_gain = AR1335_MIN_GAIN;
     SHIGH("AR1335 Requested gain(%f) is lower than the sensor minimum(%d)",
-      real_gain, AR1335_MIN_REAL_GAIN);
+      real_gain, AR1335_MIN_GAIN);
   }
   else if (real_gain > AR1335_MAX_GAIN) {
     real_gain = AR1335_MAX_GAIN;

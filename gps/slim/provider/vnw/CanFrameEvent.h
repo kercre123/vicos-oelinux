@@ -46,6 +46,7 @@ public:
   CanFrameEvent(CwFrame* pFrame, int ifNo)
     : m_pzFrame(0)
     , m_lIfNo(ifNo)
+    , mIsBuffFrame(false)
   {
     m_pzFrame = (0 != pFrame) ? pFrame->clone(1) : 0;
   }
@@ -83,6 +84,10 @@ public:
     return m_pzFrame;
   }
 
+  /**
+  @brief Indicates whether frame is buffered one or not.
+  */
+  bool  mIsBuffFrame;
 private:
   CwFrame* m_pzFrame;
   int32_t  m_lIfNo;

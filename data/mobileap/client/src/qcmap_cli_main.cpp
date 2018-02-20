@@ -125,7 +125,9 @@ const char* mobileAp_configuration_list[]=
 "5. Enable/Disable/Reset Packet Stats                         ",
 "6. Get Packet Stats Status                                   ",
 "7  Restore Factory Default Settings(** Will Reboot Device )  ",
-"8  Teardown/Disable and Exit                                 "
+"8  Teardown/Disable and Exit                                 ",
+"9  Set Data Path Optimization Flag                           ",
+"10  Get Data Path Optimization Flag                          "
 };
 
 const char* lan_configuration_list[]=
@@ -2444,6 +2446,54 @@ void mobileApConfig(int mobileApOpt)
         exit(1);
       }
       break;
+
+    /*Set Data Path Optimization Flag*/
+    case 9:
+    {
+      boolean data_path_opt_status;
+      int input;
+
+      printf("\n Please input 1-[enable]/0-[disable]:");
+      fgets(scan_string, sizeof(scan_string), stdin);
+      input = atoi(scan_string);
+      printf("\n Response: %d",input);
+      if (input > 1 || input < 0)
+      {
+        printf("\nInvalid response\n");
+        break;
+      }
+      else
+      {
+        data_path_opt_status = input;
+        if(QcMapClient->SetDataPathOptStatus(data_path_opt_status , &qmi_err_num))
+        {
+           printf("\nData path opt status set successfully\n");
+        }
+        else
+        {
+           printf("\n Set data path opt  status fails, Error: 0x%x \n", qmi_err_num);
+        }
+      }
+      break;
+    }
+
+    /* Get Data Path Optimization Flag */
+    case 10:
+    {
+      boolean data_path_opt_status = 0;
+      if (QcMapClient->GetDataPathOptStatus(&data_path_opt_status , &qmi_err_num))
+      {
+        if(data_path_opt_status)
+          printf("\nData optimization handler enabled\n");
+        else
+          printf("\nData optimization handler not enabled\n");
+      }
+      else
+      {
+        printf("\n Get data path opt  status fails, Error: 0x%x \n", qmi_err_num);
+      }
+      break;
+    }
     default:
     {
       printf("Invalid response %d\n", mobileApOpt);
@@ -4210,7 +4260,6 @@ void nat_alg_vpn_config( int natAlgOpt )
     }
     break;
   }
-
   default :
   {
    printf("Invalid response %d\n", natAlgOpt);
@@ -4684,7 +4733,7 @@ static boolean PromptUserSOCKSv5UnameAssoc(qmi_error_type_v01 *qmi_err_num)
 /*=========================================================================*/
 static boolean GetUserInputSOCKSv5Uname(char* uname)
 {
-  char scan_string[QCMAP_MSGR_MAX_FILE_PATH_LEN];
+  char scan_string[QCMAP_SOCKSV5_MAX_UNAME_PASSWD_LEN_V01 + 2];
 
   memset(uname, 0, QCMAP_SOCKSV5_MAX_UNAME_PASSWD_LEN_V01);
   memset(scan_string, 0, sizeof(scan_string));
@@ -4787,7 +4836,9 @@ static boolean GetUserInputSOCKSv5ServiceNo(unsigned int* service_no)
 static boolean CheckSOCKSv5UnameLen(char* str)
 {
   //bounds check
-  if(strlen(str) > QCMAP_SOCKSV5_MAX_UNAME_PASSWD_LEN_V01)
+  if((strlen(str) > QCMAP_SOCKSV5_MAX_UNAME_PASSWD_LEN_V01 + 1 &&
+      str[strlen(str) - 1] == '\n') || (str[strlen(str) - 1] != '\n' &&
+      strlen(str) > QCMAP_SOCKSV5_MAX_UNAME_PASSWD_LEN_V01))
   {
     printf("RFC 1929 can't allow uname len > %u\n", QCMAP_SOCKSV5_MAX_UNAME_PASSWD_LEN_V01);
     return false;
@@ -6703,7 +6754,6 @@ void backhaulWWANConfig( int backhaulWWANOpt )
   /* Create Profile */
   case 25:
   {
-    qcmap_msgr_ip_family_enum_v01 ip_family ;
     qcmap_msgr_net_policy_info_v01 net_policy;
     memset(&net_policy,0,sizeof(qcmap_msgr_net_policy_info_v01));
 
@@ -6716,29 +6766,7 @@ void backhaulWWANConfig( int backhaulWWANOpt )
       printf ("\n Invalid tech preference\n");
       break;
     }
-    printf("Please input IP Family IPV4-4 IPV6-6 IPV4V6-10 : ");
-    fgets(scan_string, sizeof(scan_string), stdin);
-    ip_family = (qcmap_msgr_ip_family_enum_v01)atoi(scan_string);
-    if ( ip_family == QCMAP_MSGR_IP_FAMILY_V4_V01 )
-    {
-     printf("   Please enter UMTS Profile Number : ");
-     fgets(scan_string, sizeof(scan_string), stdin);
-     net_policy.v4_profile_id_3gpp = atoi(scan_string);
-     printf("   Please enter CDMA Profile Number : ");
-     fgets(scan_string, sizeof(scan_string), stdin);
-     net_policy.v4_profile_id_3gpp2 = atoi(scan_string);
-    }
-    else if ( ip_family == QCMAP_MSGR_IP_FAMILY_V6_V01 )
-    {
-      printf("   Please enter UMTS Profile Number : ");
-      fgets(scan_string, sizeof(scan_string), stdin);
-      net_policy.v6_profile_id_3gpp = atoi(scan_string);
-      printf("   Please enter CDMA Profile Number : ");
-      fgets(scan_string, sizeof(scan_string), stdin);
-      net_policy.v6_profile_id_3gpp2 = atoi(scan_string);
-    }
-    else if ( ip_family == QCMAP_MSGR_IP_FAMILY_V4V6_V01 )
-    {
+
       printf("Please enter V4 UMTS Profile Number : ");
       fgets(scan_string, sizeof(scan_string), stdin);
       net_policy.v4_profile_id_3gpp = atoi(scan_string);
@@ -6751,13 +6779,6 @@ void backhaulWWANConfig( int backhaulWWANOpt )
       printf("   Please enter V6 CDMA Profile Number : ");
       fgets(scan_string, sizeof(scan_string), stdin);
       net_policy.v6_profile_id_3gpp2 = atoi(scan_string);
-    }
-    else
-    {
-      printf("\nUnsupported ip mode:- %d.\n", ip_family);
-      break;
-    }
-    net_policy.ip_family = ip_family;
     if (QcMapClient->CreateWWANPolicy(net_policy, &qmi_err_num))
       printf("  Create WWAN policy succeeds.\n. ");
     else

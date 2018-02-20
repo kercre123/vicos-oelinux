@@ -14,6 +14,9 @@ EXTRA_OECONF += " --with-glib"
 EXTRA_OECONF += " --enable-target-${BASEMACHINE}=yes"
 EXTRA_OECONF += " --with-cutils-headers=${STAGING_INCDIR}/cutils/"
 EXTRA_OECONF += " --with-sanitized-headers=${STAGING_KERNEL_BUILDDIR}/usr/include/"
+EXTRA_OECONF += " --with-adsprpc-include-path=${WORKSPACE}/adsprpc"
+#EXTRA_OECONF += " --enable-mdsp"
+#EXTRA_OECONF += " --enable-cdsp"
 
 #Used to enable SDLLVM compiler
 ENABLE_SDLLVM = "true"

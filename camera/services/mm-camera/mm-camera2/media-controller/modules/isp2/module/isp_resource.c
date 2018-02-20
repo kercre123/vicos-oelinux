@@ -3172,7 +3172,7 @@ boolean isp_resource_create_link(mct_module_t *module, mct_port_t *port,
         goto ERROR;
       }
       stream->streaminfo = l_stream_info;
-      isp_util_update_stream_info_dims_for_rotation(&stream->streaminfo);
+      //isp_util_update_stream_info_dims_for_rotation(&stream->streaminfo);
 
       ret = isp_resource_link_modules(stream, port, isp_resource_info,
         session_param, stream_param, hw_id);

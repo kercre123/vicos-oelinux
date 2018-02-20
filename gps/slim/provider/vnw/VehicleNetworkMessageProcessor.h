@@ -135,6 +135,7 @@ class VehicleNetworkCONF1AccelMP
   : public VehicleNetworkMessageProcessor
 {
 public:
+  slimVehicleSensorDataStructT mZData;
   VehicleNetworkCONF1AccelMP(VehicleNetworkProvider* pzParent,
                              AccelCONF1Config* pzCfg);
   virtual void OnNewCanFrameEvent(CanFrameEvent* pzEvent);
@@ -181,6 +182,7 @@ class VehicleNetworkCONF1GyroMP
   : public VehicleNetworkMessageProcessor
 {
 public:
+  slimVehicleSensorDataStructT mZData;
   VehicleNetworkCONF1GyroMP(VehicleNetworkProvider* pzParent,
                             GyroCONF1Config* pzCfg);
   virtual void OnNewCanFrameEvent(CanFrameEvent* pzEvent);
@@ -227,6 +229,7 @@ class VehicleNetworkCONF1OdometryMP
   : public VehicleNetworkMessageProcessor
 {
 public:
+  slimVehicleOdometryDataStructT mZData;
   VehicleNetworkCONF1OdometryMP(VehicleNetworkProvider* pzParent,
                                 OdometryCONF1Config* pzCfg);
   virtual void OnNewCanFrameEvent(CanFrameEvent* pzEvent);
@@ -275,6 +278,7 @@ class VehicleNetworkCONF1SpeedMP
   : public VehicleNetworkMessageProcessor
 {
 public:
+  slimVehicleMotionDataStructT mZData;
   VehicleNetworkCONF1SpeedMP(VehicleNetworkProvider* pzParent,
                              SpeedCONF1Config* pzCfg);
   virtual void OnNewCanFrameEvent(CanFrameEvent* pzEvent);
@@ -321,6 +325,7 @@ class VehicleNetworkCONF1DwsMP
   : public VehicleNetworkMessageProcessor
 {
 public:
+  slimVehicleMotionDataStructT mZData;
   VehicleNetworkCONF1DwsMP(VehicleNetworkProvider* pzParent,
                              DwsCONF1Config* pzCfg);
   virtual void OnNewCanFrameEvent(CanFrameEvent* pzEvent);
@@ -367,6 +372,7 @@ class VehicleNetworkCONF1GearMP
   : public VehicleNetworkMessageProcessor
 {
 public:
+  slimVehicleMotionDataStructT mZData;
   VehicleNetworkCONF1GearMP(VehicleNetworkProvider* pzParent,
                              GearCONF1Config* pzCfg);
   virtual void OnNewCanFrameEvent(CanFrameEvent* pzEvent);

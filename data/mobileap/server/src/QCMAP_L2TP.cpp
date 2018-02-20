@@ -231,8 +231,18 @@ boolean QCMAP_L2TP::DeleteL2TPTunnelConfig
   ds_dll_el_t *search_node = NULL;
   qcmap_L2TP_Tunnel_info_list_t *tunnel_list = NULL;
   qcmap_L2TP_Tunnel_list_item_t *l2tp_config_node = NULL;
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
 /*------------------------------------------------------------------------*/
   *qmi_err_num = QMI_ERR_NONE_V01;
+
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("L2TP is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
 
   if (!QcMapL2TPMgr)
   {
@@ -326,9 +336,19 @@ boolean QCMAP_L2TP::GetL2TPConfig
 {
   qcmap_L2TP_Tunnel_info_list_t *tunnel_list = NULL;
   QCMAP_L2TP* QcMapL2TPMgr= QCMAP_L2TP::Get_Instance(false);
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
   uint32 num_tunnels = 0;
   *qmi_err_num = QMI_ERR_NONE_V01;
 /*------------------------------------------------------------------------*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("L2TP is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   if (NULL == l2tp_config || NULL == length || NULL == l2tp_mtu_config
       || NULL == l2tp_mss_config)
   {
@@ -622,7 +642,17 @@ boolean QCMAP_L2TP::SetL2TPState
   *qmi_err_num = QMI_ERR_NONE_V01;
   qcmap_msgr_l2tp_mtu_config_v01 l2tp_mtu_config;
   qcmap_msgr_l2tp_TCP_MSS_config_v01 l2tp_mss_config;
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
 /*------------------------------------------------------------------------*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("L2TP is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   if (l2tp_config.enable == 1 && QCMAP_L2TP::l2tpEnableFlag == true)
   {
     LOG_MSG_ERROR("SetL2TPState() - L2TP Config already enabled "\
@@ -728,7 +758,17 @@ boolean QCMAP_L2TP::SetMTUConfigForL2TP(
   ds_dll_el_t * node = NULL;
   qcmap_L2TP_Tunnel_list_item_t *l2tp_config_node = NULL;
   qcmap_L2TP_Tunnel_info_list_t *tunnel_list = NULL;
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
 /*------------------------------------------------------------------------*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("L2TP is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   if (!QcMapL2TPMgr)
   {
     LOG_MSG_ERROR("SetMTUConfigForL2TP() - L2TP object is NULL, "
@@ -811,6 +851,14 @@ boolean QCMAP_L2TP::SetTCPMSSConfigForL2TP(
   QCMAP_ConnectionManager* QcMapMgr =
                              QCMAP_ConnectionManager::Get_Instance(NULL, false);
 /*------------------------------------------------------------------------*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("L2TP is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   if (!QcMapL2TPMgr)
   {
     LOG_MSG_ERROR("SetTCPMSSConfigForL2TP() - L2TP object is NULL, "
@@ -873,7 +921,7 @@ boolean QCMAP_L2TP::SetTCPMSSConfigForL2TP(
   {
     ds_system_call("rmmod xt_physdev",
              strlen("rmmod xt_physdev"));
-    if (!QcMapMgr->sfe_loaded)
+    if (QcMapMgr && !QcMapMgr->sfe_loaded)
       ds_system_call("rmmod br_netfilter",
               strlen("rmmod br_netfilter"));
     QCMAP_L2TP::TCP_MSS_Kernel_Configs_Enabled = false;
@@ -925,7 +973,17 @@ boolean QCMAP_L2TP::SetL2TPConfig
   uint32 *session_id_ptr = NULL;
   qcmap_L2TP_Session_info_list_t *sessionList = NULL;
   qcmap_session_id_info_list_t* sessionIDList = &(QCMAP_L2TP::sessionIDList);
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
 /*------------------------------------------------------------------------*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("L2TP is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    *qmi_err_num = QMI_ERR_NOT_SUPPORTED_V01;
+    return false;
+  }
+
   if (!QcMapL2TPMgr)
   {
     LOG_MSG_ERROR("SetL2TPConfig(), L2TP instance is NULL",0,0,0);
@@ -1203,7 +1261,16 @@ QCMAP_L2TP::QCMAP_L2TP()
                                   QCMAP_Virtual_LAN::Get_Instance(false);
   qcmap_msgr_l2tp_mtu_config_v01 mtu_config;
   qcmap_msgr_l2tp_TCP_MSS_config_v01 mss_config;
+  QCMAP_ConnectionManager* QcMapMgr=
+                        QCMAP_ConnectionManager::Get_Instance(NULL,false);
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+  if (QcMapMgr && !(IS_L2TP_VLAN_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_ERROR("L2TP is not allowed on this target(%d)",
+                  QcMapMgr->target,0,0);
+    return;
+  }
+
   mtu_config.enable = 0;
   mss_config.enable = 0;
 
@@ -1484,7 +1551,6 @@ void QCMAP_L2TP::AddL2TPNodeToXML
 
   if (NULL != tunnel_node->session_list.L2TP_SessionListHead)
   {
-    subchild1 = child.append_child(L2TPSession_Tag);
     ll_node = tunnel_node->session_list.L2TP_SessionListHead;
     ll_node = ds_dll_next (ll_node, (const void**)(&session_config));
     while (ll_node \
@@ -1498,6 +1564,7 @@ void QCMAP_L2TP::AddL2TPNodeToXML
         break;
       }
 
+      subchild1 = child.append_child(L2TPSession_Tag);
       snprintf(data,sizeof(data),"%d",session_config->sessionConfig.session_id);
       subchild2 = subchild1.append_child(L2TPSessionID_Tag);
       subchild2.append_child(pugi::node_pcdata).set_value(data);

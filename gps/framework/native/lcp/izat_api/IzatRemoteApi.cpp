@@ -113,10 +113,8 @@ public:
     }
 };
 
-
 IzatNotifier::IzatNotifier(const char* const name, const OutCard* subCard) :
     mNotifierProxy(IzatNotifierProxy::get(name)) {
-    mNotifierProxy->addNotifier(this, subCard);
 }
 
 IzatNotifier::~IzatNotifier() {
@@ -129,6 +127,18 @@ static const char* sToTag = "TO";
 static const char* sFromTag = "FROM";
 static const char* sReqTag = "REQ";
 static const char* sInfoTag = "INFO";
+
+LocationUpdaterBase::LocationUpdaterBase(const char* const name,
+                                         const OutCard* sSubscriptionCard,
+                                         const remoteClientInfo *pClientInfo,
+                                         const void* clientData) :
+                                             IzatNotifier(name,
+                                             sSubscriptionCard),
+                                             mClientInfo(pClientInfo),
+                                             mClientData(clientData),
+                                             mName(name) {
+    mNotifierProxy->addNotifier(this, sSubscriptionCard);
+}
 
 OutCard* LocationUpdaterBase::getLocSubscriptionCard(const char* name,
                                                      uint32_t streamType)
@@ -208,6 +218,10 @@ const char* const SstpUpdater::sLonTag = "LONGITUDE";
 const char* const SstpUpdater::sUncTag = "HOR-UNC-M";
 const char* const SstpUpdater::sUncConfTag = "HOR-UNC-CONFIDENCE";
 
+SstpUpdater::SstpUpdater() : IzatNotifier(sName, nullptr) {
+    mNotifierProxy->addNotifier(this, nullptr);
+}
+
 void SstpUpdater::stop() {
     if (mNotifierProxy) {
         OutPostcard* card = OutPostcard::createInstance();
@@ -285,6 +299,18 @@ const OutCard* SvInfoUpdater::sSubscriptionCard =
       SvInfoUpdaterBase::getSvInfoSubscriptionCard(SvInfoUpdater::sName,
                                                    IZAT_STREAM_DR_SVINFO);
 
+SvInfoUpdaterBase::SvInfoUpdaterBase(const char* const name,
+                                     const OutCard* sSubscriptionCard,
+                                     remoteClientInfo *pClientInfo,
+                                     const void* clientData) :
+                                         IzatNotifier(name,
+                                         sSubscriptionCard),
+                                         mClientInfo(pClientInfo),
+                                         mClientData(clientData),
+                                         mName(name) {
+    mNotifierProxy->addNotifier(this, sSubscriptionCard);
+}
+
 const char RawSvInfoUpdater::sName[] = "RAW-SVINFO-UPDATE";
 const OutCard* RawSvInfoUpdater::sRawSubscriptionCard =
       SvInfoUpdaterBase::getSvInfoSubscriptionCard(RawSvInfoUpdater::sName,
@@ -337,6 +363,10 @@ const char* const WiFiDBUpdater::sAPListTag = "AP-LIST";
 const char* const WiFiDBUpdater::sAPLocationTag = "AP-LOC";
 const char* const WiFiDBUpdater::sAPListCountTag = "AP-LIST-COUNT";
 const char* const WiFiDBUpdater::sAPLocCountTag = "AP-LOC-COUNT";
+
+WiFiDBUpdater::WiFiDBUpdater() : IzatNotifier(sName, nullptr) {
+    mNotifierProxy->addNotifier(this, nullptr);
+}
 
 void WiFiDBUpdater::sendAPListReq(int expire_in_days) {
     const char EXPIRE_IN_DAYS[] = "EXPIRE-IN-DAYS";

@@ -1774,6 +1774,27 @@ static qmi_csi_cb_error qmi_qcmap_msgr_delete_gsb_config
   void                     *service_handle
 );
 
+static qmi_csi_cb_error qmi_qcmap_msgr_get_data_path_opt_status
+(
+
+  qmi_qcmap_msgr_client_info_type        *clnt_info,
+  qmi_req_handle           req_handle,
+  int                      msg_id,
+  void                    *req_c_struct,
+  int                      req_c_struct_len,
+  void                     *service_handle
+);
+
+static qmi_csi_cb_error qmi_qcmap_msgr_set_data_path_opt_status
+(
+  qmi_qcmap_msgr_client_info_type        *clnt_info,
+  qmi_req_handle           req_handle,
+  int                      msg_id,
+  void                    *req_c_struct,
+  int                      req_c_struct_len,
+  void                     *service_handle
+);
+
 static qmi_csi_cb_error (* const req_handle_table[])
 (
  qmi_qcmap_msgr_client_info_type        *clnt_info,
@@ -1960,7 +1981,11 @@ static qmi_csi_cb_error (* const req_handle_table[])
   qmi_qcmap_msgr_disable_gsb,                              /* Request handler for message ID 0xC9 */
   qmi_qcmap_msgr_get_gsb_config,                           /* Request handler for message ID 0xCA */
   qmi_qcmap_msgr_set_gsb_config,                           /* Request handler for message ID 0xCB */
-  qmi_qcmap_msgr_delete_gsb_config                         /* Request handler for message ID 0xCC */
+  qmi_qcmap_msgr_delete_gsb_config,                        /* Request handler for message ID 0xCC */
+  NULL,                                                    /* Request handler for message ID 0xCD */
+  NULL,                                                    /* Request handler for message ID 0xCE */
+  qmi_qcmap_msgr_get_data_path_opt_status,                 /* Request handler for message ID 0xCF */
+  qmi_qcmap_msgr_set_data_path_opt_status                  /* Request handler for message ID 0xD0 */
 };
 
 /*===========================================================================
@@ -2498,6 +2523,7 @@ int main(int argc, char **argv)
   qcmap_nl_sock_msg_t qcmap_nl_wlan_buffer;
   qcmap_scm_buffer_t *qcmap_scm_buffer = NULL;
   uint8_t             mac_addr[QCMAP_MSGR_MAC_ADDR_LEN_V01];
+  uint8_t retry_on_eio = 0;
   fd_set master_fd_set;
   int tmp_handle = 0;
   qmi_error_type_v01 qmi_err_num = QMI_ERR_NONE_V01;
@@ -2508,6 +2534,12 @@ int main(int argc, char **argv)
   qcmap_msgr_wlan_mode_enum_v01 wlan_mode = QCMAP_MSGR_WLAN_MODE_ENUM_MIN_ENUM_VAL_V01;
   qcmap_msgr_guest_profile_config_v01 guest_access_profile;
   qcmap_msgr_station_mode_config_v01 station_config;
+  uint8 origIPv6[QCMAP_MSGR_IPV6_ADDR_LEN_V01];
+  char ipv6addr[INET6_ADDRSTRLEN];
+  memset(origIPv6,0,QCMAP_MSGR_IPV6_ADDR_LEN_V01);
+  memset(ipv6addr, 0, INET6_ADDRSTRLEN);
+  char devname[DSI_CALL_INFO_DEVICE_NAME_MAX_LEN+2];
+
 
   QCMAP_ConnectionManager* QcMapMgr=NULL;
   QCMAP_WLAN* QcMapWLANMgr = NULL;
@@ -2610,6 +2642,15 @@ int main(int argc, char **argv)
     }
   }
 
+  if ( QCMAP_ConnectionManager::get_gsb_enable_cfg_flag() )
+  {
+      if (QCMAP_GSB::EnableGSB(&qmi_err_num))
+      {
+        LOG_MSG_INFO1("Enable GSB on bootup succeeded",0,0,0);
+      }
+  }
+
+
   if ( QCMAP_ConnectionManager::get_wlan_enable_cfg_flag() )
   {
 
@@ -2648,14 +2689,6 @@ int main(int argc, char **argv)
     {
       LOG_MSG_INFO1("Enable WLAN on Bootup Failsi errno:%d.\n",qmi_err_num,0,0);
     }
-  }
-
-  if ( QCMAP_ConnectionManager::get_gsb_enable_cfg_flag() )
-  {
-      if (QCMAP_GSB::EnableGSB(&qmi_err_num))
-      {
-        LOG_MSG_INFO1("Enable GSB on bootup succeeded",0,0,0);
-      }
   }
 
   /* If Wlan is not in STA mode, wlan is enabled first so that wlan
@@ -2703,10 +2736,48 @@ int main(int argc, char **argv)
     if (ret < 0)
     {
       LOG_MSG_ERROR("Error in select, errno:%d", errno, 0, 0);
-      if( errno == EINTR )
-       continue;
+      if( errno == EINTR || errno == EAGAIN)
+      {
+        /* reset retry as we may have reset FD descriptors
+           successfully in this case*/
+        if (retry_on_eio > 0)
+        {
+          retry_on_eio = 0;
+        }
+        continue;
+      }
+      else if(errno == EIO)
+      {
+        ds_system_call("echo QCMAP EIO error > /dev/kmsg",
+          strlen("echo QCMAP EIO error > /dev/kmsg"));
+        /* if we are continously failing with EIO for more
+           than 3 times we exit*/
+        if (MAX_EIO_RETRY < retry_on_eio)
+        {
+          /* better to log this in console as we can make sure it
+                              was not QCMAP crash*/
+          ds_system_call("echo QCMAP..exiting > /dev/kmsg",
+                         strlen("echo QCMAP..exiting > /dev/kmsg"));
+          return -1;
+        }
+        retry_on_eio++;
+        continue;
+      }
       else
-       return -1;
+      {
+        /* better to log this in console as we can make sure it
+                              was not QCMAP crash*/
+        ds_system_call("echo QCMAP..exiting > /dev/kmsg",
+                         strlen("echo QCMAP..exiting > /dev/kmsg"));
+        return -1;
+      }
+    }
+
+    if (retry_on_eio > 0)
+    {
+      /* reset retry as we may have reset FD
+         descriptors in this case*/
+      retry_on_eio = 0;
     }
 
     for (int i = 0; ( i <= os_params.max_fd ); i++)
@@ -2953,7 +3024,7 @@ int main(int argc, char **argv)
                memset(mac_addr, 0, QCMAP_MSGR_MAC_ADDR_LEN_V01);
                ds_mac_addr_pton(qcmap_sta_buffer->mac_addr, mac_addr);
                memcpy(qcmap_nl_wlan_buffer.nl_addr.mac_addr, mac_addr, QCMAP_MSGR_MAC_ADDR_LEN_V01);
-               if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_wlan_buffer.nl_addr))))
+               if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_wlan_buffer.nl_addr))) == 0)
                {
                  LOG_MSG_INFO1("No match found for the WLAN MAC,"
                                "so add a linked list node device type %d",qcmap_sta_buffer->iface_num, 0, 0);
@@ -2968,7 +3039,7 @@ int main(int argc, char **argv)
                  {
                    Getclientaddr(&qcmap_nl_wlan_buffer.nl_addr);
                    LOG_MSG_INFO1("WLAN Client conected",0, 0, 0);
-                   if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_wlan_buffer.nl_addr))))
+                   if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_wlan_buffer.nl_addr))) == 0)
                    {
                      LOG_MSG_ERROR("No match found for the WLAN MAC -"
                          "Recived a NEWNEIGH Event before AP-STA-CONNECTED",0, 0, 0);
@@ -3031,7 +3102,7 @@ int main(int argc, char **argv)
                /* Check if an entry already exists. If not add the entry. */
                if (QCMAP_Tethering::GetTethLinkEnable(QCMAP_MSGR_TETH_LINK_INDEX1) == true)
                {
-                 if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+                 if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
                  {
                    LOG_MSG_INFO1("No match found for the USB MAC,"
                                  "so add a linked list node\n",0, 0, 0);
@@ -3051,7 +3122,7 @@ int main(int argc, char **argv)
                    {
                      Getclientaddr(&qcmap_nl_buffer->nl_addr);
                      LOG_MSG_INFO1("USB Client connected",0, 0, 0);
-                     if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+                     if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
                      {
                        ds_mac_addr_ntop(qcmap_nl_buffer->nl_addr.mac_addr,
                                         mac_addr_char);
@@ -3095,7 +3166,7 @@ int main(int argc, char **argv)
              {
                //Store the MAC and IP address in QCMAP Manager context
                LOG_MSG_INFO1("Received RTM_NEWNEIGH for WLAN Client",0, 0, 0);
-               if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+               if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
                {
                    LOG_MSG_ERROR("No match found for the WLAN MAC -"
                                  "Recived a NEWNEIGH Event "
@@ -3218,7 +3289,7 @@ int main(int argc, char **argv)
              else if (qcmap_nl_buffer->nl_event == QCMAP_NL_NEWNEIGH)
              {
                Getclientaddr(&qcmap_nl_buffer->nl_addr);
-               if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+               if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
                {
                  LOG_MSG_INFO1("No match found for the WLAN/USB/ETH client MAC,",
                                0, 0, 0);
@@ -3247,14 +3318,46 @@ int main(int argc, char **argv)
              QCMAP_Backhaul_WLAN* QcMapBackhaulWLANMgr=GET_DEFAULT_BACKHAUL_WLAN_OBJECT();
              QCMAP_Backhaul* QcMapBackhaulMgr=GET_DEFAULT_BACKHAUL_OBJECT();
 
-             if (qcmap_nl_buffer->nl_event == QCMAP_NL_RA)
+             /*
+             Without Multi-PDN introduction, we assumed that we will never get
+             RA if default BH is down. As M-PDN was introduced, we discovered
+             a scenario where default BH was down but concurrent BH was UP.
+             This resulted in RA trapped by QCMAP and we went ahead and
+             processed them.Here are issues resulting from it:
+             1. if default BH is down and connecurrent BH up, then we update
+             our CDI client's IPV6 with concurrent BH prefixes
+             2. If default BH is up, intermittently we were updating client's
+             IPV6 with prefixes from  other BH as we dont
+
+             Following fix will ensure proper handling of RA as we validate if
+             they are happening on default Iface.
+             This fix need to be revisited however with M-PDN /VLAN
+             architecture. (TO DO).
+             */
+
+             if (QcMapBackhaulMgr && qcmap_nl_buffer->nl_event == QCMAP_NL_RA)
              {
-               QCMAP_Backhaul::UpdateGlobalV6addr(&(qcmap_nl_buffer->nl_addr), true);
-               /*Check if AP_STA Router or Cradle WAN Router mode is enabled
-                 and cache the RA gateway information*/
-               if (QcMapBackhaulCradleMgr || QcMapBackhaulWLANMgr || QcMapBackhaulEthMgr)
+               memcpy(origIPv6, qcmap_nl_buffer->nl_addr.ip_v6_addr,QCMAP_MSGR_IPV6_ADDR_LEN_V01);
+               inet_ntop(AF_INET6,(void *)origIPv6, ipv6addr, INET6_ADDRSTRLEN);
+               LOG_MSG_INFO1("nl V6 Address %s, ipv6 valid? %d",
+                            ipv6addr,qcmap_nl_buffer->nl_addr.isValidIPv6address,0);
+               LOG_MSG_INFO1("nl iface %s",
+                            qcmap_nl_buffer->nl_addr.iface_name,0,0);
+               if(QcMapBackhaulMgr->GetDeviceName(devname, QCMAP_MSGR_IP_FAMILY_V6_V01, &qmi_err_num) !=0)
                {
-                 QcMapBackhaulMgr->AddIPv6DefaultRouteInfo(&qcmap_nl_buffer->nl_addr);
+                 LOG_MSG_INFO1("def dev iface %s",
+                                                devname,0,0);
+                 if (strncmp(qcmap_nl_buffer->nl_addr.iface_name, devname,
+                             strlen(qcmap_nl_buffer->nl_addr.iface_name)) == 0)
+                 {
+                   QCMAP_Backhaul::UpdateGlobalV6addr(&(qcmap_nl_buffer->nl_addr), true);
+                   /*Check if AP_STA Router or Cradle WAN Router mode is enabled
+                   and cache the RA gateway information*/
+                   if (QcMapBackhaulCradleMgr || QcMapBackhaulWLANMgr || QcMapBackhaulEthMgr)
+                   {
+                     QcMapBackhaulMgr->AddIPv6DefaultRouteInfo(&qcmap_nl_buffer->nl_addr);
+                   }
+                 }
                }
              }
              else if (QCMAP_Backhaul_WLAN::IsAPSTABridgeActivated())
@@ -3307,7 +3410,7 @@ int main(int argc, char **argv)
              if ( qcmap_nl_buffer->nl_event == QCMAP_NL_NEWNEIGH )
              {
                /* Check if an entry already exists. If not add the entry. */
-               if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+               if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
                {
                  LOG_MSG_INFO1("No match found for the Ethernet Client MAC,"
                                "so add a linked list node\n",0, 0, 0);
@@ -3324,7 +3427,7 @@ int main(int argc, char **argv)
                  {
                    Getclientaddr(&qcmap_nl_buffer->nl_addr);
                    LOG_MSG_INFO1("Ethernet Client connected",0, 0, 0);
-                   if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+                   if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
                    {
                      LOG_MSG_ERROR("No match found for the Ethernet client",
                      0, 0, 0);
@@ -3365,7 +3468,7 @@ int main(int argc, char **argv)
             if ( qcmap_nl_buffer->nl_event == QCMAP_NL_NEWNEIGH )
             {
               /* Check if an entry already exists. If not add the entry. */
-              if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+              if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
               {
                 LOG_MSG_INFO1("No match found for the BT Client MAC,"
                               "so add a linked list node\n",0, 0, 0);
@@ -3382,7 +3485,7 @@ int main(int argc, char **argv)
                 {
                   Getclientaddr(&qcmap_nl_buffer->nl_addr);
                   LOG_MSG_INFO1("BT Client connected",0, 0, 0);
-                  if(!(QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))))
+                  if((QCMAP_ConnectionManager::MatchMacAddrInList(&(qcmap_nl_buffer->nl_addr))) == 0)
                   {
                     LOG_MSG_ERROR("No match found for the BT client",
                                   0, 0, 0);
@@ -18351,3 +18454,176 @@ static qmi_csi_cb_error qmi_qcmap_msgr_get_gsb_config
 
   return QMI_CSI_CB_NO_ERR;
 } /* qmi_qcmap_msgr_get_gsb_config */
+
+/*===========================================================================
+  FUNCTION QMI_QCMAP_MSGR_GET_DATA_PATH_OPT_STATUS()
+
+  DESCRIPTION
+    Gets the configuration status for data path optimizer
+  PARAMETERS
+    sp:          QMI_QCMAP MSGR's service instance state pointer for this qmi link
+    cmd_buf_p:   Message Header
+    cl_sp:       Coresponding client state pointer
+    sdu_in:      input command data
+
+  RETURN VALUE
+    dsm * pointing to the response to be sent to host
+    NULL if no response was generated or command was discarded
+
+  DEPENDENCIES
+    qmi_qcmap_msgr_init() must have been called
+
+  SIDE EFFECTS
+    None
+===========================================================================*/
+
+static qmi_csi_cb_error qmi_qcmap_msgr_get_data_path_opt_status
+(
+  qmi_qcmap_msgr_client_info_type        *clnt_info,
+  qmi_req_handle           req_handle,
+  int                      msg_id,
+  void                    *req_c_struct,
+  int                      req_c_struct_len,
+  void                     *service_handle
+
+)
+{
+
+  qmi_qcmap_msgr_state_info_type      *qcmap_sp;
+  qmi_error_type_v01 qmi_err_num = QMI_ERR_NONE_V01;
+  boolean data_path_opt_status;
+  qcmap_msgr_get_data_path_opt_status_resp_msg_v01  resp_msg;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL,false);
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+  ds_assert(req_c_struct != NULL);
+  ds_assert(req_c_struct_len > 0);
+  ds_assert(clnt_info != NULL);
+  ds_assert(service_handle != NULL);
+
+  qcmap_sp = (qmi_qcmap_msgr_state_info_type *)service_handle;
+  memset(&resp_msg, 0, sizeof(qcmap_msgr_get_data_path_opt_status_resp_msg_v01));
+
+  if(!QcMapMgr)
+  {
+    LOG_MSG_ERROR("QcMap Object not created",0,0,0);
+    resp_msg.resp.result = QMI_RESULT_FAILURE_V01;
+    resp_msg.resp.error = QMI_ERR_INVALID_ARG_V01;
+    qmi_csi_send_resp(req_handle, msg_id, &resp_msg,
+                sizeof(qcmap_msgr_get_data_path_opt_status_resp_msg_v01));
+    return QMI_CSI_CB_NO_ERR;
+  }
+
+  if(QcMapMgr->GetDataPathOptManagerStatus(&(data_path_opt_status), &qmi_err_num))
+  {
+    resp_msg.data_path_opt_status_valid = TRUE;
+    resp_msg.data_path_opt_status = data_path_opt_status;
+    LOG_MSG_INFO1("Get Data path opt status successfull = %d",
+                                         resp_msg.data_path_opt_status,0,0);
+  }
+  else
+  {
+    LOG_MSG_INFO1("Get Data path opt status failed",0,0,0);
+    resp_msg.resp.result = QMI_RESULT_FAILURE_V01;
+    resp_msg.resp.error = qmi_err_num;
+  }
+    qmi_csi_send_resp(req_handle, msg_id, &resp_msg,
+                   sizeof(qcmap_msgr_get_data_path_opt_status_resp_msg_v01));
+    return QMI_CSI_CB_NO_ERR;
+}
+
+/*===========================================================================
+  FUNCTION QMI_QCMAP_MSGR_SET_DATA_PATH_OPT_STATUS()
+
+  DESCRIPTION
+    Sets the configured data path opt settings
+
+  PARAMETERS
+    sp:          QMI_QCMAP MSGR's service instance state pointer for this qmi link
+    cmd_buf_p:   Message Header
+    cl_sp:       Coresponding client state pointer
+    sdu_in:      input command data
+
+  RETURN VALUE
+    dsm * pointing to the response to be sent to host
+    NULL if no response was generated or command was discarded
+
+  DEPENDENCIES
+    qmi_qcmap_msgr_init() must have been called
+
+  SIDE EFFECTS
+    None
+===========================================================================*/
+
+static qmi_csi_cb_error qmi_qcmap_msgr_set_data_path_opt_status
+(
+  qmi_qcmap_msgr_client_info_type        *clnt_info,
+  qmi_req_handle           req_handle,
+  int                      msg_id,
+  void                    *req_c_struct,
+  int                      req_c_struct_len,
+  void                     *service_handle
+
+)
+{
+
+  qcmap_msgr_set_data_path_opt_status_req_msg_v01  *req_ptr;
+  qcmap_msgr_set_data_path_opt_status_resp_msg_v01  resp_msg;
+
+  qmi_error_type_v01 qmi_err_num = QMI_ERR_NONE_V01;
+
+  unsigned int     index;
+  qmi_qcmap_msgr_softap_handle_type *map_handle;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL,false);
+  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+  ds_assert(req_c_struct != NULL);
+  ds_assert(req_c_struct_len > 0);
+  ds_assert(clnt_info != NULL);
+  ds_assert(service_handle != NULL);
+
+  req_ptr = (qcmap_msgr_set_data_path_opt_status_req_msg_v01*) req_c_struct;
+
+    memset(&resp_msg, 0,
+        sizeof(qcmap_msgr_set_data_path_opt_status_req_msg_v01));
+
+  if(!QcMapMgr)
+  {
+    LOG_MSG_ERROR("QcMap Object not created",0,0,0);
+    resp_msg.resp.result = QMI_RESULT_FAILURE_V01;
+    resp_msg.resp.error = QMI_ERR_INVALID_ARG_V01;
+    qmi_csi_send_resp(req_handle, msg_id, &resp_msg,
+                sizeof(qcmap_msgr_set_data_path_opt_status_resp_msg_v01));
+    return QMI_CSI_CB_NO_ERR;
+  }
+
+  index = req_ptr->mobile_ap_handle;
+  if (index != QCMAP_MSGR_SOFTAP_HANDLE || ((map_handle = &qcmap_handle)->handle == 0))
+  {
+    LOG_MSG_ERROR("Set Data Opt request failed",0,0,0);
+    resp_msg.resp.result = QMI_RESULT_FAILURE_V01;
+    resp_msg.resp.error = QMI_ERR_INVALID_HANDLE_V01;
+    qmi_csi_send_resp(req_handle, msg_id, &resp_msg,
+                     sizeof(qcmap_msgr_set_data_path_opt_status_resp_msg_v01));
+    return QMI_CSI_CB_NO_ERR;
+  }
+  else
+  {
+    if (QcMapMgr->SetDataPathOptManagerStatus(req_ptr->data_path_opt_status, &qmi_err_num))
+    {
+      LOG_MSG_INFO1("Set Data opt status request done successfully = %d",
+                                                      req_ptr->data_path_opt_status,0,0);
+    }
+    else
+    {
+      LOG_MSG_ERROR("Set Data Status request config failed!!",0,0,0);
+      resp_msg.resp.result = QMI_RESULT_FAILURE_V01;
+      resp_msg.resp.error = qmi_err_num;
+    }
+  }
+
+  qmi_csi_send_resp(req_handle, msg_id, &resp_msg,
+                   sizeof(qcmap_msgr_set_data_path_opt_status_resp_msg_v01));
+  return QMI_CSI_CB_NO_ERR;
+}

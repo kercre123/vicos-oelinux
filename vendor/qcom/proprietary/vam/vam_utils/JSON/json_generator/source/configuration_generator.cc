@@ -375,6 +375,8 @@ JSONVAStatus ConfigurationGenerator::ToJSON()
                     motion_detected.sensitivity;
                 attributes["minimum_size"] = atomic_rules_[i].attributes.
                     motion_detected.minimum_size;
+                attributes["scene_type"] = atomic_rules_[i].attributes.
+                    motion_detected.scene_type;
                 attributes["event_on_delay"] = atomic_rules_[i].attributes.
                     motion_detected.event_on_delay;
                 attributes["event_off_delay"] = atomic_rules_[i].attributes.
@@ -386,6 +388,8 @@ JSONVAStatus ConfigurationGenerator::ToJSON()
                     intrusion_detected.sensitivity;
                 attributes["minimum_size"] = atomic_rules_[i].attributes.
                     intrusion_detected.minimum_size;
+                attributes["scene_type"] = atomic_rules_[i].attributes.
+                    motion_detected.scene_type;
                 atomic_rule["zone_id"] = atomic_rules_[i].zone_id.uuid;
                 break;
             case METADATA_EVENT_LINECROSSED:
@@ -393,6 +397,8 @@ JSONVAStatus ConfigurationGenerator::ToJSON()
                     line_crossed.sensitivity;
                 attributes["minimum_size"] = atomic_rules_[i].attributes.
                     line_crossed.minimum_size;
+                attributes["scene_type"] = atomic_rules_[i].attributes.
+                    motion_detected.scene_type;
                 attributes["direction"] = (int)atomic_rules_[i].attributes.
                     line_crossed.direction;
                 atomic_rule["line_id"] = atomic_rules_[i].line_id.uuid;
@@ -402,6 +408,8 @@ JSONVAStatus ConfigurationGenerator::ToJSON()
                     object_counted.sensitivity;
                 attributes["minimum_size"] = (int)atomic_rules_[i].attributes.
                     object_counted.minimum_size;
+                attributes["scene_type"] = atomic_rules_[i].attributes.
+                    motion_detected.scene_type;
                 attributes["report_time_interval"] = (int)atomic_rules_[i].
                     attributes.object_counted.report_time_interval;
                 attributes["reset_time_interval"] = (int)atomic_rules_[i].
@@ -428,6 +436,8 @@ JSONVAStatus ConfigurationGenerator::ToJSON()
                     loitering_detected.dwell_time;
                 attributes["minimum_size"] = atomic_rules_[i].attributes.
                     loitering_detected.minimum_size;
+                attributes["scene_type"] = atomic_rules_[i].attributes.
+                    motion_detected.scene_type;
                 atomic_rule["zone_id"] = atomic_rules_[i].zone_id.uuid;
                 break;
             case METADATA_EVENT_FACE_RECOGNIZED:
@@ -435,6 +445,8 @@ JSONVAStatus ConfigurationGenerator::ToJSON()
                     face_recognized.confidence;
                 attributes["minimum_size"] = atomic_rules_[i].attributes.
                     face_recognized.minimum_size;
+                attributes["scene_type"] = atomic_rules_[i].attributes.
+                    motion_detected.scene_type;
                 attributes["sensitivity"] = atomic_rules_[i].attributes.
                     face_recognized.sensitivity;
                 atomic_rule["zone_id"] = atomic_rules_[i].zone_id.uuid;
@@ -467,6 +479,8 @@ JSONVAStatus ConfigurationGenerator::ToJSON()
                     object_detected.sensitivity;
                 attributes["minimum_size"] = atomic_rules_[i].attributes.
                     object_detected.minimum_size;
+                attributes["scene_type"] = atomic_rules_[i].attributes.
+                    motion_detected.scene_type;
                 atomic_rule["zone_id"] = atomic_rules_[i].zone_id.uuid;
                 break;
             default:

@@ -9,6 +9,7 @@
 #include "json_metadata.h"
 #include "json_event.h"
 #include "json_common_types.h"
+#include <VAM/vaapi_config.h>
 #define VACONFIG_NAME_LEN (128)
 #define ZONES_IN_ATOMIC_RULE_MAX (5)
 #define ZONE_VERTICES_MAX (16)
@@ -50,6 +51,7 @@ struct JSONVAAtomicRule
     uint32_t cnt_zones;                      ///<the number of zones
     uint32_t sensitivity;             ///<sensitivity fo the atomic rule
     uint32_t min_size;                ///<min_size of the object for the rule
+    vaapi_scene_type scene_type;      ///< scene_type for the rule
     char name[VACONFIG_NAME_LEN];    ///< the name of atomic rule
     uint32_t status;           ///< if the atomic rule is active or not. 0:disabled, 1:enabled
     int64_t reserve[5];                 ///<reserved fields

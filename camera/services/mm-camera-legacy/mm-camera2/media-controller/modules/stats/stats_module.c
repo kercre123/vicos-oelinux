@@ -7,9 +7,9 @@
 #include "stats_module.h"
 #include "stats_port.h"
 #include "q3a_module.h"
-#ifdef FEATURE_GYRO
-#include "gyro_module.h"
-#endif
+//#ifdef FEATURE_GYRO
+//#include "gyro_module.h"
+//#endif
 #include "is_module.h"
 #include "mct_controller.h"
 #include "afd_module.h"
@@ -45,9 +45,9 @@ static mct_module_init_name_t stats_mods_list[] = {
   { "afd",  afd_module_init,  afd_module_deinit },
   { "asd",  asd_module_init,  asd_module_deinit },
   { "is",   is_module_init,   is_module_deinit},
-#ifdef FEATURE_GYRO
-  { "gyro", gyro_module_init, gyro_module_deinit},
-#endif
+//#ifdef FEATURE_GYRO
+//  { "gyro", gyro_module_init, gyro_module_deinit},
+//#endif
 };
 
 /** stats_module_check_port
@@ -170,12 +170,12 @@ static boolean stats_module_get_sub_ports(void *data, void *user_data)
   } else if (!strcmp(MCT_OBJECT_NAME(module), "asd")) {
     port = asd_module_get_port(module, sub->session);
   }
-#if FEATURE_GYRO
-  if (!strcmp(MCT_OBJECT_NAME(module), "gyro")) {
-    port = gyro_module_get_port(module, sub->session);
-    CDBG("%s: gyro port %p", __func__, port);
-  }
-#endif
+//#if FEATURE_GYRO
+//  if (!strcmp(MCT_OBJECT_NAME(module), "gyro")) {
+//    port = gyro_module_get_port(module, sub->session);
+//    CDBG("%s: gyro port %p", __func__, port);
+//  }
+//#endif
   if (!strcmp(MCT_OBJECT_NAME(module), "is")) {
     port = is_module_get_port(module, sub->session);
     CDBG("%s: is port %p", __func__, port);

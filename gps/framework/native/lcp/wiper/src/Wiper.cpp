@@ -62,10 +62,10 @@ Wiper* Wiper :: getInstance
     std::string confFile(LOC_PATH_IZAT_CONF);
     std::string gpshalConfFile(LOC_PATH_GPS_CONF);
 
-    char conf_feature_odcpi[LOC_MAX_PARAM_STRING];
-    char conf_feature_free_wifi_scan_inject[LOC_MAX_PARAM_STRING];
-    char conf_feature_supl_wifi[LOC_MAX_PARAM_STRING];
-    char conf_feature_wifi_supplicant_info[LOC_MAX_PARAM_STRING];
+    char conf_feature_odcpi[LOC_MAX_PARAM_STRING] = {0};
+    char conf_feature_free_wifi_scan_inject[LOC_MAX_PARAM_STRING] = {0};
+    char conf_feature_supl_wifi[LOC_MAX_PARAM_STRING] = {0};
+    char conf_feature_wifi_supplicant_info[LOC_MAX_PARAM_STRING] = {0};
     int  lppe_cp_techmask = 0;
     int  lppe_up_techmask = 0;
 
@@ -1276,16 +1276,23 @@ void Wiper::injectNetworkLocationMsg::proc() const
         cpi.horConfidence = mLocReport.mHorizontalConfidence;
         cpi.horReliabilityValid = true;
         cpi.horReliability = RELIABILITY_NOT_SET;
-        cpi.altitudeWrtEllipsoidValid = (mLocReport.mHasAltitudeWrtEllipsoid ? 1 : 0);
-        cpi.altitudeWrtEllipsoid = mLocReport.mAltitudeWrtEllipsoid;
-        cpi.altitudeWrtMeanSeaLevelValid = (mLocReport.mHasAltitudeWrtMeanSeaLevel ? 1 : 0);
-        cpi.altitudeWrtMeanSeaLevel = mLocReport.mAltitudeWrtMeanSeaLevel;
-        cpi.vertUncValid = (mLocReport.mHasVerticalUncertainity ? 1 : 0);
-        cpi.vertUnc = mLocReport.mVerticalUncertainity;
-        cpi.vertConfidenceValid = (mLocReport.mHasVerticalConfidence ? 1 : 0);
-        cpi.vertConfidence = mLocReport.mVerticalConfidence;
-        cpi.vertReliabilityValid = (mLocReport.mHasVerticalReliability ? 1 : 0);
-        cpi.vertReliability = mLocReport.mVerticalReliability;
+
+        /* Fill in altitude parameters only if vertical uncertainty is
+         * specified */
+        if ((mLocReport.mHasAltitudeWrtMeanSeaLevel || mLocReport.mHasAltitudeWrtEllipsoid) &&
+                mLocReport.mHasVerticalUncertainity) {
+            cpi.altitudeWrtEllipsoidValid = (mLocReport.mHasAltitudeWrtEllipsoid ? 1 : 0);
+            cpi.altitudeWrtEllipsoid = mLocReport.mAltitudeWrtEllipsoid;
+            cpi.altitudeWrtMeanSeaLevelValid = (mLocReport.mHasAltitudeWrtMeanSeaLevel ? 1 : 0);
+            cpi.altitudeWrtMeanSeaLevel = mLocReport.mAltitudeWrtMeanSeaLevel;
+            cpi.vertUncValid = (mLocReport.mHasVerticalUncertainity ? 1 : 0);
+            cpi.vertUnc = mLocReport.mVerticalUncertainity;
+            cpi.vertConfidenceValid = (mLocReport.mHasVerticalConfidence ? 1 : 0);
+            cpi.vertConfidence = mLocReport.mVerticalConfidence;
+            cpi.vertReliabilityValid = (mLocReport.mHasVerticalReliability ? 1 : 0);
+            cpi.vertReliability = mLocReport.mVerticalReliability;
+        }
+
         cpi.timestampUtcValid = (mLocReport.mHasUtcTimestampInMsec ? 1 : 0);
         cpi.timestampUtc = mLocReport.mUtcTimestampInMsec;
         if (mLocReport.mHasElapsedRealTimeInNanoSecs) {

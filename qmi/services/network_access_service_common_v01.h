@@ -32,7 +32,7 @@
 
 */
 /*====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*
-  Copyright (c) 2013-2016 Qualcomm Technologies, Inc.
+  Copyright (c) 2013-2017 Qualcomm Technologies, Inc.
   All rights reserved.
   Confidential and Proprietary - Qualcomm Technologies, Inc.
 
@@ -43,8 +43,8 @@
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Tue Mar  1 2016 (Spin 0)
+/* This file was generated with Tool version 6.14.7 
+   It was generated on: Thu Nov  2 2017 (Spin 0)
    From IDL File: network_access_service_common_v01.idl */
 
 /** @defgroup network_access_service_common_qmi_consts Constant values defined in the IDL */
@@ -69,7 +69,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define NETWORK_ACCESS_SERVICE_COMMON_V01_IDL_MAJOR_VERS 0x01
 /** Revision Number of the IDL used to generate this file */
-#define NETWORK_ACCESS_SERVICE_COMMON_V01_IDL_MINOR_VERS 0x01
+#define NETWORK_ACCESS_SERVICE_COMMON_V01_IDL_MINOR_VERS 0x05
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define NETWORK_ACCESS_SERVICE_COMMON_V01_IDL_TOOL_VERS 0x06
 
@@ -106,6 +106,7 @@ typedef enum {
   NAS_RADIO_IF_GPS_V01 = 0x07, /**<  GPS \n  */
   NAS_RADIO_IF_LTE_V01 = 0x08, /**<  LTE \n  */
   NAS_RADIO_IF_TDSCDMA_V01 = 0x09, /**<  TD-SCDMA \n  */
+  NAS_RADIO_IF_NR5G_V01 = 0x0C, /**<  NR5G \n  */
   NAS_RADIO_IF_NO_CHANGE_V01 = -1, /**<  No change  */
   NAS_RADIO_IF_ENUM_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }nas_radio_if_enum_v01;
@@ -113,6 +114,15 @@ typedef enum {
     @}
   */
 
+/**  */
+typedef uint16_t mode_pref_mask_type_v01;
+#define QMI_NAS_RAT_MODE_PREF_CDMA2000_1X_V01 ((mode_pref_mask_type_v01)0x01) 
+#define QMI_NAS_RAT_MODE_PREF_CDMA2000_HRPD_V01 ((mode_pref_mask_type_v01)0x02) 
+#define QMI_NAS_RAT_MODE_PREF_GSM_V01 ((mode_pref_mask_type_v01)0x04) 
+#define QMI_NAS_RAT_MODE_PREF_UMTS_V01 ((mode_pref_mask_type_v01)0x08) 
+#define QMI_NAS_RAT_MODE_PREF_LTE_V01 ((mode_pref_mask_type_v01)0x10) 
+#define QMI_NAS_RAT_MODE_PREF_TDSCDMA_V01 ((mode_pref_mask_type_v01)0x20) 
+#define QMI_NAS_RAT_MODE_PREF_NR5G_V01 ((mode_pref_mask_type_v01)0x40) 
 /* Conditional compilation tags for message removal */ 
 
 /*Extern Definition of Type Table Object*/

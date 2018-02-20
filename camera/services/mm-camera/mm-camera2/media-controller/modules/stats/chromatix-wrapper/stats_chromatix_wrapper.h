@@ -4367,6 +4367,12 @@ typedef struct
   int     non_linear_low_th;
   int     non_linear_hi_th;
   float   luma_target_ofs;
+  int     hdr_dark_n1;
+  float   hdr_dark_n2_minus_n1_normalization_factor;
+  int     hdr_dark_n2;
+  float   hdr_dark_n3_minus_n2_normalization_factor;
+  int     hdr_dark_n3;
+  float   hdr_dark_n4_minus_n3_normalization_factor;
 } aec_shdr_exp_lut_type_adapter;
 
 typedef struct

@@ -69,6 +69,15 @@ typedef struct {
   q3a_bhist_stats_t   *p_q3a_bhist_stats;
 } stats_bayer_stats_t;
 
+typedef struct {
+  int frame_id;
+  int num_grid_w;
+  int num_grid_h;
+  float y_avg[MAX_SHDR_BG_STATS_SIZE];
+  float bin[MAX_SHDR_BHIST_STATS_SIZE];
+} stats_shdr_stats_t;
+
+
 /** stats_t
  *    @stats_type_mask: This mask shows what types of stats are passed by ISP
  *    @frame_id:        The ID of the frame for which the stats are calculated
@@ -90,6 +99,7 @@ typedef struct {
   time_stamp_t        sof_timestamp;
   uint8_t             camera_id;
 
+  stats_shdr_stats_t  shdr_stats;
   stats_yuv_stats_t   yuv_stats;
   stats_bayer_stats_t bayer_stats;
   void *              ack_data;

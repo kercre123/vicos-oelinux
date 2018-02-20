@@ -21,6 +21,8 @@
 #undef  LOG_TAG
 #define LOG_TAG "AEC_PORT"
 
+#define PROPERTY_VALUE_MAX 32
+
 /** aec_port_malloc_msg:
  *    @msg_type:   TODO
  *    @param_type: TODO

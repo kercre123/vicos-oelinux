@@ -34,6 +34,7 @@
 #include "qti_socksv5_log_msg.h"
 
 std::mutex cli_req_sock_pair_map_mutex;
+static sem_t socks_conn_req_sem; //semaphore to restrict memory resources for SOCKS connect requests
 static std::map<int, int> cli_req_sock_pair_map; //key = cli_sock, value = sock_remote
 static QC_SOCKSv5_Proxy_Configuration* configuration;
 static std::atomic<unsigned int> num_of_critical_threads(0); //for keeping track critical sections
@@ -266,6 +267,12 @@ int main(int argc, char* argv[])
   //SIGPIPE sent when KEEPALIVE probe does not receive a probe reply
   signal(SIGPIPE, handleSigPipe);
 
+  if(sem_init(&socks_conn_req_sem, 0, MAX_SOCKS_CONN_REQ))
+  {
+    LOG_MSG_INFO1("error creating semaphore: %s", strerror(errno), 0, 0);
+    return errno;
+  }
+
   //spawn netlink monitor LAN iface up/down pthread
   if(pthread_create(&lan_monitor_thread, NULL, monitorLANIface, NULL) != 0)
   {
@@ -322,8 +329,23 @@ int main(int argc, char* argv[])
       {
         LOG_MSG_INFO1("error closing socket: %s", strerror(errno), 0, 0);
       }
-      pthread_cancel(lan_monitor_thread);
-      pthread_cancel(inotify_thread);
+      if(pthread_cancel(lan_monitor_thread))
+      {
+        LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+      }
+      if(pthread_cancel(inotify_thread))
+      {
+        LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+      }
+
+      if(pthread_join(lan_monitor_thread, NULL))
+      {
+        LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+      }
+      if(pthread_join(inotify_thread, NULL))
+      {
+        LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+      }
       if(NULL != conf_file)
       {
         free(conf_file);
@@ -403,8 +425,28 @@ int main(int argc, char* argv[])
 
   }
 
-  pthread_cancel(lan_monitor_thread);
-  pthread_cancel(inotify_thread);
+  if(pthread_cancel(lan_monitor_thread))
+  {
+    LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+  }
+  if(pthread_cancel(inotify_thread))
+  {
+    LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+  }
+
+  if(pthread_join(lan_monitor_thread, NULL))
+  {
+    LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+  }
+  if(pthread_join(inotify_thread, NULL))
+  {
+    LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+  }
+
+  if(sem_destroy(&socks_conn_req_sem))
+  {
+    LOG_MSG_INFO1("semaphore destroy error: %s", strerror(errno), 0, 0);
+  }
 
   return 0;
 }
@@ -547,8 +589,23 @@ pthread_t* server_thread_v6
     LOG_MSG_INFO1("Killing LAN server threads...", 0, 0, 0);
     if(lan_server_up)
     {
-      pthread_cancel(*server_thread_v4);
-      pthread_cancel(*server_thread_v6);
+      if(pthread_cancel(*server_thread_v4))
+      {
+        LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+      }
+      if(pthread_cancel(*server_thread_v6))
+      {
+        LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+      }
+
+      if(pthread_join(*server_thread_v4, NULL))
+      {
+        LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+      }
+      if(pthread_join(*server_thread_v6, NULL))
+      {
+        LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+      }
     }
     lan_server_up = false;
   } else if(!lan_server_up) {
@@ -690,7 +747,7 @@ void* listenForSocks5Clientv4(void* iface_name)
       //create a pthread to handle the client
       if(pthread_create(&t, NULL, handleSocks5Client, serv_cli_sock_fd_pair->second) != 0)
       {
-        LOG_MSG_INFO1("error creating pthread!", 0, 0, 0);
+        LOG_MSG_INFO1("error creating pthread! %s", strerror(errno), 0, 0);
       }
     }
   }
@@ -831,7 +888,7 @@ void* listenForSocks5Clientv6(void* iface_name)
       //create a pthread to handle the client
       if(pthread_create(&t, NULL, handleSocks5Client, serv_cli_sock_fd_pair->second) != 0)
       {
-        LOG_MSG_INFO1("error creating pthread!", 0, 0, 0);
+        LOG_MSG_INFO1("error creating pthread! %s", strerror(errno), 0, 0);
       }
 
     }
@@ -871,9 +928,10 @@ void* handleSocks5Client(void* arg)
   struct relay_session_tcp_splice t_splice_session;
 
   /* Socket Splice fallback variables */
-  struct relay_session_socket_splice* socket_splice_session;
-  pthread_t t1, t2;
-  void* ret;
+  struct relay_session_socket_splice socket_splice_session;
+  int ep_fd, num_of_events;
+  struct epoll_event read_event;
+  struct epoll_event events[MAX_NUM_EPOLL_EVENTS];
 
   if(NULL == arg)
   {
@@ -1048,26 +1106,38 @@ void* handleSocks5Client(void* arg)
     pthread_exit(0);
   }
 
-  cli_req_sock_pair_map_mutex.lock();
-
   //Check request code
   switch(buffer[1])
   {
     case(Cmd_Request::CONNECT):
     {
-      if((cli_req_sock_pair_map[cli_sock] = QC_SOCKSv5_Util::handleConnectRequest(buffer, cli_sock,
-                                            egress_wan_iface, configuration)) <= 0)
+      if(sem_wait(&socks_conn_req_sem))
       {
-        cli_req_sock_pair_map_mutex.unlock();
+        LOG_MSG_INFO1("error with semaphore wait: %s", strerror(errno), 0, 0);
         pthread_exit(0);
       }
+
+      sock_remote = QC_SOCKSv5_Util::handleConnectRequest(buffer, cli_sock, egress_wan_iface,
+                                                          configuration);
+
+      if(sem_post(&socks_conn_req_sem))
+      {
+        LOG_MSG_INFO1("error with semaphore post: %s", strerror(errno), 0, 0);
+        pthread_exit(0);
+      }
+
+      if(sock_remote <= 0)
+      {
+        LOG_MSG_INFO1("error with handle connect request", 0, 0, 0);
+        pthread_exit(0);
+      }
+
       break;
     }
 
     case(Cmd_Request::BIND):
     {
       LOG_MSG_INFO1("Not handling Bind request yet", 0, 0, 0);
-      cli_req_sock_pair_map_mutex.unlock();
       pthread_exit(0);
       break;
     }
@@ -1075,7 +1145,6 @@ void* handleSocks5Client(void* arg)
     case(Cmd_Request::UDP_ASSOCIATE):
     {
       LOG_MSG_INFO1("Not handling UDP Associate request yet", 0, 0, 0);
-      cli_req_sock_pair_map_mutex.unlock();
       pthread_exit(0);
       break;
     }
@@ -1083,13 +1152,13 @@ void* handleSocks5Client(void* arg)
     default:
     {
       QC_SOCKSv5_Util::handleUnsupportedRequest(buffer, cli_sock);
-      cli_req_sock_pair_map_mutex.unlock();
       pthread_exit(0);
     }
   }
-  cli_req_sock_pair_map_mutex.unlock();
 
-  sock_remote = cli_req_sock_pair_map[cli_sock];
+  cli_req_sock_pair_map_mutex.lock();
+  cli_req_sock_pair_map[cli_sock] = sock_remote;
+  cli_req_sock_pair_map_mutex.unlock();
 
   /*** Next Steps: Relay back and forth between client and requested destination ***/
 
@@ -1183,89 +1252,163 @@ void* handleSocks5Client(void* arg)
     //setsockopt to don't LINGER
     if(setsockopt(cli_sock, SOL_SOCKET, SO_LINGER, &linger_opt, sizeof(struct linger)) <= -1)
     {
-      LOG_MSG_INFO1("error setting linger timeout on client socket", 0, 0, 0);
+      LOG_MSG_INFO1("error setting linger timeout on client socket: %s", strerror(errno), 0, 0);
       pthread_exit(0);
     }
     if(setsockopt(sock_remote, SOL_SOCKET, SO_LINGER, &linger_opt, sizeof(struct linger)) <= -1)
     {
-      LOG_MSG_INFO1("error setting linger timeout on req socket", 0, 0, 0);
+      LOG_MSG_INFO1("error setting linger timeout on req socket: %s", strerror(errno), 0, 0);
       pthread_exit(0);
     }
 
     //setsockopt for TCP KEEPALIVE
     if(setsockopt(cli_sock, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(socklen_t)) <= -1)
     {
-      LOG_MSG_INFO1("error setting keep alive on client socket", 0, 0, 0);
+      LOG_MSG_INFO1("error setting keep alive on client socket: %s", strerror(errno), 0, 0);
       pthread_exit(0);
     }
     if(setsockopt(sock_remote, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(socklen_t)) <= -1)
     {
-      LOG_MSG_INFO1("error setting keep alive on req socket", 0, 0, 0);
+      LOG_MSG_INFO1("error setting keep alive on req socket: %s", strerror(errno), 0, 0);
       pthread_exit(0);
     }
 
-    //allocate some heap so relay threads may access socket fd and pipes
-    if((socket_splice_session = (struct relay_session_socket_splice*)malloc(
-                                sizeof(struct relay_session_socket_splice))) == NULL)
+    //assign socket fds and pipes
+    socket_splice_session.cli_sock = cli_sock;
+    socket_splice_session.sock_remote = sock_remote;
+    socket_splice_session.done = false;
+
+    if(pipe(socket_splice_session.cli_to_req_pipe) == -1)
     {
-      LOG_MSG_INFO1("error with malloc", 0, 0, 0);
+      LOG_MSG_INFO1("cli_to_req: issue with creating pipe: %s", strerror(errno), 0, 0);
       pthread_exit(0);
     }
 
-    //spawn the relay threads here
-    socket_splice_session->cli_sock = cli_sock;
-    socket_splice_session->sock_remote = sock_remote;
-    socket_splice_session->signalToDie[0] = 0;
-    socket_splice_session->signalToDie[1] = 0;
-    socket_splice_session->done = 0;
-
-    if(pipe(socket_splice_session->cli_to_req_pipe) == -1)
+    if(pipe(socket_splice_session.req_to_cli_pipe) == -1)
     {
-      LOG_MSG_INFO1("cli_to_req: issue with creating pipe...", 0, 0, 0);
-      free(socket_splice_session);
+      LOG_MSG_INFO1("req_to_cli: issue with creating pipe: %s", strerror(errno), 0, 0);
+      if(close(socket_splice_session.cli_to_req_pipe[0]))
+      {
+        LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+      }
+      if(close(socket_splice_session.cli_to_req_pipe[1]))
+      {
+        LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+      }
       pthread_exit(0);
     }
 
-    if(pipe(socket_splice_session->req_to_cli_pipe) == -1)
+    pthread_cleanup_push(cleanupSocketSplice, &socket_splice_session);
+
+    //get ready for epoll events
+    if((ep_fd = epoll_create(1)) < 0)
     {
-      LOG_MSG_INFO1("req_to_cli: issue with creating pipe...", 0, 0, 0);
-      close(socket_splice_session->cli_to_req_pipe[0]);
-      close(socket_splice_session->cli_to_req_pipe[1]);
-      free(socket_splice_session);
+      LOG_MSG_INFO1("error creating epoll fd: %s\n", strerror(errno), 0, 0);
       pthread_exit(0);
     }
 
-    if(pthread_create(&t1, NULL, relayClientToReq, socket_splice_session) != 0)
+    //add cli sock
+    memset(&read_event, 0, sizeof(struct epoll_event));
+    read_event.events = EPOLLIN;
+    read_event.data.fd = socket_splice_session.cli_sock;
+    if(epoll_ctl(ep_fd, EPOLL_CTL_ADD, socket_splice_session.cli_sock, &read_event) < 0)
     {
-      LOG_MSG_INFO1("error creating pthread for relayClientToReq!", 0, 0, 0);
-      close(socket_splice_session->req_to_cli_pipe[0]);
-      close(socket_splice_session->req_to_cli_pipe[1]);
-      close(socket_splice_session->cli_to_req_pipe[0]);
-      close(socket_splice_session->cli_to_req_pipe[1]);
-      free(socket_splice_session);
+      LOG_MSG_INFO1("error adding client socket fd to epoll fd: %s\n", strerror(errno), 0, 0);
+      if(close(ep_fd))
+      {
+        LOG_MSG_INFO1("error closing epoll fd: %s", strerror(errno), 0, 0);
+      }
       pthread_exit(0);
     }
 
-    if(pthread_create(&t2, NULL, relayReqToClient, socket_splice_session) != 0)
+    //add sock remote
+    memset(&read_event, 0, sizeof(struct epoll_event));
+    read_event.events = EPOLLIN;
+    read_event.data.fd = socket_splice_session.sock_remote;
+    if(epoll_ctl(ep_fd, EPOLL_CTL_ADD, socket_splice_session.sock_remote, &read_event) < 0)
     {
-      LOG_MSG_INFO1("error creating pthread for relayReqToClient!", 0, 0, 0);
-      close(socket_splice_session->req_to_cli_pipe[0]);
-      close(socket_splice_session->req_to_cli_pipe[1]);
-      close(socket_splice_session->cli_to_req_pipe[0]);
-      close(socket_splice_session->cli_to_req_pipe[1]);
-      free(socket_splice_session);
+      LOG_MSG_INFO1("error adding remote socket fd to epoll fd: %s\n", strerror(errno), 0, 0);
+      if(epoll_ctl(ep_fd, EPOLL_CTL_DEL, socket_splice_session.cli_sock, NULL) < 0)
+      {
+        LOG_MSG_INFO1("error deleting client socket fd from epoll fd: %s\n", strerror(errno), 0, 0);
+      }
+      if(close(ep_fd))
+      {
+        LOG_MSG_INFO1("error closing epoll fd: %s", strerror(errno), 0, 0);
+      }
       pthread_exit(0);
     }
 
-    //pthread join, t2 would have been cleaned up after t1 finishes
-    if(pthread_join(t1, &ret) != 0)
+    while(!socket_splice_session.done)
     {
-      LOG_MSG_INFO1("socket splice sessions, error joining", 0, 0, 0);
-    }
-    free(ret);
+      num_of_events = 0;
+      if((num_of_events = epoll_wait(ep_fd, events, MAX_NUM_EPOLL_EVENTS, -1)) < 0)
+      {
+        LOG_MSG_INFO1("error with epoll_wait: %s\n", strerror(errno), 0, 0);
+        socket_splice_session.done = true;
+        break;
+      }
 
-    //only need to free, since relay threads already closed
-    free(socket_splice_session);
+      for(int i = 0; i < num_of_events; i++)
+      {
+        if(events[i].data.fd == socket_splice_session.cli_sock)
+        {
+
+          if(likely((num_bytes_recv = splice(socket_splice_session.cli_sock, NULL,
+                                             socket_splice_session.cli_to_req_pipe[1], NULL,
+                                             sizeof(buffer), SPLICE_F_NONBLOCK)) > 0))
+          {
+            if(splice(socket_splice_session.cli_to_req_pipe[0], NULL,
+                      socket_splice_session.sock_remote, NULL, num_bytes_recv,
+                      SPLICE_F_NONBLOCK) < 0)
+            {
+              LOG_MSG_INFO1("error relaying cli_to_req pipe: %s", strerror(errno), 0, 0);
+              socket_splice_session.done = true;
+            }
+          } else if(num_bytes_recv == 0) {
+            socket_splice_session.done = true;
+          } else {
+            LOG_MSG_INFO1("error relaying cli_to_req pipe: %s", strerror(errno), 0, 0);
+            socket_splice_session.done = true;
+          }
+
+        } else if(events[i].data.fd == socket_splice_session.sock_remote) {
+
+          if(likely((num_bytes_recv = splice(socket_splice_session.sock_remote, NULL,
+                                             socket_splice_session.req_to_cli_pipe[1],
+                                             NULL, sizeof(buffer), SPLICE_F_NONBLOCK)) > 0))
+          {
+            if(splice(socket_splice_session.req_to_cli_pipe[0], NULL,
+                      socket_splice_session.cli_sock, NULL, num_bytes_recv,
+                      SPLICE_F_NONBLOCK) < 0)
+            {
+              LOG_MSG_INFO1("error relaying req_to_cli pipe: %s", strerror(errno), 0, 0);
+              socket_splice_session.done = true;
+            }
+          } else if(num_bytes_recv == 0) {
+            socket_splice_session.done = true;
+          } else {
+            LOG_MSG_INFO1("error relaying req_to_cli pipe: %s", strerror(errno), 0, 0);
+            socket_splice_session.done = true;
+          }
+        }
+      }
+    }
+
+    if(epoll_ctl(ep_fd, EPOLL_CTL_DEL, socket_splice_session.cli_sock, NULL) < 0)
+    {
+      LOG_MSG_INFO1("error deleting client socket fd from epoll fd: %s\n", strerror(errno), 0, 0);
+    }
+    if(epoll_ctl(ep_fd, EPOLL_CTL_DEL, socket_splice_session.sock_remote, NULL) < 0)
+    {
+      LOG_MSG_INFO1("error deleting remote socket fd from epoll fd: %s\n", strerror(errno), 0, 0);
+    }
+    if(close(ep_fd))
+    {
+      LOG_MSG_INFO1("error closing epoll fd: %s", strerror(errno), 0, 0);
+    }
+
+    pthread_cleanup_pop(1);
 
   }
 
@@ -1276,6 +1419,67 @@ void* handleSocks5Client(void* arg)
   free(arg);
 
   pthread_exit(0);
+}
+
+/*==========================================================================
+  FUNCTION cleanupSocketSplice
+==========================================================================*/
+/*!
+@brief
+  cleans up lan server thread
+
+@parameters
+  std::pair listening serv_sock* (first), cli_sock* (second)
+
+@return
+*/
+/*========================================================================*/
+void cleanupSocketSplice(void* arg)
+{
+  struct relay_session_socket_splice* r_session = NULL;
+
+  if(NULL == arg)
+  {
+    LOG_MSG_INFO1("given null socket splice session info %s", __func__, 0, 0);
+    return;
+  }
+
+  r_session = (struct relay_session_socket_splice*)arg;
+
+  if(close(r_session->cli_to_req_pipe[0]))
+  {
+    LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+  }
+  if(close(r_session->cli_to_req_pipe[1]))
+  {
+    LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+  }
+  if(close(r_session->req_to_cli_pipe[0]))
+  {
+    LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+  }
+  if(close(r_session->req_to_cli_pipe[1]))
+  {
+    LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+  }
+  if(close(r_session->cli_sock))
+  {
+    LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+  }
+  if(close(r_session->sock_remote))
+  {
+    LOG_MSG_INFO1("Error with close: %s", strerror(errno), 0, 0);
+  }
+
+  //erase from map
+  cli_req_sock_pair_map_mutex.lock();
+  if(cli_req_sock_pair_map.find(r_session->cli_sock) != cli_req_sock_pair_map.end())
+  {
+    cli_req_sock_pair_map.erase(r_session->cli_sock); //erase from hash table
+  }
+  cli_req_sock_pair_map_mutex.unlock();
+
+  return;
 }
 
 /*==========================================================================
@@ -1381,189 +1585,6 @@ void cleanupHandleSocks5Client(void* arg)
   num_of_critical_threads--;
 
   return;
-}
-
-/*==========================================================================
-  FUNCTION relayClientToReq
-==========================================================================*/
-/*!
-@brief
-  socket splice pthread for client -> remote direction
-
-@parameters
-  pair of sockets for relaying between remote and client
-
-@return
-*/
-/*========================================================================*/
-void* relayClientToReq(void* sock_pair)
-{
-  struct relay_session_socket_splice* r_session;
-  ssize_t num_bytes_recv = 0;
-  fd_set cli_read_fd_set; //for select to monitor file descriptors
-  unsigned char buffer[MAX_SOCKET_BUFFER_SIZE];
-
-  if(NULL == sock_pair)
-  {
-    LOG_MSG_INFO1("null sock_pair in relayClientToReq", 0, 0, 0);
-    pthread_exit(0);
-  }
-
-  r_session = (struct relay_session_socket_splice*)sock_pair;
-
-  //independent thread, free after we terminate this
-  if(pthread_detach(pthread_self()) != 0)
-  {
-    LOG_MSG_INFO1("problem with detaching relayClientToReq pthread!", 0, 0, 0);
-    goto cleanup_pthread;
-  }
-
-  while(1)
-  {
-    //setup file descriptors for select call
-    FD_ZERO(&cli_read_fd_set);
-    FD_SET(r_session->cli_sock, &cli_read_fd_set);
-
-    //client sent something to proxy server, relay that to remote addr
-    if(select(r_session->cli_sock + 1, &cli_read_fd_set, NULL, NULL, NULL) < 0)
-    {
-      LOG_MSG_INFO1("select call failed for receiving from client socket", 0, 0, 0);
-      goto cleanup_pthread;
-    }
-
-    if(likely((num_bytes_recv = splice(r_session->cli_sock, NULL, r_session->cli_to_req_pipe[1],
-                                      NULL, sizeof(buffer), SPLICE_F_NONBLOCK)) > 0))
-    {
-      if(splice(r_session->cli_to_req_pipe[0], NULL, r_session->sock_remote, NULL, num_bytes_recv,
-                SPLICE_F_NONBLOCK) < 0)
-      {
-        LOG_MSG_INFO1("error relaying cli_to_req pipe...", 0, 0, 0);
-        goto cleanup_pthread;
-      }
-    } else if(num_bytes_recv == 0) {
-      goto cleanup_pthread;
-    }
-
-
-    //yield the CPU and place this thread at the end of priority queue
-    if(sched_yield() != 0)
-    {
-      LOG_MSG_INFO1("error yielding this thread!", 0, 0, 0);
-      goto cleanup_pthread;
-    }
-
-  }
-
-
-  cleanup_pthread:
-    //LOG_MSG_INFO1("relayClientToReq thread about to cleanup...", 0, 0, 0);
-    r_session->signalToDie[0] = 1;
-    while(!r_session->signalToDie[1])
-    {
-      sleep(1);
-    }
-    //ReqToClient will be doing the freeing
-    //close(r_session->sock_remote);
-    //close(r_session->cli_sock);
-
-    while(!r_session->done)
-    {
-      sleep(1);
-    }
-    close(r_session->cli_to_req_pipe[0]);
-    close(r_session->cli_to_req_pipe[1]);
-    close(r_session->req_to_cli_pipe[0]);
-    close(r_session->req_to_cli_pipe[1]);
-    //std::cout << "killing a relayClientToReq thread" << std::endl;
-    pthread_exit(0);
-}
-
-/*==========================================================================
-  FUNCTION relayReqToClient
-==========================================================================*/
-/*!
-@brief
-  socket splice pthread for remote -> client direction
-
-@parameters
-  pair of sockets for relaying between remote and client
-
-@return
-*/
-/*========================================================================*/
-void* relayReqToClient(void* sock_pair)
-{
-  struct relay_session_socket_splice* r_session;
-  ssize_t num_bytes_recv = 0;
-  fd_set req_read_fd_set; //for select to monitor file descriptors
-  unsigned char buffer[MAX_SOCKET_BUFFER_SIZE];
-
-  if(NULL == sock_pair)
-  {
-    LOG_MSG_INFO1("null sock_pair in relayReqToClient", 0, 0, 0);
-    pthread_exit(0);
-  }
-
-  r_session = (struct relay_session_socket_splice*)sock_pair;
-
-  //independent thread, free after we terminate this
-  if(pthread_detach(pthread_self()) != 0)
-  {
-    LOG_MSG_INFO1("problem with detaching ReqToClient pthread!", 0, 0, 0);
-    goto cleanup_pthread;
-  }
-
-  while(1)
-  {
-    //setup file descriptors for select call
-    FD_ZERO(&req_read_fd_set);
-    FD_SET(r_session->sock_remote, &req_read_fd_set);
-
-    //remote addr sent something to proxy server, relay that to client
-    if(select(r_session->sock_remote + 1, &req_read_fd_set, NULL, NULL, NULL) < 0)
-    {
-      LOG_MSG_INFO1("select call failed for receiving from remote requested socket", 0, 0, 0);
-      goto cleanup_pthread;
-    }
-
-    if(likely((num_bytes_recv = splice(r_session->sock_remote, NULL, r_session->req_to_cli_pipe[1],
-                                        NULL, sizeof(buffer), SPLICE_F_NONBLOCK)) > 0))
-    {
-      if(splice(r_session->req_to_cli_pipe[0], NULL, r_session->cli_sock, NULL, num_bytes_recv,
-                SPLICE_F_NONBLOCK) < 0)
-      {
-        LOG_MSG_INFO1("error relaying req_to_cli pipe...", 0, 0, 0);
-        goto cleanup_pthread;
-      }
-    } else if(num_bytes_recv == 0) {
-      goto cleanup_pthread;
-    }
-
-
-    //yield the CPU and place this thread at the end of priority queue
-    //if(pthread_yield() != 0)
-    if(sched_yield() != 0)
-    {
-      LOG_MSG_INFO1("error yielding this thread!", 0, 0, 0);
-      goto cleanup_pthread;
-    }
-
-
-  }
-
-
-  cleanup_pthread:
-    //std::cout << "relayReqToClient thread about to cleanup..." << std::endl;
-    r_session->signalToDie[1] = 1;
-    while(!r_session->signalToDie[0])
-    {
-      sleep(1);
-    }
-    close(r_session->sock_remote);
-    close(r_session->cli_sock);
-    r_session->done = 1;
-    //std::cout << "killing a relayReqToClient thread" << std::endl;
-    pthread_exit(0);
 }
 
 /*==========================================================================
@@ -1674,8 +1695,23 @@ void* monitorConfFile(void* conf_file)
         //no need to check for LAN version support, just kill everything
         if(lan_server_up)
         {
-          pthread_cancel(server_thread_v4);
-          pthread_cancel(server_thread_v6);
+          if(pthread_cancel(server_thread_v4))
+          {
+            LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+          }
+          if(pthread_cancel(server_thread_v6))
+          {
+            LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+          }
+
+          if(pthread_join(server_thread_v4, NULL))
+          {
+            LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+          }
+          if(pthread_join(server_thread_v6, NULL))
+          {
+            LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+          }
         }
         lan_server_up = false;
         LOG_MSG_INFO1("Cancelled LAN pthreads", 0, 0, 0);
@@ -1827,8 +1863,23 @@ void* monitorLANIface(void* arg)
                 {
                   LOG_MSG_INFO1("Killing LAN server threads...", 0, 0, 0);
 
-                  pthread_cancel(server_thread_v4);
-                  pthread_cancel(server_thread_v6);
+                  if(pthread_cancel(server_thread_v4))
+                  {
+                    LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+                  }
+                  if(pthread_cancel(server_thread_v6))
+                  {
+                    LOG_MSG_INFO1("pthread_cancel error: %s", strerror(errno), 0, 0);
+                  }
+
+                  if(pthread_join(server_thread_v4, NULL))
+                  {
+                    LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+                  }
+                  if(pthread_join(server_thread_v6, NULL))
+                  {
+                    LOG_MSG_INFO1("pthread_join error: %s", strerror(errno), 0, 0);
+                  }
 
                   QC_SOCKSv5_Garbage_Collector::shutdownAllConnections(&cli_req_sock_pair_map);
 

@@ -91,6 +91,8 @@ AC_CONFIG_FILES([ \
         ./adec-ape/qdsp6/Makefile \
         ./adec-wma/qdsp6/Makefile \
         ./adec-amr/qdsp6/Makefile \
+        ./adec-evrc/sw/Makefile \
+        ./adec-qcelp13/sw/Makefile \
         omx.pc
         ])
 

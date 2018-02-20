@@ -1240,7 +1240,7 @@ static void aec_biz_pack_output(aec_biz_t* aec,
     output->vhdr_update.number_of_hdr_frames =
       core_output->number_of_hdr_frames;
     output->vhdr_update.hdr_gtm_gamma = core_output->hdr_gtm_gamma;
-    output->vhdr_update.hdr_exp_time_ratio = core_output->hdr_exposure_ratio;
+    output->vhdr_update.hdr_exp_time_ratio = core_output->hdr_exposure_ratio_real[0];
     output->vhdr_update.linecount[VIDEO_HDR_SHORT_FRAME] =
       core_output->hdr_linecount[VIDEO_HDR_SHORT_FRAME];
     output->vhdr_update.linecount[VIDEO_HDR_LONG_FRAME] =
@@ -2099,7 +2099,16 @@ static boolean aec_biz_stats_map(aec_biz_t *aec, const stats_t* stats)
         return FALSE;
       }
     }
-
+  } else if(stats->stats_type_mask & STATS_SHDR){
+    aec->core_input.stats.stats_type_mask = Q3A_CORE_STATS_SHDR;
+    aec->core_input.stats.frame_id = stats->frame_id;
+    /** map yuv stats.  */
+    aec->core_input.stats.shdr_stats.num_grid_h = stats->shdr_stats.num_grid_h;
+    aec->core_input.stats.shdr_stats.num_grid_w = stats->shdr_stats.num_grid_w;
+    Q3A_MEMCPY(aec->core_input.stats.shdr_stats.y_avg,
+      stats->shdr_stats.y_avg, sizeof(float)*MAX_SHDR_BG_STATS_SIZE);
+    Q3A_MEMCPY(aec->core_input.stats.shdr_stats.bin,
+      stats->shdr_stats.bin, sizeof(float)*MAX_SHDR_BHIST_STATS_SIZE);
   } else if(stats->stats_type_mask & STATS_HDR_VID){
     aec->core_input.stats.stats_type_mask = Q3A_CORE_STATS_HDR_VID;
     aec->core_input.stats.frame_id = stats->frame_id;

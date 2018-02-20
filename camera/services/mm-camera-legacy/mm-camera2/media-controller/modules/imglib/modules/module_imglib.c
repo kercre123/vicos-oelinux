@@ -6,6 +6,7 @@
 #include "module_imglib_defs.h"
 #include "module_imglib_common.h"
 #include "mct_pipeline.h"
+#define CPP_LOG_VERBOSE    3
 
 /**
  *  dynamic loglevel

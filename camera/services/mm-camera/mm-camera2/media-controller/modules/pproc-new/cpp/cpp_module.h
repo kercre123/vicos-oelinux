@@ -65,12 +65,10 @@
 #define PTHREAD_COND_WAIT_TIME(cond_ptr, mutex_ptr, \
     timeout_ptr, ns, rc) \
   { \
-    clock_gettime(CLOCK_REALTIME, (timeout_ptr)); \
-    (timeout_ptr)->tv_nsec += ns;\
-    if ((timeout_ptr)->tv_nsec > 999999999) { \
-      (timeout_ptr)->tv_nsec -= 999999999; \
-      (timeout_ptr)->tv_sec += 1; \
-    } \
+    clock_gettime(CLOCK_MONOTONIC, (timeout_ptr)); \
+    int64_t new_nsec = (int64_t)(timeout_ptr)->tv_nsec + ns; \
+    (timeout_ptr)->tv_sec += new_nsec / SEC_TO_NS_FACTOR; \
+    (timeout_ptr)->tv_nsec = new_nsec % SEC_TO_NS_FACTOR; \
     rc = pthread_cond_timedwait(cond_ptr, \
       mutex_ptr, timeout_ptr);\
   }
@@ -324,6 +322,7 @@ struct _cpp_module_stream_params_t {
   /* variable idicating how many buffers are active in cpp for a stream */
   /* Process dealy greater than 1 indicates performance bottleneck */
   int32_t                      process_delay;
+  uint32_t                     queue_frame_id[FRAME_CTRL_SIZE];
 };
 
 typedef struct {
@@ -575,6 +574,7 @@ int32_t cpp_module_update_clock_freq(mct_module_t* module __unused,
   cpp_module_stream_params_t *stream_params,
   bool force);
 int32_t cpp_module_get_and_update_buf_index(
+  mct_module_t *module,
   cpp_module_session_params_t *session_params,
   cpp_module_stream_params_t *stream_params, uint32_t frame_id);
 

@@ -384,6 +384,8 @@ void SensorHalProvider::bufferDataprocessTask()
   // Buffer for reading raw events from the queue
   // The events are sorted by timestamp by event queue facility
   slimSensorSampleStructT samples[2];
+  memset(&samples, 0, 2 * sizeof(slimSensorSampleStructT));
+
   ssize_t accNumRead = 0, gyroNumRead = 0;
   if ((mfdBuffAccelE = fopen(ENABLE_ACCEL_BUFFER_DATA, "w")) == 0) {
     SLIM_LOGE("failed to open %s errno %d, (%s)",
@@ -581,8 +583,8 @@ void SensorHalProvider::bufferDataprocessTask()
 
   setBufferState(COMPLETED_BUFFER_DATA);
   /*Trigger regular sensor data */
-  doUpdateSensorStatus(true, mAccReportRateHz, mAccSampleCount, eSLIM_SERVICE_SENSOR_ACCEL);
-  doUpdateSensorStatus(true, mGyroReportRateHz, mGyroSampleCount, eSLIM_SERVICE_SENSOR_GYRO);
+  updateSensorDataRate(mAccReportRateHz, mAccSampleCount, eSLIM_SERVICE_SENSOR_ACCEL);
+  updateSensorDataRate(mGyroReportRateHz, mGyroSampleCount, eSLIM_SERVICE_SENSOR_GYRO);
 
 bail:
   memsBufferDataDeInit();
@@ -946,6 +948,65 @@ slimErrorEnumT SensorHalProvider::getTimeUpdate(int32_t lTxnId)
   SLIM_LOGD("retVal= %d", retVal);
 #endif
   return retVal;
+}
+
+slimErrorEnumT SensorHalProvider::updateSensorDataRate
+(
+  uint16_t wReportRateHz,
+  uint16_t wSampleCount,
+  slimServiceEnumT eService
+)
+{
+  struct sensor_t const* list = NULL;
+  int count = 0;
+  int sensor = 0;
+
+  SLIM_LOGD("updateSensorDataRate service %d rate %d sampleCount %d",
+            eService, wReportRateHz, wSampleCount);
+  if (NULL != device) {
+    count = device->get_sensors_list(&list);
+    if ( 0 == count ) {
+      SLIM_LOGE("Failed to get sensor list.");
+      return eSLIM_ERROR_UNSUPPORTED;
+    }
+  } else {
+      SLIM_LOGE("device is NULL -sensors_poll_context_t() failed \n");
+      return eSLIM_ERROR_UNSUPPORTED;
+  }
+
+  switch(eService){
+    case eSLIM_SERVICE_SENSOR_ACCEL:
+      sensor = SENSOR_TYPE_ACCELEROMETER;
+    break;
+    case eSLIM_SERVICE_SENSOR_GYRO:
+      sensor = SENSOR_TYPE_GYROSCOPE_UNCALIBRATED;
+    break;
+    case eSLIM_SERVICE_SENSOR_MAG_UNCALIB:
+      sensor = SENSOR_TYPE_MAGNETIC_FIELD_UNCALIBRATED;
+    break;
+    case eSLIM_SERVICE_SENSOR_BARO:
+      sensor = SENSOR_TYPE_PRESSURE;
+    break;
+    case eSLIM_SERVICE_SENSOR_MAG_CALIB:
+    case eSLIM_SERVICE_MAG_FIELD_DATA:
+      sensor = SENSOR_TYPE_MAGNETIC_FIELD;
+    break;
+    default:
+      sensor = SENSOR_TYPE_META_DATA;
+  }
+
+  for (int i = 0 ; i < count ; i++) {
+    if ((NULL != list) && (list[i].type == sensor))
+    {
+      if (wReportRateHz > 0)
+      {
+        SLIM_LOGD("Setting DelayRate for %s as RateHz %d val %d",
+                  list[i].name, wReportRateHz, (1000000000 / (wSampleCount * wReportRateHz)));
+        device->setDelay(list[i].handle, (1000000000 / (wSampleCount * wReportRateHz)));
+      }
+    }
+  }
+  return eSLIM_SUCCESS;
 }
 
 

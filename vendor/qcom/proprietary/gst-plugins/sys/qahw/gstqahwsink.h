@@ -81,8 +81,15 @@ typedef enum {
   GST_QAHWSRC_OUTPUT_FLAG_DIRECT_PCM = AUDIO_OUTPUT_FLAG_DIRECT_PCM,
 } GstQahwSinkOutputFlags;
 
+typedef enum {
+    GST_QAHWSRC_OUTPUT_SESSION_DEFAULT,
+    GST_QAHWSRC_OUTPUT_SESSION_DEEP_BUFFER,
+    GST_QAHWSRC_OUTPUT_SESSION_DIRECT_PCM,
+} GstQahwSinkSessionType;
+
 #define GST_TYPE_QAHWSINK_OUTPUT_DEVICE (gst_qahwsink_output_device_get_type ())
 #define GST_TYPE_QAHWSINK_OUTPUT_FLAGS (gst_qahwsink_output_flags_get_type ())
+#define GST_TYPE_QAHWSINK_OUTPUT_SESSION_TYPE (gst_qahwsink_session_get_type ())
 
 
 /**
@@ -108,6 +115,7 @@ struct _GstQahwSink {
   gint                   audio_handle;
   gboolean               kpi_mode;
   GstQahwSinkOutputFlags output_flags;
+  GstQahwSinkSessionType session_type;
 
   GMutex qahw_lock;
   GCond  qahw_cond;

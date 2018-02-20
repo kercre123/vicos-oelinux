@@ -143,6 +143,7 @@ int ulp_gnp_start_engine ()
       {
          // Send start msg
          UlpNetworkRequestPos networkPosRequest;
+         memset(&networkPosRequest, 0, sizeof(networkPosRequest));
          if (gnp_recurrence_type == ULP_LOC_RECURRENCE_SINGLE)
              networkPosRequest.request_type = ULP_NETWORK_POS_START_SINGLE_REQUEST;
          else

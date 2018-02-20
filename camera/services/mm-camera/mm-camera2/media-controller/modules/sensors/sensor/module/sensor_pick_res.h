@@ -1,14 +1,16 @@
 
 /* sensor_pick_res.h
  *
- * Copyright (c) 2014-2016 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
+ * Copyright (c) 2014-2017 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
 
 #ifndef __SENSOR_PICK_RES_H__
 #define __SENSOR_PICK_RES_H__
 
 typedef enum {
+  SEN_USECASE_FOCAL_LENGTH,
   SEN_USECASE_FASTAEC,
   SEN_USECASE_QUADRA,
   SEN_USECASE_HFR,
@@ -36,6 +38,7 @@ typedef enum {
   SEN_COND_MODE_RHDR,
   SEN_COND_MODE_MPIX,
   SEN_COND_MODE_BEST_RES,
+  SEN_COND_FOCAL_LENGTH,
   SEN_COND_MAX,
 } sensor_pick_condition_t;
 
@@ -46,6 +49,7 @@ typedef struct {
   int32_t in_sensor_hdr_enable;
   int32_t raw_hdr_enable;
   boolean is_fast_aec_mode_on;
+  boolean sensor_feature_focal_length;
 } sensor_pick_usecase_t;
 
 typedef struct {
@@ -65,6 +69,8 @@ typedef struct {
   uint32_t in_clk;
   int32_t ex_ar;
   int32_t in_ar;
+  float ex_focal_length;
+  float in_focal_length;
 } sensor_pick_data_t;
 
 typedef boolean (*is_usecase_func_t[SEN_USECASE_MAX])(sensor_pick_usecase_t *sctrl);
@@ -92,6 +98,7 @@ boolean sensor_pick_check_best_res(sensor_pick_data_t *pick_data);
 boolean sensor_pick_check_aspect_ratio(sensor_pick_data_t *pick_data);
 boolean sensor_pick_check_fps(sensor_pick_data_t *pick_data);
 boolean sensor_pick_check_bounded_fps(sensor_pick_data_t *pick_data);
+boolean sensor_pick_check_focal_length(sensor_pick_data_t *pick_data);
 
 boolean sensor_pick_res_is_hfr(sensor_pick_usecase_t *sctrl);
 boolean sensor_pick_res_is_ihdr(sensor_pick_usecase_t *sctrl);/*in-sensor HDR*/
@@ -101,6 +108,7 @@ boolean sensor_pick_res_is_video_preview(sensor_pick_usecase_t *sctrl);
 boolean sensor_pick_res_is_snapshot(sensor_pick_usecase_t *sctrl);
 boolean sensor_pick_res_is_fast_aec(sensor_pick_usecase_t *sctrl);
 boolean sensor_pick_res_is_quadra(sensor_pick_usecase_t *sctrl);
+boolean sensor_pick_res_is_focal_length(sensor_pick_usecase_t *pick_usecase);
 
 int32_t sensor_pick_resolution(void *sctrl,
   sensor_set_res_cfg_t *res_cfg, int32_t *pick_res);

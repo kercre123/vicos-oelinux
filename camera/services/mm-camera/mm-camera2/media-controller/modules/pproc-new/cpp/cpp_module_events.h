@@ -44,6 +44,9 @@ int32_t cpp_module_handle_isp_out_dim_event(mct_module_t* module,
 int32_t cpp_module_handle_isp_drop_buffer(mct_module_t* module,
   mct_event_t* event);
 
+int32_t cpp_module_handle_divert_drop(mct_module_t* module,
+  mct_event_t* event);
+
 int32_t cpp_module_handle_aec_manual_update(mct_module_t *module,
   mct_event_t *event);
 

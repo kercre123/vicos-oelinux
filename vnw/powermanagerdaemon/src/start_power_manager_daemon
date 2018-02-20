@@ -1,0 +1,30 @@
+#! /bin/sh
+#
+# Copyright (c) 2012-2014,2017 Qualcomm Technologies, Inc.
+# All Rights Reserved.
+# Confidential and Proprietary - Qualcomm Technologies, Inc.
+
+# power_manager_daemon   init.d script to start the power manager daemon
+
+set -e
+
+case "$1" in
+  start)
+        echo -n  "Starting power_manager_daemon " > /dev/kmsg
+        start-stop-daemon -S -b --exec /usr/bin/power_manager_daemon
+        ;;
+  stop)
+        echo -n "Stopping power_manager_daemon " > /dev/kmsg
+        start-stop-daemon -K -n /usr/bin/power_manager_daemon
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  *)
+        echo "Usage power_manager_daemon { start | stop | restart}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

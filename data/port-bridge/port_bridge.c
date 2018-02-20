@@ -545,6 +545,9 @@ void* modem_to_usb_bridge_glink(void* thread_info)
     {
       LOGI("Closing: '%s'\n", tinfo.from_file_path);
       close_fd_mutexed(tinfo.from_file_path, tinfo.from_fd, tinfo.from_mutex);
+
+      /*Reset RX_INTENT*/
+      glink_rx_intent_count = 0;
       continue;
     }
 

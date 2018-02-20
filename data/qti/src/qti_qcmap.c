@@ -42,6 +42,7 @@ Qualcomm Technologies Proprietary and Confidential.
 #include <sys/time.h>
 #include <sys/select.h>
 #include <pthread.h>
+#include "qti.h"
 #include "ds_util.h"
 #include "ds_string.h"
 #include "qualcomm_mobile_access_point_msgr_v01.h"
@@ -57,6 +58,10 @@ Qualcomm Technologies Proprietary and Confidential.
                                 VARIABLE DEFINITIONS
 ==============================================================================*/
 static qti_conf_t * qti_qcmap_conf;
+qmi_idl_service_object_type qti_qcmap_service_object;
+qmi_client_type qcmap_notifier;
+qmi_client_os_params qti_qcmap_msgr_os_params;
+qmi_client_os_params qti_qcmap_os_params_init;
 
 /*=============================================================================
                                 FUNCTION FORWARD DECLARATION
@@ -94,19 +99,65 @@ void qti_qcmap_msgr_ind_cb
 ==============================================================================*/
 int qti_qcmap_init(qti_conf_t * qti_conf )
 {
-  qti_cmdq_cmd_t            * cmd_buf = NULL;
-
   ds_assert(qti_conf != NULL);
 
   LOG_MSG_INFO1("qti_qcmap_init()", 0, 0, 0);
 
   qti_qcmap_conf = qti_conf;
 
+/*-----------------------------------------------------------------------------
+  Get the service object
+------------------------------------------------------------------------------*/
+  qti_qcmap_service_object = qcmap_msgr_get_service_object_v01();
+  if (qti_qcmap_service_object == NULL)
+  {
+    LOG_MSG_ERROR("QTI QCMAP service object not available",
+                   0, 0, 0);
+    return QTI_FAILURE;
+  }
+
+  memset(&qti_qcmap_msgr_os_params, 0, sizeof(qmi_client_os_params));
+  memset(&qti_qcmap_os_params_init, 0, sizeof(qmi_client_os_params));
+  memset(&qcmap_notifier, 0, sizeof(qmi_client_type));
+
+  (void) qmi_client_notifier_init(qti_qcmap_service_object,
+                                  &qti_qcmap_os_params_init,
+                                  &qcmap_notifier);
+
+  (void) qmi_client_register_notify_cb(qcmap_notifier,
+                                       qcmap_service_available_cb,
+                                       NULL);
+
+  return QTI_SUCCESS;
+}
+
+/*===========================================================================
+
+FUNCTION QCMAP_SERVICE_AVAILABLE_CB()
+
+DESCRIPTION
+  This function is invoked by ipc router, to notify QTI when service is available.
+
+DEPENDENCIES
+  None.
+
+RETURN VALUE
+
+SIDE EFFECTS
+  None
+
+=========================================================================*/
+void qcmap_service_available_cb()
+{
+  qti_cmdq_cmd_t            * cmd_buf = NULL;
+
+  LOG_MSG_INFO1("qcmap_service_available_cb()", 0, 0, 0);
+
   cmd_buf = qti_cmdq_get_cmd();
   if(cmd_buf == NULL)
   {
     LOG_MSG_ERROR("qti_cmdq: failed to allocate memeory for cmd", 0, 0, 0);
-    return QTI_FAILURE;
+    return ;
   }
 
 /*-----------------------------------------------------------------------------
@@ -117,10 +168,8 @@ int qti_qcmap_init(qti_conf_t * qti_conf )
   {
     qti_cmdq_release_cmd(cmd_buf);
     LOG_MSG_ERROR("qti_cmdq: failed to put commmand",0,0,0);
-    return QTI_FAILURE;
+    return ;
   }
-
-  return QTI_SUCCESS;
 }
 
 /*=============================================================================
@@ -149,7 +198,6 @@ int qti_qcmap_connect(void)
   qcmap_msgr_mobile_ap_status_ind_register_resp_msg_v01  qcmap_mobile_ap_status_ind_rsp;
   qcmap_msgr_wwan_status_ind_register_req_msg_v01        wwan_status_ind_reg;
   qcmap_msgr_wwan_status_ind_register_resp_msg_v01       wwan_status_ind_rsp;
-  qmi_client_os_params                                   qti_qcmap_msgr_os_params;
 /*---------------------------------------------------------------------------*/
 
   LOG_MSG_INFO1("qti_qcmap_connect()", 0, 0, 0);

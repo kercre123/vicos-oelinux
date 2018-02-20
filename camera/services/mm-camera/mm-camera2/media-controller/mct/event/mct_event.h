@@ -1,8 +1,9 @@
 /* mct_event.h
- *                                                           .
- * Copyright (c) 2013-2017 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
- */
+ * ***********************************************************
+ * Copyright (c) 2013-2018 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
+ *************************************************************/
 
 #ifndef __MCT_EVENT_H__
 #define __MCT_EVENT_H__
@@ -180,6 +181,7 @@ typedef struct {
   ADD_ENTRY(MCT_EVENT_MODULE_GET_GYRO_DATA) /* mct_event_gyro_data_t */       \
   ADD_ENTRY(MCT_EVENT_MODULE_STATS_DIS_UPDATE)                                \
   ADD_ENTRY(MCT_EVENT_MODULE_STATS_DEWARP_UPDATE)                             \
+  ADD_ENTRY(MCT_EVENT_MODULE_ISP_CONFIG) /*mct_bus_msg_isp_config_t */        \
   /* isp_stream_skip_pattern_t */                                             \
   ADD_ENTRY(MCT_EVENT_MODULE_ISP_SKIP_PATTERN)                                \
   ADD_ENTRY(MCT_EVENT_MODULE_STATS_POST_TO_BUS)                               \
@@ -315,6 +317,8 @@ typedef struct {
   ADD_ENTRY(MCT_EVENT_MODULE_STATS_FOVC_MAGNIFICATION_FACTOR_ISP)             \
   ADD_ENTRY(MCT_EVENT_MODULE_GET_GAMMA_TABLE)                                 \
   ADD_ENTRY(MCT_EVENT_MODULE_GET_CCM_TABLE)                                 \
+  ADD_ENTRY(MCT_EVENT_MODULE_STATS_IMU_STATS)                                 \
+  ADD_ENTRY(MCT_EVENT_MODULE_BAYER_DATA)                                      \
   ADD_ENTRY(MCT_EVENT_MODULE_MAX)                                             \
 
 typedef enum _mct_event_module_type {

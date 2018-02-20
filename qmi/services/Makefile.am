@@ -18,6 +18,7 @@ library_include_HEADERS = \
 	network_access_service_v01.h \
 	user_identity_module_v01.h \
 	user_identity_module_remote_v01.h \
+	voice_nas_services_common_v01.h \
 	voice_service_common_v02.h \
 	voice_service_v01.h \
 	voice_service_v02.h \
@@ -58,6 +59,7 @@ library_include_HEADERS = \
 
 c_sources = \
 	common_v01.c \
+	voice_nas_services_common_v01.c \
 	voice_service_common_v02.c \
 	voice_service_v02.c \
 	phonebook_manager_service_v01.c \

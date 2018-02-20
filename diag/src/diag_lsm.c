@@ -1405,7 +1405,7 @@ static void rename_logging_directory(void)
 	/* Loop backwards through the MSM directory name to find the date/time sub-directory */
 	len = strlen(output_dir[0]);
 	index = len - 1;
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < len && index >= 0; i++) {
 		if (output_dir[0][index] == '/') {
 			if (index != len - 1) {
 				replace_pos = index + 1;

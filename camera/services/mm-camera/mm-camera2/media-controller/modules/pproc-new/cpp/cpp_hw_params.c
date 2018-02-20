@@ -48,14 +48,14 @@
 /* 4x4 indicies within a 5x5 kernel */
 uint32_t const asf_4_4_Idx[16] = {6,7,8,9,11,12,13,14,16,17,18,19,21,22,23,24};
 
-inline uint16_t to_9bit_2sComplement(int x)
+static inline uint16_t to_9bit_2sComplement(int x)
 {
   if(x >= 0) return x;
   uint16_t y = -x;
   return ((~y & 0xff) + 1) | (1<<8);
 }
 
-inline uint8_t conv_nz_flag_int_to_uint(int x)
+static inline uint8_t conv_nz_flag_int_to_uint(int x)
 {
   if(x == 0) return 1;
   if(x == 1) return 0;
@@ -1823,7 +1823,9 @@ void cpp_prepare_write_engine_info(struct cpp_plane_info_t *plane_info,
   uint32_t blocks_per_stripe;
   int32_t output_block_height, output_block_width;
   int32_t h_pix_offset, v_pix_offset;
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   char value[PROPERTY_VALUE_MAX];
+#endif
 
   /* Write engine config depends on scaler position */
   if (plane_info->sharpen_before_scale) {
@@ -1893,11 +1895,16 @@ void cpp_prepare_write_engine_info(struct cpp_plane_info_t *plane_info,
     we_info->highest_bank_en =  UBWC_HIGESHT_BANK_ENABLE;
     we_info->highest_bank_bit = plane_info->ubwc_hbb;
     we_info->rot_mode = rot_info->rot_cfg;
+#if (defined(_ANDROID_) && !defined(_DRONE_))
     property_get("ubwc.no.compression", value, "0");
     if (atoi(value))
       we_info->ubwc_out_type = UBWC_UNCOMPRESSED_OUTPUT;
     else
       we_info->ubwc_out_type = UBWC_COMPRESSED_OUTPUT;
+#else
+    we_info->ubwc_out_type = UBWC_COMPRESSED_OUTPUT;
+#endif
+
   }
 
   switch (rot_info->rot_cfg) {
@@ -7698,7 +7705,9 @@ int32_t cpp_params_create_frame_info(cpp_hardware_t *cpphw,
   struct cpp_asf_info *asf_info = &frame_info->asf_info;
   int input_buffer_offset = 0, output_buffer_offset = 0;
   uint32_t asf_info_filter_k_entries = 0;
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   char value[PROPERTY_VALUE_MAX];
+#endif
   float fmt_conv_vscale_ratio = 1;
   float fmt_conv_hscale_ratio = 1;
   bool cace_inval = false;
@@ -8323,11 +8332,13 @@ int32_t cpp_params_create_frame_info(cpp_hardware_t *cpphw,
 
   frame_info->we_disable = hw_params->we_disable;
 
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   /* Power collapse enable */
   property_get("disable.cpp.power.collapse", value, "0");
   if (atoi(value)) {
     frame_info->power_collapse = DISABLE_POWER_COLLAPSE;
   }
+#endif
 
   CPP_DENOISE_LOW("bf_enable:%d", hw_params->denoise_enable);
   return 0;

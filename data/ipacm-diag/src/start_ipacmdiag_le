@@ -35,14 +35,14 @@ set -e
 
 case "$1" in
   start)
-        echo -n "Starting ipacmdiag: "
+        echo -n "Starting ipacmdiag: " > /dev/kmsg
         start-stop-daemon -S -b -a ipacmdiag
-        echo "done"
+        echo "done" > /dev/kmsg
         ;;
   stop)
-        echo -n "Stopping ipacmdiag: "
+        echo -n "Stopping ipacmdiag: " > /dev/kmsg
         start-stop-daemon -K -n ipacmdiag
-        echo "done"
+        echo "done" > /dev/kmsg
         ;;
   restart)
         $0 stop

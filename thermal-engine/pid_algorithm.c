@@ -278,8 +278,11 @@ static int handle_sampling_adjust(struct pid_algo_t *pid_info, uint32_t algo_idx
 	}
 	if(s_idx >= sampling_group_count) {
 
-		if (sampling_group_count == MAX_PID_INSTANCES_SUPPORTED)
+		if (sampling_group_count >= MAX_PID_INSTANCES_SUPPORTED) {
+			msg("%s: Sampling group count max is reached:%d\n",
+				__func__, sampling_group_count);
 			return -1;
+		}
 
 		s_idx = sampling_group_count;
 		sampling_group_count++;
@@ -1216,8 +1219,15 @@ error_handler:
 					break;
 				}
 			}
-			if (i < MAX_PID_INSTANCES_SUPPORTED &&
-			    sampling_groups[i].sampling == 0) {
+
+			if (i >= MAX_PID_INSTANCES_SUPPORTED ||
+				(sampling_groups[i].sampling == 0 &&
+				sampling_group_count >= MAX_PID_INSTANCES_SUPPORTED)) {
+				msg("%s: Sampling group count max is reached:%d idx:%d\n",
+					__func__, sampling_group_count, i);
+				err = -1;
+				goto error_handler;
+			} else if (sampling_groups[i].sampling == 0) {
 				sampling_groups[i].sampling =
 					pid_cfg->data.pid.sampling_period_ms;
 				pid_algo_clnt[pid_clnt_cnt].sampling_group_id = i;

@@ -20,6 +20,8 @@
 #include <cutils/properties.h>
 #endif
 
+#define PROPERTY_VALUE_MAX 32
+
 #define QFACTOR 100
 #define BUFF_SIZE_255 255
 

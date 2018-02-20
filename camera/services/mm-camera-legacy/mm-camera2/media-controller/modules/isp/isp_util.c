@@ -138,10 +138,10 @@ static boolean isp_util_is_video_hint_set(isp_session_t *session,
 
 boolean isp_util_is_4k2k_resolution_set(cam_dimension_t dim)
 {
-  bool enabled = false;
+  boolean enabled = FALSE;
   if ((dim.width == 4096 && dim.height == 2160) ||
     (dim.width == 3840 && dim.height == 2160) ){
-    enabled = true;
+    enabled = TRUE;
   }
   return enabled;
 }
@@ -2663,7 +2663,7 @@ int isp_util_set_bestshot(isp_t *isp, isp_port_t *isp_sink_port,
   int rc = 0;
   isp_session_t *session = isp_util_find_session(isp, session_id);
   isp_stream_t *stream;
-  boolean enable = false;
+  boolean enable = FALSE;
 
   if (!session) {
     CDBG_ERROR("%s: cannot find session (%d)\n", __func__, session_id);
@@ -2684,9 +2684,9 @@ int isp_util_set_bestshot(isp_t *isp, isp_port_t *isp_sink_port,
   }
   // Update 3A about the best shot mode.
   if (*bestshot == CAM_SCENE_MODE_OFF)
-	enable = false;
+	enable = FALSE;
   else
-	enable = true;
+	enable = TRUE;
   isp_util_set_adrc_spl_effect(isp,session_id,stream_id,enable);
   ISP_DBG(ISP_MOD_COM,"CAM_DBG  bestshot mode is %d, enable %d\n",*bestshot,enable);
 
@@ -2830,7 +2830,7 @@ int isp_util_set_effect(isp_t *isp, isp_port_t *isp_sink_port,
   int rc = 0;
   isp_session_t *session = isp_util_find_session(isp, session_id);
   isp_stream_t *stream;
-  boolean enable = false;
+  boolean enable = FALSE;
   if (!session) {
     CDBG_ERROR("%s: cannot find session (%d)\n", __func__, session_id);
     return rc;
@@ -2853,9 +2853,9 @@ int isp_util_set_effect(isp_t *isp, isp_port_t *isp_sink_port,
        (*effect == CAM_EFFECT_MODE_SKETCH) ||
        (*effect == CAM_EFFECT_MODE_NEON)   ||
        (*effect == CAM_EFFECT_MODE_OFF))
-    enable = false;
+    enable = FALSE;
   else
-    enable = true;
+    enable = TRUE;
   isp_util_set_adrc_spl_effect(isp,session_id,stream_id,enable);
   ISP_DBG(ISP_MOD_COM,"CAM_DBG  special mode is %d, enable %d\n",*effect,enable);
 
@@ -4334,7 +4334,7 @@ boolean isp_util_check_yuv_sensor_from_stream(isp_t *isp, uint32_t session_id,
 {
   isp_session_t *session = isp_util_find_session(isp, session_id);
   isp_stream_t *stream;
-  bool rc = FALSE;
+  boolean rc = FALSE;
   isp_info_t isp_info[VFE_MAX];
   int num_isps = 0;
   num_isps = isp_get_info(isp_info);

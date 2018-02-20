@@ -77,6 +77,10 @@ PKG_CHECK_MODULES([EVENTOBSERVER], [event-observer])
 AC_SUBST([EVENTOBSERVER_CFLAGS])
 AC_SUBST([EVENTOBSERVER_LIBS])
 
+PKG_CHECK_MODULES([PM], [powermanager])
+AC_SUBST([PM_CFLAGS])
+AC_SUBST([PM_LIBS])
+
 AC_ARG_WITH([core_includes],
       AC_HELP_STRING([--with-core-includes=@<:@dir@:>@],
          [Specify the location of the core headers]),

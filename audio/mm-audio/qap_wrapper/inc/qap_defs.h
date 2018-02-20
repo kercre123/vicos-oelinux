@@ -11,6 +11,88 @@ __BEGIN_DECLS
 
 #define MAX_SUPPORTED_OUTPUTS 4
 #define DTS_MAX_CHANNELS (8)
+#define MAX_SUPPORTED_PP_CONFIGS 2
+#define QAP_AUDIO_MAX_CHANNELS 32
+
+/* PCM Channel map */
+typedef enum {
+    /* Front left channel. */
+    QAP_AUDIO_PCM_CHANNEL_L = 1,
+    /* Front right channel. */
+    QAP_AUDIO_PCM_CHANNEL_R = 2,
+    /* Front center channel. */
+    QAP_AUDIO_PCM_CHANNEL_C = 3,
+    /* Left surround channel.*/
+    QAP_AUDIO_PCM_CHANNEL_LS = 4,
+    /* Right surround channel.*/
+    QAP_AUDIO_PCM_CHANNEL_RS = 5,
+    /* Low frequency effect channel. */
+    QAP_AUDIO_PCM_CHANNEL_LFE = 6,
+    /* Center surround channel; rear center channel. */
+    QAP_AUDIO_PCM_CHANNEL_CS = 7,
+    /* Center back channel. */
+    QAP_AUDIO_PCM_CHANNEL_CB = QAP_AUDIO_PCM_CHANNEL_CS,
+    /* Left back channel; rear left channel. */
+    QAP_AUDIO_PCM_CHANNEL_LB = 8,
+    /* Right back channel; rear right channel. */
+    QAP_AUDIO_PCM_CHANNEL_RB = 9,
+    /* Top surround channel.*/
+    QAP_AUDIO_PCM_CHANNEL_TS = 10,
+    /* Center vertical height channel.*/
+    QAP_AUDIO_PCM_CHANNEL_CVH = 11,
+    /* Top front center channel.*/
+    QAP_AUDIO_PCM_CHANNEL_TFC = QAP_AUDIO_PCM_CHANNEL_CVH,
+    /* Mono surround channel.*/
+    QAP_AUDIO_PCM_CHANNEL_MS = 12,
+    /* Front left of center channel. */
+    QAP_AUDIO_PCM_CHANNEL_FLC = 13,
+    /* Front right of center channel. */
+    QAP_AUDIO_PCM_CHANNEL_FRC = 14,
+    /* Rear left of center channel. */
+    QAP_AUDIO_PCM_CHANNEL_RLC = 15,
+    /* Rear right of center channel. */
+    QAP_AUDIO_PCM_CHANNEL_RRC = 16,
+    /* Secondary low frequency effect channel. */
+    QAP_AUDIO_PCM_CHANNEL_LFE2 = 17,
+    /* Side left channel. */
+    QAP_AUDIO_PCM_CHANNEL_SL = 18,
+    /* Side right channel. */
+    QAP_AUDIO_PCM_CHANNEL_SR = 19,
+    /* Top front left channel. */
+    QAP_AUDIO_PCM_CHANNEL_TFL = 20,
+    /* Left vertical height channel. */
+    QAP_AUDIO_PCM_CHANNEL_LVH = QAP_AUDIO_PCM_CHANNEL_TFL,
+    /* Top front right channel. */
+    QAP_AUDIO_PCM_CHANNEL_TFR = 21,
+    /* Right vertical height channel. */
+    QAP_AUDIO_PCM_CHANNEL_RVH = QAP_AUDIO_PCM_CHANNEL_TFR,
+    /* Top center channel. */
+    QAP_AUDIO_PCM_CHANNEL_TC = 22,
+    /* Top back left channel. */
+    QAP_AUDIO_PCM_CHANNEL_TBL = 23,
+    /* Top back right channel. */
+    QAP_AUDIO_PCM_CHANNEL_TBR = 24,
+    /* Top side left channel. */
+    QAP_AUDIO_PCM_CHANNEL_TSL = 25,
+    /* Top side right channel. */
+    QAP_AUDIO_PCM_CHANNEL_TSR = 26,
+    /* Top back center channel. */
+    QAP_AUDIO_PCM_CHANNEL_TBC = 27,
+    /* Bottom front center channel. */
+    QAP_AUDIO_PCM_CHANNEL_BFC = 28,
+    /* Bottom front left channel. */
+    QAP_AUDIO_PCM_CHANNEL_BFL = 29,
+    /* Bottom front right channel. */
+    QAP_AUDIO_PCM_CHANNEL_BFR = 30,
+    /* Left wide channel. */
+    QAP_AUDIO_PCM_CHANNEL_LW = 31,
+    /* Right wide channel. */
+    QAP_AUDIO_PCM_CHANNEL_RW = 32,
+    /* Left side direct channel. */
+    QAP_AUDIO_PCM_CHANNEL_LSD = 33,
+    /* Right side direct channel. */
+    QAP_AUDIO_PCM_CHANNEL_RSD = 34
+} qap_pcm_chmap;
 
 /* FLAG to be set for input buffers from Client */
 typedef enum {
@@ -92,6 +174,7 @@ typedef struct qap_output_config {
     qap_audio_format_t format;
     int32_t sample_rate;
     int channels;
+    uint8_t ch_map[QAP_AUDIO_MAX_CHANNELS];
     int bit_width;
     bool is_interleaved;
     uint32_t id;          /* Unique Output ID */
@@ -139,6 +222,20 @@ typedef enum {
     QAP_STATUS_OK = 0,
 } qap_status_t;
 
+/* PP config
+ *   -- Called using QAP_SESSION_CMD_SET_PP_CONFIG */
+typedef struct qap_pp_config {
+    uint32_t id;         /* Unique Output ID */
+    void *pp_type;
+} qap_pp_config_t;
+
+/* PP config
+ *   -- Called using QAP_SESSION_CMD_SET_PP_OUTPUTS */
+typedef struct {
+    uint32_t num_confs;
+    qap_pp_config_t pp_config[MAX_SUPPORTED_PP_CONFIGS];
+} qap_session_pp_configs_t;
+
 typedef enum {
     QAP_CALLBACK_EVENT_DATA,              /* Event to notify DATA availabilty to Client */
     QAP_CALLBACK_EVENT_OUTPUT_CFG_CHANGE, /* Event to notify client about output config change */
@@ -168,6 +265,8 @@ typedef enum {
     QAP_SESSION_CMD_GET_PARAM,                   /* Command to retrieve run-time session params */
     QAP_SESSION_CMD_SET_PARAM,                   /* Command to set run-time session params */
     QAP_SESSION_CMD_SET_KVPAIRS,                 /* Command to set kvpairs to the session */
+    QAP_SESSION_CMD_SET_PP_CONFIG,               /* Command to indicate on which id Dap processing output to be sent */
+    QAP_SESSION_CMD_SET_PP_OUTPUTS,              /* Command to set multiple pp configs */
     QAP_SESSION_CMD_FIRST_PROPRIETARY = 0x10000, /* first proprietary command code */
 } qap_session_cmd_t;
 

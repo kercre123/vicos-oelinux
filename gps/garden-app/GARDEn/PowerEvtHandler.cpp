@@ -10,120 +10,52 @@
 #include "platform_lib_log_util.h"
 #include "ulp_service.h"
 #include "PowerEvtHandler.h"
+#include "power_state.h"
 
-#define PWR_KEY_DEVICE "/dev/input/event0"
-#define SHUTDOWN_TIME_US 1000000
-#define USEC_IN_SEC 1000000
+#define ACK_TIMEOUT_US 300000 // 300 msec
 
-
-void *powerStateEvtRxThread(void * arg1)
-{
-    PowerEvtHandler *evtObsPtr = ((PowerEvtHandler *)arg1);
-    if (evtObsPtr)
-        evtObsPtr->powerEvtHandlerThread();
-
-    return NULL;
+PowerEvtHandler &PowerEvtHandler::getPwrEvtHandler() {
+    static PowerEvtHandler instance;
+    return instance;
 }
 
-PowerEvtHandler::PowerEvtHandler():
-                     mSuspend(1),
-                     mProducerEventObserver(NULL),
-                     mPwrDeviceFd(0)
-{
-    int result;
+PowerEvtHandler::PowerEvtHandler(): mProducerEventObserver(NULL) {
 
-    /*This thread is required only for LE platform */
-    result = pthread_create(&mThreadId, NULL, powerStateEvtRxThread, (void*) this);
-    if (0 != result) {
-        LOC_LOGE("%s: powerStateEvtRxThread creation failed err= %d \n", __func__, errno);
+    mProducerEventObserver = new EventObserver();
+    if (NULL == mProducerEventObserver) {
+        LOC_LOGE("Failed to create EventObserver object!\n");
+    } else {
+        //register with power api framework
+        pwr_state_notification_register(PowerEvtHandler::pwrStateCb);
     }
 }
 
 PowerEvtHandler::~PowerEvtHandler()
 {
-    if (mPwrDeviceFd > 0) {
-        close(mPwrDeviceFd);
-        mPwrDeviceFd = 0;
+    if (mProducerEventObserver) {
+        delete mProducerEventObserver;
     }
 }
 
-int PowerEvtHandler::timeDiffUs(struct timeval *press, struct timeval *release)
+int PowerEvtHandler::pwrStateCb(power_state_t pwr_state)
 {
-    int time;
-    if (release->tv_usec > press->tv_usec) {
-        release->tv_usec += USEC_IN_SEC;
-        release->tv_sec--;
+    client_ack_t client_ack;
+    client_ack.ack = ERR;
+    PowerEvtHandler &handle = getPwrEvtHandler();
+    LOC_LOGV("pwrStateCb: pwr_state %d\n", pwr_state.sys_state);
+    if (handle.mProducerEventObserver && (SYS_SUSPEND == pwr_state.sys_state)) {
+        getPwrEvtHandler().mProducerEventObserver->sendSystemEvent(ULP_LOC_SCREEN_OFF);
+        client_ack.ack = SUSPEND_ACK;
+    } else if (handle.mProducerEventObserver && (SYS_RESUME == pwr_state.sys_state)) {
+        handle.mProducerEventObserver->sendSystemEvent(ULP_LOC_SCREEN_ON);
+        client_ack.ack = RESUME_ACK;
+    } else if (handle.mProducerEventObserver && (SYS_SHUTDOWN == pwr_state.sys_state)) {
+        handle.mProducerEventObserver->sendSystemEvent(ULP_LOC_SCREEN_OFF);
+        client_ack.ack = SHUTDOWN_ACK;
     }
-    time = (int) (release->tv_sec - press->tv_sec) * USEC_IN_SEC +
-                  release->tv_usec - press->tv_usec;
-    return time;
-}
+    //Allow some time to stop the session and write calibration data NVM.
+    usleep(ACK_TIMEOUT_US);
 
-void PowerEvtHandler::suspendOrResume()
-{
-    LOC_LOGV("Power Key Initiated System Suspend or Resume\n");
-
-    if (mSuspend == 1) {
-        LOC_LOGV("System Suspend \n");
-        mProducerEventObserver->sendSystemEvent(ULP_LOC_SCREEN_OFF);
-        mSuspend = 0;
-    } else {
-        LOC_LOGV("System Resume \n");
-        mProducerEventObserver->sendSystemEvent(ULP_LOC_SCREEN_ON);
-        mSuspend = 1;
-    }
-}
-
-int PowerEvtHandler::powerEvtHandlerThread()
-{
-    int rc, fd, read_size, keypress = 0;
-    struct input_event event;
-    struct timeval press, release;
-
-    mPwrDeviceFd = open(PWR_KEY_DEVICE, O_RDONLY);
-    if (mPwrDeviceFd < 0) {
-        LOC_LOGE("open pwr key device failed: %s\n", PWR_KEY_DEVICE);
-        return 0;
-    }
-
-    memset(&press, 0, sizeof(struct timeval));
-    memset(&release, 0, sizeof(struct timeval));
-    /* Create producer event object to send power state evenets*/
-    mProducerEventObserver = new EventObserver();
-    if (NULL == mProducerEventObserver) {
-        LOC_LOGE("Failed to create EventObserver object!..exiting thread\n");
-        return 0;
-    }
-
-    while (1) {
-        /* wait for power key event */
-        read_size = read(mPwrDeviceFd, &event, sizeof(struct input_event));
-        if (read_size < sizeof(struct input_event)) {
-            LOC_LOGE("evtObserverRxThread MAX read error -- exit thread\n");
-            break;
-        }
-        if (event.type == EV_KEY && event.code == KEY_POWER) {
-            if (event.value == 1){
-                memcpy(&press, &event.time, sizeof(struct timeval));
-                keypress = 1;
-            } else {
-                memcpy(&release, &event.time, sizeof(struct timeval));
-                /* Sometimes timeval is negative when reading the
-                 * event time from pmic. Add a check to process suspend or
-                 * shutdown request only when the values are non-negative.
-                 */
-                if ((press.tv_sec >= 0) && (release.tv_sec >= 0) && (keypress == 1)) {
-                    keypress = 0;
-                    if (timeDiffUs(&press, &release) < SHUTDOWN_TIME_US) {
-                        suspendOrResume();
-                    } else {
-                        /*shutdown*/
-                        LOC_LOGV("Going to shutdown.\n");
-                        mProducerEventObserver->sendSystemEvent(ULP_LOC_SCREEN_OFF);
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    LOC_LOGV("pwrStateCb: sending ack %d to power daemon\n", client_ack.ack);
+    send_acknowledgement(client_ack);
 }

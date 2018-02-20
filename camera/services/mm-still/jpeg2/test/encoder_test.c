@@ -501,7 +501,7 @@ int main(int argc, char* argv[])
     for (i = 0; i < concurrent_cnt; i++)
     {
         OS_THREAD_FUNC_RET_T ret;
-        os_thread_create_jpg(&thread_ctrl_blks[i].thread, &ret);
+        os_thread_create_jpg(&thread_ctrl_blks[i].thread, &ret, &thread_ctrl_blks[i]);
         if (ret)
         {
             fprintf(stderr, "encoder_test: thread %d failed\n", i);
@@ -681,7 +681,7 @@ OS_THREAD_FUNC_RET_T OS_THREAD_FUNC_MODIFIER encoder_test(OS_THREAD_FUNC_ARG_T a
     {
         img_info.p_fragments[0].color.yuv.luma_buf   = main_luma_buf;
         img_info.p_fragments[0].color.yuv.chroma_buf = main_chroma_buf;
-        img_info.p_fragments[0].color.yuv.cr_buf = main_cr_buf;
+        //img_info.p_fragments[0].color.yuv.cr_buf = main_cr_buf;
     }
     else if ((img_info.color_format >= JPEG_BITSTREAM_H2V2) &&
              (img_info.color_format < JPEG_COLOR_FORMAT_MAX))

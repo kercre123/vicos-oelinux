@@ -56,6 +56,7 @@ static const uint32_t format_list[] = {
     GBM_FORMAT_BGR565,
     GBM_FORMAT_ABGR2101010,
     GBM_FORMAT_YCbCr_420_TP10_UBWC,
+    GBM_FORMAT_P010,
 };
 
 static const uint32_t usage_list[] = {
@@ -928,7 +929,8 @@ static int test_get_ubwc_status()
                          "GBM_BO_USE_RENDERING         ", GBM_BO_USE_RENDERING, 0},
              {"GBM_FORMAT_ABGR2101010", GBM_FORMAT_ABGR2101010,
                          "GBM_BO_USE_WRITE             ", GBM_BO_USE_WRITE, 0},
-
+             {"GBM_FORMAT_P010", GBM_FORMAT_P010,
+                         "GBM_BO_USE_WRITE             ", GBM_BO_USE_WRITE, 0},
              {"GBM_FORMAT_NONE", -1, "GBM_BO_NONE", -1, 0},
            };
 
@@ -1281,7 +1283,8 @@ static int test_surface_ubwc_status()
                        "GBM_BO_USE_RENDERING         ", GBM_BO_USE_RENDERING, 0},
            {"GBM_FORMAT_ABGR2101010", GBM_FORMAT_ABGR2101010,
                        "GBM_BO_USE_WRITE             ", GBM_BO_USE_WRITE, 0},
-
+           {"GBM_FORMAT_P010", GBM_FORMAT_P010,
+                       "GBM_BO_USE_WRITE             ", GBM_BO_USE_WRITE, 0},
            {"GBM_FORMAT_NONE", -1, "GBM_BO_NONE", -1, 0},
          };
 
@@ -1637,7 +1640,7 @@ static int test_import_fd()
     struct gbm_bo *bo1, *bo2;
     char *data1, *data2;
     struct gbm_import_fd_data buf_data;
-    uint32_t bo_size;
+    size_t bo_size;
     uint32_t ret=GBM_ERROR_NONE;
 
     bo1 = gbm_bo_create(gbm, 1024, 1024, GBM_FORMAT_XRGB8888, GBM_BO_USE_RENDERING);
@@ -1685,7 +1688,7 @@ static int test_import_gbm_buf()
     struct gbm_bo *bo1, *bo2;
     char *data1, *data2;
     struct gbm_buf_info buf_info;
-    uint32_t bo_size;
+    size_t bo_size;
     uint32_t ret=GBM_ERROR_NONE;
 
     bo1 = gbm_bo_create(gbm, 1024, 1024, GBM_FORMAT_XRGB8888, GBM_BO_USE_RENDERING);
@@ -1734,7 +1737,7 @@ static int test_import_wl_buffer()
     char *data1, *data2;
     struct wl_resource resource;
     static struct gbm_buf_info buf_info;
-    uint32_t bo_size;
+    size_t bo_size;
     uint32_t ret=GBM_ERROR_NONE;
 
     resource.data=&buf_info;
@@ -1779,6 +1782,33 @@ static int test_import_wl_buffer()
     return 1;
 }
 
+
+/*
+ * Tests focussed on validating GBM_FORMAT_P010 format
+ *  following apis are validated for above format
+ */
+static int test_validate_p010_format()
+{
+  int i;
+  struct gbm_bo *gb_bo[1000];
+  int ret;
+  void *prm;
+  int ubwc_status;
+
+  for(i = 0; i < 2; i++) {
+      printf("test_alloc_free run(%d)\n",i);
+      gb_bo[i] = gbm_bo_create(gbm, 1024, 1024, GBM_FORMAT_P010, GBM_BO_USE_RENDERING);
+      CHECK(check_bo(gb_bo[i]));
+
+      prm = (void *)&ubwc_status;
+      ret = gbm_perform(GBM_PERFORM_GET_UBWC_STATUS, gb_bo[i], prm);
+      printf("ubwc status for BO is %d\n", ubwc_status);
+   }
+
+  for(i = 0; i < 2; i++)
+      gbm_bo_destroy(gb_bo[i]);
+
+}
 
 /*
  * Tests repeated alloc/free with
@@ -1836,6 +1866,7 @@ static int test_validate_colorspace()
  */
 static int test_destroy()
 {
+    printf("Inside test_destroy\n");
     gbm_device_destroy(gbm);
     close(fd);
 
@@ -1936,6 +1967,7 @@ int gbm_test_help() {
   printf("18 Test UBWC status on Surface\n");
   printf("19 Validate gbm_buf_info from wl_resource\n");
   printf("20 Test Colorspace metadata operations on BO\n");
+  printf("21 Test GBM_FORMAT_P010 format operations on BO\n");
   return 0;
 }
 int main(int argc, char *argv[])
@@ -2035,6 +2067,11 @@ int main(int argc, char *argv[])
         case 20:
             result &= test_init();
             result &= test_validate_colorspace();
+            result &= test_destroy();
+            break;
+        case 21:
+            result &= test_init();
+            result &= test_validate_p010_format();
             result &= test_destroy();
             break;
         default:

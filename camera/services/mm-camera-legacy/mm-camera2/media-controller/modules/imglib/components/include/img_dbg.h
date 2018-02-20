@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #define IMG_USE_DYNAMIC_LOGGING
+#define _ANDROID_
 
 #ifndef IDBG_LOG_LEVEL
 #define IDBG_LOG_LEVEL 2

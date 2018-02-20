@@ -19,6 +19,7 @@
 #define MAX_IMAGE_WIDTH 16384
 #define MAX_IMAGE_HEIGHT 16384
 #define MAX_PARSED_METADATA_SIZE (4096)
+#define OMX_ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
 
 // Mobicat mask for exif
 #define MOBICAT_MASK                      1
@@ -511,7 +512,7 @@ protected:
    *
    *  Thumbnail image info
    **/
-  QOMX_THUMBNAIL_INFO m_thumbnailInfo;
+  QOMX_THUMBNAIL_INFO m_thumbnailInfo[MAX_NUM_THUMBNAILS];
 
   /** m_mainEncodeParams
    *
@@ -523,7 +524,7 @@ protected:
    *
    *  Thumbnail encode parameters
    **/
-  QIEncodeParams m_thumbEncodeParams;
+  QIEncodeParams m_thumbEncodeParams[MAX_NUM_THUMBNAILS];
 
   /** m_composer
    *
@@ -553,7 +554,7 @@ protected:
    *
    *  Thumbnail encoder object
    **/
-  QImageEncoderInterface *m_thumbEncoder;
+  QImageEncoderInterface *m_thumbEncoder[MAX_NUM_THUMBNAILS];
 
   /** m_inputMainImage
    *
@@ -571,13 +572,13 @@ protected:
    *
    *  Thumbnail input image
    **/
-  QImage *m_inThumbImage;
+  QImage *m_inThumbImage[MAX_NUM_THUMBNAILS];
 
   /** m_outThumbImage
    *
    *  thumbnail output image
    **/
-  QImage *m_outThumbImage;
+  QImage *m_outThumbImage[MAX_NUM_THUMBNAILS];
 
   /** m_thumbEncoding
    *
@@ -627,7 +628,7 @@ protected:
    *
    *  Store the thumbnail buffer
    **/
-  QIBuffer *mThumbBuffer;
+  QIBuffer *mThumbBuffer[MAX_NUM_THUMBNAILS];
 
   /** m_releaseFlag
    *
@@ -700,4 +701,16 @@ protected:
    * sequence number
    */
   uint32_t mSeqNo;
+
+  /**m_NumThumbnails
+   *
+   * Number of thumbnails
+   */
+   OMX_U32 m_NumThumbnails;
+
+  /**m_NumThumbnailsEncoded
+   *
+   * Number of encoded thumbnails
+   */
+   OMX_U32 m_NumThumbnailsEncoded;
 };

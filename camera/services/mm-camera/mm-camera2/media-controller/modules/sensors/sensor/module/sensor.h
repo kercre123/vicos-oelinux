@@ -1,7 +1,8 @@
 /* sensor.h
  *
- * Copyright (c) 2012-2016 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
+ * Copyright (c) 2012-2017 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
 
 #ifndef __SENSOR_H__
@@ -177,6 +178,8 @@ typedef struct {
   boolean                        window_updated;
   pdaf_window_configure_t        new_window;
   pdaf_window_configure_t        curr_window;  /* T2/3 */
+  float                          set_focal_length;
+  boolean                        start_stream_flag;
 } sensor_data_t;
 
 typedef struct {

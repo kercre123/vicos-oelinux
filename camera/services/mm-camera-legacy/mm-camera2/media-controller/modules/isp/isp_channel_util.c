@@ -11,7 +11,8 @@ Qualcomm Technologies Proprietary and Confidential.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <linux/media.h>
-
+#include "linux/limits.h"
+#include "limits.h"
 #include "camera_dbg.h"
 #include "cam_intf.h"
 #include "mct_controller.h"
@@ -35,6 +36,8 @@ Qualcomm Technologies Proprietary and Confidential.
 #define CUSTOM_ROUND(a)((long)(a + 0.6))
 #define SENSOR_OUT_13MP 13000000
 #define SENSOR_OUT_8MP   8000000
+
+#define PROPERTY_VALUE_MAX 32
 
 #ifdef _ANDROID_
 #include <cutils/properties.h>

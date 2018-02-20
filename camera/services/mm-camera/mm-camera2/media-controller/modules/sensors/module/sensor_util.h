@@ -10,6 +10,7 @@
 #include <linux/media.h>
 #include "mct_stream.h"
 #include "module_sensor.h"
+#include <linux/videodev2.h>
 
 #define SENSOR_SESSIONID(id) (((id) & 0xFFFF0000) >> 16)
 #define SENSOR_STREAMID(id) ((id) & 0x0000FFFF)

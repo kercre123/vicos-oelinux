@@ -182,7 +182,7 @@ static int32_t csiphy_close(void *csiphy_ctrl)
 
   cfg.cfgtype = CSIPHY_RELEASE;
   cfg.cfg.csi_lane_params = &csi_lane_params;
-  rc = ioctl(ctrl->fd, __user(VIDIOC_MSM_CSIPHY_IO_CFG), &cfg);
+  rc = ioctl(ctrl->fd, VIDIOC_MSM_CSIPHY_IO_CFG, &cfg);
   if (rc < 0) {
     SERR("VIDIOC_MSM_CSIPHY_IO_CFG failed: rc  = %d", rc);
     ret = SENSOR_FAILURE;

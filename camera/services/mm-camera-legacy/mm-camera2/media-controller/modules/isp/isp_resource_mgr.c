@@ -41,6 +41,8 @@ Qualcomm Technologies Proprietary and Confidential.
 #define RM_RDI_POLICY_MIMIC_PIX       (2)
 #define RM_RDI_POLICY_CURRENT         RM_RDI_POLICY_MIMIC_PIX
 
+#define PROPERTY_VALUE_MAX 32
+
 static isp_resources_t isp_res_mgr;
 
 /** get_dual_vfe_session_id

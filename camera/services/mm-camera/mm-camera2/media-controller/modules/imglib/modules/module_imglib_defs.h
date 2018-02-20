@@ -122,10 +122,19 @@ typedef struct {
  */
 
 /* Modules definition */
+#ifndef _DRONE_
 #define MOD_IMGLIB_FACEPROC { \
   .name = "imglib_faceproc", \
   .init_mod = NULL, \
   .deinit_mod = NULL, } \
+
+#else
+#define MOD_IMGLIB_FACEPROC { \
+  .name = "imglib_faceproc", \
+  .init_mod = module_faceproc_init, \
+  .deinit_mod = module_faceproc_deinit, } \
+
+#endif
 
 #define MOD_IMGLIB_DENOISE { \
   .name = "imglib_denoise", \

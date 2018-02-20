@@ -1,4 +1,4 @@
-inherit autotools qcommon qlicense
+inherit autotools qcommon qlicense pkgconfig sdllvm
 DESCRIPTION = "Video PostProcessing Library"
 SECTION = "multimedia"
 PR = "r0"

@@ -131,7 +131,7 @@ QExifComposer::QExifComposer(QImageWriterObserver &aObserver)
   app2_present = false;
   app2_start_offset = 0;
   overflow_flag = false;
-  mThumbnail = NULL;
+  memset(&mThumbnails, 0, sizeof(mThumbnails));
   mAheadBuffer = NULL;
   mCurrentOffset = 0;
   mBuffer = NULL;
@@ -234,23 +234,92 @@ int QExifComposer::SetParams(QExifComposerParams &aParams)
  * Description: This function is used to flush the thumbnail data
  *
  * Input parameters:
- *   none
+ *   aThumbnailIdx - thumbnail index
  *
  * Return values:
  *   none
  *
  * Notes: none
  *==========================================================================*/
-int QExifComposer::FlushThumbnail()
+int QExifComposer::FlushThumbnail(uint32_t aThumbnailIdx)
 {
   int lrc = QI_SUCCESS;
-  if (mThumbnail) {
+  if (mThumbnails[aThumbnailIdx]) {
     memcpy(mBuffer->Addr() + mCurrentOffset,
-      mThumbnail->BaseAddr(),
-      mThumbnail->FilledLen());
-    mCurrentOffset += mThumbnail->FilledLen();
+      mThumbnails[aThumbnailIdx]->BaseAddr(),
+      mThumbnails[aThumbnailIdx]->FilledLen());
+    mCurrentOffset += mThumbnails[aThumbnailIdx]->FilledLen();
   }
   return lrc;
+}
+
+/*===========================================================================
+ * Function: FlushExtraThumbnails
+ *
+ * Description: This function is used to flush extra thumbnails
+ *
+ * Input parameters:
+ *   none
+ *
+ * Return values:
+ *   QI_SUCCESS
+ *   QI_ERR_GENERAL
+ *
+ * Notes: none
+ *==========================================================================*/
+int QExifComposer::FlushExtraThumbnails()
+{
+  uint32_t lSectionSize = 0;
+  uint32_t lRemainingSize;
+  uint32_t lCurrentOffset;
+  uint32_t lCurrentAvailableSize;
+  uint32_t lLengthOffset;
+  bool lEmitHeader;
+
+  for (uint32_t i = 1; i < mNumThumbnails; i++) {
+
+    lRemainingSize = mThumbnails[i]->FilledLen();
+    lCurrentOffset = 0;
+    lEmitHeader = true;
+
+    do {
+      // Write APP2 Marker
+      JWRITE_SHORT(0xFF00 | M_APP2, mBuffer->Addr(), mCurrentOffset,
+        mBuffer->Length(), overflow_flag);
+
+      // length will be determined later, bypass for now
+      lLengthOffset = mCurrentOffset;
+      mCurrentOffset += 2;
+
+      if (lEmitHeader) {
+        EmitThumbnailIfd(i);
+        lEmitHeader = false;
+      }
+
+      if (mCurrentOffset - lLengthOffset + lRemainingSize < 0xFFFF) {
+        lCurrentAvailableSize = lRemainingSize;
+      } else {
+        lCurrentAvailableSize = 0xFFFF - (mCurrentOffset - lLengthOffset);
+        // Make sure that there is no split marker
+        if (0xFF == *(uint8_t*)(mThumbnails[i]->BaseAddr() + lCurrentOffset +
+            lCurrentAvailableSize - 1)) {
+          lCurrentAvailableSize--;
+        }
+      }
+
+      memcpy(mBuffer->Addr() + mCurrentOffset,
+        mThumbnails[i]->BaseAddr() + lCurrentOffset,
+        lCurrentAvailableSize);
+      mCurrentOffset += lCurrentAvailableSize;
+      lCurrentOffset += lCurrentAvailableSize;
+      lRemainingSize -= lCurrentAvailableSize;
+
+      jpegw_overwrite_short((uint16_t)(mCurrentOffset - lLengthOffset),
+        mBuffer->Addr(), lLengthOffset, mBuffer->Length(), &overflow_flag);
+    } while (lRemainingSize != 0);
+  }
+
+  return QI_SUCCESS;
 }
 
 /*===========================================================================
@@ -274,12 +343,12 @@ int QExifComposer::FlushFileHeader()
   char* lPayload = NULL;
   uint32_t lPayload_len = 0;
 
-  if(mThumbnail) {
+  if (mNumThumbnails > 0) {
     // drop the thumbnail if it is larger than the allowable
     //  size or the allocated
     // buffer has overflown
     if((fApp1Present &&
-      (mThumbnail->FilledLen() + mCurrentOffset - nApp1LengthOffset >
+      (mThumbnails[0]->FilledLen() + mCurrentOffset - nApp1LengthOffset >
       EXIF_MAX_APP1_LENGTH))) {
         // Update App1 length field
       jpegw_overwrite_short ((uint16_t)(nThumbnailOffset - nApp1LengthOffset),
@@ -301,7 +370,7 @@ int QExifComposer::FlushFileHeader()
       if (fApp1Present) {
         // Update Jpeg Interchange Format Length
         jpegw_overwrite_long ((mCurrentOffset - nThumbnailStreamOffset) +
-          mThumbnail->FilledLen(),
+          mThumbnails[0]->FilledLen(),
           mBuffer->Addr(),
           nJpegInterchangeLOffset,
           mBuffer->Length(),
@@ -311,7 +380,7 @@ int QExifComposer::FlushFileHeader()
       // Update App1 length field
       jpegw_overwrite_short (
         (uint16_t) ((mCurrentOffset - nApp1LengthOffset) +
-        mThumbnail->FilledLen()),
+        mThumbnails[0]->FilledLen()),
         mBuffer->Addr(),
         nApp1LengthOffset,
         mBuffer->Length(),
@@ -325,17 +394,19 @@ int QExifComposer::FlushFileHeader()
   }
 
   // Flush the thumbnail
-  if (mThumbnail && !thumbnail_dropped) {
-    QI_ERROR_RET(FlushThumbnail());
+  if ((mNumThumbnails > 0) && !thumbnail_dropped) {
+    QI_ERROR_RET(FlushThumbnail(0));
   }
 
-  if (app2_present && mThumbnail) {
+  if (app2_present && (mNumThumbnails > 0)) {
     // Update APP2 start offset
-    app2_start_offset += mThumbnail->FilledLen();
+    app2_start_offset += mThumbnails[0]->FilledLen();
   }
 
   if (app2_present) {
     EmitApp2();
+  } else if (mNumThumbnails > 1) {
+    FlushExtraThumbnails();
   }
 
   // Emit Stats debug data
@@ -720,7 +791,7 @@ void QExifComposer::EmitApp0()
     mBuffer->Length(), overflow_flag);
 
   // no thumbnail case
-  if (NULL == mThumbnail) {
+  if (0 == mNumThumbnails) {
 
     JWRITE_SHORT(2 + 4 + 1 + 2 + 1 + 2 + 2 + 1 + 1,
       mBuffer->Addr(), mCurrentOffset,
@@ -1171,23 +1242,25 @@ void QExifComposer::EmitGpsIfd()
  * Description: This function is used to emit Thumbnail Ifd
  *
  * Input parameters:
- *   none
+ *   aThumbnailIdx - thumbnail index
  *
  * Return values:
  *   none
  *
  * Notes: none
  *==========================================================================*/
-void QExifComposer::EmitThumbnailIfd()
+void QExifComposer::EmitThumbnailIfd(uint32_t aThumbnailIdx)
 {
   exif_tag_entry_ex_t dummy_entry;
   int i, nJpegInterchangeOffset = 0;
   exif_tag_entry_ex_t **pp_entries = (exif_tag_entry_ex_t **)(p_exif_info);
 
-  // Update Thumbnail_IFD pointer
-  jpegw_overwrite_long(mCurrentOffset - nTiffHeaderOffset,
-    mBuffer->Addr(), nThumbnailIfdPointerOffset,
-    mBuffer->Length(), &overflow_flag);
+  if (aThumbnailIdx == 0) {
+    // Update Thumbnail_IFD pointer
+    jpegw_overwrite_long(mCurrentOffset - nTiffHeaderOffset,
+      mBuffer->Addr(), nThumbnailIfdPointerOffset,
+      mBuffer->Length(), &overflow_flag);
+  }
 
   StartIfd();
 
@@ -1222,11 +1295,11 @@ void QExifComposer::EmitThumbnailIfd()
     mBuffer->Length(), overflow_flag);
 
   // Emit Frame Header
-  EmitFrameHeader(mWriterParams->EncodeParams(true),
+  EmitFrameHeader(mWriterParams->EncodeParams(true, aThumbnailIdx),
     mWriterParams->Subsampling(true));
 
   // Emit Scan Header
-  EmitScanHeader(mWriterParams->EncodeParams(true));
+  EmitScanHeader(mWriterParams->EncodeParams(true, aThumbnailIdx));
 
   // Update Jpeg Interchange Format
   jpegw_overwrite_long(nThumbnailStreamOffset - nTiffHeaderOffset,
@@ -1320,7 +1393,7 @@ void QExifComposer::EmitApp1()
     // Write GPS Ifd
     EmitGpsIfd();
 
-  if (mThumbnail) {
+  if (mNumThumbnails > 0) {
     // Make sure the starting offset is at 2-byte boundary.
     if (mCurrentOffset & 1)
       JWRITE_BYTE(0, mBuffer->Addr(), mCurrentOffset,
@@ -1329,7 +1402,7 @@ void QExifComposer::EmitApp1()
     // Save the thumbnail starting offset
     nThumbnailOffset = mCurrentOffset;
 
-    EmitThumbnailIfd();
+    EmitThumbnailIfd(0);
   }
 
   // Update App1 length field
@@ -2038,7 +2111,8 @@ int QExifComposer::addBuffer(QIBuffer *aBuffer)
  * Description: This function is used to start the exif composer
  *
  * Input parameters:
- *   aThumbnail - pointer to the thumbnail object
+ *   aThumbnail - pointer to the thumbnail objects
+ *   aNumThumbnails - number of thumbnails
  *   aType - type of jpeg image
  *   aSync - start the composer synchronous or asynchronouse
  *
@@ -2047,10 +2121,13 @@ int QExifComposer::addBuffer(QIBuffer *aBuffer)
  *
  * Notes: Only sync mode is supported as of now
  *==========================================================================*/
-int QExifComposer::Start(QImage *aThumbnail, JpegHeaderType aType,
-  int aSync __unused)
+int QExifComposer::Start(QImage *aThumbnails[], uint32_t aNumThumbnails,
+  JpegHeaderType aType, int aSync __unused)
 {
-  mThumbnail = aThumbnail;
+  mNumThumbnails = aNumThumbnails;
+  for (uint32_t i = 0; i < mNumThumbnails; i++) {
+    mThumbnails[i] = aThumbnails[i];
+  }
   mCurrentOffset = mBuffer->FilledLen();
 
   return (aType != EXIF) ? EmitJFIF() : EmitEXIF();

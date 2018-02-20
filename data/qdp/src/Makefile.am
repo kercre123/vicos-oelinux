@@ -20,6 +20,7 @@ AM_CPPFLAGS = -D__packed__= \
         -DFEATURE_NO_REX \
         $(QMIFRAMEWORK_CFLAGS) \
         $(QMI_CFLAGS) \
+        $(QMICLIENTHELPER_CFLAGS) \
         $(DSUTILS_CFLAGS) \
         $(DIAG_CFLAGS) \
         -I../inc \
@@ -29,21 +30,24 @@ AM_CPPFLAGS = -D__packed__= \
 INCPATHS  = -I../../../../../../system/core/include
 
 libqdp_c_sources = qdp.c \
-        qdp_platform.c
+        qdp_platform.c \
+        qdp_qmi_wds.c
 
 requiredlibs = -lpthread
 
 library_includedir = $(pkgincludedir)
+library_include_HEADERS = \
+        ../inc/qdp.h
 
 lib_LTLIBRARIES = libqdp.la
 libqdp_la_CC = @CC@
 libqdp_la_SOURCES = $(libqdp_c_sources)
 if USE_GLIB
 libqdp_la_CFLAGS  = -DUSE_GLIB $(AM_CFLAGS) @GLIB_CFLAGS@
-libqdp_la_LDFLAGS  = $(DSUTILS_LIBS) -lpthread -lqmi @GLIB_LIBS@
+libqdp_la_LDFLAGS  = $(DSUTILS_LIBS) $(QMICLIENTHELPER_LIBS) -lpthread -lqmi @GLIB_LIBS@
 else
 libqdp_la_CFLAGS = $(AM_CFLAGS) -fPIC
-libqdp_la_LDFLAGS = -lpthread -lqmi $(DSUTILS_LIBS)
+libqdp_la_LDFLAGS = -lpthread -lqmi $(DSUTILS_LIBS) $(QMICLIENTHELPER_LIBS)
 endif
 libqdp_la_CPPFLAGS = $(AM_CPPFLAGS)
 libqdp_la_LIBADD = $(requiredlibs)

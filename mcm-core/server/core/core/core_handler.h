@@ -7,8 +7,9 @@
     Primary use would be to add and remove incoming events to the
     core queue. The events once added would be processed by the core thread.
 
-    Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved.
-    Qualcomm Technologies Proprietary and Confidential.
+    Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
+    All Rights Reserved.
+    Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #ifndef CORE_HANDLER
@@ -22,7 +23,9 @@ typedef enum core_handler_event_category_type
     CORE_HANDLER_HLOS_CONTROL,
     CORE_HANDLER_CRI_MESSAGE,
     CORE_HANDLER_CRI_CONTROL,
-    CORE_HANDLER_TIMER_EVENT
+    CORE_HANDLER_TIMER_EVENT,
+    CORE_HANDLER_SERVICE_DOWN,
+    CORE_HANDLER_SERVICE_UP
 }core_handler_event_category_type;
 
 typedef struct core_handler_data_type

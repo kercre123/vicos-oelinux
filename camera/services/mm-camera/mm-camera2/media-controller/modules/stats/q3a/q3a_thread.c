@@ -9,6 +9,7 @@
 #include "q3a_thread.h"
 #include "camera_dbg.h"
 
+
 #define MAX_3A_CAMERA_ID 1 /**< Defines the MAX number of simultaneous cameras supported by single 3A algo thread*/
 
 
@@ -35,7 +36,8 @@ void q3a_thread_aecawb_free_msg(q3a_thread_aecawb_msg_t **msg_pp)
     case MSG_BG_AWB_STATS:
     case MSG_AWB_STATS:
     case MSG_BE_AEC_STATS:
-    case MSG_HDR_BE_AEC_STATS: {
+    case MSG_HDR_BE_AEC_STATS:
+    case MSG_AEC_STATS_SVHDR:{
       /* enq-msg has struct of pointers to stats buffer. Free up the memory
        * allocated for struct of pointers.
        * enq-msg carrying this pointer's struct will be deallocated just before
@@ -48,7 +50,7 @@ void q3a_thread_aecawb_free_msg(q3a_thread_aecawb_msg_t **msg_pp)
       }
     }
       break;
-    case MSG_AEC_STATS_HDR: {
+    case MSG_AEC_STATS_HDR:{
       /* Allocated locally freeing buffer */
       if (msg->u.stats && msg->u.stats->yuv_stats.p_q3a_aec_stats) {
         free(msg->u.stats->yuv_stats.p_q3a_aec_stats);
@@ -156,7 +158,9 @@ q3a_thread_aecawb_data_t* q3a_thread_aecawb_init(void)
   mct_queue_init(aecawb->thread_data->msg_q);
   mct_queue_init(aecawb->thread_data->p_msg_q);
   sem_init(&aecawb->thread_data->sem_launch, 0, 0);
-  pthread_cond_init(&(aecawb->thread_data->thread_cond), NULL);
+  pthread_condattr_init(&aecawb->thread_data->thread_condattr);
+  pthread_condattr_setclock(&aecawb->thread_data->thread_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&(aecawb->thread_data->thread_cond), &aecawb->thread_data->thread_condattr);
   pthread_mutex_init(&(aecawb->thread_data->thread_mutex), NULL);
   aecawb->thread_data->num_of_registered_cameras = 1; /* default */
   Q3A_LOW("private->thread_data: %p", aecawb->thread_data);
@@ -177,6 +181,7 @@ void q3a_thread_aecawb_deinit(q3a_thread_aecawb_data_t *aecawb)
   Q3A_LOW("thread_data: %p", aecawb->thread_data);
   pthread_mutex_destroy(&aecawb->thread_data->thread_mutex);
   pthread_cond_destroy(&aecawb->thread_data->thread_cond);
+  pthread_condattr_destroy(&aecawb->thread_data->thread_condattr);
   mct_queue_free(aecawb->thread_data->msg_q);
   mct_queue_free(aecawb->thread_data->p_msg_q);
   pthread_mutex_destroy(&aecawb->thread_data->msg_q_lock);
@@ -241,7 +246,8 @@ boolean q3a_aecawb_thread_en_q_msg(void *aecawb_data,
   if (thread_data->active &&
       is_cam_id_valid &&
       !((msg->type == MSG_BG_AEC_STATS || msg->type == MSG_BG_AWB_STATS ||
-        msg->type == MSG_BE_AEC_STATS || msg->type == MSG_HDR_BE_AEC_STATS)
+        msg->type == MSG_BE_AEC_STATS || msg->type == MSG_HDR_BE_AEC_STATS ||
+        msg->type == MSG_AEC_STATS_SVHDR)
         && thread_data->thread_ctrl[camera_id].no_stats_mode)) {
     rc = TRUE;
     Q3A_LOW("type=%d, sync_falg=%d",
@@ -438,11 +444,12 @@ void* aecawb_thread_handler(void *aecawb_data)
     case MSG_BE_AEC_STATS:
     case MSG_HDR_BE_AEC_STATS:
     case MSG_AEC_STATS_HDR:
-    case MSG_BG_AEC_STATS: {
+    case MSG_BG_AEC_STATS:
+    case MSG_AEC_STATS_SVHDR: {
       aec_output->aec_custom_param = aec_obj->aec_custom_param;
 
       if ((thread_ctrl->aec_bg_be_stats_cnt < 3) ||
-        (msg->type == MSG_AEC_STATS_HDR)) {
+        (msg->type == MSG_AEC_STATS_HDR) || (msg->type == MSG_AEC_STATS_SVHDR)) {
         if (!thread_ctrl->no_stats_mode) {
           ATRACE_CAMSCOPE_BEGIN(CAMSCOPE_AEC);
           rc = aec_ops->process(msg->u.stats, aec_algo_obj, aec_output, 1);
@@ -1114,7 +1121,11 @@ q3a_thread_af_data_t* q3a_thread_af_init(void)
   pthread_mutex_init(&af->thread_data->msg_q_lock, NULL);
   mct_queue_init(af->thread_data->msg_q);
   mct_queue_init(af->thread_data->p_msg_q);
-  pthread_cond_init(&af->thread_data->thread_cond, NULL);
+
+  pthread_condattr_init(&af->thread_data->thread_condattr);
+  pthread_condattr_setclock(&af->thread_data->thread_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&af->thread_data->thread_cond, &af->thread_data->thread_condattr);
+
   pthread_mutex_init(&af->thread_data->thread_mutex, NULL);
   sem_init(&af->thread_data->sem_launch, 0, 0);
   af->thread_data->num_of_registered_cameras = 1; /* default */
@@ -1136,6 +1147,7 @@ void q3a_thread_af_deinit(q3a_thread_af_data_t *af)
   Q3A_LOW("thread_data: %p", af->thread_data);
   pthread_mutex_destroy(&af->thread_data->thread_mutex);
   pthread_cond_destroy(&af->thread_data->thread_cond);
+  pthread_condattr_destroy(&af->thread_data->thread_condattr);
   mct_queue_free(af->thread_data->msg_q);
   mct_queue_free(af->thread_data->p_msg_q);
   pthread_mutex_destroy(&af->thread_data->msg_q_lock);

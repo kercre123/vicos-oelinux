@@ -1,6 +1,4 @@
-inherit autotools qcommon
-inherit qlicense qprebuilt
-
+inherit autotools qcommon qlicense qprebuilt pkgconfig sdllvm
 
 SUMMARY = "mm-video-noship"
 SECTION = "multimedia"
@@ -10,7 +8,6 @@ Qualcomm-Technologies-Inc.-Proprietary;md5=92b1d0ceea78229551577d4284669bb8"
 
 FILESPATH =+ "${WORKSPACE}:"
 SRC_URI = "file://video/lib/mm-video-noship/"
-#SRC_URI += "file://0001-enable-gpu-stats.patch"
 SRC_URI += "file://fpv.cfg"
 SRC_DIR = "${WORKSPACE}/video/lib/mm-video-noship"
 
@@ -25,18 +22,13 @@ DEPENDS += "adreno200"
 DEPENDS += "adsprpc"
 DEPENDS += "glib-2.0"
 
+DEPENDS_remove_apq8017 = "display-hal"
+DEPENDS_remove_apq8017 = "adreno200"
+DEPENDS_append_apq8017 = " display-hal-linux"
+
 EXTRA_OEMAKE += "LINUX_OMX_TEST_ONLY_ENCODE=true"
 EXTRA_OEMAKE += "LOCAL_CLANG=false"
 EXTRA_OEMAKE += "LINUX_FPV_RAVE_ENABLED=true"
-
-FILES_${PN} += "${sysconfdir}/fpv.cfg \
-                ${includedir}/fpv_rave/fpv_config.hpp \
-                ${includedir}/fpv_rave/fpv_dbg.hpp \
-                ${includedir}/fpv_rave/fpv_queue.hpp \
-                ${includedir}/fpv_rave/fpv_ra.hpp \
-                ${includedir}/fpv_rave/fpv_rave.hpp \
-                ${includedir}/fpv_rave/fpv_utils.hpp"
-
 
 EXTRA_OECONF_append =" --with-sanitized-headers=${STAGING_KERNEL_BUILDDIR}/usr/include"
 EXTRA_OECONF_append =" --with-kernel-headers=${STAGING_KERNEL_BUILDDIR}/include"
@@ -52,18 +44,10 @@ EXTRA_OECONF_append =" --with-videolibs-headers=${WORKDIR}/video/lib/mm-video-no
 EXTRA_OECONF_append =" --with-libyuvtool-headers=${STAGING_INCDIR}/libyuvtool/"
 EXTRA_OECONF_append =" --with-usr-include-headers=${STAGING_INCDIR}/"
 
-EXTRA_OECONF_append_msm8909   =" --enable-is-swvenc-enable="yes""
-EXTRA_OECONF_append_msm8937   =" --enable-is-swvenc-enable="yes""
-EXTRA_OECONF_append_msm8937   =" --enable-is-swvdec-enable="yes""
-EXTRA_OECONF_append_msm8974   =" --enable-is-hevc-enable="yes""
-EXTRA_OECONF_append_msm8226   =" --enable-is-hevc-enable="yes""
-EXTRA_OECONF_append_msm8916   =" --enable-is-hevc-enable="yes""
 EXTRA_OECONF_append_msm8998   =" --enable-is-gpupq-enable="yes""
 EXTRA_OECONF_append_msm8996   =" --enable-is-gpupq-enable="yes""
 EXTRA_OECONF_append_sdm660    =" --enable-is-gpupq-enable="yes""
 EXTRA_OECONF_append_msm8953   =" --enable-is-gpupq-enable="yes""
-EXTRA_OECONF_append_msm8992   =" --enable-is-hevc-enc-enable="yes""
-EXTRA_OECONF_append_msm8909   =" --enable-is-ittiam-vidc-enable="yes""
 EXTRA_OECONF_append_msm8953   =" --enable-is-adsppq-enable="yes""
 EXTRA_OECONF_append_msm8996   =" --enable-is-fpv-enable="yes""
 EXTRA_OECONF_append_msm8953   =" --enable-is-fpv-enable="yes""
@@ -91,6 +75,7 @@ FILES_${PN}      = "${libdir}/*.so ${libdir}/*.so.* ${sysconfdir}/* ${libdir}/pk
 FILES_${PN}-dev  = "${libdir}/*.la ${includedir}"
 INSANE_SKIP_${PN} = "dev-so"
 
+
 do_install_append() {
 install -d ${D}${includedir}/mm-video/utils
 install -m 0644 ${S}/utils/inc/list.h -D ${D}${includedir}/mm-video/utils/
@@ -110,8 +95,6 @@ install -m 0644 ${S}/streamparser/inc/VideoStreamParser.h -D ${D}${includedir}/m
 install -d ${D}${includedir}/libpqstats
 install -m 0644 ${S}/pq_stats/common/inc/pqstats.h -D ${D}${includedir}/libpqstats/pqstats.h
 
-
-
 # install FPV config file
 dest=/etc
 install -d ${D}${dest}
@@ -127,10 +110,8 @@ do_install_append_apq8053(){
 install -d ${D}${includedir}/libvqzip
 install -m 0644 ${S}/vqzip/VQZip.h -D ${D}${includedir}/libvqzip/VQZip.h
 
-if [ "${MLPREFIX}" == "lib32-" ]; then
- install -d ${D}${libdir}/rfsa/adsp
- install -m 0644 ${S}/pq_stats/adsp_skel/*.so -D ${D}${libdir}/rfsa/adsp/
-fi
+install -d ${D}${libdir}/rfsa/adsp
+install -m 0644 ${S}/pq_stats/adsp_skel/*.so -D ${D}${libdir}/rfsa/adsp/
 }
 
 do_install_append_apq8098(){
@@ -142,6 +123,20 @@ do_install_append_apq8096(){
 install -d ${D}${includedir}/libvqzip
 install -m 0644 ${S}/vqzip/VQZip.h -D ${D}${includedir}/libvqzip/VQZip.h
 }
+
+FILES_${PN} += "${sysconfdir}/fpv.cfg \
+                ${includedir}/fpv_rave/fpv_config.hpp \
+                ${includedir}/fpv_rave/fpv_dbg.hpp \
+                ${includedir}/fpv_rave/fpv_queue.hpp \
+                ${includedir}/fpv_rave/fpv_ra.hpp \
+                ${includedir}/fpv_rave/fpv_rave.hpp \
+                ${includedir}/fpv_rave/fpv_utils.hpp \
+                ${includedir}/libpqstats/* \
+                ${includedir}/libvqzip/* \
+                ${includedir}/mm-video/* \
+               "
+
+FILES_${PN}_append_msm8953 = "${libdir}/rfsa/adsp/*.so"
 
 INSANE_SKIP_${PN} += "arch"
 export TARGET_LIBRARY_SUPPRESS_LIST="libadsprpc"

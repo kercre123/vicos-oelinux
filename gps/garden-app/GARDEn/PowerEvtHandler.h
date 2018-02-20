@@ -14,21 +14,20 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "EventObserver.h"
+#include "power_state.h"
 
 class PowerEvtHandler {
-private:
-    int                 mSuspend;
-    int                 mPwrDeviceFd;
-    pthread_t           mThreadId;
-    EventObserver       *mProducerEventObserver;
 
 public:
-    PowerEvtHandler();
+    static PowerEvtHandler & getPwrEvtHandler();
     ~PowerEvtHandler();
 
-    void         suspendOrResume();
-    int          powerEvtHandlerThread();
-    int          timeDiffUs(struct timeval *press, struct timeval *release);
+    EventObserver *mProducerEventObserver;
+    static int     pwrStateCb(power_state_t pwr_state);
+
+private:
+    PowerEvtHandler();
+
 };
 
 #endif //_POWER_EVENT_HANDLER_H_

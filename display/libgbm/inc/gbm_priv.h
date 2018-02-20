@@ -349,6 +349,8 @@ extern "C" {
 
 #define GBM_FORMAT_YCbCr_420_P010_UBWC                      __gbm_fourcc_code('Q', '1', '2', 'B')
 
+/* Y/CbCr 4:2:0 P10 format*/
+#define GBM_FORMAT_P010                                     __gbm_fourcc_code('P', '0', '1', '0')
 
 /**
  * Pixel component ID defines

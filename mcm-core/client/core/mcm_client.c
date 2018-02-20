@@ -1,9 +1,11 @@
 /**************************************************************************************
-Copyright (c) 2013-2014 Qualcomm Technologies, Inc.  All Rights Reserved.
-Qualcomm Technologies Proprietary and Confidential. 
+Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+All Rights Reserved.
+Confidential and Proprietary - Qualcomm Technologies, Inc.
 **************************************************************************************/
 #include "mcm_constants.h"
 #include "mcm_qmi_client.h"
+#include "mcm_client_internal.h"
 #include "mcm_service_object_v01.h"
 #include "mcm_client.h"
 #include <pthread.h>
@@ -456,6 +458,12 @@ uint32 mcm_client_execute_command_async
             break;
         }
 
+        if((TRUE == mcm_is_device_in_ssr()) && (FALSE == mcm_is_msg_for_mobileap_service(msg_id)))
+        {
+            ret_val = MCM_ERROR_RADIO_RESET_V01;
+            break;
+        }
+
         MCM_CLIENT_MUTEX_LOCK();
         *token_ptr = client_token ++;
         MCM_CLIENT_MUTEX_UNLOCK();
@@ -483,6 +491,7 @@ uint32 mcm_client_execute_command_async
                                         token_ptr,
                                         &txn_handle);
 
+        qmi_util_log("server_execute_async ret_val:%d", ret_val);
         ret_val = convert_qmi_err_to_mcm(ret_val);
 
         if (MCM_SUCCESS_V01 != ret_val)
@@ -559,6 +568,12 @@ uint32 mcm_client_execute_command_sync_ex
     LOG_MSG_INFO("mcm_client_execute_command_sync_ex ENTER msg_id:%d", msg_id);
 
     do {
+        if((TRUE == mcm_is_device_in_ssr()) && (FALSE == mcm_is_msg_for_mobileap_service(msg_id)))
+        {
+            ret_val = MCM_ERROR_RADIO_RESET_V01;
+            break;
+        }
+
         if(MCM_SUCCESS_V01 !=
             (ret_val = mcm_client_internal_get_qmi_handle_for_mcm_handle(client_handle, msg_id, &user_handle)))
         {
@@ -573,6 +588,7 @@ uint32 mcm_client_execute_command_sync_ex
                                             resp_c_struct_len,
                                             timeout);
 
+        qmi_util_log("server_execute_sync ret_val:%d", ret_val);
         ret_val = convert_qmi_err_to_mcm(ret_val);
         if(MCM_SUCCESS_V01 != ret_val)
         {

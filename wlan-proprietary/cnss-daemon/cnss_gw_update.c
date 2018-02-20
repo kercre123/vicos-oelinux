@@ -471,7 +471,6 @@ static int cnss_gw_init_wifi_socket(struct cnss_gw_data *gw_data)
 
 	if (nl_connect(gw_update_info.wifi_sockfd, NETLINK_GENERIC)) {
 		wsvc_printf_err("wifi nl connect failed\n");
-		nl_socket_free(gw_update_info.wifi_sockfd);
 		return -1;
 	}
 
@@ -483,11 +482,9 @@ static int cnss_gw_init_wifi_socket(struct cnss_gw_data *gw_data)
 	cb = nl_socket_get_cb(gw_update_info.wifi_sockfd);
 	if (cb == NULL) {
 		wsvc_printf_err("gw update cb allocation failed\n");
+		nl_close(gw_update_info.wifi_sockfd);
 		return -ENOMEM;
 	}
-
-	/* will be freed during de-init */
-	gw_data->g_cb = cb;
 
 	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, nl_no_seq_check, NULL);
 	nl_cb_err(cb, NL_CB_CUSTOM, nl_error_handler, &err);
@@ -495,6 +492,9 @@ static int cnss_gw_init_wifi_socket(struct cnss_gw_data *gw_data)
 	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, nl_ack_handler, &err);
 	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, nl_response_handler, NULL);
 	nl_cb_put(cb);
+
+	/* will be freed during de-init */
+	gw_data->g_cb = cb;
 
 	wsvc_printf_dbg("wifi nl socket successfully initialized\n");
 	return 0;
@@ -532,8 +532,10 @@ static int cnss_gw_init_route_socket()
 	wsvc_printf_dbg("cnss gw kernel netlink socket initialized\n");
 
 out:
-	if (fd >= 0 && ret < 0)
+	if (fd >= 0 && ret < 0) {
 		close(fd);
+		gw_update_info.route_sockfd = 0;
+	}
 
 	return ret;
 }
@@ -580,11 +582,16 @@ int cnss_gw_update_init(void)
 /* deinit handler */
 int cnss_gw_update_deinit()
 {
-	close(gw_update_info.route_sockfd);
+	if (gw_update_info.route_sockfd) {
+		close(gw_update_info.route_sockfd);
+		gw_update_info.route_sockfd = 0;
+	}
 
-	nl_cb_put(gw_data.g_cb);
-	nl_socket_free(gw_update_info.wifi_sockfd);
-	gw_update_info.wifi_sockfd = NULL;
+	if (gw_update_info.wifi_sockfd) {
+		nl_close(gw_update_info.wifi_sockfd);
+		nl_socket_free(gw_update_info.wifi_sockfd);
+		gw_update_info.wifi_sockfd = 0;
+	}
 
 	memset(&gw_update_info, 0, sizeof(struct cnss_gw_update));
 	return 0;

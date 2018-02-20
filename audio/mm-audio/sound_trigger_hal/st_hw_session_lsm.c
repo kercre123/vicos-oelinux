@@ -847,6 +847,9 @@ static void *callback_thread_loop(void *context)
 
     }
 
+    if (st_lsm_event_cmd)
+        free(st_lsm_event_cmd);
+
     if (params)
         free(params);
 

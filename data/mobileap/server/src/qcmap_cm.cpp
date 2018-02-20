@@ -2828,57 +2828,6 @@ qcmap_cm_eri_read_config
   return QCMAP_CM_SUCCESS;
 }
 
-/*===========================================================================
-
-FUNCTION QCMAP_CM_DELETE_IPV6_DELEGATED_PREFIX()
-
-DESCRIPTION
- - Removes a single prefix if prefix_valid is set, othwise removes all
- delegated prefix's
-
-DEPENDENCIES
-  None.
-
-SIDE EFFECTS
-
-===========================================================================*/
-int qcmap_cm_delete_ipv6_delegated_prefix
-(
-  boolean             prefix_valid,/*Boolean to flush single or all*/
-  uint8_t             *ipv6_addr,  /*Prefix to delete*/
-  qmi_error_type_v01  *qmi_err_num /*QMI error number*/
-)
-{
-  wds_remove_delegated_ipv6_prefix_req_msg_v01 req;
-  wds_remove_delegated_ipv6_prefix_resp_msg_v01 resp;
-
-  memset(&req, 0, sizeof(wds_remove_delegated_ipv6_prefix_req_msg_v01));
-  memset(&resp, 0, sizeof(wds_remove_delegated_ipv6_prefix_resp_msg_v01));
-
-  req.ipv6_prefix_valid = prefix_valid;
-  if(prefix_valid)
-  {
-    memcpy(req.ipv6_prefix.ipv6_addr, ipv6_addr, QMI_WDS_IPV6_ADDR_LEN_V01);
-    req.ipv6_prefix.ipv6_prefix_length = sizeof(ipv6_addr);
-  }
-
-  *qmi_err_num = qmi_client_send_msg_sync(qcmap_cm_cb.qmi_wds_handle,
-                                       QMI_WDS_REMOVE_DELEGATED_IPV6_PREFIX_REQ_V01,
-                                       &req,
-                                       sizeof(wds_remove_delegated_ipv6_prefix_req_msg_v01),
-                                       &resp,
-                                       sizeof(wds_remove_delegated_ipv6_prefix_resp_msg_v01),
-                                       QCMAP_CM_QMI_TIMEOUT_VALUE);
-
-  if(*qmi_err_num != QMI_NO_ERR)
-  {
-    LOG_MSG_ERROR("Failed to flush delegated prefix %d", *qmi_err_num,0,0);
-    return QCMAP_CM_ERROR;
-  }
-
-  return QCMAP_CM_SUCCESS;
-}
-
 /*=====================================================
   FUNCTION qcmap_cm_check_ltefdd_cat4_bw
 ======================================================*/

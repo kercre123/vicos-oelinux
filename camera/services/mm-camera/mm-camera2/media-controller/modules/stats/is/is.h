@@ -92,8 +92,12 @@ typedef struct _is_info {
   unsigned int transform_type;
   long vfe_width[IS_MAX_STREAMS];
   long vfe_height[IS_MAX_STREAMS];
+  uint32_t vfe_stride[IS_MAX_STREAMS];
+  uint32_t vfe_scanline[IS_MAX_STREAMS];
   long width[IS_MAX_STREAMS];
   long height[IS_MAX_STREAMS];
+  uint32_t stride[IS_MAX_STREAMS];
+  uint32_t scanline[IS_MAX_STREAMS];
   uint32_t fps;
   uint32_t num_mesh_x;
   uint32_t num_mesh_y;
@@ -119,6 +123,7 @@ typedef struct _is_info {
   uint8_t trans_mat_type;
   ldc_parameters_t ldc_params;
   int dewarp_eis_bitmask;
+  is_vfe_window_t vfe_win;
 } is_info_t;
 
 typedef enum {
@@ -133,7 +138,9 @@ typedef enum {
   IS_PROCESS_STREAM_EVENT = 1,
   IS_PROCESS_RS_CS_STATS,
   IS_PROCESS_GYRO_STATS,
-  IS_PROCESS_FLUSH_MODE
+  IS_PROCESS_FLUSH_MODE,
+  IS_PROCESS_ISP_CONFIG_EVENT,
+  IS_PROCESS_IMU_STATS,
 } is_process_parameter_type;
 
 
@@ -167,12 +174,21 @@ typedef struct _is_gyro_data {
   mct_event_gyro_data_t gyro_data;
 } is_gyro_data_t;
 
+typedef struct _is_imu_data {
+  unsigned int frame_id;
+  is_info_t *is_info;
+  mct_event_imu_stats_t imu_data;
+} is_imu_data_t;
 
 typedef struct _is_flush_mode {
   is_info_t *is_info;
   boolean flush_mode;
 } is_flush_mode_t;
 
+typedef struct _is_isp_config_data {
+  unsigned int frame_id;
+  is_info_t *is_info;
+} is_isp_config_data_t;
 
 typedef struct _is_process_parameter {
   is_process_parameter_type type;
@@ -181,7 +197,9 @@ typedef struct _is_process_parameter {
     is_stream_event_data_t stream_event_data;
     is_stats_data_t stats_data;
     is_gyro_data_t gyro_data;
+    is_imu_data_t imu_data;
     is_flush_mode_t flush_mode;
+    is_isp_config_data_t isp_data;
   } u;
 } is_process_parameter_t;
 
@@ -192,7 +210,8 @@ typedef enum {
   IS_PROCESS_OUTPUT_STREAM_EVENT = 1,
   IS_PROCESS_OUTPUT_RS_CS_STATS,
   IS_PROCESS_OUTPUT_GYRO_STATS,
-  IS_PROCESS_OUTPUT_FLUSH_MODE
+  IS_PROCESS_OUTPUT_FLUSH_MODE,
+  IS_PROCESS_OUTPUT_IMU_STATS
 } is_process_output_type_t;
 
 

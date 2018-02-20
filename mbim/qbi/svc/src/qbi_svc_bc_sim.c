@@ -44,8 +44,10 @@ $Header$
 
 when      who  what, where, why
 --------  ---  ---------------------------------------------------------------
+09/14/17  rv   Added logic to check if pbm response ind already contains a '+'
 09/04/17  rv   Added interface to trigger default profile apn enable/disable 
                flag intialization.
+08/20/17  mm   Fixed issue related to provision of card
 08/11/17  mm   Fixed issue related to subscriber ready state
 07/26/17  mm   Fixed issue related to hot swap
 07/21/17  rv   Fixed crash when exec slot NV couldnt be created
@@ -91,8 +93,6 @@ when      who  what, where, why
 #include "network_access_service_v01.h"
 #include "phonebook_manager_service_v01.h"
 #include "user_identity_module_v01.h"
-#include "qbi_svc_bc_ext_mbim.h"
-#include "qbi_svc_bc_ext.h"
 
 /*=============================================================================
 
@@ -2623,8 +2623,11 @@ static qbi_svc_action_e qbi_svc_bc_sim_subscriber_ready_status_q_pbm04_ind_cb
            info->records_read < info->records_total; i++, info->records_read++)
     {
       /* Prepend a + to international numbers */
-      if (qmi_ind->basic_record_data.record_instances[i].num_type ==
-            PBM_NUM_TYPE_INTERNATIONAL_V01)
+      /* Do not prepend additional '+' if the response already 
+         contains a payload with '+' */
+      if ((qmi_ind->basic_record_data.record_instances[i].num_type ==
+            PBM_NUM_TYPE_INTERNATIONAL_V01) &&
+          (qmi_ind->basic_record_data.record_instances[i].number[0] != '+'))
       {
         QBI_MEMSET(num_with_plus, 0, sizeof(num_with_plus));
         num_with_plus[0] = '+';

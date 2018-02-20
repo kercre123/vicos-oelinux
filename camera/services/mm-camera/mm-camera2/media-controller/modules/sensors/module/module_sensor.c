@@ -1,7 +1,8 @@
 /* module_sensor.c
  *
- * Copyright (c) 2012-2017 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
+ * Copyright (c) 2012-2017 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
 #include <cutils/properties.h>
 #include <linux/media.h>
@@ -1184,7 +1185,9 @@ static boolean module_sensor_init_session(
   memset(&s_bundle->cap_control, 0, sizeof(sensor_capture_control_t));
 
   /* initialize condition variable */
-  pthread_cond_init(&s_bundle->fast_aec_cond, NULL);
+  pthread_condattr_init(&s_bundle->fast_aec_condattr);
+  pthread_condattr_setclock(&s_bundle->fast_aec_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&s_bundle->fast_aec_cond, &s_bundle->fast_aec_condattr);
   /* initialize mutex */
   pthread_mutex_init(&s_bundle->fast_aec_mutex, NULL);
 
@@ -1204,7 +1207,9 @@ static boolean module_sensor_init_session(
   /* Initialize the mutex & cond*/
   pthread_mutex_init(&s_bundle->mutex, NULL);
 
-  pthread_cond_init(&s_bundle->cond, NULL);
+  pthread_condattr_init(&s_bundle->condattr);
+  pthread_condattr_setclock(&s_bundle->condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&s_bundle->cond, &s_bundle->condattr);
 
   for (i = 0; i < SUB_MODULE_MAX; i++) {
     intf_info = &s_bundle->subdev_info[i].intf_info[SUBDEV_INTF_PRIMARY];
@@ -1387,10 +1392,12 @@ static boolean module_sensor_deinit_session(
 
   /* Destroy Fast AEC mutex and condition variable*/
   pthread_cond_destroy(&s_bundle->fast_aec_cond);
+  pthread_condattr_destroy(&s_bundle->fast_aec_condattr);
   pthread_mutex_destroy(&s_bundle->fast_aec_mutex);
 
   /* Destroy the mutex and cond */
   pthread_cond_destroy(&s_bundle->cond);
+  pthread_condattr_destroy(&s_bundle->condattr);
   pthread_mutex_destroy(&s_bundle->mutex);
 
   /* Destroy flash control mutex */
@@ -1664,9 +1671,15 @@ static boolean module_sensor_is_ready_for_stream_on(mct_port_t *port,
   if (bundle_id == -1) {
     /* This stream does not belong to any bundle */
 
-    res_cfg->width       = s_bundle->max_width;
-    res_cfg->height      = s_bundle->max_height;
-    res_cfg->stream_mask = s_bundle->stream_mask;
+    if (TRUE == s_bundle->is_stereo_configuration) {
+      res_cfg->width       = s_bundle->max_width/2;
+      res_cfg->height      = s_bundle->max_height;
+      res_cfg->stream_mask = s_bundle->stream_mask;
+    } else {
+      res_cfg->width       = s_bundle->max_width;
+      res_cfg->height      = s_bundle->max_height;
+      res_cfg->stream_mask = s_bundle->stream_mask;
+    }
 
     SLOW("s_bundle->stream_on_count %d", s_bundle->stream_on_count);
     SLOW("is_bundle_started %d", is_bundle_started);
@@ -1692,9 +1705,16 @@ static boolean module_sensor_is_ready_for_stream_on(mct_port_t *port,
   bundle_info->stream_on_count++;
 
   /* update the res_cfg with bundle dim and mask */
-  res_cfg->width       = s_bundle->max_width;
-  res_cfg->height      = s_bundle->max_height;
-  res_cfg->stream_mask = s_bundle->stream_mask;
+  if (TRUE == s_bundle->is_stereo_configuration) {
+    res_cfg->width       = s_bundle->max_width/2;
+    res_cfg->height      = s_bundle->max_height;
+    res_cfg->stream_mask = s_bundle->stream_mask;
+  } else {
+    res_cfg->width       = s_bundle->max_width;
+    res_cfg->height      = s_bundle->max_height;
+    res_cfg->stream_mask = s_bundle->stream_mask;
+  }
+
 
   SLOW("bundle_info->stream_on_count %d", bundle_info->stream_on_count);
   SLOW("bundle_info->bundle_config.num_of_streams %d",
@@ -1711,7 +1731,7 @@ static boolean module_sensor_is_ready_for_stream_on(mct_port_t *port,
   if ((bundle_info->stream_on_count ==
        bundle_info->bundle_config.num_of_streams) &&
       (s_bundle->stream_on_count == 0) && (is_bundle_started == FALSE)) {
-    SLOW("stream_on_count=%d, w=%d, h=%d, stream_mask=%x",
+    SLOW("stream_on_count=%d, sensor cfg dim %dx%d, stream_mask=%x",
       bundle_info->stream_on_count, res_cfg->width, res_cfg->height,
       res_cfg->stream_mask);
     return TRUE;
@@ -4381,6 +4401,10 @@ static boolean module_sensor_handle_meta_stream_info(mct_module_t *module,
 
   /* Copy the stream_info from hal stucture */
   sensor_isp_info.num_streams = stream_size_info->num_streams;
+  sensor_isp_info.stream_max_size.width =
+    s_bundle->sensor_lib_params->sensor_lib_ptr->pixel_array_size_info.active_array_size.width;
+  sensor_isp_info.stream_max_size.height =
+    s_bundle->sensor_lib_params->sensor_lib_ptr->pixel_array_size_info.active_array_size.height;
   for (i = 0; i < sensor_isp_info.num_streams; i++) {
     sensor_isp_info.stream_sizes[i] = stream_size_info->stream_sizes[i];
     sensor_isp_info.type[i] = stream_size_info->type[i];
@@ -4531,6 +4555,10 @@ static boolean module_sensor_handle_meta_stream_info_for_meta(
 
   /* Copy the stream_info from hal stucture */
   sensor_isp_info.num_streams = stream_size_info->num_streams;
+  sensor_isp_info.stream_max_size.width =
+    s_bundle->sensor_lib_params->sensor_lib_ptr->pixel_array_size_info.active_array_size.width;
+  sensor_isp_info.stream_max_size.height =
+    s_bundle->sensor_lib_params->sensor_lib_ptr->pixel_array_size_info.active_array_size.height;
   for (i = 0; i < sensor_isp_info.num_streams; i++) {
     sensor_isp_info.stream_sizes[i] = stream_size_info->stream_sizes[i];
     sensor_isp_info.type[i] = stream_size_info->type[i];
@@ -5043,7 +5071,24 @@ boolean module_sensor_event_control_set_parm(
   case CAM_INTF_PARM_BURST_LED_ON_PERIOD:
     s_bundle->led_on_period = *((uint32_t *)event_control->parm_data);
     break;
-  case CAM_INTF_PARM_MAX_DIMENSION:
+  case CAM_INTF_PARM_MAX_DIMENSION: {
+    cam_dimension_t *dim = (cam_dimension_t *)event_control->parm_data;
+    if((s_bundle->max_width != dim->width) ||
+      (s_bundle->max_height != dim->height)) {
+      /* Apply bundle dim instead of the dim from HAL,
+         in case that there are margins in IS mode. */
+      SHIGH("Adjust dim from (%d,%d) to (%d,%d)",
+        dim->width, dim->height, s_bundle->max_width, s_bundle->max_height);
+      dim->width = s_bundle->max_width;
+      dim->height = s_bundle->max_height;
+    }
+
+    if (TRUE == s_bundle->is_stereo_configuration) {
+      SHIGH("Adjust dim from (%d,%d) to (%d,%d)",
+        dim->width, dim->height, dim->width/2, dim->height);
+      dim->width = dim->width/2;
+    }
+
     rc = module_sensor_params->func_tbl.process(
       module_sensor_params->sub_module_private,
       SENSOR_SET_MAX_DIMENSION, event_control->parm_data);
@@ -5052,6 +5097,7 @@ boolean module_sensor_event_control_set_parm(
       ret = FALSE;
     }
     break;
+  }
   case CAM_INTF_PARM_SET_AUTOFOCUSTUNING: {
     if (_check_event_pending(&s_bundle->mutex, s_bundle->init_config_done,
       &ret)) {
@@ -5443,6 +5489,16 @@ boolean module_sensor_event_control_set_parm(
     }
   }
   break;
+  case CAM_INTF_META_LENS_FOCAL_LENGTH:
+    rc = module_sensor_params->func_tbl.process(
+      module_sensor_params->sub_module_private,
+      SENSOR_SET_FOCAL_LENGTH, event_control->parm_data);
+    if (rc < 0) {
+      SERR("Set LENS_FOCAL_LENGTH failed");
+      ret = FALSE;
+    }
+  break;
+
   default:{
     sensor_output_format_t output_format;
     rc = module_sensor_params->func_tbl.process(
@@ -6861,6 +6917,12 @@ static boolean module_sensor_query_mod(mct_module_t *module,
   sensor_cap->apertures[0] =
     s_bundle->sensor_common_info.camera_config.lens_info.f_number;
   sensor_cap->pix_size = sensor_property.pix_size;
+
+  if (!sensor_cap->focal_lengths_count) {
+    sensor_cap->focal_lengths_count = 1;
+    sensor_cap->focal_lengths[0] = sensor_cap->focal_length;
+  }
+
   /* mininum focus distance in diapters */
   sensor_cap->min_focus_distance = 1.0 /
     s_bundle->sensor_common_info.camera_config.lens_info.min_focus_distance;

@@ -3,6 +3,10 @@
 * Qualcomm Technologies Proprietary and Confidential.                        *
 *****************************************************************************/
 #include "QMobicatComposer.h"
+#ifdef USE_GLIB
+#include <glib.h>
+#define strlcat g_strlcat
+#endif
 
 extern "C" {
 #include "mct_stream.h"

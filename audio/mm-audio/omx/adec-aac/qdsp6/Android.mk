@@ -54,6 +54,45 @@ LOCAL_PROPRIETARY_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
 
+# ---------------------------------------------------------------------------------
+#             Make the apps-test (mm-adec-omxaac-test)
+# ---------------------------------------------------------------------------------
+
+include $(CLEAR_VARS)
+
+mm-aac-dec-test-inc     := $(LOCAL_PATH)/inc
+mm-aac-dec-test-inc     += $(LOCAL_PATH)/test
+mm-aac-dec-test-inc     += $(AUDIO_ROOT)/omx/alsa-utils/qdsp6/inc
+mm-aac-dec-test-inc     += $(TARGET_OUT_HEADERS)/mm-audio/audio-alsa
+mm-aac-dec-test-inc     += $(TARGET_OUT_HEADERS)/mm-audio/omx/alsa-utils/qdsp6/inc
+mm-aac-dec-test-inc     += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+mm-aac-dec-test-inc     += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/techpack/audio/include
+mm-aac-dec-test-inc     += $(TARGET_OUT_HEADERS)/mm-core/omxcore
+mm-aac-dec-test-inc     += $(TARGET_OUT_HEADERS)/common/inc
+
+ifeq ($(call is-board-platform,msm8960),true)
+mm-aac-dec-test-inc        += $(AUDIO_ROOT)/audio-alsa/inc
+mm-aac-dec-test-inc        += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
+endif
+
+ifeq ($(call is-board-platform-in-list,msm8974 msm8226 msm8610 copper apq8084 msm8994 msm8992 msm8996 msm8998 sdm660 msmskunk),true)
+mm-aac-dec-test-inc        += $(AUDIO_ROOT)/audio-alsa/inc
+mm-aac-dec-test-inc        += $(TARGET_OUT_HEADERS)/mm-audio/libalsa-intf
+endif
+
+LOCAL_MODULE            := mm-adec-omxaac-test
+LOCAL_MODULE_TAGS       := optional
+LOCAL_CFLAGS            := $(libOmxAacDec-def)
+LOCAL_C_INCLUDES        := $(mm-aac-dec-test-inc)
+LOCAL_PRELINK_MODULE    := false
+LOCAL_SHARED_LIBRARIES  := libmm-omxcore
+LOCAL_SHARED_LIBRARIES  += libOmxAacDec
+
+LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_SRC_FILES         := test/omx_aac_dec_test.c
+
+include $(BUILD_EXECUTABLE)
+
 endif #BUILD_TINY_ANDROID
 endif #TARGET_BOARD_PLATFORM
 # ---------------------------------------------------------------------------------

@@ -267,7 +267,7 @@ static void FlpServiceProvider_class_init(JNIEnv* env, jclass clazz)
                                          "([Landroid/location/Location;II)V");
     sOnMaxPowerAllocatedChanged = env->GetMethodID(clazz,
                                                    "onMaxPowerAllocatedChanged",
-                                                  "(D)V");
+                                                  "(I)V");
 }
 
 static jint FlpServiceProvider_init(JNIEnv* env, jobject obj)

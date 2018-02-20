@@ -120,7 +120,7 @@ do_install_append_msm() {
         rm -rf ${D}${sysconfdir}/init.d/start_stop_qti_ppp_le
         rm -rf ${D}${sysconfdir}/init.d/port_bridge
 
-        install -m 0755 ${WORKDIR}/data/mobileap/server/src/mobileap_cfg.xml -D ${D}${userfsdatadir}/mobileap_cfg.xml
+        install -m 0755 ${WORKDIR}/data/mobileap/server/src/mobileap_cfg_apq.xml -D ${D}${userfsdatadir}/mobileap_cfg.xml
         if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
           install -d ${D}${systemd_unitdir}/system/
           #QCMAP service

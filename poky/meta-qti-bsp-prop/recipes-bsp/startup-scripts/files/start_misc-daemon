@@ -46,6 +46,11 @@ case "$1" in
            /etc/init.d/start_stop_qti_ppp_le start
         fi
 
+        if [ -f /etc/init.d/start_power_manager_daemon ]
+        then
+           /etc/init.d/start_power_manager_daemon start
+        fi
+
         echo -n "Completed starting miscellaneous daemons"
         ;;
   stop)
@@ -65,6 +70,11 @@ case "$1" in
         if [ -f /etc/init.d/start_stop_qti_ppp_le ]
         then
            /etc/init.d/start_stop_qti_ppp_le stop
+        fi
+
+        if [ -f /etc/init.d/start_power_manager_daemon ]
+        then
+           /etc/init.d/start_power_manager_daemon stop
         fi
 
         echo -n "Completed stopping miscellaneous daemons"

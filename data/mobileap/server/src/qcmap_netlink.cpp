@@ -1626,9 +1626,10 @@ void Getclientaddr(qcmap_nl_addr_t* nl_addr)
 
     LOG_MSG_INFO1("Ip address = %s ",line,0,0);
 
-    if(!inet_pton(AF_INET,line,&nl_addr->ip_addr))
+    if(!nl_addr->isValidIPv4address || !inet_pton(AF_INET,line,&nl_addr->ip_addr))
     {
-      LOG_MSG_ERROR("\n Not a valid IPV4 addr \n",0,0,0);
+      LOG_MSG_ERROR("\n Not a valid IPV4 addr or IPv4 address already valid %d\n",
+         nl_addr->isValidIPv4address, 0, 0);
     }
     else
     {

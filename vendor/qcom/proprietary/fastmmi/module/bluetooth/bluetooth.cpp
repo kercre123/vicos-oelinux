@@ -32,7 +32,7 @@ static int start_test(char *buf, uint32_t size, unordered_map < string, string >
     char tmp[256];
     int ret = FAILED;
     bool found = false;
-    bt_info bt_result;
+    bt_info bt_result = {0};
     const char *args[3];
     int i = 0;
     exec_cmd_t execmd;

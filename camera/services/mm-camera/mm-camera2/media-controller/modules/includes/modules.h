@@ -1,8 +1,9 @@
 /* modules.h
- *
- * Copyright (c) 2012-2017 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
- */
+ ***************************************************************
+ * Copyright (c) 2012-2018 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
+ **************************************************************/
 
 #ifndef __MODULES_H__
 #define __MODULES_H__
@@ -216,6 +217,9 @@ typedef struct {
   unsigned int start_y;
   unsigned int width;
   unsigned int height;
+  unsigned int lef_byte_offset;
+  unsigned int sef_byte_offset;
+  unsigned int sensor_layout;
 } custom_format_t;
 
 typedef struct {
@@ -1012,6 +1016,7 @@ typedef struct {
   cam_feature_mask_t postprocess_mask[MAX_NUM_STREAMS];
   cam_frame_margins_t margins[MAX_NUM_STREAMS];
   cam_dimension_t stream_sz_plus_margin[MAX_NUM_STREAMS]; /* stream sizes + margin */
+  cam_dimension_t stream_max_size;
   cam_pad_format_t width_alignment;
   cam_pad_format_t height_alignment;
   uint32_t num_additional_buffers[MAX_NUM_STREAMS];

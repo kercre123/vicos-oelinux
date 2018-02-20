@@ -379,6 +379,9 @@ unsigned int platform_wrap::get_size(int format, int width, int height, int usag
             LOG(LOG_INFO," VENUS_BUF_SIZE=%u, computed for Width=%u, Height=%u\n",
                                   size, width, height);
             break;
+        case GBM_FORMAT_P010:
+            size = ALIGN((alignedw * alignedh * 2) + (alignedw * alignedh) + 1, 4096);
+            break;
         case GBM_FORMAT_BLOB:
         case GBM_FORMAT_RAW_OPAQUE:
             if(height != 1) {
@@ -505,14 +508,24 @@ void platform_wrap::get_aligned_wdth_hght(gbm_bufdesc *descriptor, unsigned int 
     case GBM_FORMAT_YCrCb_422_SP:
     case GBM_FORMAT_YCbCr_422_I:
     case GBM_FORMAT_YCrCb_422_I:
+    case GBM_FORMAT_P010:
       *alignedw = ALIGN(width, 16);
+      *alignedh = height;
       break;
     case GBM_FORMAT_YCbCr_420_SP_VENUS:
     case GBM_FORMAT_NV12_ENCODEABLE:
-    case GBM_FORMAT_NV12:
       LOG(LOG_DBG,"@ YUV Format\n");
       *alignedw = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12, width));
       *alignedh = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12, height));
+      break;
+    case GBM_FORMAT_NV12:
+      if (ubwc_enabled) {
+          *alignedw = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width));
+          *alignedh = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height));
+      } else {
+          *alignedw = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12, width));
+          *alignedh = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12, height));
+      }
       break;
     case GBM_FORMAT_YCrCb_420_SP_VENUS:
       *alignedw = INT(VENUS_Y_STRIDE(COLOR_FMT_NV21, width));
@@ -541,6 +554,8 @@ void platform_wrap::get_aligned_wdth_hght(gbm_bufdesc *descriptor, unsigned int 
 // Explicitly defined UBWC formats Typically used for Video formats.
 bool platform_wrap::is_valid_ubwc_fmt(int format) {
   switch (format) {
+    case GBM_FORMAT_YCbCr_420_TP10_UBWC:
+      return true;
     default:
       return false;
   }
@@ -575,6 +590,10 @@ bool platform_wrap::is_ubwc_enbld(int format, int prod_usage,
     if (is_valid_ubwc_fmt(format)) {
         return true;
     }
+
+    // Allow UBWC for NV12, if client usage flags is set to GBM_BO_USAGE_UBWC_ALIGNED_QTI
+    if ((prod_usage & GBM_BO_USAGE_UBWC_ALIGNED_QTI) && (format == GBM_FORMAT_NV12))
+        return true;
 
     // Allow UBWC, if an OpenGL client sets UBWC usage flag and GPU plus MDP
     // support the format. OR if a non-OpenGL client like Rotator, sets UBWC

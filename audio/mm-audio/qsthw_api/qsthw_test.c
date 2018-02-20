@@ -25,8 +25,8 @@
 #define SM_FILE_PATH_MAX_LENGTH 128
 #define MIN_REQ_PARAMS_PER_SESSION 3
 #define SM_MINOR_VERSION 1
-#define MAX_SET_PARAM_KEYS 3
-#define MAX_GET_PARAM_KEYS 1
+#define MAX_SET_PARAM_KEYS 4
+#define MAX_GET_PARAM_KEYS 2
 
 #define SOUNDTRIGGER_TEST_USAGE \
     "qti_sound_trigger_test [OPTIONS]\n" \
@@ -80,8 +80,9 @@ struct sm_session_data {
     bool loaded;
     bool started;
     unsigned int counter;
-    struct sound_trigger_recognition_config rc_config;
-    struct qsthw_phrase_recognition_event qsthw_event;
+    struct sound_trigger_recognition_config *rc_config;
+    struct qsthw_phrase_recognition_event *qsthw_event;
+    bool versioned_det_event_payload;
 };
 
 struct keyword_buffer_config {
@@ -95,9 +96,13 @@ static unsigned int num_sessions;
 static int lab_duration = 5; //5sec is default duration
 static int kb_duration_ms = 2000; //2000 msec is default duration
 int total_duration_ms = 0;
+
 /* SVA vendor uuid */
 static const sound_trigger_uuid_t qc_uuid =
     { 0x68ab2d40, 0xe860, 0x11e3, 0x95ef, { 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b } };
+
+static const sound_trigger_uuid_t qc_arm_uuid =
+    { 0x67fabb70, 0x79e8, 0x4e1c, 0xa202, { 0xbc, 0xb0, 0x50, 0x24, 0x3a, 0x70} };
 
 static void *event_handler_thread(void *);
 
@@ -105,12 +110,20 @@ static const char *set_param_key_array[] =
 {
      QSTHW_PARAMETER_CUSTOM_CHANNEL_MIXING,
      QSTHW_PARAMETER_SESSION_PAUSE,
-     QSTHW_PARAMETER_BAD_MIC_CHANNEL_INDEX
+     QSTHW_PARAMETER_BAD_MIC_CHANNEL_INDEX,
+     QSTHW_PARAMETER_EC_REF_DEVICE
 };
 
 static const char *get_param_key_array[] =
 {
-    QSTHW_PARAMETER_DIRECTION_OF_ARRIVAL
+    QSTHW_PARAMETER_DIRECTION_OF_ARRIVAL,
+    QSTHW_PARAMETER_CHANNEL_INDEX
+};
+
+static enum det_event_keys {
+    KWD_CONFIDENCE_LEVEL = 0x0,
+    KWD_INDEX,
+    KWD_MAX
 };
 
 static struct sm_session_data *get_sm_session_data(int session_id)
@@ -135,6 +148,18 @@ static struct sm_session_data *get_sound_trigger_info(sound_model_handle_t sm_ha
     return NULL;
 }
 
+static void deinit_sm_session_data(void)
+{
+    int i;
+
+    for (i = 0; i < MAX_SOUND_TRIGGER_SESSIONS; i++) {
+        if (sound_trigger_info[i].rc_config)
+            free(sound_trigger_info[i].rc_config);
+        if (sound_trigger_info[i].qsthw_event)
+            free(sound_trigger_info[i].qsthw_event);
+    }
+}
+
 static void init_sm_session_data(void)
 {
     int i;
@@ -149,10 +174,9 @@ static void init_sm_session_data(void)
         sound_trigger_info[i].loaded = false;
         sound_trigger_info[i].started = false;
         sound_trigger_info[i].counter = 0;
-        memset(&sound_trigger_info[i].rc_config, 0,
-               sizeof(struct sound_trigger_recognition_config));
-        memset(&sound_trigger_info[i].qsthw_event, 0,
-               sizeof(struct qsthw_phrase_recognition_event));
+        sound_trigger_info[i].rc_config = NULL;
+        sound_trigger_info[i].qsthw_event = NULL;
+        sound_trigger_info[i].versioned_det_event_payload = false;
     }
 }
 
@@ -164,6 +188,7 @@ static void eventCallback(struct sound_trigger_recognition_event *event, void *s
     sound_model_handle_t sm_handle = event->model;
     struct qsthw_phrase_recognition_event *qsthw_event;
     uint64_t event_timestamp;
+    unsigned int event_size;
 
     printf("[%d] Callback event received: %d\n", event->model, event->status);
     qsthw_event = (struct qsthw_phrase_recognition_event *)event;
@@ -180,9 +205,23 @@ static void eventCallback(struct sound_trigger_recognition_event *event, void *s
         printf("Error: Invalid sound model handle %d\n", sm_handle);
         return;
     }
+    if (sm_data->qsthw_event) {
+        printf("Error: previous callback in progress for session %d\n", sm_handle);
+        return;
+    }
 
-    memcpy(&sm_data->qsthw_event, qsthw_event,
+    event_size = sizeof(struct qsthw_phrase_recognition_event) +
+                      qsthw_event->phrase_event.common.data_size;
+    sm_data->qsthw_event = (struct qsthw_phrase_recognition_event *)calloc(1, event_size);
+    if (sm_data->qsthw_event == NULL) {
+        printf("Could not allocate memory for sm data recognition event");
+        return;
+    }
+    memcpy(sm_data->qsthw_event, qsthw_event,
            sizeof(struct qsthw_phrase_recognition_event));
+    memcpy((char *)sm_data->qsthw_event + sm_data->qsthw_event->phrase_event.common.data_offset,
+           (char *)qsthw_event + qsthw_event->phrase_event.common.data_offset,
+           qsthw_event->phrase_event.common.data_size);
 
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     rc = pthread_create(&callback_thread, &attr,
@@ -262,6 +301,114 @@ static void capture_lab_data(struct qsthw_phrase_recognition_event *qsthw_event)
     fclose(fp);
 }
 
+static void process_detection_event(struct sm_session_data *sm_data)
+{
+    int i, j, k, user_id;
+    void *payload;
+    char *payload_8;
+    uint32_t *payload_32;
+    uint32_t version, key, key_version, key_size;
+    struct qsthw_phrase_recognition_event *event = sm_data->qsthw_event;
+    struct sound_trigger_phrase_recognition_event phrase_event;
+
+    printf("%s: offset %d, size %d\n", __func__, event->phrase_event.common.data_offset,
+            event->phrase_event.common.data_size);
+    payload = calloc(1, event->phrase_event.common.data_size);
+    if (!payload) {
+        printf("%s: Memory allocation for payload failed\n", __func__);
+        return;
+    }
+    memcpy(payload, ((char *)event) + event->phrase_event.common.data_offset,
+        event->phrase_event.common.data_size);
+    payload_32 = (uint32_t *)payload;
+    printf("%s: detection event status %d\n", __func__, event->phrase_event.common.status);
+    printf("%s: detection event timestamp %ld\n", __func__, event->timestamp);
+
+    phrase_event = event->phrase_event;
+    if (sm_data->versioned_det_event_payload) {
+        /*
+         * versioned detection event payload will be in following format and
+         * needs to be parsed accordingly.
+         * uint32 version - describes the release version (starting from 0x1)
+         * uint32 key1 - KWD_CONFIDENCE_LEVEL
+         * uint32 key1_version - describes release version of key1 (starting from 0x1)
+         * uint32 key1_size - payload size of key1 following this attribute
+         * Key1_payload - payload of key1
+         * ....
+         *
+         * Similarly key2 represents KWD_INDEX.
+         * The payload format can be extended accordingly for any newly added keys
+         * distinguished based on version.
+         *
+         */
+        version = *payload_32++;
+        printf("%s: version %d\n", __func__, version);
+        if (version == 0x1) {
+            for (k = 0; k < KWD_MAX; k++) {
+                key = *payload_32++;
+                printf("%s: [%d]: key %d\n", __func__, k, key);
+                key_version = *payload_32++;
+                printf("%s: key version %d\n", __func__, key_version);
+                key_size = *payload_32++;
+                printf("%s: key size %d\n", __func__, key_size);
+                switch (key) {
+                case KWD_CONFIDENCE_LEVEL:
+                    /* parse payload for key == KWD_CONFIDENCE_LEVEL */
+                    if (key_version != 0x1) {
+                        printf("%s: Invalid version for confidence level key %d\n",
+                                __func__, key_version);
+                        goto exit;
+                    }
+                    payload_8 = (char *)payload_32;
+                    uint8_t conf_levels = *payload_8++;
+                    printf("%s: conf levels %d\n", __func__, conf_levels);
+                    for (i = 0; i < conf_levels; i++) {
+                        printf("%s: [%d] kw_id level %d\n", __func__, i,
+                               payload_8[i]);
+                    }
+                    payload_32 = (uint32_t *)((char *)payload_32 + key_size);
+                    break;
+                case KWD_INDEX:
+                    /* parse payload for key == KWD_INDEX */
+                    if (key_version != 0x1) {
+                        printf("%s: Invalid version for keyword index key %d\n",
+                                __func__, key_version);
+                        goto exit;
+                    }
+                    printf("%s: keyword start index %d\n", __func__, *payload_32++);
+                    printf("%s: keyword stop index %d\n", __func__, *payload_32++);
+                    payload_32 += key_size;
+                    break;
+                default:
+                    printf("%s: Invalid key %d\n", __func__, key);
+                    goto exit;
+                }
+            }
+        } else {
+            printf("%s: Invalid version for detection event payload %d\n",
+                    __func__, version);
+            goto exit;
+        }
+    } else {
+        for (i = 0; i < phrase_event.num_phrases; i++) {
+            printf("%s: [%d] kw_id %d level %d\n", __func__, i,
+                   phrase_event.phrase_extras[i].id,
+                   ((char *)payload)[i]);
+            printf("%s: Num levels %d\n", __func__,
+                   phrase_event.phrase_extras[i].num_levels);
+            for (j = 0; j < phrase_event.phrase_extras[i].num_levels; j++) {
+                user_id = phrase_event.phrase_extras[i].levels[j].user_id;
+                printf("%s: [%d] user_id %d level %d\n", __func__, i,
+                       user_id, ((char *)payload)[user_id]);
+            }
+        }
+    }
+
+exit:
+    if (payload)
+        free(payload);
+}
+
 static void *event_handler_thread(void *context)
 {
     int system_ret;
@@ -271,25 +418,27 @@ static void *event_handler_thread(void *context)
         return NULL;
     }
 
-   system_ret = system("echo qti_services > /sys/power/wake_lock");
-   if (system_ret < 0)
-       printf("%s: Failed to acquire qti lock\n", __func__);
-   else
-       printf("%s: Success to acquire qti lock\n", __func__);
+    system_ret = system("echo qti_services > /sys/power/wake_lock");
+    if (system_ret < 0)
+        printf("%s: Failed to acquire qti lock\n", __func__);
+    else
+        printf("%s: Success to acquire qti lock\n", __func__);
 
-    struct sound_trigger_recognition_config *rc_config = &sm_data->rc_config;
-    struct qsthw_phrase_recognition_event *qsthw_event =
-                                                       &sm_data->qsthw_event;
     sound_model_handle_t sm_handle = sm_data->sm_handle;
-    printf("[%d] session params %p, %d\n", sm_handle, rc_config, total_duration_ms);
-
-    if (qsthw_event && qsthw_event->phrase_event.common.capture_available) {
-        printf ("capture LAB data\n");
-        capture_lab_data(qsthw_event);
+    printf("[%d] session params %p, %d\n", sm_handle, sm_data->rc_config, total_duration_ms);
+    if (sm_data->qsthw_event) {
+        process_detection_event(sm_data);
+        if (sm_data->qsthw_event->phrase_event.common.capture_available) {
+            printf ("capture LAB data\n");
+            capture_lab_data(sm_data->qsthw_event);
+        }
+        free(sm_data->qsthw_event);
+        sm_data->qsthw_event = NULL;
     }
+
     /* ignore error */
     qsthw_start_recognition(st_mod_handle, sm_handle,
-                            rc_config, eventCallback, NULL);
+                            sm_data->rc_config, eventCallback, NULL);
     sm_data->counter++;
     printf("[%d] callback event processed, detection counter %d\n", sm_handle, sm_data->counter);
     printf("proceed with utterance or command \n");
@@ -358,18 +507,28 @@ static void process_get_param_data(const char *param,
                                    qsthw_get_param_payload_t *payload,
                                    size_t param_data_size)
 {
-    struct qsthw_source_tracking_param st_params = payload->st_params;
-
     if (!strncmp(param, QSTHW_PARAMETER_DIRECTION_OF_ARRIVAL, sizeof(param))) {
+        printf("%s: procsesing direction of arrival params\n", __func__);
+        struct qsthw_source_tracking_param st_params = payload->st_params;
         if (param_data_size != sizeof(struct qsthw_source_tracking_param)) {
             printf("%s: ERROR. Invalid param data size returned %d\n",
                     __func__, param_data_size);
             return;
         }
         printf("%s: target angle boundaries [%d, %d]\n", __func__,
-        st_params.target_angle_L16[0], st_params.target_angle_L16[1]);
+                st_params.target_angle_L16[0], st_params.target_angle_L16[1]);
         printf("%s: interference angle boundaries [%d, %d]\n", __func__,
-        st_params.interf_angle_L16[0], st_params.interf_angle_L16[1]);
+                st_params.interf_angle_L16[0], st_params.interf_angle_L16[1]);
+    } else if (!strncmp(param, QSTHW_PARAMETER_CHANNEL_INDEX, sizeof(param))) {
+        printf("%s: procsesing channel index params\n", __func__);
+        struct qsthw_target_channel_index_param ch_index_params = payload->ch_index_params;
+        if (param_data_size != sizeof(struct qsthw_target_channel_index_param)) {
+            printf("%s: ERROR. Invalid param data size returned %d\n",
+                    __func__, param_data_size);
+            return;
+        }
+        printf("%s: target channel index - [%d]\n", __func__,
+                ch_index_params.target_chan_idx);
     }
 }
 
@@ -408,7 +567,6 @@ int main(int argc, char *argv[])
     unsigned int j, k;
     uint32_t rc_config_size;
     struct sound_trigger_phrase_sound_model *sound_model = NULL;
-    struct sound_trigger_recognition_config *rc_config = NULL;
     struct keyword_buffer_config kb_config;
     bool user_verification = false;
     unsigned int kw_conf = 60; //default confidence level is 60
@@ -486,6 +644,12 @@ int main(int argc, char *argv[])
         }
         count++;
         i += (params * 2);
+
+        if (!memcmp(&sound_trigger_info[index].vendor_uuid, &qc_arm_uuid,
+            sizeof(sound_trigger_uuid_t))) {
+            printf("Versioned detection event\n");
+            sound_trigger_info[index].versioned_det_event_payload = true;
+        }
     }
 
     if (++index != num_sessions) {
@@ -548,6 +712,7 @@ int main(int argc, char *argv[])
         unsigned int num_users =
                  user_verification ? sound_trigger_info[k].num_users : 0;
         sound_model_handle_t sm_handle = 0;
+        struct sound_trigger_recognition_config *rc_config = NULL;
 
         if (fp)
             fclose(fp);
@@ -602,17 +767,16 @@ int main(int argc, char *argv[])
         }
         sound_trigger_info[k].loaded = true;
 
-        if (rc_config)
-            free(rc_config);
         if (keyword_buffer)
             opaque_data_size = sizeof(struct keyword_buffer_config);
 
         rc_config_size = sizeof(struct sound_trigger_recognition_config) + opaque_data_size;
-        rc_config = (struct sound_trigger_recognition_config *)calloc(1, rc_config_size);
-        if (rc_config == NULL) {
-            printf("Could not allocate memory for recognition config");
+        sound_trigger_info[k].rc_config = (struct sound_trigger_recognition_config *)calloc(1, rc_config_size);
+        if (sound_trigger_info[k].rc_config == NULL) {
+            printf("Could not allocate memory for sm data recognition config");
             goto error;
         }
+        rc_config = sound_trigger_info[k].rc_config;
         rc_config->capture_handle = AUDIO_IO_HANDLE_NONE;
         rc_config->capture_device = AUDIO_DEVICE_NONE;
         rc_config->capture_requested = capture_requested;
@@ -642,7 +806,6 @@ int main(int argc, char *argv[])
         }
 
         sound_trigger_info[k].sm_handle = sm_handle;
-        memcpy(&sound_trigger_info[k].rc_config, rc_config, sizeof(*rc_config));
         printf("[%d]session params %p, %p, %d\n", k, &sound_trigger_info[k], rc_config, sm_handle);
     }
 
@@ -701,7 +864,7 @@ int main(int argc, char *argv[])
             continue;
         }
         printf("[%d][%p] command entered %s\n", ses_id, ses_data, token);
-        struct sound_trigger_recognition_config *rc_config = &ses_data->rc_config;
+        struct sound_trigger_recognition_config *rc_config = ses_data->rc_config;
         sound_model_handle_t sm_handle = ses_data->sm_handle;
 
         if(!strncmp(token, "start", 5)) {
@@ -775,8 +938,6 @@ error:
             sound_trigger_info[i].loaded = false;
         }
     }
-    if (rc_config)
-       free(rc_config);
 
     status = qsthw_unload_module(st_mod_handle);
     if (OK != status) {
@@ -786,5 +947,6 @@ error:
        free(sound_model);
     if (fp)
         fclose(fp);
+    deinit_sm_session_data();
     return status;
 }

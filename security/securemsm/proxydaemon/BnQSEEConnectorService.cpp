@@ -24,6 +24,11 @@ namespace android {
           sp<IQSEEConnectorServiceCb> notifier = interface_cast <IQSEEConnectorServiceCb> (data.readStrongBinder());
           const char *path = data.readCString();
           const char *name = data.readCString();
+          if (!path || !name) {
+            reply->writeNoException();
+            ret = BAD_VALUE;
+            break;
+          }
           uint32_t size = data.readInt32();
           uint32_t handle = 0;
           ret = load(notifier, path, name, size, handle);

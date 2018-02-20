@@ -4978,6 +4978,58 @@ DeleteGSBConfig
   qmi_error_type_v01 *qmi_err_num
 );
 
+/*===========================================================================
+FUNCTION GetDataPathOptStatus()
+===========================================================================*/
+/**
+  Use to know the status of data path optimization whether enabled/disabled.
+  @datatypes
+  qmi_error_type_v01
+
+  @param [in] data_path_opt_status      Status of Data Path Optimizer
+  @param[out] qmi_err_num       Error code returned by the server.
+
+  @return
+  TRUE upon success. \n
+  FALSE upon failure.
+
+  @dependencies
+  QCMobileAP must be enabled.
+*/
+
+boolean
+GetDataPathOptStatus
+(
+  boolean *data_path_opt_status,
+  qmi_error_type_v01 *qmi_err_num
+);
+
+/*===========================================================================
+FUNCTION SetDataPathOptStatus()
+===========================================================================*/
+/**
+  Use to enable/disable data path optimization.
+
+  @datatypes
+  qmi_error_type_v01
+
+  @param[out] qmi_err_num       Error code returned by the server.
+
+  @return
+  TRUE upon success. \n
+  FALSE upon failure.
+
+  @dependencies
+  QCMobileAP must be enabled.
+*/
+
+boolean
+SetDataPathOptStatus
+(
+  boolean data_path_opt_status,
+  qmi_error_type_v01 *qmi_err_num
+);
+
 private:
 
   boolean  qcmap_msgr_enable;

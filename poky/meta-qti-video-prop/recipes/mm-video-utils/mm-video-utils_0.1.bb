@@ -1,4 +1,4 @@
-inherit autotools pkgconfig qlicense
+inherit autotools pkgconfig qlicense sdllvm
 DESCRIPTION = "video utils"
 
 FILESPATH =+ "${WORKSPACE}:"
@@ -15,6 +15,10 @@ DEPENDS += "system-core"
 DEPENDS += "display-hal"
 DEPENDS += "mm-video-noship"
 
+DEPENDS_remove_apq8017 = "display-hal"
+DEPENDS_remove_apq8017 = "adreno200"
+DEPENDS_append_apq8017 = " display-hal-linux"
+
 # configure features
 EXTRA_OECONF_append =" --enable-use-glib="yes""
 EXTRA_OECONF_append =" --enable-target-${SOC_FAMILY}="yes""
@@ -23,7 +27,7 @@ EXTRA_OECONF_append =" --with-glib-headers=${STAGING_INCDIR}/glib-2.0/"
 EXTRA_OECONF_append =" --with-glib-lib-dir=${STAGING_LIBDIR}/glib-2.0/include"
 EXTRA_OECONF_append =" --with-omx-headers=${STAGING_INCDIR}/mm-core"
 EXTRA_OECONF_append =" --with-xml2-headers=${STAGING_INCDIR}/libxml2"
-EXTRA_OECONF_append =" --with-common-headers=${STAGING_INCDIR}/"
+EXTRA_OECONF_append =" --with-common-headers=${STAGING_INCDIR}/qcom/display/"
 EXTRA_OECONF_append =" --with-android-headers=${STAGING_INCDIR}/media/hardware/"
 EXTRA_OECONF_append =" --with-sanitized-headers=${STAGING_KERNEL_BUILDDIR}/usr/include"
 EXTRA_OECONF_append =" --with-time-headers=${STAGING_KERNEL_BUILDDIR}/usr/include/uapi/linux/"

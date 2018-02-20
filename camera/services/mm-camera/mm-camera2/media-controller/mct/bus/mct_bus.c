@@ -43,16 +43,15 @@ static boolean mct_bus_queue_free(void *data, void *user_data __unused)
 static int mct_bus_timeout_wait(pthread_cond_t *cond, pthread_mutex_t *mutex,
                          signed long long timeout) {
   signed long long end_time;
-  struct timeval r;
+  struct timespec r;
   struct timespec ts;
   int ret;
   pthread_mutex_lock(mutex);
   if (timeout != -1) {
-    gettimeofday(&r, NULL);
-    end_time = (((((signed long long)r.tv_sec) * 1000000) + r.tv_usec) +
-      (timeout / 1000));
-    ts.tv_sec  = (end_time / 1000000);
-    ts.tv_nsec = ((end_time % 1000000) * 1000);
+    clock_gettime(CLOCK_MONOTONIC, &r);
+    end_time = ((((signed long long)r.tv_sec) * 1000000000) + (r.tv_nsec + timeout));
+    ts.tv_sec  = (end_time / 1000000000);
+    ts.tv_nsec = (end_time % 1000000000);
     ret = pthread_cond_timedwait(cond, mutex, &ts);
   } else {
     ret = pthread_cond_wait(cond, mutex);
@@ -156,7 +155,9 @@ static void start_sof_check_thread(mct_bus_t *bus)
         bus->session_id);
 
   pthread_mutex_init(&bus->bus_sof_msg_lock, NULL);
-  pthread_cond_init(&bus->bus_sof_msg_cond, NULL);
+  pthread_condattr_init(&bus->bus_sof_msg_condattr);
+  pthread_condattr_setclock(&bus->bus_sof_msg_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&bus->bus_sof_msg_cond, &bus->bus_sof_msg_condattr);
   pthread_mutex_lock(&bus->bus_sof_init_lock);
   rc = pthread_create(&bus->bus_sof_tid, NULL, mct_bus_sof_thread_run, bus);
   if(!rc) {
@@ -190,6 +191,7 @@ static void stop_sof_check_thread(mct_bus_t *bus)
   pthread_mutex_unlock(&bus->bus_sof_msg_lock);
   pthread_join(bus->bus_sof_tid, NULL);
   pthread_cond_destroy(&bus->bus_sof_msg_cond);
+  pthread_condattr_destroy(&bus->bus_sof_msg_condattr);
   pthread_mutex_destroy(&bus->bus_sof_msg_lock);
 }
 

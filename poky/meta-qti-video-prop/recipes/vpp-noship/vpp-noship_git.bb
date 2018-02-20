@@ -1,4 +1,4 @@
-inherit autotools qcommon qlicense qprebuilt
+inherit autotools qcommon qlicense qprebuilt pkgconfig sdllvm
 DESCRIPTION = "Video PostProcessing No-Ship Library"
 SECTION = "multimedia"
 PR = "r0"

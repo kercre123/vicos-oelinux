@@ -213,7 +213,7 @@ static int test_event(sensors_event_t * event, unordered_map < string, string > 
 
 static void print_event(sensors_event_t * event, const mmi_module_t * mod, bool is_pcba) {
     int err = FAILED;
-    char print_buf[256];
+    char print_buf[256] = {0};
 
     if(event == NULL || mod == NULL)
         return;

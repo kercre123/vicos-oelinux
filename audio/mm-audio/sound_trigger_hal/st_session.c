@@ -1344,13 +1344,11 @@ static inline int process_detection_event(st_session_t *st_ses,
     struct sound_trigger_recognition_event **event)
 {
     int ret;
-    struct st_vendor_info *v_info = st_ses->vendor_uuid_info;
     struct sound_trigger_phrase_recognition_event *phrase_event = NULL;
 
     *event = NULL;
     if (st_ses->sm_type == SOUND_MODEL_TYPE_KEYPHRASE) {
-        if ((v_info) &&
-            (v_info->fwk_mode == SOUND_TRIGGER_EVENT_TIME_STAMP_MODE))
+        if (sthw_extn_check_process_det_ev_support())
             ret = sthw_extn_process_detection_event_keyphrase(st_ses,
                                       timestamp, detect_status,
                                       payload, payload_size, &phrase_event);
@@ -1700,7 +1698,7 @@ int st_session_init(st_session_t *st_ses, struct sound_trigger_device *stdev,
 
         if (stdev->is_gcs) {
             /* alloc and init cpe session*/
-            st_ses->hw_ses_cpe = calloc(1, sizeof(st_hw_session_gcs_t));
+            st_ses->hw_ses_cpe = (st_hw_session_t *)calloc(1, sizeof(st_hw_session_gcs_t));
             if (!st_ses->hw_ses_cpe) {
                 status = -ENOMEM;
                 goto cleanup;
@@ -1731,7 +1729,7 @@ int st_session_init(st_session_t *st_ses, struct sound_trigger_device *stdev,
 
         } else {
             /* alloc and init cpe session*/
-            st_ses->hw_ses_cpe = calloc(1, sizeof(st_hw_session_lsm_t));
+            st_ses->hw_ses_cpe = (st_hw_session_t *)calloc(1, sizeof(st_hw_session_lsm_t));
             if (!st_ses->hw_ses_cpe) {
                 status = -ENOMEM;
                 goto cleanup;
@@ -1770,7 +1768,7 @@ int st_session_init(st_session_t *st_ses, struct sound_trigger_device *stdev,
         st_ses->enable_trans = false;
         if (stdev->is_gcs) {
             ALOGD("%s: initializing gcs hw session", __func__);
-            st_ses->hw_ses_cpe = calloc(1, sizeof(st_hw_session_gcs_t));
+            st_ses->hw_ses_cpe = (st_hw_session_t *)calloc(1, sizeof(st_hw_session_gcs_t));
             if (!st_ses->hw_ses_cpe) {
                 status = -ENOMEM;
                 goto cleanup;
@@ -1783,7 +1781,7 @@ int st_session_init(st_session_t *st_ses, struct sound_trigger_device *stdev,
                 goto cleanup;
             }
         } else {
-            st_ses->hw_ses_cpe = calloc(1, sizeof(st_hw_session_lsm_t));
+            st_ses->hw_ses_cpe = (st_hw_session_t *)calloc(1, sizeof(st_hw_session_lsm_t));
             if (!st_ses->hw_ses_cpe) {
                 status = -ENOMEM;
                 goto cleanup;
@@ -1829,7 +1827,7 @@ int st_session_init(st_session_t *st_ses, struct sound_trigger_device *stdev,
         }
         st_ses->hw_ses_current = st_ses->hw_ses_arm;
     } else if (!v_info) {
-        st_ses->hw_ses_cpe = calloc(1, sizeof(st_hw_session_lsm_t));
+        st_ses->hw_ses_cpe = (st_hw_session_t *)calloc(1, sizeof(st_hw_session_lsm_t));
         if (!st_ses->hw_ses_cpe) {
             status = -ENOMEM;
             goto cleanup;

@@ -12,7 +12,7 @@ INITIALIZATION AND SEQUENCING REQUIREMENTS
   None.
 
 Copyright (c) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 
-2008 by Qualcomm Technologies, Inc.  All Rights Reserved.
+2008, 2017 by Qualcomm Technologies, Inc.  All Rights Reserved.
 
 Export of this technology or software is regulated by the U.S. Government.
 Diversion contrary to U.S. law prohibited.
@@ -3907,7 +3907,7 @@ wms_status_e_type wms_ts_decode_CDMA_tl
               st = WMS_INVALID_PARM_SIZE_S;
             }
           }
-          else if( parm_len == 2 )
+          else if( parm_len == 2 && pos < WMS_MAX_LEN )
           {
             tl_ptr->cause_code.tl_status = (wms_cdma_tl_status_e_type)
                                                       OTA_msg_ptr->data[pos];

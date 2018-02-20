@@ -37,7 +37,6 @@ LOCAL_CFLAGS += -DDSPS_DISABLE_WAIT_FOR_CALLBACK
 ifeq ($(USE_ANDROID_GYRO),true)
  FEATURE_GYRO_DSPS := false
 else
- LOCAL_CFLAGS += -DFEATURE_GYRO_DSPS
  FEATURE_GYRO_DSPS := true
 endif
 
@@ -55,6 +54,13 @@ ifneq ($(USE_GYRO),true)
  LOCAL_CFLAGS += -DDISABLE_GYRO_MODULE
 endif
 
+ifeq ($(DRONE_TARGET),true)
+ FEATURE_GYRO_DSPS := false;
+ LOCAL_CFLAGS += -DFEATURE_GYRO_IMU
+endif
+ifeq ($(FEATURE_GYRO_DSPS), true)
+ LOCAL_CFLAGS += -DFEATURE_GYRO_DSPS
+endif
 ifeq ($(IS_ENABLE),false)
  LOCAL_CFLAGS += -DDISABLE_IS_MODULE
 endif
@@ -108,6 +114,12 @@ endif
 
 LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/is
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../mm-camera-noship/is/sensor_lib
+
+ifeq ($(DRONE_TARGET),true)
+LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/gyro/imu
+LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/gyro
+LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/gyro/dsps
+endif
 ifeq ($(USE_GYRO),true)
 LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/gyro
 LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/gyro/dsps
@@ -137,6 +149,7 @@ LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/sensors/inc
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/inc
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/include/adreno
 LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/is/EIS_DG
+LOCAL_C_INCLUDES += $(LOCAL_MMCAMERA_PATH)/media-controller/modules/stats/is/Digital_Gimbal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../../../../mm-camera-noship/is/eis_dg/inc
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/eis_dg
 
@@ -156,6 +169,7 @@ LOCAL_SRC_FILES += $(shell find $(LOCAL_SRC_DIR) -type d \( -name gyro -o -name 
 LOCAL_AF_SRC_FILES_309 := $(LOCAL_PATH)/q3a/af
 LOCAL_AF_SRC_FILES_310 := $(LOCAL_PATH)/q3a/af_v2
 LOCAL_AF_SRC_FILES_GYRO:= $(LOCAL_PATH)/gyro
+LOCAL_AF_SRC_FILES_IMU := $(LOCAL_PATH)/gyro/imu
 LOCAL_IS_SRC_FILES := $(LOCAL_PATH)/is
 
 ifeq ($(call is-board-platform-in-list,msmcobalt sdm660 msm8998),true)
@@ -173,6 +187,19 @@ endif
 ifeq ($(IS_ENABLE),true)
 LOCAL_SRC_FILES += $(shell find $(LOCAL_IS_SRC_FILES) -name '*.c' | sed s:^$(LOCAL_PATH)::g )
 LOCAL_SRC_FILES += $(shell find $(LOCAL_IS_SRC_FILES) -name '*.cpp' | sed s:^$(LOCAL_PATH)::g )
+endif
+
+ifeq ($(DRONE_TARGET),true)
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_IMU) -name '*.c' | sed s:^$(LOCAL_PATH)::g)
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_IMU) -name '*.cpp' | sed s:^$(LOCAL_PATH)::g)
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name 'gyro*.c' | sed s:^$(LOCAL_PATH)::g )
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name 'gyro*.cpp' | sed s:^$(LOCAL_PATH)::g )
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name '*interface*.c' | sed s:^$(LOCAL_PATH)::g )
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name '*interface*.cpp' | sed s:^$(LOCAL_PATH)::g )
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name '*intf*.c' | sed s:^$(LOCAL_PATH)::g )
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name '*intf*.cpp' | sed s:^$(LOCAL_PATH)::g )
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name '*laser*.c' | sed s:^$(LOCAL_PATH)::g )
+LOCAL_SRC_FILES += $(shell find $(LOCAL_AF_SRC_FILES_GYRO) -name '*laser*.cpp' | sed s:^$(LOCAL_PATH)::g )
 endif
 
 LOCAL_MODULE           := libmmcamera2_stats_modules

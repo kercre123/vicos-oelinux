@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Qualcomm Technologies, Inc.
+ * Copyright (c) 2017-2018 Qualcomm Technologies, Inc.
  * All Rights Reserved.
  * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
@@ -9,6 +9,21 @@
 
 #include "sensor_lib.h"
 #define SENSOR_MODEL "imx477"
+
+/* IMX477 SVHDR */
+#define BASIC_READOUT_LINE          (37)
+#define DOL_MIN_EXPOSURE_LINE       (2)
+#define DOL_MAX_EXPOSURE_LINE_LEF_2MP (2736)
+#define DOL_MAX_EXPOSURE_LINE_SEF_2MP (342)
+#define DOL_MAX_ANALOG_GAIN         (0x03DB)
+#define DOL_MIN_DIGITAL_GAIN        (0x0100)
+#define DOL_MAX_DIGITAL_GAIN        (0x0FFF)
+#define REG_ANALOG_GAIN_1ST_FRAME   0x00F0
+#define REG_ANALOG_GAIN_2ND_FRAME   0x00F2
+#define REG_DIGITAL_GAIN_1ST_FRAME  0x00F6
+#define REG_DIGITAL_GAIN_2ND_FRAME  0x00F8
+#define REG_DOL_CIT_1ST             0x00EA
+#define REG_DOL_CIT_2ND             0x00EC
 
 /* IMX477 REGISTERS */
 #define IMX477_DIG_GAIN_GR_ADDR           0x020E
@@ -1825,6 +1840,216 @@
   {FLEX_AREA_XSTA0_ADDR+47, (int)(SCALE_Y(720)*PD_WIN_Y_E_5)&0xFF, 0x00} \
 }
 
+#define RES9_REG_ARRAY \
+{ \
+  {0x0112, 0x0A, 0x00}, \
+  {0x0113, 0x0A, 0x00}, \
+  {0x0114, 0x03, 0x00}, \
+  {0x0342, 0x11, 0x00}, \
+  {0x0343, 0xA0, 0x00}, \
+  {0x0340, 0x0C, 0x00}, \
+  {0x0341, 0x1E, 0x00}, \
+  {0x0344, 0x00, 0x00}, \
+  {0x0345, 0x6C, 0x00}, \
+  {0x0346, 0x01, 0x00}, \
+  {0x0347, 0xB8, 0x00}, \
+  {0x0348, 0x0F, 0x00}, \
+  {0x0349, 0x6B, 0x00}, \
+  {0x034A, 0x0A, 0x00}, \
+  {0x034B, 0x27, 0x00}, \
+  {0x00E3, 0x01, 0x00}, \
+  {0x00E4, 0x01, 0x00}, \
+  {0x00FC, 0x0A, 0x00}, \
+  {0x00FD, 0x0A, 0x00}, \
+  {0x00FE, 0x0A, 0x00}, \
+  {0x00FF, 0x0A, 0x00}, \
+  {0x0220, 0x00, 0x00}, \
+  {0x0221, 0x11, 0x00}, \
+  {0x0381, 0x01, 0x00}, \
+  {0x0383, 0x01, 0x00}, \
+  {0x0385, 0x01, 0x00}, \
+  {0x0387, 0x01, 0x00}, \
+  {0x0900, 0x00, 0x00}, \
+  {0x0901, 0x11, 0x00}, \
+  {0x0902, 0x02, 0x00}, \
+  {0x3140, 0x02, 0x00}, \
+  {0x3C00, 0x00, 0x00}, \
+  {0x3C01, 0x03, 0x00}, \
+  {0x3C02, 0xDC, 0x00}, \
+  {0x3F0D, 0x00, 0x00}, \
+  {0x5748, 0x07, 0x00}, \
+  {0x5749, 0xFF, 0x00}, \
+  {0x574A, 0x00, 0x00}, \
+  {0x574B, 0x00, 0x00}, \
+  {0x7B75, 0x0E, 0x00}, \
+  {0x7B76, 0x09, 0x00}, \
+  {0x7B77, 0x0C, 0x00}, \
+  {0x7B78, 0x06, 0x00}, \
+  {0x7B79, 0x3B, 0x00}, \
+  {0x7B53, 0x01, 0x00}, \
+  {0x9369, 0x5A, 0x00}, \
+  {0x936B, 0x55, 0x00}, \
+  {0x936D, 0x28, 0x00}, \
+  {0x9304, 0x03, 0x00}, \
+  {0x9305, 0x00, 0x00}, \
+  {0x9E9A, 0x2F, 0x00}, \
+  {0x9E9B, 0x2F, 0x00}, \
+  {0x9E9C, 0x2F, 0x00}, \
+  {0x9E9D, 0x00, 0x00}, \
+  {0x9E9E, 0x00, 0x00}, \
+  {0x9E9F, 0x00, 0x00}, \
+  {0xA2A9, 0x60, 0x00}, \
+  {0xA2B7, 0x00, 0x00}, \
+  {0x0401, 0x00, 0x00}, \
+  {0x0404, 0x00, 0x00}, \
+  {0x0405, 0x10, 0x00}, \
+  {0x0408, 0x03, 0x00}, \
+  {0x0409, 0xC0, 0x00}, \
+  {0x040A, 0x02, 0x00}, \
+  {0x040B, 0x1C, 0x00}, \
+  {0x040C, 0x07, 0x00}, \
+  {0x040D, 0x80, 0x00}, \
+  {0x040E, 0x04, 0x00}, \
+  {0x040F, 0x38, 0x00}, \
+  {0x034C, 0x07, 0x00}, \
+  {0x034D, 0x80, 0x00}, \
+  {0x034E, 0x04, 0x00}, \
+  {0x034F, 0x38, 0x00}, \
+  {0x0301, 0x05, 0x00}, \
+  {0x0303, 0x02, 0x00}, \
+  {0x0305, 0x04, 0x00}, \
+  {0x0306, 0x01, 0x00}, \
+  {0x0307, 0x5E, 0x00}, \
+  {0x0309, 0x0A, 0x00}, \
+  {0x030B, 0x02, 0x00}, \
+  {0x030D, 0x03, 0x00}, \
+  {0x030E, 0x00, 0x00}, \
+  {0x030F, 0xFA, 0x00}, \
+  {0x0310, 0x01, 0x00}, \
+  {0x0820, 0x0F, 0x00}, \
+  {0x0821, 0xA0, 0x00}, \
+  {0x0822, 0x00, 0x00}, \
+  {0x0823, 0x00, 0x00}, \
+  {0x080A, 0x00, 0x00}, \
+  {0x080B, 0x77, 0x00}, \
+  {0x080C, 0x00, 0x00}, \
+  {0x080D, 0x47, 0x00}, \
+  {0x080E, 0x00, 0x00}, \
+  {0x080F, 0x67, 0x00}, \
+  {0x0810, 0x00, 0x00}, \
+  {0x0811, 0x57, 0x00}, \
+  {0x0812, 0x00, 0x00}, \
+  {0x0813, 0x4F, 0x00}, \
+  {0x0814, 0x00, 0x00}, \
+  {0x0815, 0x3F, 0x00}, \
+  {0x0816, 0x01, 0x00}, \
+  {0x0817, 0x0F, 0x00}, \
+  {0x0818, 0x00, 0x00}, \
+  {0x0819, 0x37, 0x00}, \
+  {0xE04C, 0x00, 0x00}, \
+  {0xE04D, 0x6F, 0x00}, \
+  {0xE04E, 0x00, 0x00}, \
+  {0xE04F, 0x1F, 0x00}, \
+  {0x3E20, 0x01, 0x00}, \
+  {0x3E37, 0x00, 0x00}, \
+  {0x3F50, 0x00, 0x00}, \
+  {0x3F56, 0x00, 0x00}, \
+  {0x3F57, 0x81, 0x00}, \
+  {0xBCF1, 0x02, 0x00}, \
+  {0x3237, 0x00, 0x00}, \
+  /* DOL Settings */ \
+  {0x00E3, 0x01, 0x00}, \
+  {0x00E4, 0x01, 0x00}, \
+  {0x00E6, 0x01, 0x00}, \
+  {0x00E7, 0x60, 0x00}, \
+  {0x00E8, 0x00, 0x00}, \
+  {0x00E9, 0x00, 0x00}, \
+  {0x00EA, 0x0A, 0x00}, \
+  {0x00EB, 0xB0, 0x00}, \
+  {0x00EC, 0x01, 0x00}, \
+  {0x00ED, 0x56, 0x00}, \
+  {0x00EE, 0x00, 0x00}, \
+  {0x00EF, 0x00, 0x00}, \
+  {0x0112, 0x0A, 0x00}, \
+  {0x0113, 0x0A, 0x00}, \
+  {0x00FC, 0x0A, 0x00}, \
+  {0x00FD, 0x0A, 0x00}, \
+  {0x00FE, 0x0A, 0x00}, \
+  {0x00FF, 0x0A, 0x00}, \
+  {0x00F0, 0x01, 0x00}, \
+  {0x00F1, 0x00, 0x00}, \
+  {0x00F2, 0x01, 0x00}, \
+  {0x00F3, 0x00, 0x00}, \
+  {0x00F4, 0x01, 0x00}, \
+  {0x00F5, 0x00, 0x00}, \
+  {0x00F6, 0x01, 0x00}, \
+  {0x00F7, 0x00, 0x00}, \
+  {0x00F8, 0x01, 0x00}, \
+  {0x00F9, 0x00, 0x00}, \
+  {0x00FA, 0x01, 0x00}, \
+  {0x00FB, 0x00, 0x00}, \
+  {0x0110, 0x00, 0x00}, \
+  {0x3E10, 0x00, 0x00}, \
+  {0x3E11, 0x00, 0x00}, \
+  /* PDAF Settings */ \
+  {PD_AREA_X_OFFSET_ADDR, (int)(SCALE_X(1920)*PD_AREA_X_OFFSET)>>8, 0x00}, \
+  {PD_AREA_X_OFFSET_ADDR+1, (int)(SCALE_X(1920)*PD_AREA_X_OFFSET)&0xFF, 0x00},\
+  {PD_AREA_Y_OFFSET_ADDR, (int)(SCALE_Y(1080)*PD_AREA_Y_OFFSET)>>8, 0x00},\
+  {PD_AREA_Y_OFFSET_ADDR+1, (int)(SCALE_Y(1080)*PD_AREA_Y_OFFSET)&0xFF, 0x00},\
+  {PD_AREA_WIDTH_ADDR, (int)(SCALE_X(1920)*PD_AREA_WIDTH)>>8, 0x00}, \
+  {PD_AREA_WIDTH_ADDR+1, (int)(SCALE_X(1920)*PD_AREA_WIDTH)&0xFF, 0x00}, \
+  {PD_AREA_HEIGHT_ADDR, (int)(SCALE_Y(1080)*PD_AREA_HEIGHT)>>8, 0x00}, \
+  {PD_AREA_HEIGHT_ADDR+1, (int)(SCALE_Y(1080)*PD_AREA_HEIGHT)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR, (int)(SCALE_X(1920)*PD_WIN_X_S_0)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+1, (int)(SCALE_X(1920)*PD_WIN_X_S_0)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+2, (int)(SCALE_Y(1080)*PD_WIN_Y_S_0)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+3, (int)(SCALE_Y(1080)*PD_WIN_Y_S_0)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+4, (int)(SCALE_X(1920)*PD_WIN_X_E_0)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+5, (int)(SCALE_X(1920)*PD_WIN_X_E_0)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+6, (int)(SCALE_Y(1080)*PD_WIN_Y_E_0)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+7, (int)(SCALE_Y(1080)*PD_WIN_Y_E_0)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+8, (int)(SCALE_X(1920)*PD_WIN_X_S_1)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+9, (int)(SCALE_X(1920)*PD_WIN_X_S_1)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+10, (int)(SCALE_Y(1080)*PD_WIN_Y_S_1)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+11, (int)(SCALE_Y(1080)*PD_WIN_Y_S_1)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+12, (int)(SCALE_X(1920)*PD_WIN_X_E_1)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+13, (int)(SCALE_X(1920)*PD_WIN_X_E_1)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+14, (int)(SCALE_Y(1080)*PD_WIN_Y_E_1)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+15, (int)(SCALE_Y(1080)*PD_WIN_Y_E_1)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+16, (int)(SCALE_X(1920)*PD_WIN_X_S_2)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+17, (int)(SCALE_X(1920)*PD_WIN_X_S_2)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+18, (int)(SCALE_Y(1080)*PD_WIN_Y_S_2)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+19, (int)(SCALE_Y(1080)*PD_WIN_Y_S_2)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+20, (int)(SCALE_X(1920)*PD_WIN_X_E_2)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+21, (int)(SCALE_X(1920)*PD_WIN_X_E_2)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+22, (int)(SCALE_Y(1080)*PD_WIN_Y_E_2)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+23, (int)(SCALE_Y(1080)*PD_WIN_Y_E_2)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+24, (int)(SCALE_X(1920)*PD_WIN_X_S_3)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+25, (int)(SCALE_X(1920)*PD_WIN_X_S_3)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+26, (int)(SCALE_Y(1080)*PD_WIN_Y_S_3)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+27, (int)(SCALE_Y(1080)*PD_WIN_Y_S_3)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+28, (int)(SCALE_X(1920)*PD_WIN_X_E_3)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+29, (int)(SCALE_X(1920)*PD_WIN_X_E_3)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+30, (int)(SCALE_Y(1080)*PD_WIN_Y_E_3)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+31, (int)(SCALE_Y(1080)*PD_WIN_Y_E_3)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+32, (int)(SCALE_X(1920)*PD_WIN_X_S_4)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+33, (int)(SCALE_X(1920)*PD_WIN_X_S_4)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+34, (int)(SCALE_Y(1080)*PD_WIN_Y_S_4)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+35, (int)(SCALE_Y(1080)*PD_WIN_Y_S_4)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+36, (int)(SCALE_X(1920)*PD_WIN_X_E_4)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+37, (int)(SCALE_X(1920)*PD_WIN_X_E_4)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+38, (int)(SCALE_Y(1080)*PD_WIN_Y_E_4)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+39, (int)(SCALE_Y(1080)*PD_WIN_Y_E_4)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+40, (int)(SCALE_X(1920)*PD_WIN_X_S_5)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+41, (int)(SCALE_X(1920)*PD_WIN_X_S_5)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+42, (int)(SCALE_Y(1080)*PD_WIN_Y_S_5)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+43, (int)(SCALE_Y(1080)*PD_WIN_Y_S_5)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+44, (int)(SCALE_X(1920)*PD_WIN_X_E_5)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+45, (int)(SCALE_X(1920)*PD_WIN_X_E_5)&0xFF, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+46, (int)(SCALE_Y(1080)*PD_WIN_Y_E_5)>>8, 0x00}, \
+  {FLEX_AREA_XSTA0_ADDR+47, (int)(SCALE_Y(1080)*PD_WIN_Y_E_5)&0xFF, 0x00} \
+}
+
 /* Sensor Handler */
 static sensor_lib_t sensor_lib_ptr =
 {
@@ -1961,9 +2186,13 @@ static sensor_lib_t sensor_lib_ptr =
     .max_gain = IMX477_MAX_GAIN,
     .max_analog_gain = IMX477_MAX_AGAIN,
     .max_linecount = 65535 - IMX477_MAX_INTEGRATION_MARGIN,
+    .svhdr_use_separate_gain = 1,
+    .svhdr_use_separate_limits = 1,
+    .min_line_cnt = {DOL_MIN_EXPOSURE_LINE, DOL_MIN_EXPOSURE_LINE},
+    .max_line_cnt = {DOL_MAX_EXPOSURE_LINE_SEF_2MP, DOL_MAX_EXPOSURE_LINE_LEF_2MP},
   },
   .sensor_num_frame_skip = 2,
-  .sensor_num_HDR_frame_skip = 2,
+  .sensor_num_HDR_frame_skip = 0,
   .sensor_max_pipeline_frame_delay = 2,
   .sensor_property =
   {
@@ -2010,9 +2239,9 @@ static sensor_lib_t sensor_lib_ptr =
             .decode_format = CSI_DECODE_10BIT,
           },
           {
-          .cid = 0,
-          .dt = CSI_RAW10,
-          .decode_format = CSI_DECODE_10BIT_PLAIN16_LSB
+            .cid = 0,
+            .dt = CSI_RAW10,
+            .decode_format = CSI_DECODE_10BIT_PLAIN16_LSB
           },
         },
         .pix_data_fmt =
@@ -2232,8 +2461,15 @@ static sensor_lib_t sensor_lib_ptr =
         .data_type = CAMERA_I2C_BYTE_DATA,
         .delay = 0,
       },
+      /* Res 9 */
+      {
+        .reg_setting_a = RES9_REG_ARRAY,
+        .addr_type = CAMERA_I2C_WORD_ADDR,
+        .data_type = CAMERA_I2C_BYTE_DATA,
+        .delay = 0,
+      },
     },
-    .size = 9,
+    .size = 10,
   },
   .out_info_array =
   {
@@ -2392,8 +2628,37 @@ static sensor_lib_t sensor_lib_ptr =
         .scale_factor = 0.000,
         .is_pdaf_supported = 1,
       },
+      /* Res 9 */
+      {
+        .x_output = 1920,
+        .y_output = 1080,
+        .line_length_pclk = 4512,
+        .frame_length_lines = 3102,
+        .vt_pixel_clk = 840000000,
+        .op_pixel_clk = 400000000,
+        .binning_factor = 1,
+        .min_fps = 7.50,
+        .max_fps = 30.00,
+        .mode = SENSOR_RAW_HDR_MODE,
+        .offset_x = 108,
+        .offset_y = 440,
+        .scale_factor = 0.000,
+        .is_pdaf_supported = 1,
+        .custom_format =
+        {
+          .enable = 1,
+          .subframes_cnt = 2,
+          .start_x = 0,
+          .start_y = 0,
+          .width = (1920),
+          .height = (1080 + BASIC_READOUT_LINE),
+          .lef_byte_offset = 0,
+          .sef_byte_offset = 849600,
+          .sensor_layout = SHDR_INTERLEAVED_NO_STATUS_2LINES_NO_BLANK,
+        },
+      },
     },
-    .size = 9,
+    .size = 10,
   },
   .csi_params =
   {
@@ -2558,8 +2823,25 @@ static sensor_lib_t sensor_lib_ptr =
           },
         },
       },
+      /* Res 9 */
+      {
+        .num_cid = 2,
+        .vc_cfg_a =
+        {
+          {
+            .cid = 0,
+            .dt = CSI_RAW10,
+            .decode_format = CSI_DECODE_10BIT
+          },
+          {
+            .cid = 1,
+            .dt = IMX477_CSI_PD_ISTATS,
+            .decode_format = CSI_DECODE_10BIT
+          },
+        },
+      },
     },
-    .size = 9,
+    .size = 10,
   },
   .crop_params_array =
   {
@@ -2628,8 +2910,15 @@ static sensor_lib_t sensor_lib_ptr =
         .left_crop = 0,
         .right_crop = 0,
       },
+      /* Res 9 */
+      {
+        .top_crop = 0,
+        .bottom_crop = 0,
+        .left_crop = 0,
+        .right_crop = 0,
+      },
     },
-     .size = 9,
+     .size = 10,
    },
   .exposure_func_table =
   {
@@ -2649,7 +2938,7 @@ static sensor_lib_t sensor_lib_ptr =
     },
     .size = 1,
   },
-  .sensor_capability = (SENSOR_VIDEO_HDR_FLAG | SENSOR_SNAPSHOT_HDR_FLAG),
+  .sensor_capability = (SENSOR_STAGGERED_VIDEO_HDR_FLAG),
   .parse_RDI_stats =
   {
     .pd_data_format = SENSOR_STATS_RAW10_11B_CONF_11B_PD,

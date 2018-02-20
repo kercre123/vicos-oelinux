@@ -937,14 +937,15 @@ void mmi_cam_user_preview_cb(mm_camera_buf_def_t * frame)
 void mmi_cam_user_rdi_cb(mm_camera_buf_def_t * frame)
 {
     static int frm_cnt=0;
-    int frame_idx = frame->frame_idx;
-
-    ALOGI("%s,frame idx: %d\n", __func__, frame_idx);
+    int frame_idx;
 
     if(frame == NULL) {
-        ALOGW("%s, frame is NULL, returns directly!\n", __func__);
+        ALOGI("%s, frame is NULL, returns directly!\n", __func__);
         return;
     }
+
+    frame_idx = frame->frame_idx;
+    ALOGI("%s,frame idx: %d\n", __func__, frame_idx);
 
     frm_cnt++;
     ALOGI("%s, [FD_DBG] ####frm_cnt=%d###\n", __func__,frm_cnt);

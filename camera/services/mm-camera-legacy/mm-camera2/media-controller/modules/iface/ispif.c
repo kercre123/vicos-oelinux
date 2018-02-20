@@ -1021,7 +1021,7 @@ static int ispif_proc_streamoff(ispif_t *ispif, ispif_session_t *session,
           return rc;
         } else {
           CDBG_ERROR("%s: ISPIF_CFG error = %d\n", __func__, rc);
-          assert(fd == 0);
+          //assert(fd == 0);
 
           return rc;
         }

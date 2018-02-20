@@ -192,8 +192,9 @@ QCMAP_Backhaul_Ethernet::~QCMAP_Backhaul_Ethernet()
   flag=false;
   object=NULL;
 
-  if(!QcMapBackhaulWLANMgr && !QcMapBackhaulWWANMgr && !QcMapBackhaulCradleMgr)
-    delete QcMapBackhaulMgr;
+  //Default Backhaul manager object should not be deleted
+  //if(!QcMapBackhaulWLANMgr && !QcMapBackhaulWWANMgr && !QcMapBackhaulCradleMgr)
+ //   delete QcMapBackhaulMgr;
 }
 
 /*=====================================================
@@ -345,8 +346,8 @@ boolean QCMAP_Backhaul_Ethernet::SetEthBackhaulMode
     {
       case QCMAP_MSGR_ETHERNET_LAN_ROUTER_V01:
         QCMAP_Backhaul_Ethernet::SetIPACMCategory(ETH_IFACE,
-                                               LAN_CATEGORY,
-                                                ROUTER_MODE);
+                                                  ETH_LAN_CATEGORY,
+                                                  ROUTER_MODE);
       break;
       case QCMAP_MSGR_ETHERNET_WAN_ROUTER_V01:
         QCMAP_Backhaul_Ethernet::SetIPACMCategory(ETH_IFACE,
@@ -391,8 +392,8 @@ boolean QCMAP_Backhaul_Ethernet::SetEthBackhaulMode
       #ifndef FEATURE_DATA_TARGET_MDM9607
       /* Update IPACM cfg , For JO there is no IPA. */
       QCMAP_Backhaul_Ethernet::SetIPACMCategory(ETH_IFACE,
-                                                 LAN_CATEGORY,
-                                                  ROUTER_MODE);
+                                                ETH_LAN_CATEGORY,
+                                                ROUTER_MODE);
      #endif /* FEATURE_DATA_TARGET_MDM9607 */
       return true;
     break;

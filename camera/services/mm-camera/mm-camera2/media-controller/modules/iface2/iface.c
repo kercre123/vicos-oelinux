@@ -248,6 +248,15 @@ int iface_start_session(iface_t *iface, uint32_t session_id)
       }
       mct_queue_init(session->fe.frame_q);
       session->frame_request.hw_stream_id = 0;
+      session->fe.req_frame_q= (mct_queue_t *)calloc(1, sizeof(mct_queue_t));
+      if (!session->fe.req_frame_q) {
+        CDBG_ERROR("%s:%d calloc failed\n", __func__, __LINE__);
+        rc = -ENOMEM;
+        return rc;
+      }
+      mct_queue_init(session->fe.req_frame_q);
+      memset(session->fe.req_q_data,0, sizeof(iface_util_fe_input_buf_t)*IFACE_UTIL_FRAME_REQ_Q_SIZE);
+      session->fe.req_num = 0;
       CDBG("%s: X", __func__);
       return 0;
     }
@@ -823,6 +832,7 @@ int iface_stop_session(iface_t *iface, uint32_t session_id)
       iface_session_sem_thread_stop(&session->session_thread);
 
       mct_queue_free_all(session->fe.frame_q, NULL);
+      mct_queue_free_all(session->fe.req_frame_q, NULL);
       pthread_mutex_destroy(&session->fe.mutex);
       memset(&session->fe, 0, sizeof(session->fe));
 
@@ -2620,6 +2630,7 @@ end:
 
   if (session->num_bundled_streamon == 0) {
     mct_queue_init(session->fe.frame_q);
+    mct_queue_init(session->fe.req_frame_q);
     CDBG_ERROR("Flushing FE queue");
   }
 
@@ -2719,6 +2730,8 @@ int iface_streamoff_post_isp(
     session->fe.busy = FALSE;
     session->fe.num = 0;
     session->fe.next_free_entry = 0;
+    session->fe.req_num = 0;
+    session->fe.next_free_frame_entry = 0;
     session->frame_request.hw_stream_id = 0;
   }
   return rc;

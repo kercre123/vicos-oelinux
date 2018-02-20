@@ -27,6 +27,14 @@ $Header$
 
 when      who  what, where, why
 --------  ---  ---------------------------------------------------------------
+10/25/17  mm   Fixed issue related to device caps
+10/09/17  nk   Fixed KW p1 issues and warnings
+09/29/17  mm   Fixed issue related to slot info status during hotswap
+09/13/17  rv   Fixed Class 2 disable should disable all class 1/2/3/4 profile
+               Query/Set Prov Context Should fail if SIM not initialized
+09/11/17  rv   Fixed MBIM to WDS IP and vice versa Mapping
+09/11/17  mm   Fixed closure of channel on incorrect slot
+09/08/17  vk   Exposing BC EXT cache for usage in BC
 09/04/17  rv   1. Fixed Modem should fail query and set OIDs when No SIM is
                present. 2. Fixed Disabling class 2 DM config does not persist
                across factory restore. 3. Fixed Multiple APN Names can be 
@@ -68,6 +76,7 @@ when      who  what, where, why
 #include "qbi_svc_bc_common.h"
 #include "qbi_svc_msuicc.h"
 #include "qbi_svc_bc_spdp.h"
+#include "qbi_svc_bc_sim.h"
 
 #include "qbi_common.h"
 #include "qbi_mbim.h"
@@ -183,7 +192,10 @@ when      who  what, where, why
 #define QBI_SVC_BC_EXT_GET_SLOT_BYTE(slot_idx)\
           (slot_idx & QBI_SVC_BC_EXT_UIM_SLOT_INFO_MASK) >> 8
 
+/* Currently supporting only 1 executor */
 #define QBI_SVC_BC_EXT_MAX_SUPPORTED_EXECUTORS             (1)
+/* As we only support 1 executor, so concurrency will be only 1*/
+#define QBI_SVC_BC_EXT_CONCURRENCY                         (1)
 #define QBI_SVC_BC_EXT_SLOT_ACTIVATE                       (1)
 #define QBI_SVC_BC_EXT_SLOT_DEACTIVATE                     (0)
 #define QBI_SVC_BC_EXT_SLOT_1                              (0)
@@ -206,42 +218,6 @@ typedef enum {
   Private Typedefs
 
 =============================================================================*/
-
-/*! Cache used locally by CIDs processed in this file. This is a child of the
-main qbi_svc_bc_ext_cache_s structure */
-
-typedef enum {
-  QBI_SVC_BC_EXT_ROAMING_FLAG_MIN = 0x00,
-
-  QBI_SVC_BC_EXT_ROAMING_FLAG_HOME = 0x01,
-  QBI_SVC_BC_EXT_ROAMING_FLAG_PARTNER = 0x02,
-  QBI_SVC_BC_EXT_ROAMING_FLAG_NON_PARTNER = 0x04,
-
-  QBI_SVC_BC_EXT_ROAMING_FLAG_MAX
-} qbi_svc_bc_ext_roaming_flag_e;
-
-typedef enum {
-  QBI_SVC_BC_EXT_CONTEXT_FLAG_MIN = 0,
-
-  QBI_SVC_BC_EXT_CONTEXT_FLAG_MODEM = 1,
-  QBI_SVC_BC_EXT_CONTEXT_FLAG_USER_DEFINED = 2,
-  QBI_SVC_BC_EXT_CONTEXT_FLAG_USER_MODIFIED = 3,
-
-  QBI_SVC_BC_EXT_CONTEXT_FLAG_MAX
-} qbi_svc_bc_ext_context_flag_e;
-
-typedef PACK(struct) {
-  uint32 ip_type;
-  uint32 source;
-  uint32 roaming;
-  uint32 media_type;
-  uint32 enable;
-  uint32 prov_active;
-  uint32 lte_active;
-  uint32 lte_attach_state;
-  uint32 roaming_flag;
-  uint32 context_flag;
-} qbi_svc_bc_ext_cache_s;
 
 static boolean cmd_in_progress_ignore_indication = FALSE;
 
@@ -751,7 +727,7 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_wds29_rsp_cb
   qbi_qmi_txn_s *qmi_txn
 );
 
-static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_is_pdp_type_matched
+static boolean qbi_svc_bc_ext_provisioned_contexts_v2_s_is_pdp_type_matched
 (
   qbi_qmi_txn_s                         *qmi_txn,
   wds_get_profile_settings_resp_msg_v01 *profile_settings
@@ -856,6 +832,15 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_context_v2_wds29_rsp_cb
 static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_pdc_wds29_req
 (
   qbi_txn_s *txn
+);
+
+static boolean qbi_svc_bc_ext_update_cache_ip_type
+(
+  qbi_txn_s     *txn,
+  const uint32 operation,
+  qbi_svc_bc_ext_cache_s *cache,
+  const uint32 ip_type,
+  const wds_pdp_type_enum_v01 pdp_type
 );
 
 static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_pdc_prep_wds29_req
@@ -1371,7 +1356,7 @@ Private Function Definitions
     @return qbi_svc_bc_cache_s* Pointer to cache, or NULL on error
 */
 /*=========================================================================*/
-static qbi_svc_bc_ext_cache_s *qbi_svc_bc_ext_cache_get
+qbi_svc_bc_ext_cache_s *qbi_svc_bc_ext_cache_get
 (
   qbi_ctx_s *ctx,
   const uint32 cache_index
@@ -2057,6 +2042,8 @@ FUNCTION: qbi_svc_bc_ext_match_pdp_type
 ===========================================================================*/
 /*!
     @brief Compares IP Type of requested profile with that of modem
+           Comman API used by both LTE Attach Config and Provisoned
+           Context V2
 
     @details
 
@@ -2068,18 +2055,17 @@ FUNCTION: qbi_svc_bc_ext_match_pdp_type
 /*=========================================================================*/
 static boolean qbi_svc_bc_ext_match_pdp_type
 (
-  qbi_svc_bc_ext_lte_attach_context_s *context,
+  uint32  ip_type,
   wds_get_profile_settings_resp_msg_v01 *qmi_rsp
 )
 {
   boolean success = FALSE;
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_FALSE(qmi_rsp);
-  QBI_CHECK_NULL_PTR_RET_FALSE(context);
 
   if (qmi_rsp->pdp_type_valid)
   {
-    switch (context->ip_type)
+    switch (ip_type)
     {
     case QBI_SVC_BC_IP_TYPE_IPV4:
       success = (qmi_rsp->pdp_type == WDS_PDP_TYPE_PDP_IPV4_V01 ||
@@ -2098,8 +2084,8 @@ static boolean qbi_svc_bc_ext_match_pdp_type
     }
   }
 
-  QBI_LOG_D_3("LTEAttachConfig::S: Matching pdp_type(%d) <==> ip_type(%d), "
-    "status %d", qmi_rsp->pdp_type, context->ip_type, success);
+  QBI_LOG_D_3("Matching pdp_type(%d) <==> ip_type(%d), "
+    "status %d", qmi_rsp->pdp_type, ip_type, success);
   return success;
 }/* qbi_svc_bc_ext_match_pdp_type() */
 
@@ -2253,11 +2239,11 @@ static uint32 qbi_svc_bc_ext_roam_type_to_roam_flag
   switch (roam_type)
   {
     case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_ROAMING_CONTROL_HOME:
-             return QBI_SVC_BC_EXT_ROAMING_FLAG_HOME;
+      return QBI_SVC_BC_EXT_ROAMING_FLAG_HOME;
     case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_ROAMING_CONTROL_PARTNER:
-             return QBI_SVC_BC_EXT_ROAMING_FLAG_PARTNER;
+      return QBI_SVC_BC_EXT_ROAMING_FLAG_PARTNER;
     case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_ROAMING_CONTROL_NON_PARTNER:
-             return QBI_SVC_BC_EXT_ROAMING_FLAG_NON_PARTNER;
+      return QBI_SVC_BC_EXT_ROAMING_FLAG_NON_PARTNER;
   }
 
   return QBI_SVC_BC_EXT_ROAMING_FLAG_HOME;
@@ -2554,25 +2540,18 @@ static boolean qbi_svc_bc_ext_compare_imsi_for_operator
   const char *imsi
 )
 {
-  boolean match_found = FALSE;
 /*-------------------------------------------------------------------------*/
-  if (!QBI_STRNCMP(imsi, QBI_SVC_BC_EXT_IMSI_311_480,
-      sizeof(char) * QBI_SVC_BC_EXT_IMSI_311_480_MAX_LEN))
+  if ((!QBI_STRNCMP(imsi, QBI_SVC_BC_EXT_IMSI_311_480,
+      sizeof(char) * QBI_SVC_BC_EXT_IMSI_311_480_MAX_LEN)) ||
+      (!QBI_STRNCMP(imsi, QBI_SVC_BC_EXT_IMSI_311_270,
+      sizeof(char) * QBI_SVC_BC_EXT_IMSI_311_270_MAX_LEN)) ||
+      (!QBI_STRNCMP(imsi, QBI_SVC_BC_EXT_IMSI_312_770,
+      sizeof(char) * QBI_SVC_BC_EXT_IMSI_312_770_MAX_LEN)))
   {
-    match_found = TRUE;
-  }
-  else if (!QBI_STRNCMP(imsi, QBI_SVC_BC_EXT_IMSI_311_270,
-      sizeof(char) * QBI_SVC_BC_EXT_IMSI_311_270_MAX_LEN))
-  {
-    match_found = TRUE;
-  }
-  else if (!QBI_STRNCMP(imsi, QBI_SVC_BC_EXT_IMSI_312_770,
-      sizeof(char) * QBI_SVC_BC_EXT_IMSI_312_770_MAX_LEN))
-  {
-    match_found = TRUE;
+    return TRUE;
   }
 
-  return match_found;
+  return FALSE;
 } /* qbi_svc_bc_ext_compare_imsi_for_operator() */
 
 /*===========================================================================
@@ -2601,9 +2580,9 @@ static void qbi_svc_bc_ext_prov_contxt_v2_update_operator_nv
 {
   qbi_svc_bc_spdp_cache_s cache = { 0 };
 /*-------------------------------------------------------------------------*/
-  QBI_CHECK_NULL_PTR_RET_ABORT(ctx);
-  QBI_CHECK_NULL_PTR_RET_ABORT(operator_cfg);
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_rsp);
+  QBI_CHECK_NULL_PTR_RET(ctx);
+  QBI_CHECK_NULL_PTR_RET(operator_cfg);
+  QBI_CHECK_NULL_PTR_RET(qmi_rsp);
 
   qbi_svc_bc_spdp_read_nv_store(ctx, &cache);
   if ((qmi_rsp->apn_disabled_flag_valid == TRUE) &&
@@ -2663,8 +2642,8 @@ static void qbi_svc_bc_ext_prov_contxt_v2_update_operator_nv_if_reqd
 )
 {
 /*-------------------------------------------------------------------------*/
-  QBI_CHECK_NULL_PTR_RET_ABORT(txn);
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_rsp);
+  QBI_CHECK_NULL_PTR_RET(txn);
+  QBI_CHECK_NULL_PTR_RET(qmi_rsp);
 
   QBI_LOG_D_0("Prov Contxt V2 : Update Operator Status If Required.");
   if (operator_cfg->class1_disable == QBI_SVC_BC_EXT_OPERATOR_STATE_NONE ||
@@ -2813,16 +2792,12 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_pdc_wds28_rsp_c
 {
   qbi_svc_action_e action = QBI_SVC_ACTION_ABORT;
   wds_modify_profile_settings_resp_msg_v01 *qmi_rsp = NULL;
-  wds_modify_profile_settings_req_msg_v01 *qmi_req = NULL;
-  qbi_svc_bc_ext_provisioned_contexts_v2_s_req_s *req = NULL;
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->req.data);
 
   qmi_rsp = (wds_modify_profile_settings_resp_msg_v01 *)qmi_txn->rsp.data;
-  qmi_req = (wds_modify_profile_settings_req_msg_v01 *)qmi_txn->req.data;
 
   QBI_LOG_I_0("Rsp Callback For PDC Modify Req");
   if (qmi_rsp->resp.result != QMI_RESULT_SUCCESS_V01)
@@ -2936,7 +2911,8 @@ static qbi_svc_action_e qbi_svc_bc_ext_prov_ctx_v2_s_update_disable_flag
 
   qbi_svc_bc_ext_read_operator_nv(qmi_txn->ctx,&operator_cfg);
   if ((QBI_SVC_BC_MBIM_CID_SUBSCRIBER_READY_STATUS == qmi_txn->parent->cid) &&
-      (qbi_svc_bc_ext_provisioned_contexts_v2_s_is_apn_class1(qmi_txn->parent->ctx,qmi_rsp->apn_name) ||
+      (qbi_svc_bc_ext_provisioned_contexts_v2_s_is_apn_class1(
+        qmi_txn->parent->ctx,qmi_rsp->apn_name) ||
        qbi_svc_bc_ext_provisioned_contexts_v2_s_is_apn_class2(qmi_rsp->apn_name)))
   {
     (void)qbi_svc_bc_ext_prov_contxt_v2_update_operator_nv_if_reqd(qmi_txn->parent,qmi_rsp,&operator_cfg);
@@ -2990,7 +2966,6 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_pdc_wds2b_rsp_cb
   wds_get_profile_settings_req_msg_v01 *qmi_req = NULL;
   wds_get_profile_settings_resp_msg_v01 *qmi_rsp = NULL;
   qbi_svc_bc_ext_provisioned_contexts_v2_profiles_info_s *info = NULL;
-  qbi_svc_bc_ext_operator_config_s operator_cfg = {0};
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
@@ -3084,6 +3059,7 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_pdc_wds2b_rsp_cb
         }
         else
         {
+          QBI_LOG_D_0("Prov Context V2 Request Completed. Triggering Query.");
           action = qbi_svc_bc_ext_provisioned_context_v2_q_req(qmi_txn->parent);
         }
       }
@@ -3298,7 +3274,6 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_pdc_wds29_req
 {
   qbi_svc_action_e action = QBI_SVC_ACTION_ABORT;
   wds_delete_profile_req_msg_v01 *qmi_req_wds29 = NULL;
-  wds_get_profile_list_req_msg_v01 *qmi_req = NULL;
   qbi_svc_bc_ext_cache_s *cache = NULL;
   uint32 *info = NULL;
   uint32 profile_index = 0;
@@ -4789,13 +4764,13 @@ qbi_svc_bc_ext_cache_s* qbi_svc_bc_ext_provisioned_contexts_v2_update_cache
   info = (qbi_svc_bc_ext_provisioned_contexts_v2_profiles_info_s *)txn->info;
 
   cache = qbi_svc_bc_ext_cache_get(txn->ctx, 
-      info->profile_list.profile_index[info->profiles_read - 1]);
+      info->profile_list.profile_index[info->profiles_read]);
   QBI_CHECK_NULL_PTR_RET_NULL(cache);
 
   QBI_LOG_D_0("Prov Cntxt V2 : Updating Cache");
   if (txn->req.data)
   {
-    // This is set case. update cache.
+    // This is set case. Update cache.
     QBI_LOG_D_0("Cache Updating As Part Of Set Operation");
     req = (qbi_svc_bc_ext_provisioned_contexts_v2_s_req_s*)txn->req.data;
 
@@ -4856,17 +4831,27 @@ qbi_svc_bc_ext_cache_s* qbi_svc_bc_ext_provisioned_contexts_v2_update_cache
         qbi_svc_bc_ext_provisioned_contexts_v2_qmi_profile_enable_to_mbim_enable(qmi_rsp);
       break;
     }
+    if (qmi_rsp->pdp_type_valid)
+    {
+      (void)qbi_svc_bc_ext_update_cache_ip_type(txn,
+            req->operation, cache, req->ip_type, qmi_rsp->pdp_type);
+    }
   }
   
   if (set_default && !cache->prov_active)
   {
-    // this is query case. Update default value.
+    // This is query case. Update default value.
     QBI_LOG_D_0("Cache Updating As Part Of Query Operation");
-    cache->prov_active = TRUE;
     cache->source = QBI_SVC_MBIM_MS_CONTEXT_SOURCE_MODEM;
     cache->media_type = QBI_SVC_MBIM_MS_CONTEXT_MEDIA_TYPE_CELLULAR;
     cache->enable = 
        qbi_svc_bc_ext_provisioned_contexts_v2_qmi_profile_enable_to_mbim_enable(qmi_rsp);
+    if (qmi_rsp->pdp_type_valid)
+    {
+      (void)qbi_svc_bc_ext_update_cache_ip_type(txn,
+            0, cache, 0, qmi_rsp->pdp_type);
+    }
+    cache->prov_active = TRUE;
   }
 
   qbi_svc_bc_ext_update_nv_store(txn->ctx);
@@ -4929,11 +4914,7 @@ static boolean qbi_svc_ext_provisioned_contexts_v2_q_add_context_to_rsp
 
   context->context_id = context_id;
 
-  if (qmi_rsp->pdp_type_valid == TRUE || qmi_rsp->pdn_type_valid == TRUE)
-  {
-      qmi_rsp->pdp_type_valid == TRUE ? (context->ip_type = qmi_rsp->pdp_type) :
-      (context->ip_type = qmi_rsp->pdn_type);
-  }
+  context->ip_type = cache->ip_type;
 
   context->enable = cache->enable;
 
@@ -5211,8 +5192,11 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_wds27_rsp_cb
           QBI_MEM_FREE(qmi_txn->parent->info);
           qmi_txn->parent->info = NULL;
       }
-      QBI_LOG_D_0("Create Completed Now Quering");
-      action = qbi_svc_bc_ext_provisioned_context_v2_q_req(qmi_txn->parent);
+      QBI_LOG_D_0("Create Profile Completed "
+                  "Triggering Check whether Class 2 disabled required.");
+
+      cmd_in_progress_ignore_indication = TRUE;
+      action = qbi_svc_bc_ext_provisioned_contexts_v2_s_pdc_prep_wds29_req(qmi_txn->parent);
     }
   }
 
@@ -6055,38 +6039,27 @@ FUNCTION: qbi_svc_bc_ext_provisioned_contexts_v2_s_is_pdp_type_matched
     @details
 
     @param qmi_txn
+    @param qmi_rsp
 
-    @return qbi_svc_action_e
+    @return TRUE/FALSE
 */
 /*=========================================================================*/
-static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_is_pdp_type_matched
+static boolean qbi_svc_bc_ext_provisioned_contexts_v2_s_is_pdp_type_matched
 (
   qbi_qmi_txn_s                         *qmi_txn,
   wds_get_profile_settings_resp_msg_v01 *profile_settings
 )
 {
-  boolean result = TRUE;
+  boolean result = FALSE;
   qbi_svc_bc_ext_provisioned_contexts_v2_s_req_s *req = NULL;
-  
 /*-------------------------------------------------------------------------*/
-  req = (qbi_svc_bc_ext_provisioned_contexts_v2_s_req_s *)qmi_txn->parent->req.data;
-  /* Compare IP type only if apn name matches */
-  if (profile_settings->pdp_type_valid &&
-     (profile_settings->pdp_type == WDS_PDP_TYPE_PDP_PPP_V01 ||
-     (profile_settings->pdp_type == WDS_PDP_TYPE_PDP_IPV4_V01 &&
-     !QBI_SVC_BC_EXT_IPV4_REQUESTED(req->ip_type)) ||
-     (profile_settings->pdp_type == WDS_PDP_TYPE_PDP_IPV6_V01 &&
-     !QBI_SVC_BC_EXT_IPV6_REQUESTED(req->ip_type)) ||
-     (profile_settings->pdp_type != WDS_PDP_TYPE_PDP_IPV4V6_V01 &&
-     QBI_SVC_BC_EXT_MAP_DEFAULT_IP_TYPE(req->ip_type) ==
-     QBI_SVC_BC_IP_TYPE_IPV4_AND_IPV6)))
-  {
-     QBI_LOG_I_0("PDP type does not match");
-     result = FALSE;
-  }
+  QBI_CHECK_NULL_PTR_RET_FALSE(profile_settings);
+  QBI_CHECK_NULL_PTR_RET_FALSE(qmi_txn->parent->req.data);
 
-  QBI_LOG_D_1("PDP type Match result %d", result);
-  
+  req = (qbi_svc_bc_ext_provisioned_contexts_v2_s_req_s *)qmi_txn->parent->req.data;
+
+  result = qbi_svc_bc_ext_match_pdp_type(req->ip_type, profile_settings);
+
   return result;
 }/* qbi_svc_bc_ext_provisioned_contexts_v2_s_is_pdp_type_matched */
 
@@ -6496,8 +6469,11 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_wds28_rsp_cb
           qmi_txn->parent->info = NULL;
         }
 
-        QBI_LOG_D_0("Completed profile modify operation,Triggering Query");
-        action = qbi_svc_bc_ext_provisioned_context_v2_q_req(qmi_txn->parent);
+        QBI_LOG_D_0("Completed profile modify operation."
+                    "Triggering Check whether Class 2 disabled required.");
+
+        cmd_in_progress_ignore_indication = TRUE;
+        action = qbi_svc_bc_ext_provisioned_contexts_v2_s_pdc_prep_wds29_req(qmi_txn->parent);
       }
     }
   }
@@ -6681,7 +6657,8 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_populate_profil
     *profile_settings->user_id_valid = TRUE;
     *profile_settings->auth_password_valid = TRUE;
     *profile_settings->common_pdp_type_valid = TRUE;
-    *profile_settings->common_pdp_type = req->ip_type;
+    *profile_settings->common_pdp_type = 
+       qbi_svc_bc_ext_ip_type_to_pdp_type(req->ip_type);
 
    if (req->access_string.offset != 0 &&
        !qbi_svc_bc_ext_provisioned_contexts_v2_s_populate_str(
@@ -6721,7 +6698,8 @@ static qbi_svc_action_e qbi_svc_bc_ext_provisioned_contexts_v2_s_populate_profil
     *profile_settings->user_id_valid = TRUE;
     *profile_settings->auth_password_valid = TRUE;
     *profile_settings->common_pdp_type_valid = TRUE;
-    *profile_settings->common_pdp_type = req->ip_type;
+    *profile_settings->common_pdp_type =  
+       qbi_svc_bc_ext_ip_type_to_pdp_type(req->ip_type);
 
     if (req->access_string.offset != 0 &&
         !qbi_svc_bc_ext_provisioned_contexts_v2_s_populate_str(
@@ -7385,70 +7363,75 @@ static uint32 qbi_svc_bc_ext_qmi_profile_to_mbim_compression
 FUNCTION: qbi_svc_bc_ext_update_cache_ip_type
 ===========================================================================*/
 /*!
-    @brief Extracts the compression information from a QMI profile (3GPP or
-    3GPP2), if available, and returns it as an MBIM value
+    @brief Converts Modem PDP Type (WDS) to QBI/MBIM Class defined IP Type.
+           Comman API used by both LTE Attach Config and Provisoned
+           Context V2.
 
     @details
-
-    @param profile_type
-    @param qmi_rsp
+ 
+    @param txn
+    @param operation
+    @param cache
+    @param ip_type
+    @param pdp_type
 
     @return uint32 MBIM_COMPRESSION value
 */
 /*=========================================================================*/
 static boolean qbi_svc_bc_ext_update_cache_ip_type
 (
-  const uint32 cmd_type,
+  qbi_txn_s     *txn,
   const uint32 operation,
   qbi_svc_bc_ext_cache_s *cache,
-  const qbi_svc_bc_ext_lte_attach_context_s *context,
-  const qbi_svc_bc_ext_lte_attach_config_profile_settings_s profile_settings
+  const uint32 ip_type,
+  const wds_pdp_type_enum_v01 pdp_type
 )
 {
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_FALSE(cache);
 
-  if (profile_settings.pdp_type_valid)
+  switch (pdp_type)
   {
-    switch (profile_settings.pdp_type)
+  case WDS_PDP_TYPE_PDP_IPV4_V01:
+    cache->ip_type = QBI_SVC_BC_IP_TYPE_IPV4;
+    break;
+  case WDS_PDP_TYPE_PDP_IPV6_V01:
+    cache->ip_type = QBI_SVC_BC_IP_TYPE_IPV6;
+    break;
+  case WDS_PDP_TYPE_PDP_IPV4V6_V01:
+    if (txn->cmd_type == QBI_MSG_CMD_TYPE_SET ||
+         (txn->cmd_type == QBI_TXN_CMD_TYPE_INTERNAL && 
+          txn->req.data))
     {
-    case WDS_PDP_TYPE_PDP_IPV4_V01:
-      cache->ip_type = QBI_SVC_BC_IP_TYPE_IPV4;
-      break;
-    case WDS_PDP_TYPE_PDP_IPV6_V01:
-      cache->ip_type = QBI_SVC_BC_IP_TYPE_IPV6;
-      break;
-    case WDS_PDP_TYPE_PDP_IPV4V6_V01:
-      if ((cmd_type == QBI_MSG_CMD_TYPE_SET ||
-           cmd_type == QBI_TXN_CMD_TYPE_INTERNAL) && 
-          context != NULL)
+      switch (operation)
       {
-        switch (operation)
-        {
-        case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_OPERATION_DEFAULT:
-          cache->ip_type = context->ip_type == QBI_SVC_BC_IP_TYPE_DEFAULT ?
-            QBI_SVC_BC_IP_TYPE_DEFAULT : QBI_SVC_BC_IP_TYPE_IPV4V6;
-          break;
-        case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_OPERATION_RESTORE_FACTORY:
-          cache->ip_type = QBI_SVC_BC_IP_TYPE_IPV4V6;
-          break;
-        }
-      }
-      else
-      {
-        cache->ip_type = cache->ip_type == QBI_SVC_BC_IP_TYPE_DEFAULT ?
+      case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_OPERATION_DEFAULT:
+        cache->ip_type = ip_type == QBI_SVC_BC_IP_TYPE_DEFAULT ?
           QBI_SVC_BC_IP_TYPE_DEFAULT : QBI_SVC_BC_IP_TYPE_IPV4V6;
+        break;
+      case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_OPERATION_RESTORE_FACTORY:
+      case QBI_SVC_MBIM_MS_CONTEXT_OPERATION_RESTORE_FACTORY:
+        cache->ip_type = QBI_SVC_BC_IP_TYPE_IPV4V6;
+        break;
       }
-      break;
-    default:
-      QBI_LOG_E_1("LTEAttachConfig::Cache update:E: Unknown IP type: %d", 
-        profile_settings.pdp_type);
-      return FALSE;
     }
-  }
-  else
-  {
-    QBI_LOG_E_0("LTEAttachConfig::Cache update:E: IP type TLV missing.");
+    else
+    {
+       /* This is when Query is triggered first time before any Set */
+       if (cache->prov_active || cache->lte_active)
+       {
+         cache->ip_type = cache->ip_type == QBI_SVC_BC_IP_TYPE_DEFAULT ?
+          QBI_SVC_BC_IP_TYPE_DEFAULT : QBI_SVC_BC_IP_TYPE_IPV4V6;
+       }
+       else
+       {
+         cache->ip_type = pdp_type;
+       }
+    }
+    break;
+  default:
+    QBI_LOG_E_1("Cache update:E: Unknown IP type: %d", 
+      pdp_type);
     return FALSE;
   }
 
@@ -7512,14 +7495,23 @@ static qbi_svc_bc_ext_cache_s* qbi_svc_bc_ext_lte_attach_config_update_cache
       QBI_CHECK_NULL_PTR_RET_FALSE(context);
 
       cache->source = context->source;
+      cache->roaming = context->roaming;
       break;
     case QBI_SVC_MBIM_MS_LTE_ATTACH_CONTEXT_OPERATION_RESTORE_FACTORY:
       cache->source = QBI_SVC_MBIM_MS_CONTEXT_SOURCE_MODEM;
       break;
     }
 
-    qbi_svc_bc_ext_update_cache_ip_type(txn->cmd_type, req->operation,
-      cache, context, profile_settings);
+    if (profile_settings.pdp_type_valid)
+    {
+       QBI_CHECK_NULL_PTR_RET_FALSE(context);
+       qbi_svc_bc_ext_update_cache_ip_type(txn, req->operation,
+         cache, context->ip_type, profile_settings.pdp_type);
+    }
+    else
+    {
+      QBI_LOG_E_0("LTEAttachConfig::Cache update:E: IP type TLV missing.");
+    }
 
     if (is_user_defined)
     {
@@ -7545,8 +7537,15 @@ static qbi_svc_bc_ext_cache_s* qbi_svc_bc_ext_lte_attach_config_update_cache
       cache->source = QBI_SVC_MBIM_MS_CONTEXT_SOURCE_MODEM;
     }
 
-    qbi_svc_bc_ext_update_cache_ip_type(txn->cmd_type, 0, cache,
-      NULL, profile_settings);
+    if (profile_settings.pdp_type_valid)
+    {
+      qbi_svc_bc_ext_update_cache_ip_type(txn, 0, cache,
+        0, profile_settings.pdp_type);
+    }
+    else
+    {
+      QBI_LOG_E_0("LTEAttachConfig::Cache update:E: IP type TLV missing.");
+    }
   }
 
   cache->lte_active = TRUE;
@@ -9049,7 +9048,7 @@ static boolean qbi_svc_bc_ext_lte_attach_config_s_match_profile
           field_desc->size);
       QBI_CHECK_NULL_PTR_RET_FALSE(context);
 
-      match_found = qbi_svc_bc_ext_match_pdp_type(context, qmi_rsp) ? TRUE : FALSE;
+      match_found = qbi_svc_bc_ext_match_pdp_type(context->ip_type, qmi_rsp) ? TRUE : FALSE;
 
       if (match_found)
       {
@@ -11154,64 +11153,15 @@ static qbi_svc_action_e qbi_svc_bc_ext_sys_caps_info_q_uim2f_rsp_cb
           rsp->num_of_slots = qmi_rsp->card_status.card_info_len;
           QBI_LOG_D_1("num_of_slots %d", rsp->num_of_slots);
       }
+      rsp->concurrency = QBI_SVC_BC_EXT_CONCURRENCY;
+      rsp->num_of_executors = QBI_SVC_BC_EXT_MAX_SUPPORTED_EXECUTORS;
+      QBI_LOG_D_2("concurrency %d num_of_executors %d", rsp->concurrency, rsp->num_of_executors);
+
       action = qbi_svc_bc_ext_device_caps_q_rsp(qmi_txn->parent);
   }
 
   return action;
 }/* qbi_svc_bc_ext_sys_caps_info_q_uim2f_rsp_cb() */
-
-/*===========================================================================
-FUNCTION: qbi_svc_bc_ext_sys_caps_info_q_dms20_rsp_cb
-===========================================================================*/
-/*!
-    @brief Handles a QBI_SVC_BC_EXT_MBIM_CID_MS_SYS_CAPS response
-
-    @details
-
-    @param txn
-
-    @return qbi_svc_action_e
-*/
-/*=========================================================================*/
-static qbi_svc_action_e qbi_svc_bc_ext_sys_caps_info_q_dms20_rsp_cb
-(
-  qbi_qmi_txn_s *qmi_txn
-)
-{
-  dms_get_device_cap_resp_msg_v01 *qmi_rsp;
-  qbi_svc_bc_ext_sys_caps_rsp_s *rsp;
-  qbi_svc_action_e action = QBI_SVC_ACTION_ABORT;
-/*-------------------------------------------------------------------------*/
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent->rsp.data);
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
-
-  QBI_LOG_D_0("qbi_svc_bc_ext_sys_caps_info_q_dms20_rsp_cb");
-  rsp = (qbi_svc_bc_ext_sys_caps_rsp_s *)qmi_txn->parent->rsp.data;
-  qmi_rsp = (dms_get_device_cap_resp_msg_v01 *)qmi_txn->rsp.data;
-  if (qmi_rsp->resp.result != QMI_RESULT_SUCCESS_V01)
-  {
-      QBI_LOG_E_1("Received error code %d from QMI", qmi_rsp->resp.error);
-  }
-  else
-  {
-      if (!qmi_rsp->max_active_data_subscriptions_valid)
-      {
-          QBI_LOG_W_0("Leaving DeviceId field blank: invalid concurrency or num of executors");
-      }
-      else
-      {
-          rsp->concurrency = qmi_rsp->max_active_data_subscriptions;
-          rsp->num_of_executors = qmi_rsp->max_active_data_subscriptions;
-          QBI_LOG_D_1("max_active_data_subscriptions %d ", qmi_rsp->max_active_data_subscriptions);
-      }
-      action = qbi_svc_bc_ext_device_caps_q_rsp(qmi_txn->parent);
-
-  }
-
-  return action;
-}/* qbi_svc_bc_ext_sys_caps_info_q_dms20_rsp_cb() */
 
 /*===========================================================================
 FUNCTION: qbi_svc_bc_ext_sys_caps_info_q_dms25_rsp_cb
@@ -11390,13 +11340,6 @@ static qbi_svc_action_e qbi_svc_bc_ext_sys_caps_info_q_req
   qmi_txn = qbi_qmi_txn_alloc(txn, QBI_QMI_SVC_DMS,
         QMI_DMS_GET_DEVICE_SERIAL_NUMBERS_REQ_V01,
         qbi_svc_bc_ext_sys_caps_info_q_dms25_rsp_cb);
-
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
-
-  /* QMI_DMS_GET_DEVICE_CAP (0x20) */
-  qmi_txn = qbi_qmi_txn_alloc(txn, QBI_QMI_SVC_DMS,
-        QMI_DMS_GET_DEVICE_CAP_REQ_V01,
-        qbi_svc_bc_ext_sys_caps_info_q_dms20_rsp_cb);
 
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
 
@@ -12034,39 +11977,21 @@ static qbi_svc_action_e qbi_svc_bc_ext_slot_mapping_s_uim2f_rsp_cb
       break;
     }
 
-    /* Setting prov_complete to FALSE to indicate de-activation/activation is in progess */
-    exec_slot_cfg.exec0_prov_complete = FALSE;
-    exec_slot_cfg.exec0_slot = info->curr.slot;
-    if (!qbi_nv_store_cfg_item_write(
-      qmi_txn->ctx, QBI_NV_STORE_CFG_ITEM_EXECUTOR_SLOT_CONFIG,
-      &exec_slot_cfg, sizeof(qbi_svc_bc_ext_exec_slot_config_s)))
-    {
-      QBI_LOG_E_0("Couldn't save new switched slot to NV!");
-    }
-
     if (!info->curr.info_gw.deact_done || !info->curr.info_1x.deact_done)
     {
       action = qbi_svc_bc_ext_slot_mapping_s_deact_req(qmi_txn);
       QBI_LOG_D_0("Deactivation in progress");
       break;
     }
-
-    if (qbi_svc_bc_ext_slot_mapping_close_logical_channels(qmi_txn))
+    
+    /* Closing of logical channels occurs only during de-activation*/
+    if (info->req.info_gw.act_done == FALSE &&
+        info->req.info_1x.act_done == FALSE &&
+        qbi_svc_bc_ext_slot_mapping_close_logical_channels(qmi_txn))
     {
-      QBI_LOG_D_0("Closing logical channels");
-      action = QBI_SVC_ACTION_SEND_QMI_REQ;
-      break;
-    }
-
-    /* Update mutlisim configuration NV to ensure it has latest slot mapping */
-    exec_slot_cfg.exec0_slot = info->req.slot;
-    /* Keeping prov_complete as FALSE since activation stage is not yet complete */
-    exec_slot_cfg.exec0_prov_complete = FALSE;
-    if (!qbi_nv_store_cfg_item_write(
-      qmi_txn->ctx, QBI_NV_STORE_CFG_ITEM_EXECUTOR_SLOT_CONFIG,
-      &exec_slot_cfg, sizeof(qbi_svc_bc_ext_exec_slot_config_s)))
-    {
-      QBI_LOG_E_0("Couldn't save new switched slot to NV during deact");
+        QBI_LOG_D_0("Closing logical channels");
+        action = QBI_SVC_ACTION_SEND_QMI_REQ;
+        break;
     }
 
     if ((info->req.info_gw.act_need && !info->req.info_gw.act_done) ||
@@ -12334,8 +12259,10 @@ static qbi_svc_action_e qbi_svc_bc_ext_slot_mapping_s_deact_req
   qbi_qmi_txn_s *qmi_txn
 )
 {
+  qbi_svc_action_e                    action = QBI_SVC_ACTION_ABORT;
   uim_event_reg_req_msg_v01           *qmi_req = NULL;
   qbi_svc_bc_ext_slot_map_cmd_info_s  *info = NULL;
+  qbi_svc_bc_ext_exec_slot_config_s exec_slot_cfg;
 /*-------------------------------------------------------------------------*/
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
@@ -12343,23 +12270,36 @@ static qbi_svc_action_e qbi_svc_bc_ext_slot_mapping_s_deact_req
 
   info = (qbi_svc_bc_ext_slot_map_cmd_info_s *)qmi_txn->parent->info;
 
-  /* De-register for QMI_UIM_STATUS_CHANGE_IND */
-  qmi_req = (uim_event_reg_req_msg_v01 *)
-    qbi_qmi_txn_alloc_ret_req_buf(
-      qmi_txn->parent, QBI_QMI_SVC_UIM, QMI_UIM_EVENT_REG_REQ_V01,
-      qbi_svc_bc_ext_slot_mapping_s_deact_uim2e_cb);
-  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
-
-  if (info->curr.info_gw.deact_need || info->curr.info_1x.deact_need)
+  /* Setting prov_complete to FALSE to indicate de-activation/activation is in progess */
+  exec_slot_cfg.exec0_prov_complete = FALSE;
+  exec_slot_cfg.exec0_slot = info->curr.slot;
+  if (!qbi_nv_store_cfg_item_write(
+    qmi_txn->ctx, QBI_NV_STORE_CFG_ITEM_EXECUTOR_SLOT_CONFIG,
+    &exec_slot_cfg, sizeof(qbi_svc_bc_ext_exec_slot_config_s)))
   {
-    qmi_req->event_mask = (0 << QMI_UIM_EVENT_CARD_STATUS_BIT_V01);
+    QBI_LOG_E_0("Couldn't save curr slot to NV during deact");
   }
   else
   {
-    qmi_req->event_mask = (1 << QMI_UIM_EVENT_CARD_STATUS_BIT_V01);
+    /* De-register for QMI_UIM_STATUS_CHANGE_IND */
+    qmi_req = (uim_event_reg_req_msg_v01 *)
+      qbi_qmi_txn_alloc_ret_req_buf(
+        qmi_txn->parent, QBI_QMI_SVC_UIM, QMI_UIM_EVENT_REG_REQ_V01,
+        qbi_svc_bc_ext_slot_mapping_s_deact_uim2e_cb);
+    QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+
+    if (info->curr.info_gw.deact_need || info->curr.info_1x.deact_need)
+    {
+      qmi_req->event_mask = (0 << QMI_UIM_EVENT_CARD_STATUS_BIT_V01);
+    }
+    else
+    {
+      qmi_req->event_mask = (1 << QMI_UIM_EVENT_CARD_STATUS_BIT_V01);
+    }
+    action = QBI_SVC_ACTION_SEND_QMI_REQ;
   }
 
-  return QBI_SVC_ACTION_SEND_QMI_REQ;
+  return action;
 } /* qbi_svc_bc_ext_slot_mapping_s_deact_req() */
 
 /*===========================================================================
@@ -12441,68 +12381,78 @@ static qbi_svc_action_e qbi_svc_bc_ext_slot_mapping_s_act_req
   qbi_qmi_txn_s *qmi_txn
 )
 {
-    qbi_svc_action_e action = QBI_SVC_ACTION_ABORT;
-    uim_change_provisioning_session_req_msg_v01 *qmi_req = NULL;
-    qbi_svc_bc_ext_slot_map_cmd_info_s  *info;
+  qbi_svc_action_e action = QBI_SVC_ACTION_ABORT;
+  uim_change_provisioning_session_req_msg_v01 *qmi_req = NULL;
+  qbi_svc_bc_ext_slot_map_cmd_info_s  *info;
+  qbi_svc_bc_ext_exec_slot_config_s exec_slot_cfg;
 /*-------------------------------------------------------------------------*/
-    QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
-    QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
-    QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent->info);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
+  QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent->info);
 
-    info = (qbi_svc_bc_ext_slot_map_cmd_info_s *)qmi_txn->parent->info;
+  info = (qbi_svc_bc_ext_slot_map_cmd_info_s *)qmi_txn->parent->info;
 
-    /* GW: Activating slot */
-    if ((info->req.info_gw.act_need == TRUE) && (info->req.info_gw.act_done == FALSE))
-    {
-      info->req.info_gw.act_done = TRUE;
-      qmi_req = (uim_change_provisioning_session_req_msg_v01 *)
-        qbi_qmi_txn_alloc_ret_req_buf(qmi_txn->parent,
-        QBI_QMI_SVC_UIM, QMI_UIM_CHANGE_PROVISIONING_SESSION_REQ_V01,
-        qbi_svc_bc_ext_change_prov_session_act_s_uim38_rsp_cb);
-      QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+  /* Update mutlisim configuration NV to ensure it has latest slot mapping */
+  exec_slot_cfg.exec0_slot = info->req.slot;
+  /* Keeping prov_complete as FALSE since activation stage is not yet complete */
+  exec_slot_cfg.exec0_prov_complete = FALSE;
+  if (!qbi_nv_store_cfg_item_write(
+    qmi_txn->ctx, QBI_NV_STORE_CFG_ITEM_EXECUTOR_SLOT_CONFIG,
+    &exec_slot_cfg, sizeof(qbi_svc_bc_ext_exec_slot_config_s)))
+  {
+    QBI_LOG_E_0("Couldn't save req slot to NV during act");
+  }
+  else if ((info->req.info_gw.act_need == TRUE) && (info->req.info_gw.act_done == FALSE))
+  {
+    info->req.info_gw.act_done = TRUE;
+    qmi_req = (uim_change_provisioning_session_req_msg_v01 *)
+      qbi_qmi_txn_alloc_ret_req_buf(qmi_txn->parent,
+      QBI_QMI_SVC_UIM, QMI_UIM_CHANGE_PROVISIONING_SESSION_REQ_V01,
+      qbi_svc_bc_ext_change_prov_session_act_s_uim38_rsp_cb);
+    QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
 
-      qmi_req->session_change.session_type = UIM_SESSION_TYPE_PRIMARY_GW_V01;
-      qmi_req->session_change.activate = QBI_SVC_BC_EXT_SLOT_ACTIVATE;
-      qmi_req->application_information_valid = TRUE;
+    qmi_req->session_change.session_type = UIM_SESSION_TYPE_PRIMARY_GW_V01;
+    qmi_req->session_change.activate = QBI_SVC_BC_EXT_SLOT_ACTIVATE;
+    qmi_req->application_information_valid = TRUE;
 
-      if(info->req.slot == QBI_SVC_BC_EXT_SLOT_1)
-        qmi_req->application_information.slot = UIM_SLOT_1_V01;
-      else if(info->req.slot == QBI_SVC_BC_EXT_SLOT_2)
-        qmi_req->application_information.slot = UIM_SLOT_2_V01;
+    if(info->req.slot == QBI_SVC_BC_EXT_SLOT_1)
+      qmi_req->application_information.slot = UIM_SLOT_1_V01;
+    else if(info->req.slot == QBI_SVC_BC_EXT_SLOT_2)
+      qmi_req->application_information.slot = UIM_SLOT_2_V01;
 
-      qmi_req->application_information.aid_len = info->req.info_gw.aid_length;
-      QBI_MEMSCPY(qmi_req->application_information.aid, 
-        sizeof(qmi_req->application_information.aid), 
-        info->req.info_gw.aid, info->req.info_gw.aid_length);
-      action = QBI_SVC_ACTION_SEND_QMI_REQ;
-    }
-    else if((info->req.info_1x.act_need == TRUE) && (info->req.info_1x.act_done == FALSE))
-    {
-      /* 1x : Activating requested slot */
-      info->req.info_1x.act_done = TRUE;
-      qmi_req = (uim_change_provisioning_session_req_msg_v01 *)
-        qbi_qmi_txn_alloc_ret_req_buf(qmi_txn->parent, QBI_QMI_SVC_UIM,
-        QMI_UIM_CHANGE_PROVISIONING_SESSION_REQ_V01,
-        qbi_svc_bc_ext_change_prov_session_act_s_uim38_rsp_cb);
-      QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
+    qmi_req->application_information.aid_len = info->req.info_gw.aid_length;
+    QBI_MEMSCPY(qmi_req->application_information.aid, 
+      sizeof(qmi_req->application_information.aid), 
+      info->req.info_gw.aid, info->req.info_gw.aid_length);
+    action = QBI_SVC_ACTION_SEND_QMI_REQ;
+  }
+  else if((info->req.info_1x.act_need == TRUE) && (info->req.info_1x.act_done == FALSE))
+  {
+    /* 1x : Activating requested slot */
+    info->req.info_1x.act_done = TRUE;
+    qmi_req = (uim_change_provisioning_session_req_msg_v01 *)
+      qbi_qmi_txn_alloc_ret_req_buf(qmi_txn->parent, QBI_QMI_SVC_UIM,
+      QMI_UIM_CHANGE_PROVISIONING_SESSION_REQ_V01,
+      qbi_svc_bc_ext_change_prov_session_act_s_uim38_rsp_cb);
+    QBI_CHECK_NULL_PTR_RET_ABORT(qmi_req);
 
-      qmi_req->session_change.session_type = UIM_SESSION_TYPE_PRIMARY_1X_V01;
-      qmi_req->session_change.activate = QBI_SVC_BC_EXT_SLOT_ACTIVATE;
-      qmi_req->application_information_valid = TRUE;
+    qmi_req->session_change.session_type = UIM_SESSION_TYPE_PRIMARY_1X_V01;
+    qmi_req->session_change.activate = QBI_SVC_BC_EXT_SLOT_ACTIVATE;
+    qmi_req->application_information_valid = TRUE;
 
-      if(info->req.slot == QBI_SVC_BC_EXT_SLOT_1)
-        qmi_req->application_information.slot = UIM_SLOT_1_V01;
-      else if(info->req.slot == QBI_SVC_BC_EXT_SLOT_2)
-        qmi_req->application_information.slot = UIM_SLOT_2_V01;
+    if(info->req.slot == QBI_SVC_BC_EXT_SLOT_1)
+      qmi_req->application_information.slot = UIM_SLOT_1_V01;
+    else if(info->req.slot == QBI_SVC_BC_EXT_SLOT_2)
+      qmi_req->application_information.slot = UIM_SLOT_2_V01;
 
-      qmi_req->application_information.aid_len = info->req.info_1x.aid_length;
-      QBI_MEMSCPY(qmi_req->application_information.aid, 
-        sizeof(qmi_req->application_information.aid), 
-        info->req.info_1x.aid, info->req.info_1x.aid_length);
-      action = QBI_SVC_ACTION_SEND_QMI_REQ;
-    }
+    qmi_req->application_information.aid_len = info->req.info_1x.aid_length;
+    QBI_MEMSCPY(qmi_req->application_information.aid, 
+      sizeof(qmi_req->application_information.aid), 
+      info->req.info_1x.aid, info->req.info_1x.aid_length);
+    action = QBI_SVC_ACTION_SEND_QMI_REQ;
+  }
 
-    return action;
+  return action;
 } /* qbi_svc_bc_ext_slot_mapping_s_act_req() */
 
 /*===========================================================================
@@ -13438,6 +13388,8 @@ static void qbi_svc_bc_ext_slot_info_ind_q_msuicc_cache_release
         QBI_LOG_E_1("Cannot remove channel %d from cache",
           logical_channel->channel_id);
       }
+
+      qbi_util_list_iter_init(&msuicc_cache->logical_channel_list, &iter);
     }
     QBI_MEMSET(msuicc_cache, 0, sizeof(qbi_svc_msuicc_cache_s));
     QBI_LOG_D_1("Flushing the msuicc cache for slot %d",

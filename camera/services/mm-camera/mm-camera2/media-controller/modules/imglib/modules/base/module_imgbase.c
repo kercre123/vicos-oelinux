@@ -1434,7 +1434,8 @@ boolean module_imgbase_port_event_func(mct_port_t *port,
         IDBG_HIGH("[%s] Processing mask absent!", p_mod->name);
       }
       p_stream->streamon = false;
-      if (p_mod->caps.use_internal_bufs && !p_client->stream_on) {
+      //incase of internal output buffers, issue stream off to downstream first
+      if (p_mod->caps.use_internal_bufs && p_mod->caps.num_output) {
         p_client->state = IMGLIB_STATE_STOP_PENDING;
         rc = module_imgbase_forward_port_event(p_client, port, event);
         fwd_event = FALSE;

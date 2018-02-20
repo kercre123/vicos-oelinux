@@ -2373,13 +2373,15 @@ static void module_hdr_port_divert_notify_cb(void* user_data,
       if (list_match && list_match->data) {
         found = TRUE;
         frame_config = *(module_frame_config_t *)list_match->data;
+        void * stored_param = list_match->data;
 
         if (frame_config.src_port_linked) {
           send_frame_to_next_module = TRUE;
         } else {
           private_data->config_list = mct_list_remove(private_data->config_list,
-            list_match->data);
-          free(list_match->data);
+            stored_param);
+          free(stored_param);
+          stored_param = NULL;
         }
       } else {
         IDBG_ERROR("Memory corruption in %s:%d \n", __func__, __LINE__);

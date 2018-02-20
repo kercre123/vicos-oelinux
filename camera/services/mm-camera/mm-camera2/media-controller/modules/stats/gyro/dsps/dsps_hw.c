@@ -67,8 +67,10 @@ int dsps_disconnect(void * sensor_config)
     rc = -1;
   }
   pthread_mutex_destroy(&(dsps_config->callback_mutex));
+  pthread_condattr_destroy(&dsps_config->callback_condattr);
   pthread_cond_destroy(&(dsps_config->callback_condvar));
   pthread_mutex_destroy(&(dsps_config->thread_mutex));
+  pthread_condattr_destroy(&dsps_config->thread_condattr);
   pthread_cond_destroy(&(dsps_config->thread_condvar));
 
   return rc;

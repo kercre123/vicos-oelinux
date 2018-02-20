@@ -85,7 +85,9 @@ asd_thread_data_t* asd_thread_init(void)
 
   pthread_mutex_init(&thread_data->msg_q_lock, NULL);
   mct_queue_init(thread_data->msg_q);
-  pthread_cond_init(&(thread_data->thread_cond), NULL);
+  pthread_condattr_init(&thread_data->thread_condattr);
+  pthread_condattr_setclock(&thread_data->thread_condattr, CLOCK_MONOTONIC);
+  pthread_cond_init(&(thread_data->thread_cond), &thread_data->thread_condattr);
   pthread_mutex_init(&(thread_data->thread_mutex), NULL);
   sem_init(&thread_data->sem_launch, 0, 0);
 
@@ -108,6 +110,7 @@ void asd_thread_deinit(asd_thread_data_t *thread_data)
   ASD_LOW("thread_data: %p", thread_data);
   pthread_mutex_destroy(&thread_data->thread_mutex);
   pthread_cond_destroy(&thread_data->thread_cond);
+  pthread_condattr_destroy(&thread_data->thread_condattr);
   pthread_mutex_lock(&thread_data->msg_q_lock);
   mct_queue_free(thread_data->msg_q);
   pthread_mutex_unlock(&thread_data->msg_q_lock);

@@ -24,7 +24,6 @@ $Header$
 
 when      who  what, where, why
 --------  ---  ---------------------------------------------------------------
-08/24/17  vk   Exposed DataClass API
 01/13/12  bd   Expose AvailableDataClass for SMS transcoding
 10/28/11  bd   Updated to MBIM v1.0 SC
 07/28/11  bd   Initial release based on MBIM v0.3+
@@ -121,25 +120,6 @@ boolean qbi_svc_bc_device_is_in_ftm
 */
 /*=========================================================================*/
 boolean qbi_svc_bc_device_supports_3gpp2
-(
-  const qbi_ctx_s *ctx
-);
-
-/*===========================================================================
-  FUNCTION: qbi_svc_bc_get_available_data_class
-===========================================================================*/
-/*!
-    @brief Returns the current AvailableDataClass reported in
-    MBIM_CID_REGISTER_STATE
-
-    @details
-
-    @param ctx
-
-    @return uint32
-*/
-/*=========================================================================*/
-uint32 qbi_svc_bc_get_attach_state
 (
   const qbi_ctx_s *ctx
 );

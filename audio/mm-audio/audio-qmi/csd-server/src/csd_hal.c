@@ -21,7 +21,7 @@ struct csd_hal_common_data csd_hal_common_data = {0};
 
 #define DEV_ROUTE_LENGTH 15
 #define KV_PAIR_LENGTH 40
-#define NUM_OF_ROUTINGS 4
+#define NUM_OF_ROUTINGS 8
 #define NUM_OF_SESSIONS 4
 #define NAMES_PER_SESSION 2
 #define NUM_OF_MUTE_TYPES 4
@@ -46,8 +46,11 @@ typedef struct {
 static routing_info_t routing_info[NUM_OF_ROUTINGS] = {
   {8, 10, "routing=4" },
   {4, 7, "routing=1" },
+  {41, 7, "routing=1" },
   {16, 17, "routing=4" },
   {11, 14, "routing=2" },
+  {43, 14, "routing=2" },
+  {43, 135, "routing=2" },
   {11, 135, "routing=2" }
 };
 

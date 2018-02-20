@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (c) 2016-2017 Qualcomm Technologies, Inc.                            *
+* Copyright (c) 2016-2018 Qualcomm Technologies, Inc.                       *
 * All Rights Reserved.                                                      *
 * Confidential and Proprietary - Qualcomm Technologies, Inc.                *
 ****************************************************************************/
@@ -758,11 +758,21 @@ static boolean module_svhdr_handle_set_stream_cfg(uint32_t event_identity,
     p_output_info->custom_format.start_x;
   p_sensor_out_dim->custom_format.start_y =
     p_output_info->custom_format.start_y;
+  p_sensor_out_dim->custom_format.lef_byte_offset =
+    p_output_info->custom_format.lef_byte_offset;
+  p_sensor_out_dim->custom_format.sef_byte_offset =
+    p_output_info->custom_format.sef_byte_offset;
   p_sensor_out_dim->custom_format.subframes_cnt =
     p_output_info->custom_format.subframes_cnt;
+  p_sensor_out_dim->custom_format.sensor_layout =
+    p_output_info->custom_format.sensor_layout;
   IDBG_MED("custom_format.enable %d custom_format.subframes_cnt %d",
     p_output_info->custom_format.enable,
     p_output_info->custom_format.subframes_cnt);
+  IDBG_MED("lef_byte_offset %d sef_byte_offset %d sensor_layout %d",
+    p_sensor_out_dim->custom_format.lef_byte_offset,
+    p_sensor_out_dim->custom_format.sef_byte_offset,
+    p_sensor_out_dim->custom_format.sensor_layout);
   IDBG_MED("start_y %d start_x %d", p_output_info->custom_format.start_y,
     p_output_info->custom_format.start_x);
   IDBG_MED("custom fmt W x H %d x %d",
@@ -979,6 +989,12 @@ static int module_svhdr_client_get_out_dim(imgbase_client_t *p_client,
     out_dim->custom_format.width;
   info.in_info.custom_format.height =
     out_dim->custom_format.height;
+  info.in_info.custom_format.lef_byte_offset =
+    out_dim->custom_format.lef_byte_offset;
+  info.in_info.custom_format.sef_byte_offset =
+    out_dim->custom_format.sef_byte_offset;
+  info.in_info.custom_format.sensor_layout=
+    out_dim->custom_format.sensor_layout;
 
   info.out_info = info.in_info;
   info.out_info.analysis = info.in_info.analysis;
@@ -1400,6 +1416,13 @@ static boolean module_svhdr_client_map_buf(uint32_t event_identity,
   }
 
   if (prepare_info.in_buf_map.frame_cnt || prepare_info.out_buf_map.frame_cnt) {
+    rc = IMG_COMP_SET_PARAM(p_comp, QIMG_PARAM_SET_LIB_CALLBACK,
+      NULL); /*Use the deault framproc callback*/
+    if (IMG_ERROR(rc)) {
+      IDBG_ERROR("Fail to map stream buffers");
+      rc = IMG_ERR_INVALID_OPERATION;
+      goto out_and_unlock;
+    }
     /*Set tuning info from chromatix pointer*/
     if(p_chromatix->chromatixIotPtr) {
       chromatix_iot_parms_type* p_chromatix_iot =

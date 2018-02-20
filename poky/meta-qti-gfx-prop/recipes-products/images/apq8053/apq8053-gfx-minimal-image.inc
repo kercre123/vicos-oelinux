@@ -1,3 +1,3 @@
 # gfx proprietary source Packages
 
-IMAGE_INSTALL += "adreno200"
+IMAGE_INSTALL += "adreno"

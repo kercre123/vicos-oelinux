@@ -64,6 +64,14 @@ typedef struct _is_sensor_info {
   uint64_t                  l_readout_time;
 } is_sensor_info_t;
 
+typedef struct _is_vfe_window {
+  uint32_t                  scaler_output_w;
+  uint32_t                  scaler_output_h;
+  uint32_t                  vfe_start_x;
+  uint32_t                  vfe_start_y;
+  uint32_t                  vfe_end_x;
+  uint32_t                  vfe_end_y;
+}is_vfe_window_t;
 
 /** is_dis_config_info:
  *    @stream_type: stream type (preview, video)
@@ -74,6 +82,8 @@ typedef struct _is_dis_config_info {
   cam_stream_type_t stream_type;
   uint32_t width;
   uint32_t height;
+  uint32_t stride;
+  uint32_t scanline;
 } is_dis_config_info_t;
 
 
@@ -233,8 +243,12 @@ typedef struct {
 typedef struct {
   int32_t dis_frame_width;
   int32_t dis_frame_height;
+  int32_t dis_frame_stride;
+  int32_t dis_frame_scanline;
   int32_t vfe_output_width;
   int32_t vfe_output_height;
+  int32_t vfe_output_stride;
+  int32_t vfe_output_scanline;
   uint16_t frame_fps;
   uint16_t num_mesh_y;
 } frame_cfg_t;

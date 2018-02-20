@@ -2,8 +2,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
   ---------------------------------------------------------------------------
 ******************************************************************************/
 
@@ -165,7 +166,11 @@ mcm_error_t_v01 hlos_map_qmi_sim_error_to_mcm_error(qmi_error_type_v01 qmi_sim_e
 
 uint32_t hlos_map_qmi_ril_error_to_mcm_error(int qmi_ril_error);
 
-
-
+void hlos_core_mcm_ssr_init(void);
+void hlos_core_mcm_ssr_resume(void);
+void hlos_core_register_for_service_down(ssr_srv_down_cb hlos_cb_srv_down_complete);
+void hlos_cb_srv_down_complete(void);
+void hlos_core_register_for_service_up_event(ssr_srv_up_cb hlos_cb_srv_up_complete);
+void hlos_cb_srv_up_complete(void);
 #endif
 

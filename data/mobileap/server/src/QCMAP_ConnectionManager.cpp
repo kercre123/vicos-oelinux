@@ -206,6 +206,7 @@ QCMAP_ConnectionManager* QCMAP_ConnectionManager::Get_Instance
     QCMAP_LAN* QcMapLan = QCMAP_LAN::Get_Instance(true);
     LOG_MSG_INFO1("Creating object : QCMAP",0, 0, 0);
     object = new QCMAP_ConnectionManager();
+    object->init();
     flag = true;
     return object;
   }
@@ -1006,6 +1007,14 @@ static void QCMAP_ConnectionManager_callback
     if (pBackhaulWWANObj)
     {
       pBackhaulWWANObj->AddDNSRoutesForPDN(QCMAP_MSGR_WWAN_CALL_TYPE_V6_V01);
+      if(QCMAPLANMgr &&
+        (QCMAP_MSGR_DHCPV6_MODE_UP_V01 != pBackhaulWWANObj->dhcpv6_dns_conf.dhcpv6_enable_state) &&
+        (pBackhaulWWANObj->GetProfileHandle() == QCMAP_Backhaul::GetDefaultProfileHandle()) &&
+        (pBackhaulWWANObj->GetProfileHandle() != 0))
+      {
+        QCMAPLANMgr->AddDNSNameServers(pBackhaulWWANObj->pri_dns_ipv6_addr,
+                                       pBackhaulWWANObj->sec_dns_ipv6_addr);
+      }
     }
     ds_system_call("echo QCMAP:WAN connected v6 > /dev/kmsg",\
                    strlen("echo QCMAP:WAN connected v6 > /dev/kmsg"));
@@ -1131,6 +1140,12 @@ static void QCMAP_ConnectionManager_callback
     if (pBackhaulWWANObj)
     {
       pBackhaulWWANObj->DeleteDNSRoutesForPDN(QCMAP_MSGR_WWAN_CALL_TYPE_V6_V01);
+      if((pBackhaulWWANObj->GetProfileHandle() == QCMAP_Backhaul::GetDefaultProfileHandle()) &&
+         (pBackhaulWWANObj->GetProfileHandle() != 0))
+      {
+        QCMAPLANMgr->DeleteDNSNameServers(pBackhaulWWANObj->pri_dns_ipv6_addr,
+                                          pBackhaulWWANObj->sec_dns_ipv6_addr);
+      }
     }
 
     if (cbPtr && cbPtr->wwan_cb && pBackhaulWWANObj)
@@ -1167,9 +1182,24 @@ static void QCMAP_ConnectionManager_callback
     if( !cradle_sta_eth_bh_active)
     {
       QcMapBackhaul->DisableIPV6Forwarding(true);
+      if(QCMAPLANMgr && pBackhaulWWANObj &&
+         (pBackhaulWWANObj->GetProfileHandle() == QCMAP_Backhaul::GetDefaultProfileHandle()) &&
+         (pBackhaulWWANObj->GetProfileHandle() != 0))
+      {
+        QCMAPLANMgr->DeleteDNSNameServers(pBackhaulWWANObj->pri_dns_ipv6_addr,
+                                          pBackhaulWWANObj->sec_dns_ipv6_addr);
+      }
       QcMapFirewall->CleanIPv6MangleTable();
       QcMapBackhaul->EnableIPV6Forwarding();
       QcMapFirewall->EnableIPV6Firewall();
+      if(QCMAPLANMgr && pBackhaulWWANObj &&
+        (QCMAP_MSGR_DHCPV6_MODE_UP_V01 != pBackhaulWWANObj->dhcpv6_dns_conf.dhcpv6_enable_state) &&
+        (pBackhaulWWANObj->GetProfileHandle() == QCMAP_Backhaul::GetDefaultProfileHandle()) &&
+        (pBackhaulWWANObj->GetProfileHandle() != 0))
+      {
+        QCMAPLANMgr->AddDNSNameServers(pBackhaulWWANObj->pri_dns_ipv6_addr,
+                                       pBackhaulWWANObj->sec_dns_ipv6_addr);
+      }
     }
   break;
   case QCMAP_CM_EVENT_DISABLED:
@@ -1336,7 +1366,8 @@ static void QCMAP_ConnectionManager_callback
   }
 
   //pBackhaulWWANObj would not be NULL if this callback is for WWAN event
-  if((NULL != pBackhaulWWANObj) && (NULL != QcMapNatAlg) && (NULL != manager))
+  if((NULL != QcMapMgr) && IS_SOCKSV5_ALLOWED(QcMapMgr->target) && (NULL != pBackhaulWWANObj) &&
+     (NULL != QcMapNatAlg) && (NULL != manager))
   {
     switch(event)
     {
@@ -1510,14 +1541,13 @@ static void QCMAP_ConnectionManager_callback
 ==========================================================*/
 /*!
 @brief
-  Initializes QCMAP_ConnectionManager variables.
+  Creates QCMAP_ConnectionManager object
 
 @parameters
 none
 
 @return
-  true  - on success
-  false - on failure
+none
 
 @note
 - Dependencies
@@ -1529,6 +1559,31 @@ none
 /*=========================================================*/
 
 QCMAP_ConnectionManager::QCMAP_ConnectionManager()
+{
+ /*All the initialization will be taken care in the init function*/
+  return;
+}
+
+/*==========================================================*/
+/*!
+@brief
+  Initializes QCMAP_ConnectionManager variables.
+
+@parameters
+none
+
+@return
+none
+
+@note
+- Dependencies
+- None
+
+- Side Effects
+- None
+*/
+/*=========================================================*/
+void QCMAP_ConnectionManager::init()
 {
   QCMAP_CM_LOG_FUNC_ENTRY();
   char command[MAX_COMMAND_STR_LEN];
@@ -1554,9 +1609,12 @@ QCMAP_ConnectionManager::QCMAP_ConnectionManager()
   this->cfg.bootup_config.enable_wlan_at_bootup =false;
   this->cfg.bootup_config.enable_mobileap_at_bootup =false;
   this->cfg.bootup_config.enable_gsb_at_bootup =false;
+  this->target =  DS_TARGET_INVALID;
+  this->target = ds_get_target();
 
   this->cfg.packet_stats_config = false;
   this->packet_stats_enabled = false;
+  this->data_path_opt_enable = false;
 
   if(QCMAP_ConnectionManager::CheckDUNSoftAPMode())
   {
@@ -1611,17 +1669,23 @@ QCMAP_ConnectionManager::QCMAP_ConnectionManager()
     snprintf( command, MAX_COMMAND_STR_LEN,
               "cp %s %s ",this->xml_path,FACTORY_CONF);
     ds_system_call(command, strlen(command));
-  }
-
-  if(!doesFileExist(FACTORY_SOCKSV5_CONF))
-  {
-    snprintf(command, MAX_COMMAND_STR_LEN, "cp %s %s ", SOCKSV5_DEFAULT_CONF, FACTORY_SOCKSV5_CONF);
+    snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",FACTORY_CONF);
     ds_system_call(command, strlen(command));
   }
 
-  if(!doesFileExist(FACTORY_SOCKSV5_AUTH))
+  if(IS_SOCKSV5_ALLOWED(this->target) && !doesFileExist(FACTORY_SOCKSV5_CONF))
+  {
+    snprintf(command, MAX_COMMAND_STR_LEN, "cp %s %s ", SOCKSV5_DEFAULT_CONF, FACTORY_SOCKSV5_CONF);
+    ds_system_call(command, strlen(command));
+    snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",FACTORY_SOCKSV5_CONF);
+    ds_system_call(command, strlen(command));
+  }
+
+  if(IS_SOCKSV5_ALLOWED(this->target) && !doesFileExist(FACTORY_SOCKSV5_AUTH))
   {
     snprintf(command, MAX_COMMAND_STR_LEN, "cp %s %s ", SOCKSV5_DEFAULT_AUTH, FACTORY_SOCKSV5_AUTH);
+    ds_system_call(command, strlen(command));
+    snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",FACTORY_SOCKSV5_AUTH);
     ds_system_call(command, strlen(command));
   }
 
@@ -1629,13 +1693,13 @@ QCMAP_ConnectionManager::QCMAP_ConnectionManager()
   {
     snprintf(command, MAX_COMMAND_STR_LEN, "cp %s %s ", L2TP_CFG_XML, FACTORY_L2TP_CONF);
     ds_system_call(command, strlen(command));
+    snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",FACTORY_L2TP_CONF);
+    ds_system_call(command, strlen(command));
   }
 
-  this->target =  DS_TARGET_INVALID;
   this->is_ssr_in_progress = false;
-
   memset (&this->dyn_clk_info, 0, sizeof(qcmap_cm_dynamic_clock_info_t));
-  this->target = ds_get_target();
+
   if (this->target == DS_TARGET_LYKAN || this->target == DS_TARGET_LE_MDM9x06)
   {
     fd = open(USB_CLK_UPDATE_NODE,O_WRONLY);
@@ -2597,6 +2661,7 @@ boolean QCMAP_ConnectionManager::ReadQCMAPConfigFromXML(char *xml_path)
   pugi::xml_node          concurrentCfgNode;
   QCMAP_Backhaul         *pBackhaul;
   profile_handle_type_v01 profile_handle;
+  int value_debug = 0;
 
   QCMAP_CM_LOG_FUNC_ENTRY();
 
@@ -2667,6 +2732,14 @@ boolean QCMAP_ConnectionManager::ReadQCMAPConfigFromXML(char *xml_path)
   root = xml_file.child(System_TAG).child(MobileAPCfg_TAG).child(PacketStats_TAG);
   this->cfg.packet_stats_config  =
                                 atoi(root.child(PacketStatsCfg_TAG).child_value());
+  root = xml_file.child(System_TAG).child(MobileAPCfg_TAG).child(MobileAPBootUp_TAG);
+  this->data_path_opt_enable = (boolean) atoi(root.child(DataPathOpt_Tag).child_value());
+  if (this->data_path_opt_enable)
+  {
+    value_debug = QCMAP_ConnectionManager::DataPathOptInit(this->data_path_opt_enable);
+    LOG_MSG_INFO1("Enabling data path optimization ret val: %d,%d",value_debug, this->data_path_opt_enable,0);
+  }
+
   return true;
 }
 
@@ -2905,15 +2978,26 @@ boolean QCMAP_ConnectionManager::RestoreFactoryConfig
   snprintf( command, MAX_COMMAND_STR_LEN,
             "cp %s %s ",FACTORY_CONF,QcMapMgr->xml_path);
   ds_system_call(command, strlen(command));
+  snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",QcMapMgr->xml_path);
+  ds_system_call(command, strlen(command));
 
-  if(QCMAP_NATALG::GetSOCKSv5ConfigFilePathFromXML(&socksv5_file_path))
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+
+  } else if(QCMAP_NATALG::GetSOCKSv5ConfigFilePathFromXML(&socksv5_file_path))
   {
     snprintf(command, MAX_COMMAND_STR_LEN, "cp %s %s ", FACTORY_SOCKSV5_CONF,
              socksv5_file_path.conf_file);
     ds_system_call(command, strlen(command));
+    snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",socksv5_file_path.conf_file);
+    ds_system_call(command, strlen(command));
 
     snprintf(command, MAX_COMMAND_STR_LEN, "cp %s %s ", FACTORY_SOCKSV5_AUTH,
              socksv5_file_path.auth_file);
+    ds_system_call(command, strlen(command));
+    snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",socksv5_file_path.auth_file);
     ds_system_call(command, strlen(command));
 
   } else {
@@ -2922,6 +3006,8 @@ boolean QCMAP_ConnectionManager::RestoreFactoryConfig
 
   snprintf(command, MAX_COMMAND_STR_LEN, "cp %s %s ", FACTORY_L2TP_CONF,
             L2TP_CFG_XML);
+  ds_system_call(command, strlen(command));
+  snprintf( command, MAX_COMMAND_STR_LEN,"fsync -d %s",L2TP_CFG_XML);
   ds_system_call(command, strlen(command));
 
   if(!xml_file.load_file(QcMapMgr->xml_path))
@@ -2965,7 +3051,10 @@ boolean QCMAP_ConnectionManager::RestoreFactoryConfig
 @parameters
   Pointer to qcmap_nl_addr_t
 @return
-  none
+  1 if MAC address found in list
+  0 if not found
+  -1 other errors
+
 @note
 - Dependencies
 - None
@@ -2973,7 +3062,7 @@ boolean QCMAP_ConnectionManager::RestoreFactoryConfig
 - None
 */
 /*=====================================================*/
-bool QCMAP_ConnectionManager::MatchMacAddrInList
+int QCMAP_ConnectionManager::MatchMacAddrInList
 (
   qcmap_nl_addr_t* nl_addr
 )
@@ -2997,6 +3086,13 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
   QCMAP_Backhaul_WWAN* QcMapBackhaulWWANMgr=GET_DEFAULT_BACKHAUL_WWAN_OBJECT();
   QCMAP_LAN* QCMAPLANMgr=GET_DEFAULT_LAN_OBJECT();
   qcmap_addr_info_list_t* addrList = &(QcMapMgr->addrList);
+  qcmap_msgr_ip_passthrough_config_v01 passthrough_config;
+  qcmap_msgr_ip_passthrough_mode_enum_v01 enable_state;
+  uint32_t lease_expiry_time = 0;
+  FILE *fd = NULL;
+  pugi::xml_document xml_file;
+  pugi::xml_node root, child;
+  char command[MAX_COMMAND_STR_LEN];
 
   memset(devname, 0, DSI_CALL_INFO_DEVICE_NAME_MAX_LEN+2);
   memset(origIPv6,0,QCMAP_MSGR_IPV6_ADDR_LEN_V01);
@@ -3007,7 +3103,7 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
   if ( addrList->addrListHead == NULL)
   {
     LOG_MSG_ERROR("\nMatchMacAddrInList - Linked list head is NULL \n",0,0,0);
-    return false;
+    return 0;
   }
 
   ds_mac_addr_ntop(nl_addr->mac_addr, mac_addr_char);
@@ -3019,7 +3115,7 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
   {
     LOG_MSG_ERROR("\nMatchMacAddrInList - No match for MAC address "
                   "found in the list\n",0,0,0);
-    return false;
+    return 0;
   }
   else
   {
@@ -3028,11 +3124,12 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
     if (list_data == NULL)
     {
       LOG_MSG_ERROR("MatchMacAddrInList - Error in fetching node data ",0,0,0);
-      return false;
+      return -1;
     }
     ds_mac_addr_ntop(list_data->mac_addr, mac_addr_char);
     LOG_MSG_INFO1(" QCMAP_ConnectionManager::MatchMacAddrInList() Found node with MAC addr %s \n",
                mac_addr_char,0,0);
+
     if(nl_addr->isValidIPv4address == true && nl_addr->ip_addr != 0)
     {
       if (list_data->ip_addr == nl_addr->ip_addr)
@@ -3044,20 +3141,99 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
       {
         addr.s_addr = nl_addr->ip_addr;
         LOG_MSG_INFO1("Adding a new entry for IP %s \n",inet_ntoa(addr),0,0);
-        list_data->ip_addr = nl_addr->ip_addr;
-        if (QCMAP_Backhaul_WLAN::IsAPSTABridgeActivated())
+        if (list_data->device_type == QCMAP_MSGR_DEVICE_TYPE_USB_V01)
         {
-          if (!QCMAPLANMgr->AddEbtablesRuleForBridgeMode(list_data))
-            LOG_MSG_ERROR( "Unable to Add Ebtables rules for NEWNEIGH AP-STA Bridge Mode",
-                           0,0,0 );
+          // Delete the hostname.txt file if present
+          snprintf(command, MAX_COMMAND_STR_LEN, "rm %s",HOSTNAME_PATH);
+          ds_system_call(command, strlen(command));
+
+          //Prune the dnsmasq.leases file to have lease expiry time, MAC address and hostname
+          snprintf(command, MAX_COMMAND_STR_LEN,
+                   "cut -f1,2,4 -d ' '  %s >	  %s",
+                   DNSMASQ_LEASE_FILE,
+                   HOSTNAME_PATH);
+          ds_system_call(command, strlen(command));
+
+          //Open the hostname.txt file to fetch lease time and hostname
+          fd = fopen(HOSTNAME_PATH,"r");
+          if (fd == NULL)
+          {
+            LOG_MSG_ERROR("Error in opening %s", HOSTNAME_PATH, 0, 0);
+            return false;
+          }
+
+          fetchHostNameAndLeasetime(fd ,list_data->mac_addr,
+                                    list_data->host_name,
+                                    &lease_expiry_time);
+          fclose(fd);
+        }
+        /* Check if IP passthrough active and update the IP only if it is public IP. */
+        QCMAPLANMgr->GetIPPassthroughConfig(&enable_state,&passthrough_config,&qmi_err_num);
+        LOG_MSG_INFO1("IP Passthrough hostnames IP:%s%s\n", list_data->host_name, passthrough_config.client_device_name, 0);
+        /* If IP passthrough is active, for USB client, only for the client with specified hostname
+         * check if the IP is matching the public ip. For Ethernet client check will be based on
+         * mac address. For rest of the clients, ip address will be privat ip.
+         */
+        if (QCMAPLANMgr && QCMAPLANMgr->lan_cfg.ip_passthrough_cfg.ip_passthrough_active &&
+            (((list_data->device_type == QCMAP_MSGR_DEVICE_TYPE_USB_V01) &&
+            !strncmp(list_data->host_name, passthrough_config.client_device_name, strlen(list_data->host_name)-1)) ||
+            ((list_data->device_type == QCMAP_MSGR_DEVICE_TYPE_ETHERNET_V01) &&
+            !memcmp(list_data->mac_addr, passthrough_config.mac_addr,
+            QCMAP_MSGR_MAC_ADDR_LEN_V01))))
+        {
+          if (nl_addr->ip_addr != (uint32_t)QCMAPLANMgr->lan_cfg.ip_passthrough_cfg.public_ip)
+          {
+            addr.s_addr = (uint32_t)QCMAPLANMgr->lan_cfg.ip_passthrough_cfg.public_ip;
+            LOG_MSG_INFO1("IP Passthrough active and IP doesn't match with public ip %s ignore\n",inet_ntoa(addr),0,0);
+          }
+          else
+          {
+            list_data->ip_addr = nl_addr->ip_addr;
+            addr.s_addr = list_data->ip_addr;
+            LOG_MSG_INFO1("IP Passthrough active and updated IP %s\n",inet_ntoa(addr),0,0);
+            /* Updating the IPACM XML with the mac address for which IP passthrough is enabled. */
+            if (!xml_file.load_file(IPA_XML_PATH))
+            {
+              LOG_MSG_ERROR("Unable to load IPACM XML file.",0,0,0);
+              return false;
+            }
+            root = xml_file.child(System_TAG).child(IPACM_TAG).child(IPPassthroughFlag_TAG);
+            if (list_data->device_type == QCMAP_MSGR_DEVICE_TYPE_USB_V01)
+            {
+              /* mac address is not provided for USB client*/
+              root.child(IPPassthroughMacAddr_TAG).text() = ether_ntoa((struct ether_addr *)list_data->mac_addr);
+            }
+            QcMapMgr->WriteConfigToXML(UPDATE_IPACFG_XML,&xml_file);
+          }
+        }
+        else
+        {
+          if (QCMAPLANMgr &&
+              ((QCMAPLANMgr->lan_cfg.apps_ip_addr & QCMAPLANMgr->lan_cfg.sub_net_mask) !=
+              (ntohl(nl_addr->ip_addr) & QCMAPLANMgr->lan_cfg.sub_net_mask)) && !QCMAP_Backhaul_WLAN::IsAPSTABridgeActivated())
+          {
+            addr.s_addr = nl_addr->ip_addr;
+            LOG_MSG_INFO1("IP not in LAN subnet, ignore %s\n",inet_ntoa(addr), 0, 0);
+          }
+          else
+          {
+            list_data->ip_addr = nl_addr->ip_addr;
+            if (QCMAP_Backhaul_WLAN::IsAPSTABridgeActivated())
+            {
+              if (!QCMAPLANMgr->AddEbtablesRuleForBridgeMode(list_data))
+                LOG_MSG_ERROR( "Unable to Add Ebtables rules for NEWNEIGH AP-STA Bridge Mode",
+                           0, 0, 0 );
+            }
+          }
         }
       }
     }
+
     memcpy(origIPv6, nl_addr->ip_v6_addr,QCMAP_MSGR_IPV6_ADDR_LEN_V01);
     nl_prefix_ptr = (struct ps_in6_addr*)(nl_addr->ip_v6_addr);
 
     inet_ntop(AF_INET6,(void *)origIPv6, ipv6addr, INET6_ADDRSTRLEN);
-    LOG_MSG_INFO1("MatchMacAddrInList- Revceived V6 Address %s",ipv6addr,0,0);
+    LOG_MSG_INFO1("MatchMacAddrInList- Received V6 Address %s, ipv6 valid? %d",ipv6addr,nl_addr->isValidIPv6address,0);
 
     if((nl_addr->isValidIPv6address == true) &&
          !(QCMAP_IN6_IS_PREFIX_LINKLOCAL(nl_prefix_ptr->ps_s6_addr32)) && (QcMapBackhaulMgr != NULL))
@@ -3065,7 +3241,7 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
       if(QcMapBackhaulMgr->GetDeviceName(devname, QCMAP_MSGR_IP_FAMILY_V6_V01, &qmi_err_num) == 0)
       {
         LOG_MSG_ERROR("Couldn't get ipv6 rmnet name. error %d. Ignore v6 address\n", qcmap_cm_error,0,0);
-        return false;
+        return 1;
       }
       memset(&QcMapBackhaulMgr->ipv6_prefix_info, 0, sizeof(qcmap_cm_nl_prefix_info_t));
       QcMapBackhaulMgr->ipv6_prefix_info.cache_info.ifa_prefered = IPV6_DEFAULT_PREFERED_LIFETIME;
@@ -3142,12 +3318,12 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
             ipv6_del_prefix_info.prefix_len =  (unsigned char) IPV6_MIN_PREFIX_LENGTH;
             memcpy(((struct sockaddr_in6*)&(ipv6_del_prefix_info.prefix_addr))->sin6_addr.s6_addr,
                    list_data->ipv6[0].addr, ipv6PrefixLen);
-          if( QcMapBackhaulMgr &&
+            if( QcMapBackhaulMgr &&
               QcMapBackhaulMgr->UpdatePrefix(&ipv6_del_prefix_info,true, true,
               list_data->link_local_v6_addr) == -1)
             {
               LOG_MSG_ERROR("Error: Unable to deprecate prefix", 0, 0, 0);
-              return false;
+              return 1;
             }
           }
       }
@@ -3167,20 +3343,43 @@ bool QCMAP_ConnectionManager::MatchMacAddrInList
          LOG_MSG_INFO1("MatchMacAddrInList- New LL V6 Address %s updated\n",ipv6addr,0,0);
       }
 
+      if(QcMapBackhaulWWANMgr && QcMapBackhaulWWANMgr->prefix_delegation_activated)
+      {
+        LOG_MSG_ERROR("Prefix delegation Enabled.Don't update client prefixes",
+                      0, 0, 0);
+        return 1;
+      }
+
       if ( memcmp(&null_ipv6_address, (struct in6_addr *)list_data->ipv6[0].addr,
             sizeof(struct in6_addr) ) )
       {
-        /* Update the global address with this IID. */
-        global_addr_ptr = (struct ps_in6_addr *)list_data->ipv6[0].addr;
+        /* Update the global address with new IID and prefix. */
+        if((QcMapBackhaulMgr == NULL) || (QcMapBackhaulMgr->GetDeviceName(devname, QCMAP_MSGR_IP_FAMILY_V6_V01, &qmi_err_num) == 0))
+        {
+          LOG_MSG_ERROR("Couldn't get ipv6 rmnet name. error %d. Ignore v6 address\n", qcmap_cm_error,0,0);
+          return 1;
+        }
+        memset(&QcMapBackhaulMgr->ipv6_prefix_info, 0, sizeof(qcmap_cm_nl_prefix_info_t));
+        QcMapBackhaulMgr->ipv6_prefix_info.cache_info.ifa_prefered = IPV6_DEFAULT_PREFERED_LIFETIME;
+        QcMapBackhaulMgr->ipv6_prefix_info.cache_info.ifa_valid = IPV6_DEFAULT_VALID_LIFETIME;
+
+        QcMapBackhaulMgr->GetIPV6PrefixInfo(devname,&(QcMapBackhaulMgr->ipv6_prefix_info));
+        prefix_ptr = (struct ps_in6_addr *) &(((struct sockaddr_in6 *)&
+                   (QcMapBackhaulMgr->ipv6_prefix_info.prefix_addr))->sin6_addr);
+        prefix_ptr->ps_s6_addr64[1] <<=
+              QcMapBackhaulMgr->ipv6_prefix_info.prefix_len;
+        prefix_ptr->ps_s6_addr64[1] >>=
+            QcMapBackhaulMgr->ipv6_prefix_info.prefix_len;
         iid_addr_ptr = (struct ps_in6_addr *)list_data->link_local_v6_addr;
-        global_addr_ptr->ps_s6_addr64[1] = iid_addr_ptr->ps_s6_addr64[1];
+        prefix_ptr->ps_s6_addr64[1] = iid_addr_ptr->ps_s6_addr64[1];
+        memcpy(list_data->ipv6[0].addr, prefix_ptr, sizeof(struct in6_addr));
         inet_ntop(AF_INET6,(void *)list_data->ipv6[0].addr,ipv6addr, INET6_ADDRSTRLEN);
         LOG_MSG_INFO1("MatchMacAddrInList- New Global V6 Address %s updated\n",ipv6addr,0,0);
       }
     }
   }
   LOG_MSG_INFO1("bye match mac addr in list",0,0,0);
-  return true;
+  return 1;
 
 }
 
@@ -3352,10 +3551,10 @@ bool QCMAP_ConnectionManager::DeleteDeviceEntryInfo
   QcMapMgr->DelV6Conntrack(connectedDevicesList->ipv6[0].addr,
                            connectedDevicesList->mac_addr);
 
-  memset(temp_mac_addr_char, 0, QCMAP_MSGR_MAC_ADDR_NUM_CHARS_V01);
-  ds_mac_addr_ntop(connectedDevicesList->mac_addr, temp_mac_addr_char);
-  if(QcMapBackhaulWWANMgr)
+  if((del_evt != QCMAP_AP_STA_DISCONNECTED) && QcMapBackhaulWWANMgr)
   {
+    memset(temp_mac_addr_char, 0, QCMAP_MSGR_MAC_ADDR_NUM_CHARS_V01);
+    ds_mac_addr_ntop(connectedDevicesList->mac_addr, temp_mac_addr_char);
     QcMapBackhaulWWANMgr->DeleteDelegatedPrefix(temp_mac_addr_char,
                                                 &qmi_err_num);
   }
@@ -3597,9 +3796,24 @@ bool QCMAP_ConnectionManager::AddNewDeviceEntry
   QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
   QCMAP_Tethering *QcMapTetheringMgr = QCMAP_Tethering::Get_Instance(false);
   QCMAP_LAN* QCMAPLANMgr=GET_DEFAULT_LAN_OBJECT();
+  qcmap_msgr_ip_passthrough_config_v01 passthrough_config;
+  qcmap_msgr_ip_passthrough_mode_enum_v01 enable_state;
+  in_addr addr;
+  uint32_t lease_expiry_time = 0;
+  FILE *fd = NULL;
+  pugi::xml_document xml_file;
+  pugi::xml_node root, child;
+  char command[MAX_COMMAND_STR_LEN];
 
   if(!QcMapMgr)
     return false;
+
+  if (QcMapMgr->conn_device_info.numOfNodes >=
+                            QCMAP_MSGR_MAX_CONNECTED_DEVICES_V01)
+  {
+    LOG_MSG_INFO1("Cannot add device. Max devices reached.",0,0,0);
+    return false;
+  }
 
   qcmap_addr_info_list_t* addrList = &(QcMapMgr->addrList);
   qcmap_cm_client_data_info_t* connectedDevicesList = NULL;
@@ -3612,7 +3826,7 @@ bool QCMAP_ConnectionManager::AddNewDeviceEntry
        (device_type == QCMAP_MSGR_DEVICE_TYPE_GUEST_AP_2_V01)||
        (device_type == QCMAP_MSGR_DEVICE_TYPE_GUEST_AP_3_V01))&& (!QcMapWLANMgr))
   {
-    LOG_MSG_ERROR("\n WLAN is not enabled. Do not add this entry\n",0 ,0, 0);
+    LOG_MSG_ERROR("WLAN is not enabled. Do not add this entry",0 ,0, 0);
     return false;
   }
 
@@ -3650,12 +3864,79 @@ bool QCMAP_ConnectionManager::AddNewDeviceEntry
   {
     if (isIpv4valid == true)
     {
-      connectedDevicesList->ip_addr = *ip_addr;
-      if (QCMAP_Backhaul_WLAN::IsAPSTABridgeActivated())
+      /* Check if IP passthrough active and update the IP only if it is public IP. */
+      //Delete the hostname.txt file if present
+      snprintf(command, MAX_COMMAND_STR_LEN, "rm %s",HOSTNAME_PATH);
+      ds_system_call(command, strlen(command));
+
+      //Prune the dnsmasq.leases file to have lease expiry time, MAC address and hostname
+      snprintf(command, MAX_COMMAND_STR_LEN,
+               "cut -f1,2,4 -d ' '  %s >	%s",
+               DNSMASQ_LEASE_FILE,
+               HOSTNAME_PATH);
+      ds_system_call(command, strlen(command));
+
+      //Open the hostname.txt file to fetch lease time and hostname
+      fd = fopen(HOSTNAME_PATH,"r");
+      if (fd == NULL)
       {
-        if (!QCMAPLANMgr->AddEbtablesRuleForBridgeMode(connectedDevicesList))
-          LOG_MSG_ERROR("Unable to Add Ebtables rules for NEWNEIGH AP-STA Bridge Mode",
-                        0,0,0);
+        LOG_MSG_ERROR("Error in opening %s", HOSTNAME_PATH, 0, 0);
+        return false;
+      }
+
+      fetchHostNameAndLeasetime(fd ,connectedDevicesList->mac_addr,
+                                connectedDevicesList->host_name,
+                                &lease_expiry_time);
+      fclose(fd);
+      QCMAPLANMgr->GetIPPassthroughConfig(&enable_state,&passthrough_config,&qmi_err_num);
+      LOG_MSG_INFO1("IP Passthrough hostnames IP %s %s\n", connectedDevicesList->host_name, passthrough_config.client_device_name,0);
+      /* If IP passthrough is active, for USB client, only for the client with specified hostname
+       * check if the IP is matching the public ip. For Ethernet client check will be based on
+       * mac address. For rest of the clients, ip address will be privat ip.
+       */
+      if (QCMAPLANMgr && QCMAPLANMgr->lan_cfg.ip_passthrough_cfg.ip_passthrough_active &&
+          !strncmp(connectedDevicesList->host_name, passthrough_config.client_device_name,
+          strlen(connectedDevicesList->host_name) - 1))
+      {
+        if (*ip_addr != (uint32_t)QCMAPLANMgr->lan_cfg.ip_passthrough_cfg.public_ip)
+        {
+          addr.s_addr = (uint32_t)QCMAPLANMgr->lan_cfg.ip_passthrough_cfg.public_ip;
+          LOG_MSG_INFO1("IP Passthrough active and IP doesn't match with public ip %s ignore\n",inet_ntoa(addr),0,0);
+        }
+        else
+        {
+          connectedDevicesList->ip_addr = *ip_addr;
+          addr.s_addr = connectedDevicesList->ip_addr;
+          LOG_MSG_INFO1("IP Passthrough active and IP updated %s\n",inet_ntoa(addr),0,0);
+          /* Updating the IPACM XML with the mac address of the client for which passthrough is enabled. */
+          if (!xml_file.load_file(IPA_XML_PATH))
+          {
+            LOG_MSG_ERROR("Unable to load IPACM XML file.",0,0,0);
+            return false;
+          }
+          root = xml_file.child(System_TAG).child(IPACM_TAG).child(IPPassthroughFlag_TAG);
+          root.child(IPPassthroughMacAddr_TAG).text() = ether_ntoa((struct ether_addr *)connectedDevicesList->mac_addr);
+          QcMapMgr->WriteConfigToXML(UPDATE_IPACFG_XML,&xml_file);
+        }
+      }
+      else
+      {
+        if (QCMAPLANMgr && ((QCMAPLANMgr->lan_cfg.apps_ip_addr & QCMAPLANMgr->lan_cfg.sub_net_mask) !=
+            (ntohl(*ip_addr) & QCMAPLANMgr->lan_cfg.sub_net_mask)) && !QCMAP_Backhaul_WLAN::IsAPSTABridgeActivated())
+        {
+          addr.s_addr = *ip_addr;
+          LOG_MSG_INFO1("IP not in LAN subnet, ignore %s\n",inet_ntoa(addr), 0, 0);
+        }
+        else
+        {
+          connectedDevicesList->ip_addr = *ip_addr;
+          if (QCMAP_Backhaul_WLAN::IsAPSTABridgeActivated())
+          {
+            if (!QCMAPLANMgr->AddEbtablesRuleForBridgeMode(connectedDevicesList))
+              LOG_MSG_ERROR("Unable to Add Ebtables rules for NEWNEIGH AP-STA Bridge Mode",
+                            0,0,0);
+          }
+        }
       }
     }
 
@@ -5313,7 +5594,7 @@ bool QCMAP_ConnectionManager::UpdateDeviceEntryInfo
       /* Update device entry info with IP address as well */
       Getclientaddr(nl_addr);
       LOG_MSG_INFO1("UpdateDeviceEntryInfo:Updating IP address for the client",0, 0, 0);
-      if(!(QCMAP_ConnectionManager::MatchMacAddrInList(nl_addr)))
+      if((QCMAP_ConnectionManager::MatchMacAddrInList(nl_addr))== 0)
       {
         LOG_MSG_ERROR("UpdateDeviceEntryInfo: No match found for the new client MAC",0, 0, 0);
       }
@@ -6854,5 +7135,154 @@ QCMAP_Backhaul *QCMAP_ConnectionManager::GetBackhaulObjectFromVLANid
       return backhaulObj;
   }
   return NULL;
+}
+
+/*===========================================================================
+  FUNCTION DataPathOptInit
+==========================================================================*/
+/*!
+@brief
+  To install/ remove the data optimization module
+@parameters
+  flag
+
+@return
+  true  -on success
+  flase - on failure
+
+@note
+- Dependencies
+- None
+
+- Side Effects
+- None
+*/
+/*=========================================================================*/
+
+boolean
+QCMAP_ConnectionManager::DataPathOptInit
+(
+  boolean flag
+)
+{
+    boolean ret = 0;
+    if(flag == 1)
+    {
+      ret = ds_system_call("data_path_opt start",strlen("data_path_opt start"));
+      LOG_MSG_INFO1("Enabling data path opt ret value = %d",ret,0,0);
+    }
+    else if(flag == 0)
+    {
+      ret = ds_system_call("data_path_opt stop",strlen("data_path_opt stop"));
+      LOG_MSG_INFO1("disabling data path opt ret value = %d",ret,0,0);
+    }
+
+    return ret;
+}
+
+/*===========================================================================
+FUNCTION SetDataPathOptManagerStatus
+===========================================================================*/
+/**
+  Use to enable/disable data path optimization.
+
+  @datatypes
+  qmi_error_type_v01
+
+  @param[out] qmi_err_num       Error code returned by the server.
+
+  @return
+  TRUE upon success. \n
+  FALSE upon failure.
+
+  @dependencies
+  QCMobileAP must be enabled.
+*/
+/*=========================================================================*/
+
+boolean QCMAP_ConnectionManager::SetDataPathOptManagerStatus
+(
+  boolean data_path_opt_status,
+  qmi_error_type_v01 *qmi_err_num
+)
+{
+    int ret = 0;
+    pugi::xml_document xml_file;
+    pugi::xml_node root, child ;
+    char data[MAX_STRING_LENGTH] = {0};
+/*-----------------------------------------------------------------------------*/
+
+    if (!qmi_err_num)
+    {
+      LOG_MSG_ERROR("Invalid parameter passed ",0,0,0);
+      return false;
+    }
+
+    LOG_MSG_INFO1("set action, module_enable = %d\n",data_path_opt_status,0,0);
+    ret = this->DataPathOptInit(data_path_opt_status);
+    if (ret != DS_SYS_CALL_SUCCESS)
+    {
+      this->data_path_opt_enable = (ret == DS_SYS_INTERNAL_FAIL)? true : false;
+      *qmi_err_num = QMI_ERR_INTERNAL_V01;
+      return false;
+    }
+    this->data_path_opt_enable = data_path_opt_status;
+
+    if (!xml_file.load_file(this->xml_path))
+    {
+      LOG_MSG_ERROR("Unable to load XML file.",0,0,0);
+      *qmi_err_num = QMI_ERR_INTERNAL_V01;
+      return false;
+    }
+    root = xml_file.child(System_TAG).child(MobileAPCfg_TAG).child(MobileAPBootUp_TAG);
+    snprintf(data,sizeof(data),"%d",this->data_path_opt_enable);
+    root.child(DataPathOpt_Tag).text() = data;
+    this->WriteConfigToXML(UPDATE_MOBILEAP_XML, &xml_file);
+    return true;
+}
+
+/*===========================================================================
+FUNCTION GetDataPathOptManagerStatus()
+===========================================================================*/
+/**
+  Use to know the status of data path optimization whether enabled/disabled.
+  @datatypes
+  qmi_error_type_v01
+
+  @param [in] data_path_opt_status      Status of Data Path Optimizer
+  @param[out] qmi_err_num       Error code returned by the server.
+
+  @return
+  TRUE upon success. \n
+  FALSE upon failure.
+
+  @dependencies
+  QCMobileAP must be enabled.
+*/
+/*=========================================================================*/
+
+boolean QCMAP_ConnectionManager::GetDataPathOptManagerStatus
+(
+  boolean *data_path_opt_status,
+  qmi_error_type_v01 *qmi_err_num
+)
+{
+
+    if (!qmi_err_num)
+    {
+      LOG_MSG_ERROR("Invalid parameter passed ",0,0,0);
+      return false;
+    }
+
+    *qmi_err_num = QMI_ERR_NONE;
+    if (data_path_opt_status == NULL)
+    {
+      LOG_MSG_ERROR("GetDataPathOptManagerStatus() - Invalid parameter received",0,0,0);
+      *qmi_err_num = QMI_ERR_INVALID_ARG_V01;
+      return false;
+    }
+    *data_path_opt_status = this->data_path_opt_enable;
+    LOG_MSG_INFO1("get action, module status = %d", *data_path_opt_status, 0, 0);
+    return true;
 }
 

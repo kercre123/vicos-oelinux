@@ -194,21 +194,22 @@ msmgbm_bo_destroy(struct gbm_bo *bo)
 
     if(NULL != msm_gbm_bo){
 
-        LOG(LOG_DBG," \nmsm_gbm_bo->cpuaddr=0x%x\n msm_gbm_bo->mt_cpuaddr=0x%x\n",
+        LOG(LOG_DBG,"\nmsm_gbm_bo->cpuaddr=0x%x\n msm_gbm_bo->mt_cpuaddr=0x%x\n",
                                 msm_gbm_bo->cpuaddr, msm_gbm_bo->mt_cpuaddr);
 
         LOG(LOG_DBG,"Destroy called for fd=%d",bo->ion_fd);
-        /*
-         * Perform unmap of both the BO buffer and Metadata
-         * We are only handling CPU mapping here
-         */
-        if((msm_gbm_bo->cpuaddr != NULL)||(msm_gbm_bo->mt_cpuaddr != NULL))
-            ret = msmgbm_bo_cpu_unmap(bo);
 
          //Delete the Map entries if any
-        if((decr_refcnt(bo->ion_fd)) && (!msm_gbm_bo->import_flg))
+        if(decr_refcnt(bo->ion_fd))
         {
-            LOG(LOG_INFO,"Currently closing fd=%d\n",bo->ion_fd);
+            /*
+             * Perform unmap of both the BO buffer and Metadata
+             * when ion fd deleted from hashmap
+             * We are only handling CPU mapping here
+             */
+            if((msm_gbm_bo->cpuaddr != NULL)||(msm_gbm_bo->mt_cpuaddr != NULL))
+                ret = msmgbm_bo_cpu_unmap(bo);
+            LOG(LOG_DBG,"Currently closing fd=%d\n",bo->ion_fd);
 
             /*
              * Close the fd's for both BO and Metadata
@@ -289,6 +290,7 @@ static int GetFormatBpp(uint32_t format)
         case GBM_FORMAT_NV12_ENCODEABLE:
         case GBM_FORMAT_NV12:
         case GBM_FORMAT_YCbCr_420_TP10_UBWC:
+        case GBM_FORMAT_P010:
              LOG(LOG_DBG,"YUV format BPP\n");
             return 1;
         default:
@@ -320,6 +322,7 @@ static int IsFormatSupported(uint32_t format)
         case GBM_FORMAT_ABGR2101010:
         case GBM_FORMAT_YCbCr_420_TP10_UBWC:
         case GBM_FORMAT_YCbCr_420_P010_UBWC:
+        case GBM_FORMAT_P010:
             is_supported = 1;
             LOG(LOG_DBG,"Valid format\n");
             break;
@@ -580,8 +583,8 @@ msmgbm_bo_create(struct gbm_device *gbm,
 
             LOG(LOG_DBG,"mt_fd_data.fd:= %d\n",mt_fd_data.fd);
 
-            mt_base = mmap(NULL, mt_size, PROT_READ|PROT_WRITE, MAP_SHARED, mt_fd_data.fd, 0);
-            if(mt_base == MAP_FAILED) {
+            mt_base = msmgbm_cpu_map_metafd(mt_fd_data.fd, mt_size);
+            if(mt_base == NULL) {
                 LOG(LOG_ERR,"Failed to do  mapping on Metadata BO Err:\n%s\n",strerror(errno));
                 ioctl(msm_dev->iondev_fd, ION_IOC_FREE, &mt_handle_data);
                 return NULL;
@@ -647,19 +650,23 @@ msmgbm_bo_create(struct gbm_device *gbm,
         LOG(LOG_DBG,"Updating the UBWC buffer status =:%d\n",data->is_buffer_ubwc);
     }
 
-    //Create a gbm_buf_info and to the map entry
+    //Create a gbm_buf_info and add entry to the hashmap
     struct gbm_buf_info gbo_info;
+    struct msmgbm_private_info gbo_private_info = {NULL, NULL};
     gbo_info.fd = fd_data.fd;
     gbo_info.metadata_fd = mt_fd_data.fd;
     gbo_info.format = format;
     gbo_info.height = height;
     gbo_info.width  = width;
+    //add cpu address and metadata address of bo to hashmap
+    gbo_private_info.cpuaddr = base;
+    gbo_private_info.mt_cpuaddr = mt_base;
 
     LOG(LOG_DBG," MAP registered bo info gbo_info =:%p\n",&gbo_info);
 
     //Let us lock and unlock mutex
     lock();
-    register_to_hashmap(fd_data.fd,&gbo_info);
+    register_to_hashmap(fd_data.fd,&gbo_info, &gbo_private_info);
     incr_refcnt(fd_data.fd);
     unlock();
 
@@ -719,7 +726,7 @@ msmgbm_bo_import_fd(struct msmgbm_device *msm_dev,
     struct gbm_bufdesc bufdesc;
     int ret = 0;
     int Bpp=0;
-    unsigned int size = 0;
+    unsigned int size = 0, mt_size = 0;
     unsigned int aligned_width;
     unsigned int aligned_height;
 
@@ -741,8 +748,9 @@ msmgbm_bo_import_fd(struct msmgbm_device *msm_dev,
 
     //Query Map
     struct gbm_buf_info gbo_info;
+    struct msmgbm_private_info gbo_private_info = {NULL, NULL};
 
-    if(search_hashmap(buffer_info->fd, &gbo_info) == GBM_ERROR_NONE)
+    if(search_hashmap(buffer_info->fd, &gbo_info, &gbo_private_info) == GBM_ERROR_NONE)
     {
         LOG(LOG_DBG,"Map retrieved buf info\n gbm_buf_info.width=%d\n",
                                                         gbo_info.width);
@@ -750,8 +758,10 @@ msmgbm_bo_import_fd(struct msmgbm_device *msm_dev,
                     "gbm_buf_info.height=%d\n gbm_buf_info.format = %d\n",
                     gbo_info.fd,gbo_info.metadata_fd,gbo_info.height,gbo_info.format);
 
-        //If we have a valid entry within the map table then Increment ref count
+        lock();
+        //we have a valid entry within the map table so Increment ref count
         incr_refcnt(buffer_info->fd);
+        unlock();
     }
     else
     {
@@ -764,8 +774,10 @@ msmgbm_bo_import_fd(struct msmgbm_device *msm_dev,
         gbo_info.width=buffer_info->width;
         gbo_info.height=buffer_info->height;
 
+        //we cannot map cpu address as we dont have a reliable way to find
+        //whether ion fd is secure or not since metadata_fd is not present
         lock();
-        register_to_hashmap(buffer_info->fd, gbo_info);
+        register_to_hashmap(buffer_info->fd, &gbo_info, &gbo_private_info);
         incr_refcnt(buffer_info->fd);
         unlock();
 
@@ -801,24 +813,13 @@ msmgbm_bo_import_fd(struct msmgbm_device *msm_dev,
     bufdesc.Format = buffer_info->format;
     bufdesc.Usage  = usage;
 
+    mt_size = query_metadata_size();
     if (gbo_info.metadata_fd != -1) {
         // Check whether imported gbm bo was UBWC allocated.
         struct meta_data_t *meta_data;
-        meta_data = mmap(NULL, query_metadata_size(), PROT_READ|PROT_WRITE, MAP_SHARED,
-                         gbo_info.metadata_fd, 0);
-        if (meta_data == MAP_FAILED) {
-            LOG(LOG_ERR," Map failed for gbo_info.metadata_fd: %d %s\n",
-                                       gbo_info.metadata_fd, strerror(errno));
-            return GBM_ERROR_BAD_HANDLE;
-        }
+        meta_data = (struct meta_data_t *)gbo_private_info.mt_cpuaddr;
         if (meta_data->is_buffer_ubwc) {
             bufdesc.Usage |= GBM_BO_USAGE_UBWC_ALIGNED_QTI | GBM_BO_USAGE_HW_RENDERING_QTI;
-        }
-        if (meta_data) {
-          if(munmap(meta_data, query_metadata_size())){
-              LOG(LOG_ERR," Map failed \n %s\n",strerror(errno));
-              return GBM_ERROR_BAD_VALUE;
-          }
         }
     }
 
@@ -840,7 +841,7 @@ msmgbm_bo_import_fd(struct msmgbm_device *msm_dev,
     gbmbo->ion_fd        = buffer_info->fd;
     gbmbo->ion_metadata_fd = gbo_info.metadata_fd;
     gbmbo->handle.u32    = gemimport_req.handle;
-    gbmbo->usage_flags   = usage;
+    gbmbo->usage_flags   = bufdesc.Usage;
     gbmbo->format        = buffer_info->format;
     gbmbo->width         = buffer_info->width;
     gbmbo->height        = buffer_info->height;
@@ -853,9 +854,12 @@ msmgbm_bo_import_fd(struct msmgbm_device *msm_dev,
     gbmbo->bo_get_device = msmgbm_bo_get_device;
     gbmbo->bo_write      = msmgbm_bo_write;
     msm_gbmbo->device    = msm_dev;
+    msm_gbmbo->cpuaddr   = gbo_private_info.cpuaddr;
+    msm_gbmbo->mt_cpuaddr   = gbo_private_info.mt_cpuaddr;
     msm_gbmbo->current_state   =  GBM_BO_STATE_FREE;
     gbmbo->metadata_handle.u32 = NULL;
     msm_gbmbo->size      = size;
+    msm_gbmbo->mt_size   = mt_size;
     msm_gbmbo->magic     = QCMAGIC;
     msm_gbmbo->import_flg = 1;
 
@@ -883,9 +887,14 @@ msmgbm_bo_import_wl_buffer(struct msmgbm_device *msm_dev,
     struct gbm_bufdesc bufdesc;
     int ret = 0;
     int Bpp=0;
-    unsigned int size = 0;
+    unsigned int size = 0, mt_size = 0;
     unsigned int aligned_width;
     unsigned int aligned_height;
+    int register_map = 0;
+    struct meta_data_t *mt_cpuaddr;
+    //create gbm_buf_info and private_info to add to hashmap
+    struct gbm_buf_info gbo_info;
+    struct msmgbm_private_info gbo_private_info = {NULL, NULL};
 
 
     resource = (struct wl_resource*)(buffer);
@@ -923,30 +932,66 @@ msmgbm_bo_import_wl_buffer(struct msmgbm_device *msm_dev,
     }
 
     //Search Map for a valid entry
-    struct gbm_buf_info gbo_info;
+    ret = search_hashmap(buffer_info->fd, &gbo_info, &gbo_private_info);
+    if(ret != GBM_ERROR_NONE) {
+        register_map = 1;
+    }
 
-    if(search_hashmap(buffer_info->fd, &gbo_info) == GBM_ERROR_NONE)
+    //Initialize the helper structure
+    bufdesc.Width  = buffer_info->width;
+    bufdesc.Height = buffer_info->height;
+    bufdesc.Format = buffer_info->format;
+    bufdesc.Usage  = usage;
+
+    mt_size = query_metadata_size();
+    //if metadata cpuaddress not found in hashmap, call mmap
+    if(gbo_private_info.mt_cpuaddr == NULL) {
+        if(buffer_info->metadata_fd > 0) {
+            gbo_private_info.mt_cpuaddr = msmgbm_cpu_map_metafd(buffer_info->metadata_fd, mt_size);
+            LOG(LOG_DBG, "Meta cpu addr = %p created for ion_fd = %d, meta_ion_fd=%d \n",
+                gbo_private_info.mt_cpuaddr, buffer_info->fd, buffer_info->metadata_fd);
+        }
+    }
+    mt_cpuaddr = (struct meta_data_t *)gbo_private_info.mt_cpuaddr;
+
+    /*Query the size*/
+    /*Currently by default we query the aligned dimensions from
+      adreno utils*/
+    qry_aligned_wdth_hght(&bufdesc, &aligned_width, &aligned_height);
+    size = qry_size(&bufdesc, aligned_width, aligned_height);
+
+    //if ion fd cpu address not found in hashmap, call mmap
+    if(gbo_private_info.cpuaddr == NULL) {
+        if(mt_cpuaddr != NULL) {
+            LOG(LOG_DBG, "ION fd cpu addr = %p created for ion_fd = %d\n",
+                gbo_private_info.cpuaddr, buffer_info->fd);
+            gbo_private_info.cpuaddr = msmgbm_cpu_map_ionfd(buffer_info->fd, size, mt_cpuaddr);
+        }
+    }
+
+    //register map if ion_fd entry does not exist or update map if ion_fd is found
+    if(register_map == 0)
     {
         LOG(LOG_DBG,"Map retrieved buf info\n gbm_buf_info.width=%d\n",
                                                           gbo_info.width);
         LOG(LOG_DBG,"gbm_buf_info.height=%d\n gbm_buf_info.format = %d\n",
                       gbo_info.height,gbo_info.format);
 
+        lock();
         //We will check if it has a valid metadata fd and update the same
         if((buffer_info->metadata_fd > 0) && (buffer_info->metadata_fd != gbo_info.metadata_fd))
         {
-            lock();
            //Since we have already made sure entry exists
-            update_hashmap(buffer_info->fd, buffer_info);
-            //If we have a valid entry within the map table then Increment ref count
-            incr_refcnt(buffer_info->fd);
-            unlock();
+            update_hashmap(buffer_info->fd, buffer_info, &gbo_private_info);
         }
+        //If we have a valid entry within the map table then Increment ref count
+        incr_refcnt(buffer_info->fd);
+        unlock();
     }
     else
     {
         lock();
-        register_to_hashmap(buffer_info->fd, buffer_info);
+        register_to_hashmap(buffer_info->fd, buffer_info, &gbo_private_info);
         incr_refcnt(buffer_info->fd);
         unlock();
     }
@@ -979,18 +1024,6 @@ msmgbm_bo_import_wl_buffer(struct msmgbm_device *msm_dev,
         }
     }
 
-    //Initialize the helper structure
-    bufdesc.Width  = buffer_info->width;
-    bufdesc.Height = buffer_info->height;
-    bufdesc.Format = buffer_info->format;
-    bufdesc.Usage  = usage;
-
-    /*Query the size*/
-    /*Currently by default we query the aligned dimensions from
-      adreno utils*/
-    qry_aligned_wdth_hght(&bufdesc, &aligned_width, &aligned_height);
-    size = qry_size(&bufdesc, aligned_width, aligned_height);
-
     msm_gbmbo = (struct msmgbm_bo *)calloc(1, sizeof(struct msmgbm_bo));
 
     if (msm_gbmbo == NULL) {
@@ -1015,9 +1048,12 @@ msmgbm_bo_import_wl_buffer(struct msmgbm_device *msm_dev,
     gbmbo->bo_get_device = msmgbm_bo_get_device;
     gbmbo->bo_write      = msmgbm_bo_write;
     msm_gbmbo->device    = msm_dev;
+    msm_gbmbo->cpuaddr  = gbo_private_info.cpuaddr;
+    msm_gbmbo->mt_cpuaddr = gbo_private_info.mt_cpuaddr;
     msm_gbmbo->current_state   =  GBM_BO_STATE_FREE;
     gbmbo->metadata_handle.u32 = mtdadta_gemimport_req.handle;
     msm_gbmbo->size      = size;
+    msm_gbmbo->mt_size   = mt_size;
     msm_gbmbo->magic     = QCMAGIC;
     msm_gbmbo->import_flg = 1;
 
@@ -1047,10 +1083,14 @@ msmgbm_bo_import_gbm_buf(struct msmgbm_device *msm_dev,
     struct gbm_bufdesc bufdesc;
     int ret = 0;
     int Bpp=0;
-    unsigned int size = 0;
+    unsigned int size = 0, mt_size;
     unsigned int aligned_width;
     unsigned int aligned_height;
 
+    struct meta_data_t *meta_data = NULL;
+    struct gbm_buf_info temp_buf_info;
+    struct msmgbm_private_info gbo_private_info = {NULL, NULL};
+    int register_map = 0; //do not modify these flags
 
     buffer_info = (struct gbm_buf_info*)(buffer);
     if (buffer_info == NULL){
@@ -1069,26 +1109,25 @@ msmgbm_bo_import_gbm_buf(struct msmgbm_device *msm_dev,
         return NULL;
     }
 
-    LOG(LOG_INFO," fd=%d format: 0x%x width: %d height: %d \n",buffer_info->fd, buffer_info->format,
-                                                            buffer_info->width, buffer_info->height);
+    LOG(LOG_DBG," fd=%d format: 0x%x width: %d height: %d \n",buffer_info->fd,
+        buffer_info->format, buffer_info->width, buffer_info->height);
 
     if(1 == IsFormatSupported(buffer_info->format))
         Bpp = GetFormatBpp(buffer_info->format);
     else
     {
-        LOG(LOG_ERR,"Format (0x%x) not supported\n",
-                                                    buffer_info->format);
+        LOG(LOG_ERR,"Format (0x%x) not supported\n", buffer_info->format);
         return NULL;
     }
 
     //Search Map for a valid entry
-    struct gbm_buf_info temp_buf_info;
-    ret = search_hashmap(buffer_info->fd, &temp_buf_info);
+    lock();
+    ret = search_hashmap(buffer_info->fd, &temp_buf_info, &gbo_private_info);
+    unlock();
 
     //If we have a valid entry within the map table then Increment ref count
     if(ret==GBM_ERROR_NONE)
     {
-        incr_refcnt(buffer_info->fd);
         LOG(LOG_DBG,"MAP retrieved buf info\n");
         LOG(LOG_DBG,"temp_buf_info.width=%d\n",
                               temp_buf_info.width);
@@ -1098,22 +1137,68 @@ msmgbm_bo_import_gbm_buf(struct msmgbm_device *msm_dev,
                                     temp_buf_info.format);
         LOG(LOG_DBG,"temp_buf_info.meta_fd=%d\n",
                                     temp_buf_info.metadata_fd);
-
-        //if the current metadata fd is invalid we need to override
-        if(buffer_info->metadata_fd < 0)
-            buffer_info->metadata_fd = temp_buf_info.metadata_fd;
     }
     else
     {
         LOG(LOG_INFO," MAP table is empty\n");
 
-        lock();
-        register_to_hashmap(buffer_info->fd, buffer_info);
-        incr_refcnt(buffer_info->fd);
+        register_map = 1;
         LOG(LOG_INFO,"Registered fd=%d to table\n",buffer_info->fd);
-        unlock();
-
     }
+
+    //Initialize the helper structure
+    bufdesc.Width  = buffer_info->width;
+    bufdesc.Height = buffer_info->height;
+    bufdesc.Format = buffer_info->format;
+    bufdesc.Usage  = usage;
+
+    mt_size = query_metadata_size();
+    //if metadata cpu address not found in hashmap, call mmap
+    if (gbo_private_info.mt_cpuaddr == NULL) {
+        if(buffer_info->metadata_fd > 0) {
+            gbo_private_info.mt_cpuaddr = msmgbm_cpu_map_metafd(buffer_info->metadata_fd,mt_size);
+            LOG(LOG_DBG, "Meta cpu addr = %p created for ion_fd = %d, meta_ion_fd=%d \n",
+             gbo_private_info.mt_cpuaddr, buffer_info->fd, buffer_info->metadata_fd);
+        }
+    } else {
+        LOG(LOG_DBG, "Found metadata cpu addr from hashmap for ion fd = %d, ionmetafd=%d, meta_addr=%p\n",
+                       buffer_info->fd, buffer_info->metadata_fd, gbo_private_info.mt_cpuaddr);
+    }
+
+    meta_data = (struct meta_data_t *)gbo_private_info.mt_cpuaddr;
+    // Check whether imported gbm bo was UBWC allocated
+    if(meta_data != NULL) {
+        if (meta_data->is_buffer_ubwc) {
+            bufdesc.Usage |= GBM_BO_USAGE_UBWC_ALIGNED_QTI | GBM_BO_USAGE_HW_RENDERING_QTI;
+        }
+    }
+
+    /*Query the size*/
+    /*Currently by default we query the aligned dimensions from
+      adreno utils*/
+    qry_aligned_wdth_hght(&bufdesc, &aligned_width, &aligned_height);
+    size = qry_size(&bufdesc, aligned_width, aligned_height);
+
+    //if ion fd cpu address not found in hashmap, call mmap
+    if((gbo_private_info.cpuaddr == NULL) && (meta_data != NULL)) {
+        gbo_private_info.cpuaddr = msmgbm_cpu_map_ionfd(buffer_info->fd, size, meta_data);
+        LOG(LOG_DBG, "ION fd cpu addr = %p created for ion_fd = %d \n",
+            gbo_private_info.cpuaddr, buffer_info->fd);
+    }
+
+    lock();
+    if(register_map) {
+        //register fd to hashmap if entry not found
+        register_to_hashmap(buffer_info->fd, buffer_info, &gbo_private_info);
+    } else {
+         if(temp_buf_info.metadata_fd < 0) {
+             //Since we have already made sure entry exists
+             //metadata fd was wrong before so update hashmap
+             update_hashmap(buffer_info->fd, buffer_info, &gbo_private_info);
+         }
+    }
+    incr_refcnt(buffer_info->fd);
+    unlock();
 
     /* Import the gem handle for image BO */
     memset(&gemimport_req, 0, sizeof(gemimport_req));
@@ -1147,40 +1232,6 @@ msmgbm_bo_import_gbm_buf(struct msmgbm_device *msm_dev,
         }
     }
 
-    //Initialize the helper structure
-    bufdesc.Width  = buffer_info->width;
-    bufdesc.Height = buffer_info->height;
-    bufdesc.Format = buffer_info->format;
-    bufdesc.Usage  = usage;
-
-    if (buffer_info->metadata_fd != -1) {
-        // Check whether imported gbm bo was UBWC allocated.
-        struct meta_data_t *meta_data;
-
-        meta_data = mmap(NULL, query_metadata_size(), PROT_READ|PROT_WRITE, MAP_SHARED,
-                         buffer_info->metadata_fd, 0);
-        if (meta_data == MAP_FAILED) {
-            LOG(LOG_ERR," Map failed for gbo_info->metadata_fd: %d %s\n",
-                                       buffer_info->metadata_fd, strerror(errno));
-            return GBM_ERROR_BAD_HANDLE;
-        }
-        if (meta_data->is_buffer_ubwc) {
-            bufdesc.Usage |= GBM_BO_USAGE_UBWC_ALIGNED_QTI | GBM_BO_USAGE_HW_RENDERING_QTI;
-        }
-        if (meta_data) {
-          if(munmap(meta_data, query_metadata_size())){
-              LOG(LOG_ERR," Map failed \n %s\n",strerror(errno));
-              return GBM_ERROR_BAD_VALUE;
-          }
-        }
-    }
-
-
-    /*Query the size*/
-    /*Currently by default we query the aligned dimensions from
-      adreno utils*/
-    qry_aligned_wdth_hght(&bufdesc, &aligned_width, &aligned_height);
-    size = qry_size(&bufdesc, aligned_width, aligned_height);
 
     msm_gbmbo = (struct msmgbm_bo *)calloc(1, sizeof(struct msmgbm_bo));
 
@@ -1193,7 +1244,7 @@ msmgbm_bo_import_gbm_buf(struct msmgbm_device *msm_dev,
     gbmbo->ion_fd          = buffer_info->fd;
     gbmbo->ion_metadata_fd = buffer_info->metadata_fd;
     gbmbo->handle.u32      = gemimport_req.handle;
-    gbmbo->usage_flags     = usage;
+    gbmbo->usage_flags     = bufdesc.Usage;
     gbmbo->format          = buffer_info->format;
     gbmbo->width           = buffer_info->width;
     gbmbo->height          = buffer_info->height;
@@ -1206,9 +1257,12 @@ msmgbm_bo_import_gbm_buf(struct msmgbm_device *msm_dev,
     gbmbo->bo_get_device   = msmgbm_bo_get_device;
     gbmbo->bo_write        = msmgbm_bo_write;
     msm_gbmbo->device      = msm_dev;
+    msm_gbmbo->cpuaddr   = gbo_private_info.cpuaddr;
+    msm_gbmbo->mt_cpuaddr = gbo_private_info.mt_cpuaddr;
     msm_gbmbo->current_state   =  GBM_BO_STATE_FREE;
     gbmbo->metadata_handle.u32 = mtdadta_gemimport_req.handle;
     msm_gbmbo->size            = size;
+    msm_gbmbo->mt_size         = mt_size;
     msm_gbmbo->magic           = QCMAGIC;
     msm_gbmbo->import_flg      = 1;
 
@@ -1481,6 +1535,7 @@ msmgbm_device_destroy(struct gbm_device *gbm)
 
     lock_destroy();
 
+    LOG(LOG_DBG, "iondev_fd:%d \n", msm_dev->iondev_fd);
     //Close the ion device fd
     if(msm_dev->iondev_fd > 0)
         close(msm_dev->iondev_fd);
@@ -1522,9 +1577,9 @@ msmgbm_device_create(int fd)
     lock_init();
 
     //open the ion device
-    msm_gbmdevice->iondev_fd=ion_open();
+    msm_gbmdevice->iondev_fd = ion_open();
+    LOG(LOG_DBG,"msmgbm_device_create: iondev_fd:%d", msm_gbmdevice->iondev_fd);
     if (msm_gbmdevice->iondev_fd < 0){
-
         LOG(LOG_ERR,"Failed to open ION device\n");
         return NULL;
     }
@@ -1657,37 +1712,82 @@ struct gbm_bo* msmgbm_surface_get_free_bo(struct gbm_surface *surf)
 }
 #endif
 
+void* msmgbm_cpu_map_metafd(int meta_ion_fd, unsigned int metadata_size)
+{
+    struct meta_data_t *mt_cpuaddr = NULL;
+
+    //meta fd and gbm_bo must be valid at this point
+    mt_cpuaddr = mmap(NULL, metadata_size, PROT_READ | PROT_WRITE,
+                      MAP_SHARED, meta_ion_fd, 0);
+    if(mt_cpuaddr == MAP_FAILED) {
+        mt_cpuaddr = NULL;
+        LOG(LOG_DBG," cpu Map failed for gbo_info->metadata_fd: %d %s\n",
+            meta_ion_fd, strerror(errno));
+    }
+
+    return mt_cpuaddr;
+}
+
+void* msmgbm_cpu_map_ionfd(int ion_fd, unsigned int size, struct meta_data_t *meta_data)
+{
+    void *cpuaddr = NULL;
+
+    if(meta_data != NULL) {
+        if(!meta_data->is_buffer_secure) {
+            cpuaddr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, ion_fd, 0);
+            if(cpuaddr == MAP_FAILED) {
+                cpuaddr = NULL;
+                LOG(LOG_DBG, "cpu mapping failed for ion fd = %d, %s", ion_fd, strerror(errno));
+            }
+        }
+        LOG(LOG_DBG, "Can't map secure buffer", __func__, __LINE__);
+    }
+
+    return cpuaddr;
+}
+
+void* msmgbm_bo_meta_map(struct gbm_bo *bo)
+{
+        struct msmgbm_bo *msm_gbm_bo = to_msmgbm_bo(bo);
+        uint32_t mt_size;
+        void *mt_cpuaddr;
+
+        if(msm_gbm_bo) {
+            mt_cpuaddr = msm_gbm_bo->mt_cpuaddr;
+        } else {
+            LOG(LOG_INFO, "This is not optimized path: %s,%d\n", __func__, __LINE__);
+            mt_size = query_metadata_size();
+            mt_cpuaddr = msmgbm_cpu_map_metafd(bo->ion_metadata_fd, mt_size);
+        }
+
+        return mt_cpuaddr;
+}
+
 void* msmgbm_bo_cpu_map(struct gbm_bo *bo)
 {
     struct msmgbm_bo *msm_gbm_bo = to_msmgbm_bo(bo);
-    struct drm_msm_gem_info gem_info_req;
-    int ret = 0;
-
+    struct meta_data_t *mt_cpuaddr;
+    void *cpuaddr = NULL;
 
     if(msm_gbm_bo!=NULL)
     {
-       if(msm_gbm_bo->cpuaddr)
-       {
-            return msm_gbm_bo->cpuaddr;
-       }
-
-       msm_gbm_bo->cpuaddr = mmap(0, bo->size, PROT_READ | PROT_WRITE, MAP_SHARED,
-                                  bo->ion_fd, 0);
-
-        if(msm_gbm_bo->cpuaddr == ((void *)-1))
+        if(msm_gbm_bo->cpuaddr)
         {
-              msm_gbm_bo->cpuaddr = NULL;
-              LOG(LOG_ERR," CPU MAP FAILED for BO(%x)\n",bo);
+            cpuaddr = msm_gbm_bo->cpuaddr;
+        } else {
+            LOG(LOG_INFO, "This is not optimized path for cpu bo map\n");
+            mt_cpuaddr = (struct meta_data_t *)msm_gbm_bo->mt_cpuaddr;
+            cpuaddr = msmgbm_cpu_map_ionfd(bo->ion_fd, bo->size, mt_cpuaddr);
+            msm_gbm_bo->cpuaddr = cpuaddr;
         }
-
     }
     else
     {
         LOG(LOG_ERR," NULL or Invalid bo pointer\n");
-        msm_gbm_bo->cpuaddr = NULL;
+        cpuaddr = NULL;
     }
 
-    return msm_gbm_bo->cpuaddr;
+    return cpuaddr;
 }
 
 int msmgbm_bo_cpu_unmap(struct gbm_bo *bo)
@@ -1702,8 +1802,8 @@ int msmgbm_bo_cpu_unmap(struct gbm_bo *bo)
             LOG(LOG_DBG," unmapping msm_gbm_bo->cpuaddr=0x%x\n",
                                            msm_gbm_bo->cpuaddr);
             if(munmap((void *)msm_gbm_bo->cpuaddr, bo->size))
-                LOG(LOG_ERR," munmap failed for msm_gbm_bo->cpuaddr=0x%x\n",
-                                                msm_gbm_bo->cpuaddr);
+                LOG(LOG_ERR," munmap failed for msm_gbm_bo->cpuaddr=0x%x ERR: %s\n",
+                                                msm_gbm_bo->cpuaddr, strerror(errno));
         }
         msm_gbm_bo->cpuaddr = NULL;
 
@@ -1712,9 +1812,9 @@ int msmgbm_bo_cpu_unmap(struct gbm_bo *bo)
         {
             LOG(LOG_DBG," unmapping msm_gbm_bo->mt_cpuaddr=0x%x\n",
                                            msm_gbm_bo->mt_cpuaddr);
-            if(munmap((void *)msm_gbm_bo->mt_cpuaddr, msm_gbm_bo->mt_size))
-                LOG(LOG_ERR," munmap failed for msm_gbm_bo->mt_cpuaddr=0x%x\n",
-                                                msm_gbm_bo->mt_cpuaddr);
+            if(munmap(msm_gbm_bo->mt_cpuaddr, msm_gbm_bo->mt_size))
+                LOG(LOG_ERR," munmap failed for msm_gbm_bo->mt_cpuaddr=0x%x, ERR: %s\n",
+                                                msm_gbm_bo->mt_cpuaddr, strerror(errno));
         }
         msm_gbm_bo->mt_cpuaddr = NULL;
 
@@ -1988,8 +2088,11 @@ int msmgbm_perform(int operation, ... )
         case GBM_PERFORM_CPU_UNMAP_FOR_BO:
             {
                 struct gbm_bo *gbo = va_arg(args, struct gbm_bo *);
-
-                res = msmgbm_bo_cpu_unmap(gbo);
+                //BO unmap will be as part of bo destroy as
+                //we are storing cpu address and meta data address in hashmap
+                //unmap takes place once fd entry is erased from hashmap in
+                //msmgbm_bo_destroy
+                res = GBM_ERROR_NONE;
             }
             break;
         case GBM_PERFORM_GET_GPU_ADDR_FOR_BO:
@@ -2152,7 +2255,8 @@ int msmgbm_perform(int operation, ... )
                     //Let us try looking through the map table in case if we have
                     //an update, since last import call?
                     struct gbm_buf_info temp_buf_info;
-                    res = search_hashmap(gbo->ion_fd, &temp_buf_info);
+                    struct msmgbm_private_info gbo_private_info = {NULL, NULL};
+                    res = search_hashmap(gbo->ion_fd, &temp_buf_info, &gbo_private_info);
 
                     if((res == GBM_ERROR_NONE) && (temp_buf_info.metadata_fd > 0))
                     {
@@ -2235,12 +2339,13 @@ int msmgbm_perform(int operation, ... )
         case GBM_PERFORM_GET_BUFFER_SIZE_DIMENSIONS:
             {
                 struct gbm_buf_info * buf_info = va_arg(args, struct gbm_buf_info *);
+                uint32_t usage_flags = va_arg(args, uint32_t);
                 uint32_t *align_wdth = va_arg(args, uint32_t *);
                 uint32_t *align_hght = va_arg(args, uint32_t *);
                 uint32_t *size = va_arg(args, uint32_t *);
 
                 struct gbm_bufdesc bufdesc = {buf_info->width, buf_info->height,
-                                              buf_info->format, 0};
+                                              buf_info->format, usage_flags};
 
                 qry_aligned_wdth_hght(&bufdesc, align_wdth, align_hght);
 
@@ -2350,7 +2455,6 @@ int msmgbm_set_metadata(struct gbm_bo *gbo, int paramType,void *param) {
     size_t size = 0;
     void *base = NULL;
     int res = GBM_ERROR_NONE;
-    int map_flg = 0;
 
     if(!msm_gbm_bo)
         return GBM_ERROR_BAD_HANDLE;
@@ -2361,19 +2465,14 @@ int msmgbm_set_metadata(struct gbm_bo *gbo, int paramType,void *param) {
         return GBM_ERROR_BAD_HANDLE;
     }
 
-    size = query_metadata_size();
 
     base = msm_gbm_bo->mt_cpuaddr;
 
     if(!base)
     {
-        base = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, gbo->ion_metadata_fd, 0);
-        if (base == MAP_FAILED) {
-            LOG(LOG_ERR," Map failed for metadata_fd=%d\n %s\n",
-                               gbo->ion_metadata_fd,strerror(errno));
-            return GBM_ERROR_BAD_HANDLE;
-        }
-        map_flg = 1;
+        LOG(LOG_ERR, "No metadata cpu address available for ion_metadata_fd = %d\n",
+            gbo->ion_metadata_fd);
+        return GBM_ERROR_BAD_HANDLE;
     }
 
     data = (struct meta_data_t *)base;
@@ -2419,13 +2518,6 @@ int msmgbm_set_metadata(struct gbm_bo *gbo, int paramType,void *param) {
             break;
     }
 
-    if(map_flg)
-    {
-        if(munmap(base, size)){
-            LOG(LOG_ERR,"failed to unmap ptr %p\n%s\n",(void*)base,strerror(errno));
-            res = GBM_ERROR_BAD_VALUE;
-        }
-    }
     return res;
 }
 
@@ -2445,7 +2537,8 @@ int msmgbm_get_metadata(struct gbm_bo *gbo, int paramType,void *param) {
         //Let us try looking through the map table in case if we have
         //an update, since last import call?
         struct gbm_buf_info temp_buf_info;
-        res = search_hashmap(gbo->ion_fd, &temp_buf_info);
+        struct msmgbm_private_info bo_private_info;
+        res = search_hashmap(gbo->ion_fd, &temp_buf_info, &bo_private_info);
 
         if((res==GBM_ERROR_NONE) && (temp_buf_info.metadata_fd > 0))
         {
@@ -2472,23 +2565,12 @@ int msmgbm_get_metadata(struct gbm_bo *gbo, int paramType,void *param) {
 
     }
 
-    //Calculate the size for mapping the structure
-    size = query_metadata_size();
-
-    base=msm_gbm_bo->mt_cpuaddr;
-
-    if(!base)
-    {
-        base = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, gbo->ion_metadata_fd, 0);
-        if (base == MAP_FAILED) {
-            LOG(LOG_ERR," Map failed for gbo->ion_metadata_fd\n %d %s\n",
-                                       gbo->ion_metadata_fd,strerror(errno));
-            return GBM_ERROR_BAD_HANDLE;
-        }
-        map_flg = 1; //set it to address unmapping
+    data = (struct meta_data_t *)msm_gbm_bo->mt_cpuaddr;
+    if(data == NULL) {
+        LOG(LOG_ERR, "No metadata cpu address for ion_metadata_fd = %d\n", gbo->ion_metadata_fd);
+        return GBM_ERROR_BAD_HANDLE;
     }
 
-    data = (struct meta_data_t *)base;
 
     if (!param) {
         LOG(LOG_ERR," Null or Invalid Param Pointer\n");
@@ -2558,13 +2640,6 @@ int msmgbm_get_metadata(struct gbm_bo *gbo, int paramType,void *param) {
             break;
     }
 
-    if(map_flg)
-    {
-        if(munmap(base, size)){
-            LOG(LOG_ERR," Map failed \n %s\n",strerror(errno));
-            res = GBM_ERROR_BAD_VALUE;
-        }
-    }
     return res;
 }
 
@@ -2637,10 +2712,17 @@ int msmgbm_yuv_plane_info(struct gbm_bo *gbo,generic_buf_layout_t *buf_lyt){
         case GBM_FORMAT_YCbCr_420_SP:
         case GBM_FORMAT_YCrCb_420_SP:
         case GBM_FORMAT_YCbCr_420_SP_VENUS:
-        case GBM_FORMAT_NV12:
         case GBM_FORMAT_NV12_ENCODEABLE: //Same as YCbCr_420_SP_VENUS
              get_yuv_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
                                    YUV_420_SP_BPP, buf_lyt);
+             break;
+        case GBM_FORMAT_NV12:
+             if (is_ubwc_enabled(gbo->format, gbo->usage_flags, gbo->usage_flags))
+                get_yuv_ubwc_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
+                                           COLOR_FMT_NV12_UBWC, buf_lyt);
+             else
+                get_yuv_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
+                                      YUV_420_SP_BPP, buf_lyt);
              break;
         case GBM_FORMAT_YCbCr_420_TP10_UBWC:
              get_yuv_ubwc_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
@@ -2650,6 +2732,10 @@ int msmgbm_yuv_plane_info(struct gbm_bo *gbo,generic_buf_layout_t *buf_lyt){
              get_yuv_ubwc_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
                                         COLOR_FMT_P010_UBWC, buf_lyt);
              break;
+        case GBM_FORMAT_P010:
+            get_yuv_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
+                                  CHROMA_STEP, buf_lyt);
+            break;
         default:
              res = GBM_ERROR_UNSUPPORTED;
              break;
@@ -2770,6 +2856,10 @@ int msmgbm_get_buf_lyout(struct gbm_bo *gbo, generic_buf_layout_t *buf_lyt)
                  get_yuv_ubwc_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
                                             COLOR_FMT_P010_UBWC, buf_lyt);
                  break;
+            case GBM_FORMAT_P010:
+                get_yuv_sp_plane_info(gbo->aligned_width, gbo->aligned_height,
+                                      CHROMA_STEP, buf_lyt);
+                break;
             default:
                  res = GBM_ERROR_UNSUPPORTED;
                  break;

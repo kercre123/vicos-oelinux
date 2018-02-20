@@ -66,6 +66,10 @@ FILES_${PN}-libqmmf_alg_lcac-dbg    = "${libdir}/.debug/libqmmf_alg_lcac.*"
 FILES_${PN}-libqmmf_alg_lcac        = "${libdir}/libqmmf_alg_lcac.so.*"
 FILES_${PN}-libqmmf_alg_lcac-dev    = "${libdir}/libqmmf_alg_lcac.so ${libdir}/libqmmf_alg_lcac.la ${includedir}"
 
+FILES_${PN}-libqmmf_alg_yuv_cac-dbg    = "${libdir}/.debug/libqmmf_alg_yuv_cac.*"
+FILES_${PN}-libqmmf_alg_yuv_cac        = "${libdir}/libqmmf_alg_yuv_cac.so.*"
+FILES_${PN}-libqmmf_alg_yuv_cac-dev    = "${libdir}/libqmmf_alg_yuv_cac.so ${libdir}/libqmmf_alg_yuv_cac.la ${includedir}"
+
 SOLIBS = ".so*"
 FILES_SOLIBSDEV = ""
 
@@ -86,10 +90,13 @@ do_install_append_apq8053() {
        install -c -m 0755 ${D}${libdir}/libqmmf_alg_hazebuster.so* -D ${D}${libdir}/qmmf/alg-plugins
        install -c -m 0755 ${D}${libdir}/libqmmf_alg_es.so* -D ${D}${libdir}/qmmf/alg-plugins
        install -c -m 0755 ${D}${libdir}/libqmmf_alg_lcac.so* -D ${D}${libdir}/qmmf/alg-plugins
+       install -c -m 0755 ${D}${libdir}/libqmmf_alg_yuv_cac.so* -D ${D}${libdir}/qmmf/alg-plugins
 
        install -d ${D}/system/etc/qmmf/
        install -m 0700 ${S}/qmmf-alg/src/polaris/prebuilt/qmmf_polaris_calib.bin -D ${D}/system/etc/qmmf/
        install -m 0700 ${S}/qmmf-alg/src/bayer_lcac/prebuilt/tuning/lens_ca_gpblack_GPversion_large.json -D ${D}/system/etc/qmmf/
+       install -m 0700 ${S}/qmmf-alg/src/yuv_cac/prebuilt/tuning/yuv_cac_calib_nv12.json -D ${D}/system/etc/qmmf/
+       install -m 0700 ${S}/qmmf-alg/src/yuv_cac/prebuilt/tuning/yuv_cac_calib_nv21.json -D ${D}/system/etc/qmmf/
 }
 
 FILES_${PN} += "${libdir}/vam_engines/libEngine_FaceRecognition.so.0"
@@ -98,9 +105,12 @@ FILES_${PN} += "${libdir}/vam_engines/libEngine_RuleInterpreter.so.0"
 
 FILES_${PN} += "${libdir}/qmmf/alg-plugins/libqmmf_alg_es.so"
 FILES_${PN} += "${libdir}/qmmf/alg-plugins/libqmmf_alg_lcac.so"
+FILES_${PN} += "${libdir}/qmmf/alg-plugins/libqmmf_alg_yuv_cac.so"
 FILES_${PN} += "${libdir}/qmmf/alg-plugins/libqmmf_alg_hazebuster.so"
 
 FILES_${PN} += "/system/etc/qmmf/qmmf_polaris_calib.bin"
 FILES_${PN} += "/system/etc/qmmf/lens_ca_gpblack_GPversion_large.json"
+FILES_${PN} += "/system/etc/qmmf/yuv_cac_calib_nv12.json"
+FILES_${PN} += "/system/etc/qmmf/yuv_cac_calib_nv21.json"
 
 INSANE_SKIP_${PN} = "dev-so"

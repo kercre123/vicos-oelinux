@@ -13,7 +13,6 @@ import android.content.BroadcastReceiver;
 import android.location.Location;
 import android.os.IBinder;
 import android.os.Binder;
-import android.os.Parcelable;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.os.Bundle;
@@ -26,14 +25,13 @@ import android.app.PendingIntent;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 
 import com.qti.geofence.*;
 
 public class GeofenceServiceProvider {
     private static final String TAG = "GeofenceServiceProvider";
-    private static final boolean DEBUG_DBG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean VERBOSE = Log.isLoggable(TAG, Log.VERBOSE);
     private static final int GEOFENCE_RESULT_SUCCESS = 0;
     private static final int GEOFENCE_RESULT_ERROR_TOO_MANY_GEOFENCES = -100;
     private static final int GEOFENCE_RESULT_ERROR_ID_EXISTS = -101;
@@ -81,8 +79,9 @@ public class GeofenceServiceProvider {
     }
 
     public GeofenceServiceProvider(Context ctx) {
-        if (DEBUG_DBG)
+        if (VERBOSE) {
             Log.d(TAG, "GeofenceServiceProvider construction");
+        }
 
         mContext = ctx;
         mPackagePerProcess = new HashMap<Integer, String>();
@@ -105,8 +104,9 @@ public class GeofenceServiceProvider {
             }
             synchronized (sCallBacksLock) {
                 String callingPackage = getPackageName(Binder.getCallingPid());
-                if (DEBUG_DBG)
+                if (VERBOSE) {
                     Log.d(TAG, "calling package:" + callingPackage);
+                }
                 if (mClientDataPerPackage.containsKey(callingPackage) == false) {
                     ClientData clData = new ClientData(callback);
                     mClientDataPerPackage.put(callingPackage, clData);
@@ -136,14 +136,16 @@ public class GeofenceServiceProvider {
                                 }
                             }
                             if ((clData != null) && (clData.mPendingIntent == null)) {
-                                if (DEBUG_DBG)
+                                if (VERBOSE) {
                                     Log.d(TAG, "Client died:" + ownerPackage +
-                                        " remove all geofences");
+                                            " remove all geofences");
+                                }
                                 removeAllGeofences(ownerPackage);
                             } else {
-                                if (DEBUG_DBG)
+                                if (VERBOSE) {
                                     Log.d(TAG, "Client died:" + ownerPackage +
-                                        " notify on breach");
+                                            " notify on breach");
+                                }
                             }
                             mGeofenceCallbacks.unregister(callback);
                         }
@@ -179,7 +181,7 @@ public class GeofenceServiceProvider {
             }
 
             String callingPackage = notifyIntent.getCreatorPackage();
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG,
                     "registerPendingIntent() for package:" + callingPackage);
             }
@@ -200,7 +202,7 @@ public class GeofenceServiceProvider {
 
 
             String ownerPackage = notifyIntent.getCreatorPackage();
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG,
                     "unregisterPendingIntent() for package:" + ownerPackage);
             }
@@ -235,7 +237,7 @@ public class GeofenceServiceProvider {
                 clData.mGeofenceMap.put(geofenceId, gfData);
             }
 
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IGeofenceService.Stub(): addGeofence()" +
                            "; Calling package is " + callingPackage +
                            "; geofenceId is " + geofenceId +
@@ -281,7 +283,7 @@ public class GeofenceServiceProvider {
                 clData.mGeofenceMap.put(geofenceId, gfData);
             }
 
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IGeofenceService.Stub(): addGeofence()" +
                            "; Calling package is " + callingPackage +
                            "; geofenceId is " + geofenceId +
@@ -303,7 +305,7 @@ public class GeofenceServiceProvider {
 
         public void removeGeofence(int geofenceId) {
             String callingPackage = getPackageName(Binder.getCallingPid());
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IGeofenceService.Stub(): removeGeofence()" +
                            "; Calling package is " + callingPackage +
                            "; geofenceId is " + geofenceId);
@@ -321,7 +323,7 @@ public class GeofenceServiceProvider {
                                    int transitionTypes,
                                    int notifyResponsiveness) {
             String callingPackage = getPackageName(Binder.getCallingPid());
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IGeofenceService.Stub(): updateGeofence()" +
                            "; Calling package is " + callingPackage +
                            "; geofenceId is " + geofenceId);
@@ -343,7 +345,7 @@ public class GeofenceServiceProvider {
         }
 
         public void pauseGeofence(int geofenceId) {
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IGeofenceService.Stub(): pauseGeofence()" +
                            "; geofenceId is " + geofenceId);
             }
@@ -352,7 +354,7 @@ public class GeofenceServiceProvider {
 
         public void resumeGeofence(int geofenceId) {
             String callingPackage = getPackageName(Binder.getCallingPid());
-            if (DEBUG_DBG) {
+            if (VERBOSE) {
                 Log.d(TAG, "in IGeofenceService.Stub(): resumeGeofence()" +
                            "; Calling package is " + callingPackage +
                            "; geofenceId is " + geofenceId);
@@ -375,7 +377,7 @@ public class GeofenceServiceProvider {
 
         public void recoverGeofences(List<GeofenceData> gfList) {
              String callingPackage = getPackageName(Binder.getCallingPid());
-             if (DEBUG_DBG) {
+             if (VERBOSE) {
                 Log.d(TAG, "in IGeofenceService.Stub(): recoverGeofences()" +
                            "; Calling package is " + callingPackage);
              }
@@ -390,15 +392,16 @@ public class GeofenceServiceProvider {
     private void reportGeofenceTransition(int geofenceId,
                                           int transition,
                                           Location location) {
-        if (DEBUG_DBG)
+        if (VERBOSE) {
             Log.d(TAG, "reportGeofenceTransition id : " + geofenceId +
-                       "; transition : " + transition);
+                    "; transition : " + transition);
+        }
         synchronized (sCallBacksLock) {
             for (Map.Entry<String, ClientData> entry :
                                     mClientDataPerPackage.entrySet()) {
                 ClientData clData = entry.getValue();
                 if (clData.mGeofenceMap.containsKey(geofenceId)) {
-                    if (DEBUG_DBG) {
+                    if (VERBOSE) {
                         Log.d(TAG, "Sending breach event to: " +
                             entry.getKey());
                     }
@@ -449,10 +452,11 @@ public class GeofenceServiceProvider {
     private void reportGeofenceRequestStatus(int requestType,
                                              int geofenceId,
                                              int status) {
-        if (DEBUG_DBG)
+        if (VERBOSE) {
             Log.d(TAG, "reportGeofenceRequestStatus requestType: " +
-                       requestType +"; id : " + geofenceId +
-                       "; status : " + status);
+                    requestType + "; id : " + geofenceId +
+                    "; status : " + status);
+        }
         synchronized (sCallBacksLock) {
             for (ClientData clData: mClientDataPerPackage.values()) {
                 if (clData.mGeofenceMap.containsKey(geofenceId)) {
@@ -474,8 +478,9 @@ public class GeofenceServiceProvider {
 
     private void reportGeofenceStatus(int status,
                                       Location location) {
-        if (DEBUG_DBG)
+        if (VERBOSE) {
             Log.d(TAG, "reportGeofenceStatus - status : " + status);
+        }
         synchronized (sCallBacksLock) {
             int index = mGeofenceCallbacks.beginBroadcast();
             for (int i = 0; i < index; i++) {

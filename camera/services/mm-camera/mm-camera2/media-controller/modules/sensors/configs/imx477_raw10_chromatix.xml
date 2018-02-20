@@ -1,5 +1,5 @@
 <!--
-  Copyright (c) 2017 Qualcomm Technologies, Inc.
+  Copyright (c) 2017-2018 Qualcomm Technologies, Inc.
   All Rights Reserved.
   Confidential and Proprietary - Qualcomm Technologies, Inc.
 -->
@@ -191,6 +191,18 @@ special_mode_mask values:
       <A3Preview>imx477_hfr_240_3a</A3Preview>
       <A3Video>imx477_hfr_240_3a</A3Video>
       <Iot>imx477_hfr_240_iot</Iot>
+    </ChromatixName>
+    <ChromatixName sensor_resolution_index="9">
+      <ISPPreview>imx477_2MP_svhdr_video</ISPPreview>
+      <ISPSnapshot>imx477_2MP_svhdr_video</ISPSnapshot>
+      <ISPVideo>imx477_2MP_svhdr_video</ISPVideo>
+      <CPPPreview>imx477_2MP_cpp_svhdr_video</CPPPreview>
+      <CPPSnapshot>imx477_2MP_cpp_svhdr_video</CPPSnapshot>
+      <CPPVideo>imx477_2MP_cpp_svhdr_video</CPPVideo>
+      <CPPLiveshot>imx477_2MP_cpp_svhdr_video</CPPLiveshot>
+      <A3Preview>imx477_2MP_svhdr_video_3a</A3Preview>
+      <A3Video>imx477_2MP_svhdr_video_3a</A3Video>
+      <Iot>imx477_2MP_svhdr_video_iot</Iot>
     </ChromatixName>
   </ResolutionChromatixInfo>
 </ChromatixConfigurationRoot>

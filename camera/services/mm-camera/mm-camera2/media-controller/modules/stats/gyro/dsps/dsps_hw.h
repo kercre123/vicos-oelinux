@@ -1,8 +1,10 @@
 /*============================================================================
+Copyright (c) 2012-2015,2017 Qualcomm Technologies, Inc.
+All Rights Reserved.
+Confidential and Proprietary - Qualcomm Technologies, Inc.
+============================================================================*/
 
-   Copyright (c) 2012 - 2015 Qualcomm Technologies, Inc. All Rights Reserved.
-   Qualcomm Technologies Proprietary and Confidential.
-
+/*============================================================================
    This file defines the media/module/master controller's interface with the
    DSPS modules. The functionalities od this module include:
 
@@ -13,8 +15,9 @@
 #ifndef _DSPS_HW_H_
 #define _DSPS_HW_H_
 
-
+#ifdef FEATURE_GYRO_DSPS
 #include <sensor1.h>
+#endif
 #include <stdbool.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -143,12 +146,14 @@ typedef struct _sensor1_config {
   pthread_t thread_id;
   sensor1_handle_s *handle;
   pthread_mutex_t callback_mutex;
+  pthread_condattr_t callback_condattr;
   pthread_cond_t callback_condvar;
   dsps_sensor_info_t sensor_info[DSPS_DATA_TYPE_MAX];
   int callback_arrived;
   uint8_t callback_txn_id;
   dsps_callback_func dsps_callback;
   pthread_mutex_t thread_mutex;
+  pthread_condattr_t thread_condattr;
   pthread_cond_t thread_condvar;
   int error;
   int instance_id_gravity;

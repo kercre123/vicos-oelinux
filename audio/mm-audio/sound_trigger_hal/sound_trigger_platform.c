@@ -1033,14 +1033,16 @@ static int platform_set_acdb_ids
     if (err >= 0) {
         str_parms_del(parms, ST_PARAM_KEY_DEVICE_HANDSET_APE_PP);
         ret = platform_stdev_set_acdb_id(platform, ST_PARAM_KEY_DEVICE_HANDSET_APE_PP, value);
-        goto exit;
+        if (ret)
+            goto exit;
     }
 
     err = str_parms_get_int(parms, ST_PARAM_KEY_DEVICE_HANDSET_6MIC_ARM, &value);
     if (err >= 0) {
         str_parms_del(parms, ST_PARAM_KEY_DEVICE_HANDSET_6MIC_ARM);
         ret = platform_stdev_set_acdb_id(platform, ST_PARAM_KEY_DEVICE_HANDSET_6MIC_ARM, value);
-        goto exit;
+        if (ret)
+            goto exit;
     }
 
     err = str_parms_get_int(parms, ST_PARAM_KEY_DEVICE_HANDSET_8MIC_ARM, &value);
@@ -3498,9 +3500,8 @@ void platform_arm_free_pcm_device_id
     if (ec_ref_dev)
         i = CAPTURE_EC_REF_USECASE_INDEX;
 
-    if (stdev->arm_pcm_use_cases[i].pcm_id == pcm_id) {
+    if (stdev->arm_pcm_use_cases[i].pcm_id == pcm_id)
         stdev->arm_pcm_use_cases[i].active = false;
-    }
 }
 
 void platform_alloc_gcs_usecase

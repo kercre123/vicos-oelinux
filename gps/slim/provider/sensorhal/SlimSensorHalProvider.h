@@ -230,6 +230,13 @@ private:
   */
   slimServiceEnumT SlimSensorTypeToService(slimSensorTypeEnumT slimSensorType);
 
+  slimErrorEnumT updateSensorDataRate
+  (
+    uint16_t wReportRateHz,
+    uint16_t wSampleCount,
+    slimServiceEnumT eService
+  );
+
  /**
   @brief Method for enabling or disabling sensor service.
 

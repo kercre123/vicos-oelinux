@@ -5,8 +5,11 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta-qti-bsp-prop/files/qcom-licenses/Qua
 PR = "r1"
 PV = "1.0"
 
-SRC_URI  = "file://flight_controller.zip"
-SRC_URI  += "file://libgnss_test_skel.so"
+FILESPATH =+ "${WORKSPACE}:"
+
+SRC_URI  = "file://vendor/qcom/proprietary/drones/dronePlugin/flight-addon/flight_controller.zip"
+SRC_URI  += "file://vendor/qcom/proprietary/drones/dronePlugin/flight-addon/libgnss_test_skel.so"
+SRC_DIR   = "${WORKSPACE}/vendor/qcom/proprietary/drones/dronePlugin/flight-addon"
 
 INSANE_SKIP_${PN} += "installed-vs-shipped"
 
@@ -32,10 +35,14 @@ do_install_append() {
    install -d ${D}${dest}
    install ${WORKDIR}/krait/inc/* ${D}${dest}
 
+   dest=${COREBASE}/../FEAT-API-LNX-IMU/apps_proc
+   install -d ${dest}
+   cp -rf ${WORKDIR}/krait/inc ${dest}
+
    dest=/usr/lib/rfsa/adsp/
    install -d ${D}${dest}
    install ${WORKDIR}/hexagon/libs/* ${D}${dest}
-   install ${WORKDIR}/libgnss_test_skel.so ${D}${dest}
+   install ${WORKDIR}/vendor/qcom/proprietary/drones/dronePlugin/flight-addon/libgnss_test_skel.so ${D}${dest}
 
    dest=/usr/lib/
    install -d ${D}${dest}

@@ -776,7 +776,8 @@ UlpLocationCriteria IzatManager::createUlpCritera(const IzatRequest *req, bool a
     return res;
 }
 
-IzatLocation IzatManager::izatLocationFromUlpLocation(const UlpLocation *ulpLoc, const GpsLocationExtended* locExtended) {
+IzatLocation IzatManager::izatLocationFromUlpLocation(const UlpLocation *ulpLoc,
+                                                      const GpsLocationExtended* locExtended) {
     IzatLocation res;
     memset(&res, 0, sizeof(res));
 
@@ -890,6 +891,14 @@ IzatLocation IzatManager::izatLocationFromUlpLocation(const UlpLocation *ulpLoc,
             res.mVertAccel = locExtended->bodyFrameData.vertAccel;
             res.mYawRate = locExtended->bodyFrameData.yawRate;
             res.mPitch = locExtended->bodyFrameData.pitch;
+        }
+        if (locExtended->flags & GPS_LOCATION_EXTENDED_HAS_EXT_DOP) {
+            res.mHasExtDOP = true;
+            res.mExtPdop = locExtended->extDOP.PDOP;
+            res.mExtHdop = locExtended->extDOP.HDOP;
+            res.mExtVdop = locExtended->extDOP.VDOP;
+            res.mExtGdop = locExtended->extDOP.GDOP;
+            res.mExtTdop = locExtended->extDOP.TDOP;
         }
     }
 

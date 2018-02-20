@@ -12,7 +12,7 @@ SRC_URI  += "file://start_mdsprpcd"
 SRC_URI  += "file://adsprpcd.service"
 SRC_URI  += "file://sdsprpcd.service"
 SRC_URI  += "file://mdsprpcd.service"
-
+SRC_URI  += "file://non-root_start_adsprpcd"
 SRC_DIR   = "${WORKSPACE}/adsprpc"
 
 S  = "${WORKDIR}/adsprpc"
@@ -34,10 +34,16 @@ inherit update-rc.d systemd pkgconfig
 
 SYSTEMD_SERVICE_${PN}          = "${INITSCRIPT_NAME_${PN}}.service"
 SYSTEMD_SERVICE_${PN}_apq8096 += "sdsprpcd.service"
+SYSTEMD_SERVICE_${PN}_apq8096 += "adsprpcd.service"
 
 do_install_append () {
     install -m 0755 ${WORKDIR}/start_${INITSCRIPT_NAME_${PN}} -D ${D}${sysconfdir}/init.d/${INITSCRIPT_NAME_${PN}}
-
+    # Install systemd unit files
+    install -d ${D}${systemd_unitdir}/system
+    install -m 0644 ${WORKDIR}/${INITSCRIPT_NAME_${PN}}.service ${D}${systemd_unitdir}/system
+}
+do_install_append_apq8053() {
+    install -m 0755 ${WORKDIR}/non-root_start_${INITSCRIPT_NAME_${PN}} -D ${D}${sysconfdir}/init.d/${INITSCRIPT_NAME_${PN}}
     # Install systemd unit files
     install -d ${D}${systemd_unitdir}/system
     install -m 0644 ${WORKDIR}/${INITSCRIPT_NAME_${PN}}.service ${D}${systemd_unitdir}/system
@@ -45,9 +51,11 @@ do_install_append () {
 
 do_install_append_apq8096 () {
     install -m 0755 ${WORKDIR}/start_sdsprpcd -D ${D}${sysconfdir}/init.d/sdsprpcd
+    install -m 0755 ${WORKDIR}/start_adsprpcd -D ${D}${sysconfdir}/init.d/adsprpcd
 
     # Install systemd unit files
     install -m 0644 ${WORKDIR}/sdsprpcd.service ${D}${systemd_unitdir}/system
+    install -m 0644 ${WORKDIR}/adsprpcd.service ${D}${systemd_unitdir}/system
 }
 
 PACKAGES_append_apq8096 = " ${PN}-sdsp"

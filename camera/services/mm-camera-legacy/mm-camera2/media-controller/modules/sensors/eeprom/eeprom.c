@@ -16,6 +16,8 @@
 #endif
 #define BUFF_SIZE_255 255
 
+#define PROPERTY_VALUE_MAX 32
+
 #define MIN(a,b)\
   ((a) > (b) ? (b) : (a))
 #undef SLOW

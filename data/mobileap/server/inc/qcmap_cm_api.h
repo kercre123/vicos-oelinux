@@ -122,6 +122,12 @@ when       who        what, where, why
 #define MIN_DHCP_LEASE 120 /*Lease time in seconds */
 #define MAX_LAN_CLIENTS 40
 
+/* For per client stats feature, IPACM expects ethernet
+ * LAN category to be ODU to differentiate between RNDIS/ECM
+ * and Ethernet. For info, by default ethernet mode is ODU
+ * category in IPACM_cfg.xml.
+ */
+#define ETH_LAN_CATEGORY "ODU"
 #define LAN_CATEGORY "LAN"
 #define WAN_CATEGORY "WAN"
 
@@ -282,6 +288,7 @@ when       who        what, where, why
 #define AP_AP_AP_AP_TAG                 "AP-AP-AP-AP"
 #define FULL_TAG                        "FULL"
 #define INTERNET_TAG                    "INTERNETONLY"
+#define DataPathOpt_Tag                 "DataPathOpt"
 
 #define DHCPReservationRecord_TAG       "DHCPReservationRecord"
 #define ClientReservedIP_TAG            "ClientReservedIP"
@@ -565,6 +572,9 @@ when       who        what, where, why
 #define ETH_TYPE 2
 #define MAX_IPV6_PREFIX 40
 #define RANDOM_MAC_KEY 3
+#define MAX_EIO_RETRY 3
+#define DS_SYS_CALL_SUCCESS 0
+#define DS_SYS_INTERNAL_FAIL 255
 
 
 
@@ -589,6 +599,14 @@ when       who        what, where, why
 /* Multi-PDN allowed targets check */
 #define IS_MULTI_PDN_ALLOWED(target) \
     (target == DS_TARGET_LE_ATLAS)
+
+/* L2TP, VLAN allowed targets check */
+#define IS_L2TP_VLAN_ALLOWED(target) \
+    (target != DS_TARGET_LE_STINGRAY)
+
+/* SOCKSv5 allowed targets check */
+#define IS_SOCKSV5_ALLOWED(target) \
+    (target != DS_TARGET_LE_STINGRAY)
 
 typedef enum{
   UPDATE_MOBILEAP_XML = 0,
@@ -2202,22 +2220,6 @@ int qmi_nas_not_in_service();
 ============================================================*/
 int qmi_wds_client_init();
 
-
-/*===========================================================================
-
-FUNCTION QCMAP_CM_DELETE_IPV6_DELEGATED_PREFIX()
-
-DESCRIPTION
- - Removes a single prefix if prefix_valid is set, othwise removes all
- delegated prefix's
-
-DEPENDENCIES
-  None.
-
-SIDE EFFECTS
-
-===========================================================================*/
-
 /*===========================================================================
 
 FUNCTION Getclientaddr
@@ -2236,13 +2238,6 @@ SIDE EFFECTS
   None
 ==========================================================================*/
 void Getclientaddr(qcmap_nl_addr_t* nl_addr);
-
-int qcmap_cm_delete_ipv6_delegated_prefix
-(
-  boolean                         prefix_valid,/*Boolean to flush single or all*/
-  uint8_t                         *ipv6_addr,/*Prefix to delete*/
-  qmi_error_type_v01              *qmi_err_num /*QMI error number*/
-);
 
 /*=====================================================
   FUNCTION qcmap_cm_check_ltefdd_cat4_bw

@@ -107,7 +107,7 @@ typedef enum
 
 typedef enum {
   AEC_VHDR_SHORT_FRAME,
-  AEC_VHDR_LONG_FRAME,
+  AEC_VHDR_LONG_FRAME = AEC_CORE_NUM_OF_VHDR_FRM_SUPPORTED - 1,
   AEC_VHDR_NORMAL_FRAME,
   AEC_VHDR_FRAMES_MAX,
 }aec_core_vhdr_frames_t;
@@ -395,7 +395,8 @@ typedef struct _aec_exp_parms {
   uint32   min_gain;
   uint16   min_line_count;
   float shdr_gtm_gamma;
-  float shdr_exposure_ratio;
+  float shdr_exposure_ratio_real[MAX_EXP_ENTRIES];
+  float shdr_exposure_ratio_sensor[MAX_EXP_ENTRIES];
 } aec_exp_parms_t;
 
 /**
@@ -576,6 +577,7 @@ typedef struct _aec_sensor_info {
   uint32 snapshot_fps;
   uint32 video_fps;
   uint32 max_preview_fps;
+  uint32 max_snapshot_fps;
   uint32 preview_linesPerFrame;
   uint32 snap_linesPerFrame;
   uint32 snap_max_line_cnt;
@@ -1288,7 +1290,8 @@ typedef struct
   float                           hdr_real_gain[AEC_VHDR_FRAMES_MAX];
   uint32_t                        hdr_linecount[AEC_VHDR_FRAMES_MAX];
   float                           hdr_gtm_gamma;
-  float                           hdr_exposure_ratio;
+  float                           hdr_exposure_ratio_real[MAX_EXP_ENTRIES];
+  float                           hdr_exposure_ratio_sensor[MAX_EXP_ENTRIES];
   float                           conv_speed;
   uint8                           roi_count;
   float                           awb_roi_x[Q3A_CORE_MAX_ROI_COUNT];

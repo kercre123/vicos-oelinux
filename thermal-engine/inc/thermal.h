@@ -338,6 +338,7 @@ int modem_cx_limit_request(int level);
 int modem_proc_request(int level);
 int modem_proc_current_request(int level);
 int modem_bw_request(int level);
+int modem_skin_request(int level);
 #else
 static inline int qmi_communication_init(void)
 {
@@ -384,6 +385,10 @@ static inline int cpr_band_qmi_request(int level)
 	return -(EFAULT);
 }
 static inline int modem_bw_request(int level)
+{
+	return -(EFAULT);
+}
+static inline int modem_skin_request(int level)
 {
 	return -(EFAULT);
 }

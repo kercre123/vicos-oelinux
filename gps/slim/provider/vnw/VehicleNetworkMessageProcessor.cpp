@@ -191,6 +191,15 @@ VehicleNetworkCONF1AccelMP::VehicleNetworkCONF1AccelMP(
     VehicleNetworkProvider* pzParent, AccelCONF1Config* pzCfg) :
     VehicleNetworkMessageProcessor(pzParent), m_pzCfg(pzCfg)
 {
+  mZData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
+  mZData.flags = 0;
+  mZData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
+  mZData.sensorType = eSLIM_VEHICLE_SENSOR_TYPE_ACCEL;
+  mZData.axesValidity = 0;
+  mZData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_X_AXIS;
+  mZData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Y_AXIS;
+  mZData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Z_AXIS;
+  mZData.samples_len = 0;
 }
 
 void VehicleNetworkCONF1AccelMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
@@ -317,23 +326,45 @@ void VehicleNetworkCONF1AccelMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
              return;
       }
 
-      slimVehicleSensorDataStructT zData;
-      memset(&zData, 0, sizeof(zData));
-      zData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
-      zData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
-      zData.flags = 0;
-      zData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
-      zData.sensorType = eSLIM_VEHICLE_SENSOR_TYPE_ACCEL;
-      zData.axesValidity = 0;
-      zData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_X_AXIS;
-      zData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Y_AXIS;
-      zData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Z_AXIS;
-      zData.samples_len = 1;
-      zData.samples[0].sampleTimeOffset = 0;
-      zData.samples[0].sample[0] = x_Value;
-      zData.samples[0].sample[1] = y_Value;
-      zData.samples[0].sample[2] = z_Value;
-      m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_ACCEL, zData);
+      SLIM_LOGV("accel samples_len %d, mIsBuffFrame %d FrameTime %d",
+                 mZData.samples_len,
+                 pzEvent->mIsBuffFrame,
+                 pzFrame->getTimestamp());
+      /* First process buffer data in batches */
+      if (pzEvent->mIsBuffFrame) {
+        if (mZData.samples_len == 0) {
+          mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+          mZData.samples[0].sampleTimeOffset = 0;
+        } else {
+          mZData.samples[mZData.samples_len].sampleTimeOffset =
+              slim_TimeToClockTicks(VnTimeToApTime(pzFrame->getTimestamp()) - mZData.timeBase);
+        }
+        mZData.samples[mZData.samples_len].sample[0] = x_Value;
+        mZData.samples[mZData.samples_len].sample[1] = y_Value;
+        mZData.samples[mZData.samples_len].sample[2] = z_Value;
+        mZData.samples_len += 1;
+        if (mZData.samples_len == SLIM_VEHICLE_SENSOR_MAX_SAMPLE_SETS) {
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_ACCEL, mZData);
+          /* sleep for 2 ms to allow every batch of data sent to application */
+          usleep(TIME_BW_BUFFERED_DATA_BATCHES);
+          mZData.samples_len = 0;
+        }
+      } else {
+        /* Process live data*/
+        if (mZData.samples_len > 0) {
+          /* send remaining samples from the last buffered batch */
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_ACCEL, mZData);
+        }
+        mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+
+        mZData.samples_len = 1;
+        mZData.samples[0].sampleTimeOffset = 0;
+        mZData.samples[0].sample[0] = x_Value;
+        mZData.samples[0].sample[1] = y_Value;
+        mZData.samples[0].sample[2] = z_Value;
+        m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_ACCEL, mZData);
+        mZData.samples_len = 0;
+      }
     }
   }
 }
@@ -429,6 +460,15 @@ VehicleNetworkCONF1GyroMP::VehicleNetworkCONF1GyroMP(
     VehicleNetworkProvider* pzParent, GyroCONF1Config* pzCfg) :
     VehicleNetworkMessageProcessor(pzParent), m_pzCfg(pzCfg)
 {
+  mZData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
+  mZData.flags = 0;
+  mZData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
+  mZData.sensorType = eSLIM_VEHICLE_SENSOR_TYPE_GYRO;
+  mZData.axesValidity = 0;
+  mZData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_X_AXIS;
+  mZData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Y_AXIS;
+  mZData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Z_AXIS;
+  mZData.samples_len = 0;
 }
 
 void VehicleNetworkCONF1GyroMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
@@ -555,23 +595,45 @@ void VehicleNetworkCONF1GyroMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
              return;
       }
 
-      slimVehicleSensorDataStructT zData;
-      memset(&zData, 0, sizeof(zData));
-      zData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
-      zData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
-      zData.flags = 0;
-      zData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
-      zData.sensorType = eSLIM_VEHICLE_SENSOR_TYPE_GYRO;
-      zData.axesValidity = 0;
-      zData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_X_AXIS;
-      zData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Y_AXIS;
-      zData.axesValidity |= SLIM_MASK_VEHICLE_SENSOR_Z_AXIS;
-      zData.samples_len = 1;
-      zData.samples[0].sampleTimeOffset = 0;
-      zData.samples[0].sample[0] = x_Value;
-      zData.samples[0].sample[1] = y_Value;
-      zData.samples[0].sample[2] = z_Value;
-      m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GYRO, zData);
+      SLIM_LOGV("gyro samples_len %d, mIsBuffFrame %d FrameTime %d",
+                 mZData.samples_len,
+                 pzEvent->mIsBuffFrame,
+                 pzFrame->getTimestamp());
+      /* First process buffer data in batches */
+      if (pzEvent->mIsBuffFrame) {
+        if (mZData.samples_len == 0) {
+          mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+          mZData.samples[0].sampleTimeOffset = 0;
+        } else {
+          mZData.samples[mZData.samples_len].sampleTimeOffset =
+              slim_TimeToClockTicks(VnTimeToApTime(pzFrame->getTimestamp()) - mZData.timeBase);
+        }
+        mZData.samples[mZData.samples_len].sample[0] = x_Value;
+        mZData.samples[mZData.samples_len].sample[1] = y_Value;
+        mZData.samples[mZData.samples_len].sample[2] = z_Value;
+        mZData.samples_len += 1;
+        if (mZData.samples_len == SLIM_VEHICLE_SENSOR_MAX_SAMPLE_SETS) {
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GYRO, mZData);
+          /* sleep for 2 ms to allow every batch of data sent to application */
+          usleep(TIME_BW_BUFFERED_DATA_BATCHES);
+          mZData.samples_len = 0;
+        }
+      } else {
+        /* Process live data*/
+        if (mZData.samples_len > 0) {
+          /* send remaining samples from the last buffered batch */
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GYRO, mZData);
+        }
+        mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+
+        mZData.samples_len = 1;
+        mZData.samples[0].sampleTimeOffset = 0;
+        mZData.samples[0].sample[0] = x_Value;
+        mZData.samples[0].sample[1] = y_Value;
+        mZData.samples[0].sample[2] = z_Value;
+        m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GYRO, mZData);
+        mZData.samples_len = 0;
+      }
     }
   }
 }
@@ -624,6 +686,11 @@ VehicleNetworkCONF1OdometryMP::VehicleNetworkCONF1OdometryMP(
     VehicleNetworkProvider* pzParent, OdometryCONF1Config* pzCfg) :
     VehicleNetworkMessageProcessor(pzParent), m_pzCfg(pzCfg)
 {
+  mZData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
+  mZData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
+  mZData.distanceTravelledBase = 0;
+  mZData.odometryFlags = 0;
+  mZData.wheelFlags = 0;
 }
 
 void VehicleNetworkCONF1OdometryMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
@@ -665,44 +732,75 @@ void VehicleNetworkCONF1OdometryMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
       if (bitStream.GetStatus() != 0)
         return;
 
-      slimVehicleOdometryDataStructT zData;
-      memset(&zData, 0, sizeof(zData));
-      zData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
-      zData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
-      zData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
-      zData.distanceTravelledBase = 0;
-      zData.odometryFlags = 0;
-      if (reverse != 0)
-      {
-        zData.odometryFlags |= SLIM_MASK_VEHICLE_ODOMETRY_REVERSE_MOVEMENT;
-      }
-      zData.wheelFlags = 0;
-      if (src & OdometryCONF1Config::eODO_CFG1_SRC_LEFT)
-      {
-        zData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_LEFT;
-        zData.samples[0].distanceTravelled[1] = distance;
-      }
-      else if (src & OdometryCONF1Config::eODO_CFG1_SRC_RIGHT)
-      {
-        zData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_RIGHT;
-        zData.samples[0].distanceTravelled[2] = distance;
-      }
-      else if (src & OdometryCONF1Config::eODO_CFG1_SRC_LR_AVR)
-      {
-        zData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_LEFT_AND_RIGHT_AVERAGE;
-        zData.samples[0].distanceTravelled[0] = distance;
-      }
+      SLIM_LOGV("odo samples_len %d, mIsBuffFrame %d FrameTime %d",
+                 mZData.samples_len,
+                 pzEvent->mIsBuffFrame,
+                 pzFrame->getTimestamp());
+      /* First process buffer data in batches */
+      if (pzEvent->mIsBuffFrame) {
+        if (mZData.samples_len == 0) {
+          mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+          mZData.samples[0].sampleTimeOffset = 0;
+        } else {
+          mZData.samples[mZData.samples_len].sampleTimeOffset =
+              slim_TimeToClockTicks(VnTimeToApTime(pzFrame->getTimestamp()) - mZData.timeBase);
+        }
 
-      if (zData.wheelFlags == 0)
-      {
-        zData.samples_len = 0;
+        if (reverse != 0) {
+          mZData.odometryFlags |= SLIM_MASK_VEHICLE_ODOMETRY_REVERSE_MOVEMENT;
+        }
+        if (src & OdometryCONF1Config::eODO_CFG1_SRC_LEFT) {
+          mZData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_LEFT;
+          mZData.samples[mZData.samples_len].distanceTravelled[1] = distance;
+        } else if (src & OdometryCONF1Config::eODO_CFG1_SRC_RIGHT) {
+          mZData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_RIGHT;
+          mZData.samples[mZData.samples_len].distanceTravelled[2] = distance;
+        } else if (src & OdometryCONF1Config::eODO_CFG1_SRC_LR_AVR) {
+          mZData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_LEFT_AND_RIGHT_AVERAGE;
+          mZData.samples[mZData.samples_len].distanceTravelled[0] = distance;
+        }
+        if (mZData.wheelFlags != 0)
+          mZData.samples_len += 1;
+
+        if (mZData.samples_len == SLIM_VEHICLE_ODOMETRY_MAX_SAMPLE_SETS) {
+          m_pzParent->routeIndication(mZData);
+          /* sleep for 2 ms to allow every batch of data sent to application */
+          usleep(TIME_BW_BUFFERED_DATA_BATCHES);
+          mZData.samples_len = 0;
+        }
+      } else {
+        /* Process live data*/
+        if (mZData.samples_len > 0) {
+          /* send remaining samples from the last buffered batch */
+          m_pzParent->routeIndication(mZData);
+        }
+        mZData.odometryFlags = 0;
+        mZData.wheelFlags = 0;
+        mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+        if (reverse != 0) {
+          mZData.odometryFlags |= SLIM_MASK_VEHICLE_ODOMETRY_REVERSE_MOVEMENT;
+        }
+        if (src & OdometryCONF1Config::eODO_CFG1_SRC_LEFT) {
+          mZData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_LEFT;
+          mZData.samples[mZData.samples_len].distanceTravelled[1] = distance;
+        } else if (src & OdometryCONF1Config::eODO_CFG1_SRC_RIGHT) {
+          mZData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_RIGHT;
+          mZData.samples[mZData.samples_len].distanceTravelled[2] = distance;
+        } else if (src & OdometryCONF1Config::eODO_CFG1_SRC_LR_AVR) {
+          mZData.wheelFlags |= SLIM_MASK_VEHICLE_ODOMETRY_LEFT_AND_RIGHT_AVERAGE;
+          mZData.samples[mZData.samples_len].distanceTravelled[0] = distance;
+        }
+
+        if (mZData.wheelFlags == 0) {
+          mZData.samples_len = 0;
+        } else {
+          mZData.samples_len = 1;
+          mZData.samples[0].sampleTimeOffset = 0;
+        }
+
+        m_pzParent->routeIndication(mZData);
+        mZData.samples_len = 0;
       }
-      else
-      {
-        zData.samples_len = 1;
-        zData.samples[0].sampleTimeOffset = 0;
-      }
-      m_pzParent->routeIndication(zData);
     }
   }
 }
@@ -752,6 +850,10 @@ VehicleNetworkCONF1SpeedMP::VehicleNetworkCONF1SpeedMP(
     VehicleNetworkProvider* pzParent, SpeedCONF1Config* pzCfg) :
     VehicleNetworkMessageProcessor(pzParent), m_pzCfg(pzCfg)
 {
+  mZData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
+  mZData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
+  mZData.sensorType = eSLIM_VEHICLE_MOTION_SENSOR_TYPE_SPEED;
+  mZData.samples_len = 0;
 }
 
 void VehicleNetworkCONF1SpeedMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
@@ -822,21 +924,41 @@ void VehicleNetworkCONF1SpeedMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
       }
 
       float speedmps = speedPhysicalUnit * conversionFactor2mps;
+      SLIM_LOGV("speed samples_len %d, mIsBuffFrame %d FrameTime %d",
+                 mZData.samples_len,
+                 pzEvent->mIsBuffFrame,
+                 pzFrame->getTimestamp());
+      /* First process buffer data in batches */
+      if (pzEvent->mIsBuffFrame) {
+        if (mZData.samples_len == 0) {
+          mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+          mZData.samples[0].speed.sampleTimeOffset = 0;
+        } else {
+          mZData.samples[mZData.samples_len].speed.sampleTimeOffset =
+              slim_TimeToClockTicks(VnTimeToApTime(pzFrame->getTimestamp()) - mZData.timeBase);
+        }
+        mZData.samples[mZData.samples_len].speed.data = speedmps;
+        mZData.samples_len += 1;
+        if (mZData.samples_len == SLIM_VEHICLE_MOTION_DATA_MAX_SAMPLE_SETS) {
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_SPEED, mZData);
+          /* sleep for 2 ms to allow every batch of data sent to application */
+          usleep(TIME_BW_BUFFERED_DATA_BATCHES);
+          mZData.samples_len = 0;
+        }
+      } else {
+        /* Process live data*/
+        if (mZData.samples_len > 0) {
+          /* send remaining samples from the last buffered batch */
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_SPEED, mZData);
+        }
+        mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
 
-
-      slimVehicleMotionDataStructT zData;
-      memset(&zData, 0, sizeof(zData));
-      zData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
-      zData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
-      zData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
-
-
-      zData.sensorType = eSLIM_VEHICLE_MOTION_SENSOR_TYPE_SPEED;
-      zData.samples_len = 1;
-      zData.samples[0].speed.sampleTimeOffset = 0;
-      zData.samples[0].speed.data = speedmps;
-
-      m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_SPEED,zData);
+        mZData.samples_len = 1;
+        mZData.samples[0].speed.sampleTimeOffset = 0;
+        mZData.samples[0].speed.data = speedmps;
+        m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_SPEED, mZData);
+        mZData.samples_len = 0;
+      }
     }
   }
 }
@@ -890,6 +1012,10 @@ VehicleNetworkCONF1DwsMP::VehicleNetworkCONF1DwsMP(
     VehicleNetworkProvider* pzParent, DwsCONF1Config* pzCfg) :
     VehicleNetworkMessageProcessor(pzParent), m_pzCfg(pzCfg)
 {
+  mZData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
+  mZData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
+  mZData.sensorType = eSLIM_VEHICLE_MOTION_SENSOR_TYPE_DWS;
+  mZData.samples_len = 0;
 }
 
 void VehicleNetworkCONF1DwsMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
@@ -1002,22 +1128,46 @@ void VehicleNetworkCONF1DwsMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
       float speedmpsRL = speedPhysicalUnitRL * conversionFactor2mps;
       float speedmpsRR = speedPhysicalUnitRR * conversionFactor2mps;
 
-      slimVehicleMotionDataStructT zData;
-      memset(&zData, 0, sizeof(zData));
-      zData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
-      zData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
-      zData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
-
-
-      zData.sensorType = eSLIM_VEHICLE_MOTION_SENSOR_TYPE_DWS;
-      zData.samples_len = 1;
-      zData.samples[0].dws.sampleTimeOffset = 0;
-      zData.samples[0].dws.flWheel = speedmpsFL;
-      zData.samples[0].dws.frWheel = speedmpsFR;
-      zData.samples[0].dws.rlWheel = speedmpsRL;
-      zData.samples[0].dws.rrWheel = speedmpsRR;
-
-      m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_DWS,zData);
+      SLIM_LOGV("dws samples_len %d, mIsBuffFrame %d FrameTime %d",
+                 mZData.samples_len,
+                 pzEvent->mIsBuffFrame,
+                 pzFrame->getTimestamp());
+      /* First process buffer data in batches */
+      if (pzEvent->mIsBuffFrame) {
+        if (mZData.samples_len == 0) {
+          mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+          mZData.samples[0].dws.sampleTimeOffset = 0;
+        } else {
+          mZData.samples[mZData.samples_len].dws.sampleTimeOffset =
+              slim_TimeToClockTicks(VnTimeToApTime(pzFrame->getTimestamp()) - mZData.timeBase);
+        }
+        mZData.samples[mZData.samples_len].dws.flWheel = speedmpsFL;
+        mZData.samples[mZData.samples_len].dws.frWheel = speedmpsFR;
+        mZData.samples[mZData.samples_len].dws.rlWheel = speedmpsRL;
+        mZData.samples[mZData.samples_len].dws.rrWheel = speedmpsRR;
+        mZData.samples_len += 1;
+        if (mZData.samples_len == SLIM_VEHICLE_MOTION_DATA_MAX_SAMPLE_SETS) {
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_DWS, mZData);
+          /* sleep for 2 ms to allow every batch of data sent to application */
+          usleep(TIME_BW_BUFFERED_DATA_BATCHES);
+          mZData.samples_len = 0;
+        }
+      } else {
+        /* Process live data*/
+        if (mZData.samples_len > 0) {
+          /* send remaining samples from the last buffered batch */
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_DWS, mZData);
+        }
+        mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+        mZData.samples_len = 1;
+        mZData.samples[0].dws.sampleTimeOffset = 0;
+        mZData.samples[0].dws.flWheel = speedmpsFL;
+        mZData.samples[0].dws.frWheel = speedmpsFR;
+        mZData.samples[0].dws.rlWheel = speedmpsRL;
+        mZData.samples[0].dws.rrWheel = speedmpsRR;
+        m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_DWS, mZData);
+        mZData.samples_len = 0;
+      }
     }
   }
 }
@@ -1067,6 +1217,10 @@ VehicleNetworkCONF1GearMP::VehicleNetworkCONF1GearMP(
     VehicleNetworkProvider* pzParent, GearCONF1Config* pzCfg) :
     VehicleNetworkMessageProcessor(pzParent), m_pzCfg(pzCfg)
 {
+  mZData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
+  mZData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
+  mZData.sensorType = eSLIM_VEHICLE_MOTION_SENSOR_TYPE_GEAR;
+  mZData.samples_len = 0;
 }
 
 void VehicleNetworkCONF1GearMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
@@ -1129,19 +1283,42 @@ void VehicleNetworkCONF1GearMP::OnNewCanFrameEvent(CanFrameEvent* pzEvent)
       if(geardata == -1)
           return;
 
-      slimVehicleMotionDataStructT zData;
-      memset(&zData, 0, sizeof(zData));
-      zData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
-      zData.timeSource = eSLIM_TIME_SOURCE_UNSPECIFIED;
-      zData.provider = eSLIM_SERVICE_PROVIDER_NATIVE;
+      SLIM_LOGV("gear samples_len %d, mIsBuffFrame %d FrameTime %d",
+                 mZData.samples_len,
+                 pzEvent->mIsBuffFrame,
+                 pzFrame->getTimestamp());
+      /* First process buffer data in batches */
+      if (pzEvent->mIsBuffFrame) {
+        if (mZData.samples_len == 0) {
+          mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
+          mZData.samples[0].gear.data = geardata;
+          mZData.samples[0].gear.sampleTimeOffset = 0;
+        } else {
+          mZData.samples[mZData.samples_len].gear.data = geardata;
+          mZData.samples[mZData.samples_len].gear.sampleTimeOffset =
+              slim_TimeToClockTicks(VnTimeToApTime(pzFrame->getTimestamp()) - mZData.timeBase);
+        }
+        mZData.samples_len += 1;
+        if (mZData.samples_len == SLIM_VEHICLE_MOTION_DATA_MAX_SAMPLE_SETS) {
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GEAR, mZData);
+          /* sleep for 2 ms to allow every batch of data sent to application */
+          usleep(TIME_BW_BUFFERED_DATA_BATCHES);
+          mZData.samples_len = 0;
+        }
+      } else {
+        /* Process live data*/
+        if (mZData.samples_len > 0) {
+          /* send remaining samples from the last buffered batch */
+          m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GEAR, mZData);
+        }
+        mZData.timeBase = VnTimeToApTime(pzFrame->getTimestamp());
 
-
-      zData.sensorType = eSLIM_VEHICLE_MOTION_SENSOR_TYPE_GEAR;
-      zData.samples_len = 1;
-      zData.samples[0].gear.sampleTimeOffset = 0;
-      zData.samples[0].gear.data = geardata;
-
-      m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GEAR,zData);
+        mZData.samples_len = 1;
+        mZData.samples[0].gear.sampleTimeOffset = 0;
+        mZData.samples[0].gear.data = geardata;
+        m_pzParent->routeIndication(eSLIM_SERVICE_VEHICLE_GEAR, mZData);
+        mZData.samples_len = 0;
+      }
     }
   }
 }

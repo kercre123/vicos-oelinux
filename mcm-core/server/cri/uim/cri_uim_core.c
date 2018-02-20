@@ -1,7 +1,8 @@
 /*===========================================================================
 
-  Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
 
   Export of this technology or software is regulated by the U.S. Government.
   Diversion contrary to U.S. law prohibited.
@@ -461,3 +462,22 @@ void cri_uim_core_async_resp_handler
                               QMI_ERR_NONE_V01,
                               resp_data);
 } /* cri_uim_core_async_resp_handler */
+
+/*=========================================================================
+
+  FUNCTION:  cri_uim_release_client
+
+===========================================================================*/
+/*
+    @brief
+    function to release qmi srv client info
+
+    @return
+    None
+*/
+/*=========================================================================*/
+void cri_uim_release_client(int qmi_service_client_id)
+{
+    cri_uim_reset_card_status();
+    cri_core_release_qmi_service_client(qmi_service_client_id);
+}

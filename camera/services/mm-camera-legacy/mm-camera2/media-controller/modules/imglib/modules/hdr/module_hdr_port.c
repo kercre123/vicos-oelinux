@@ -498,7 +498,7 @@ static boolean module_hdr_port_fill_native_input_buffer(
    img_frame->info.analysis = 0;
    img_frame->idx = buf_divert->buffer.index;
    IDBG_MED("%s -", __func__);
-   return true;
+   return 1;
 }
 
 /** module_hdr_port_fill_input_buffer:
@@ -557,7 +557,7 @@ static boolean module_hdr_port_fill_input_buffer(
    img_frame->info.analysis = 0;
    img_frame->idx = buf_divert->buffer.index;
    IDBG_MED("%s -", __func__);
-   return true;
+   return 1;
 }
 
 /** module_hdr_port_fill_divert_buffer_handler:

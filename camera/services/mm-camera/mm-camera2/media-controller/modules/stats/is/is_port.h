@@ -111,6 +111,7 @@ typedef struct _is_port_private {
   int RSCS_stats_ready;
   is_output_type is_output[IS_MAX_STREAMS];
   is_output_type is_output_flush[IS_MAX_BUFFER_DELAY];
+  mct_stream_info_t *stream_info[IS_MAX_STREAMS];
   cam_stream_type_t stream_type;
   is_info_t is_info;
   is_process_output_t is_process_output;

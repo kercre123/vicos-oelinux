@@ -1,8 +1,9 @@
 /******************************************************************************
   ---------------------------------------------------------------------------
 
-  Copyright (c) 2013 Qualcomm Technologies, Inc. All Rights Reserved.
-  Qualcomm Technologies Proprietary and Confidential.
+  Copyright (c) 2013, 2017 Qualcomm Technologies, Inc.
+  All Rights Reserved.
+  Confidential and Proprietary - Qualcomm Technologies, Inc.
   ---------------------------------------------------------------------------
 ******************************************************************************/
 
@@ -38,7 +39,7 @@ cri_core_error_type cri_voice_core_init(hlos_ind_cb_type hlos_ind_cb_func_ptr)
     return 0;
 }
 
-cri_core_error_type cri_voice_reset()
+cri_core_error_type cri_voice_reset(void)
 {
     cri_voice_qmi_client_deinit(&qmi_client_info);
     // reset the cache

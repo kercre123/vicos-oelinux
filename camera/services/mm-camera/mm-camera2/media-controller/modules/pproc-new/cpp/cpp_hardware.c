@@ -102,6 +102,7 @@ cpp_hardware_t* cpp_hardware_create()
   cpp_hardware_t *cpphw;
   char  value[PROPERTY_VALUE_MAX];
   int32_t rc;
+  pthread_condattr_t cond_attr;
   cpphw = (cpp_hardware_t *) malloc(sizeof(cpp_hardware_t));
   if(!cpphw) {
     CPP_ERR("malloc() failed");
@@ -127,7 +128,15 @@ cpp_hardware_t* cpp_hardware_create()
     cpphw->stream_status[i].pending_partial_frame = 0;
     cpphw->stream_status[i].stream_off_pending = FALSE;
   }
-  pthread_cond_init(&(cpphw->subdev_cond), NULL);
+  rc = pthread_condattr_init(&cond_attr);
+  if (rc) {
+    CPP_ERR("%s: pthread_condattr_init failed", __func__);
+  }
+  rc = pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+  if (rc) {
+    CPP_ERR("%s: pthread_condattr_setclock failed!!!", __func__);
+  }
+  pthread_cond_init(&(cpphw->subdev_cond), &cond_attr);
   pthread_mutex_init(&(cpphw->mutex), NULL);
   property_get("persist.enable.max.pending.buf", value, "1");
   if (atoi(value)) {
@@ -1100,7 +1109,9 @@ static int32_t cpp_hardware_dump_metadata(cpp_hardware_params_t *hw_params,
 {
   uint32_t                i = 0;
   int32_t                 enabled = 0;
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   char                    value[PROPERTY_VALUE_MAX];
+#endif
   int32_t                 meta_frame_count = 0;
   pproc_meta_data_t      *meta_data;
   cpp_info_t             *cpp_meta_info;
@@ -1114,8 +1125,10 @@ static int32_t cpp_hardware_dump_metadata(cpp_hardware_params_t *hw_params,
     return -EINVAL;
   }
 
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   property_get("persist.camera.dumpmetadata", value, "0");
   enabled = atoi(value);
+#endif
   if (enabled == 0) {
     return 0;
   }
@@ -1255,7 +1268,7 @@ int32_t cpp_hardware_flush_frame(cpp_hardware_t *cpphw,
   return 0;
 }
 
-#ifdef _ANDROID_
+#if (defined(_ANDROID_) && !defined(_DRONE_))
 void cpp_hardware_dump_payload(cpp_hardware_t *cpphw,
   struct msm_cpp_frame_info_t *msm_cpp_frame_info,
   cpp_hardware_params_t *hw_params)
@@ -1578,7 +1591,7 @@ static int32_t cpp_hardware_process_frame(cpp_hardware_t *cpphw,
   struct msm_camera_v4l2_ioctl_t v4l2_ioctl;
   int32_t status = 0;
   msm_cpp_frame_info->status = &status;
-#ifdef _ANDROID_
+#if (defined(_ANDROID_) && !defined(_DRONE_))
   cpp_hardware_dump_payload(cpphw, msm_cpp_frame_info, hw_params);
 #endif
   v4l2_ioctl.ioctl_ptr = (void *)msm_cpp_frame_info;
@@ -1762,6 +1775,7 @@ static int32_t cpp_hardware_pop_stream_buffer(cpp_hardware_t *cpphw,
   v4l2_ioctl.len = sizeof(struct msm_cpp_frame_info_t);
   frame.frame_id = event_data->frame_id;
   frame.identity = event_data->identity;
+  frame.output_buffer_info[0].index = event_data->buf_idx;
   rc = ioctl(cpphw->subdev_fd, VIDIOC_MSM_CPP_POP_STREAM_BUFFER, &v4l2_ioctl);
   PTHREAD_MUTEX_UNLOCK(&(cpphw->mutex));
   return rc;

@@ -1073,6 +1073,87 @@ int32_t cpp_module_handle_isp_drop_buffer(mct_module_t* module,
   return 0;
 }
 
+/* cpp_module_handle_divert_drop:
+ *
+ * Description:
+ *
+ **/
+int32_t cpp_module_handle_divert_drop(mct_module_t* module,
+  mct_event_t* event)
+{
+  int32_t                       rc, i = 0;
+  cpp_module_stream_params_t   *stream_params;
+  cpp_module_session_params_t  *session_params;
+  cpp_module_ctrl_t            *ctrl = NULL;
+  cpp_module_event_t           *isp_buffer_drop_event = NULL;
+  uint32_t                  stream_frame_valid = 0;
+  uint32_t process_frame_control;
+
+  if(!module || !event) {
+    CPP_BUF_ERR("failed, module=%p, event=%p\n", module, event);
+    return -EINVAL;
+  }
+  CPP_BUF_ERR("%s:%d \n", __func__,__LINE__);
+  ctrl = (cpp_module_ctrl_t*) MCT_OBJECT_PRIVATE(module);
+  if(!ctrl) {
+    CPP_BUF_ERR("invalid cpp control, failed\n");
+    return -EFAULT;
+  }
+
+  /* get stream parameters based on the event identity */
+  cpp_module_get_params_for_identity(ctrl, event->identity,
+    &session_params, &stream_params);
+  if(!session_params || !stream_params) {
+    CPP_BUF_ERR("failed session_params %p, stream_params %p\n",
+      session_params, stream_params);
+    return -EFAULT;
+  }
+
+  CPP_BUF_HIGH("Request is valid");
+  isp_buffer_drop_event =
+    (cpp_module_event_t*)malloc(sizeof(cpp_module_event_t));
+  if(!isp_buffer_drop_event) {
+    CPP_BUF_ERR("malloc failed\n");
+    return -ENOMEM;
+  }
+
+  memset(isp_buffer_drop_event, 0x00, sizeof(cpp_module_event_t));
+  isp_buffer_drop_event->hw_process_flag = TRUE;
+  isp_buffer_drop_event->type = CPP_MODULE_EVENT_ISP_BUFFER_DROP;
+  //isp_buffer_drop_event->ack_key = 0; // No ACK expected so key is not needed
+  isp_buffer_drop_event->invalid = FALSE;
+  isp_buffer_drop_event->u.drop_buffer.frame_id =
+    event->u.module_event.current_frame_id;
+  isp_buffer_drop_event->u.drop_buffer.stream_params = stream_params;
+
+  CPP_BUF_ERR("ISP buf drop for id %x frame %d \n",
+    event->identity, isp_buffer_drop_event->u.drop_buffer.frame_id);
+
+  PTHREAD_MUTEX_LOCK(&(ctrl->cpp_mutex));
+  if (ctrl->cpp_thread_started) {
+    cpp_thread_msg_t msg;
+    rc = cpp_module_enq_event(ctrl, isp_buffer_drop_event,
+        CPP_PRIORITY_REALTIME);
+    if (rc < 0) {
+      CPP_BUF_LOW("Enqueue event failed");
+      free(isp_buffer_drop_event);
+      PTHREAD_MUTEX_UNLOCK(&(ctrl->cpp_mutex));
+      return rc;
+    }
+    msg.type = CPP_THREAD_MSG_NEW_EVENT_IN_Q;
+    cpp_module_post_msg_to_thread(ctrl, msg);
+  } else {
+    free(isp_buffer_drop_event);
+    CPP_BUF_HIGH("Thread not active, dont queue for identity %x, frame %d",
+      stream_params->identity, event->u.module_event.current_frame_id);
+    PTHREAD_MUTEX_UNLOCK(&(ctrl->cpp_mutex));
+    return -EINVAL;
+  }
+  PTHREAD_MUTEX_UNLOCK(&(ctrl->cpp_mutex));
+
+  CPP_BUF_DBG("Exit\n");
+  return 0;
+}
 
 /* cpp_module_handle_aec_manual_update:
  *
@@ -3007,8 +3088,12 @@ static int32_t cpp_module_store_frame_control(cpp_module_ctrl_t *ctrl,
       }
     }
       break;
-    case CAM_INTF_META_STREAM_ID:
+    case CAM_INTF_META_STREAM_ID: {
+      cpp_module_stream_params_t  *stream_params = NULL;
+      cpp_module_session_params_t *session_params = NULL;
+
       CPP_PER_FRAME_DBG("CAM_INTF_META_STREAM_ID\n");
+
       parm_data = calloc(1, sizeof(cam_stream_ID_t));
       if (parm_data) {
         uint32_t j;
@@ -3016,11 +3101,23 @@ static int32_t cpp_module_store_frame_control(cpp_module_ctrl_t *ctrl,
           *(cam_stream_ID_t *)control_param->parm_data;
         for (j = 0; j <
           ((cam_stream_ID_t *)control_param->parm_data)->num_streams; j++) {
-          CPP_HIGH("META_STREAM_ID q_idx %d frame id %d streamID:%d",
+
+          uint32_t request_identity = (identity & 0xFFFF0000) |
+            ((cam_stream_ID_t *)control_param->parm_data)->stream_request[j].streamID;
+
+          cpp_module_get_params_for_identity(ctrl, request_identity,
+            &session_params, &stream_params);
+
+          if(stream_params != NULL) {
+            stream_params->queue_frame_id[q_idx] = future_frame_id;
+          }
+          CPP_HIGH("META_STREAM_ID q_idx %d frame id %d streamID:%d, request_identity 0x%x",
             q_idx, future_frame_id,
-            ((cam_stream_ID_t *)control_param->parm_data)->stream_request[j].streamID);
+            ((cam_stream_ID_t *)control_param->parm_data)->stream_request[j].streamID,
+            request_identity);
         }
       }
+    }
       break;
     case CAM_INTF_PARM_CDS_MODE:
       CPP_PER_FRAME_LOW("CAM_INTF_PARM_CDS_MODE\n");
@@ -3163,12 +3260,10 @@ int32_t cpp_module_process_frame_control(mct_module_t *module,
             if (report_frame_id > per_frame_params->cur_frame_id){
               pthread_mutex_unlock(&per_frame_params->frame_ctrl_mutex[q_idx]);
 
-              pthread_mutex_lock(&per_frame_params->frame_ctrl_mutex[report_q_idx]);
 
               cpp_module_add_report_entry(per_frame_params,
                 frame_ctrl_data, report_frame_id, identity);
 
-              pthread_mutex_unlock(&per_frame_params->frame_ctrl_mutex[report_q_idx]);
 
               pthread_mutex_lock(&per_frame_params->frame_ctrl_mutex[q_idx]);
             } else if (report_frame_id == per_frame_params->cur_frame_id) {
@@ -3554,7 +3649,12 @@ int32_t cpp_module_process_set_param_event(cpp_module_ctrl_t *ctrl,
     }
     memset(&session_params->valid_stream_ids[0], 0,
       sizeof(session_params->valid_stream_ids));
-
+    for(i=0; i < CPP_MODULE_MAX_STREAMS; i++) {
+      if(session_params->stream_params[i]) {
+        memset(&session_params->stream_params[i]->queue_frame_id[0], 0,
+          sizeof(stream_params->queue_frame_id));
+      }
+    }
     cam_stream_size_info_t *meta_stream_info =
       (cam_stream_size_info_t *)(parm_data);
     for (i = 0; i < meta_stream_info->num_streams; i++) {
@@ -4512,6 +4612,8 @@ int32_t cpp_module_handle_streamoff_event(mct_module_t* module,
           stream_params->stream_type, per_frame_params);
         memset(&session_params->valid_stream_ids[0], 0,
           sizeof(session_params->valid_stream_ids));
+        memset(&stream_params->queue_frame_id[0], 0,
+          sizeof(stream_params->queue_frame_id));
       }
     }
   }
@@ -4782,8 +4884,10 @@ int32_t cpp_module_handle_frame_skip_event(mct_module_t *module,
 
     frame_ctrl_data->frame_id = skip_frame_id + skip_frame_cnt;
     new_q_idx = (frame_ctrl_data->frame_id % FRAME_CTRL_SIZE);
+  pthread_mutex_lock(&per_frame_params->frame_ctrl_mutex[new_q_idx]);
     mct_queue_push_tail(per_frame_params->frame_ctrl_q[new_q_idx],
       (void *)frame_ctrl_data);
+  pthread_mutex_unlock(&per_frame_params->frame_ctrl_mutex[new_q_idx]);
   }
   pthread_mutex_unlock(&per_frame_params->frame_ctrl_mutex[q_idx]);
 
@@ -4895,8 +4999,10 @@ int32_t cpp_module_post_sticky_meta_entry(cpp_module_ctrl_t *ctrl,
 
     frame_ctrl_data->u.ctrl_param.type = type;
     frame_ctrl_data->u.ctrl_param.parm_data = parm_data;
+    PTHREAD_MUTEX_UNLOCK(&per_frame_params->frame_ctrl_mutex[q_idx]);
     cpp_module_add_report_entry(per_frame_params, frame_ctrl_data,
       cur_frame_id, identity);
+    PTHREAD_MUTEX_LOCK(&per_frame_params->frame_ctrl_mutex[q_idx]);
   }
 
   PTHREAD_MUTEX_UNLOCK(&per_frame_params->frame_ctrl_mutex[q_idx]);
@@ -4943,8 +5049,10 @@ int32_t cpp_module_add_report_entry(
     " rpt_q_idx:%d\n",
     frame_ctrl_data->u.ctrl_param.type, frame_ctrl_data->frame_id,
     report_q_idx);
+    pthread_mutex_lock(&per_frame_params->frame_ctrl_mutex[report_q_idx]);
   mct_queue_push_tail(per_frame_params->frame_ctrl_q[report_q_idx],
     (void *)frame_ctrl_data);
+    pthread_mutex_unlock(&per_frame_params->frame_ctrl_mutex[report_q_idx]);
 
   return TRUE;
 }

@@ -6,8 +6,9 @@
     Supports functions for performing operations on/using qmi clients
     Primary use would be to create, release qmi clients and send, recv messages using the same.
 
-    Copyright (c) 2013-2014 Qualcomm Technologies, Inc. All Rights Reserved.
-    Qualcomm Technologies Proprietary and Confidential.
+    Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
+    All Rights Reserved.
+    Confidential and Proprietary - Qualcomm Technologies, Inc.
 ***************************************************************************************************/
 
 #ifndef CRI_CORE
@@ -25,6 +26,13 @@ struct cri_rule_handler_user_rule_info_type;
 typedef uint32_t cri_core_hlos_token_id_type;
 typedef uint16_t cri_core_token_id_type;
 typedef uint64_t cri_core_context_type;
+
+typedef enum
+{
+    CRI_CORE_GEN_OPERATIONAL_STATUS_UNKNOWN = 0,
+    CRI_CORE_GEN_OPERATIONAL_STATUS_SUSPENDED,
+    CRI_CORE_GEN_OPERATIONAL_STATUS_RESUMED
+} cri_core_gen_operational_status_type;
 
 typedef enum {
   CRI_ERROR_TYPE_MIN_ENUM_VAL_V01 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
@@ -138,6 +146,7 @@ typedef enum {
   CRI_ERR_DIAL_MODIFIED_TO_SS = 0x0101,
   CRI_ERR_DIAL_MODIFIED_TO_USSD = 0x0102,
   CRI_ERR_DIAL_FDN_CHECK_FAILURE = 0x0103,
+  CRI_ERR_RADIO_RESET_V01 = 0x0104,
   CRI_ERROR_TYPE_MAX_ENUM_VAL_V01 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 } cri_core_error_type;
 
@@ -204,6 +213,29 @@ typedef enum
   QMI_CRI_RF_SAR_SERVICE                      = QMI_FIRST_VS_SERVICE,
   QMI_CRI_MAX_SERVICES
 } qmi_cri_service_id_type;
+
+typedef enum service_status_type
+{
+    SRV_DOWN = 1,
+    SRV_UP = 2,
+}service_status_type;
+
+typedef struct cri_core_service_down_event_data_type
+{
+    service_status_type event_id;
+    qmi_client_type clnt;
+    qmi_client_error_type error;
+    void *cb_data;
+}cri_core_service_down_event_data_type;
+
+typedef struct cri_core_service_up_event_data_type
+{
+    service_status_type event_id;
+    qmi_client_type clnt;
+    qmi_idl_service_object_type svc_obj;
+    qmi_client_notify_event_type service_event;
+    void *cb_data;
+}cri_core_service_up_event_data_type;
 
 typedef enum cri_core_message_category_type
 {
@@ -750,5 +782,31 @@ void cri_core_unsol_ind_handler(void *event_data);
 ***************************************************************************************************/
 hlos_ind_cb_type cri_core_retrieve_hlos_ind_cb(int qmi_service_client_id);
 
+typedef void (*ssr_srv_down_cb)(void);
+typedef void (*ssr_srv_up_cb)(void);
 
+void cri_core_register_for_service_down(ssr_srv_down_cb cb);
+
+void cri_core_service_down_event
+(
+  qmi_client_type       clnt,
+  qmi_client_error_type error,
+  void                 *cb_data
+);
+
+void cri_core_register_for_service_up(ssr_srv_up_cb cb);
+
+void cri_core_service_up_event
+(
+  qmi_client_type  clnt,
+  qmi_idl_service_object_type   svc_obj,
+  qmi_client_notify_event_type  service_event,
+  void                         *cb_data
+);
+
+void cri_core_set_operational_status( cri_core_gen_operational_status_type status );
+cri_core_gen_operational_status_type cri_core_get_operational_status(void);
+uint8_t cri_core_mcm_ssr_resume(void);
+void cri_core_service_down_event_hdlr(void *event_data);
+void cri_core_service_up_event_hdlr(void *event_data);
 #endif

@@ -386,7 +386,7 @@ int mcm_data_test_input_string( char * buff, unsigned int len )
   do
   {
     buff[i++] = ch;
-  } while(scanf("%c",&ch)!=0 && ch!='\n' && i<len);
+  } while(scanf("%c",&ch)!=0 && ch!='\n' && i<len-1);
   buff[i]='\0';
   if(ch!='\n')
   {

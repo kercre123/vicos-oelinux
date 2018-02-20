@@ -5325,6 +5325,8 @@ boolean QCMAP_Client::CreateWWANPolicy
   memset(&create_wwan_policy_resp_msg , 0, sizeof(qcmap_msgr_create_wwan_policy_resp_msg_v01));
   create_wwan_policy_req_msg.mobile_ap_handle = this->mobile_ap_handle;
   create_wwan_policy_req_msg.wwan_policy = WWAN_policy;
+  //setting Wan policy ip family type as V4V6
+  create_wwan_policy_req_msg.wwan_policy.ip_family = QCMAP_MSGR_IP_FAMILY_V4V6_V01;
 
   qmi_error = qmi_client_send_msg_sync(this->qmi_qcmap_msgr_handle,
                                        QMI_QCMAP_MSGR_CREATE_WWAN_POLICY_REQ_V01,
@@ -11353,6 +11355,145 @@ QCMAP_Client::DeleteGSBConfig
   }
 
   LOG_MSG_INFO1("Delete GSB Config Succeeded", 0, 0, 0);
+
+  return true;
+}
+
+/*===========================================================================
+FUNCTION GetDataPathOptStatus()
+===========================================================================*/
+/**
+  Use to know the status of data path optimization whether enabled/disabled.
+  @datatypes
+  qmi_error_type_v01
+
+  @param [in] data_path_opt_status      Status of Data Path Optimizer
+  @param[out] qmi_err_num       Error code returned by the server.
+
+  @return
+  TRUE upon success. \n
+  FALSE upon failure.
+
+  @dependencies
+  QCMobileAP must be enabled.
+*/
+/*=========================================================================*/
+boolean
+QCMAP_Client::GetDataPathOptStatus
+(
+  boolean *data_path_opt_status,
+  qmi_error_type_v01 *qmi_err_num
+)
+{
+  qcmap_msgr_get_data_path_opt_status_req_msg_v01  req_msg;
+  qcmap_msgr_get_data_path_opt_status_resp_msg_v01  resp_msg;
+
+  memset(&req_msg, 0 , sizeof(qcmap_msgr_get_data_path_opt_status_req_msg_v01));
+  memset(&resp_msg, 0 , sizeof(qcmap_msgr_get_data_path_opt_status_req_msg_v01));
+
+  qmi_client_error_type qmi_error;
+  QCMAP_LOG_FUNC_ENTRY();
+  LOG_MSG_INFO1("requesting to get data path opt status",0,0,0);
+  if (!qmi_err_num)
+  {
+    LOG_MSG_ERROR("Invalid parameter passed ",0,0,0);
+    return false;
+  }
+
+  if(data_path_opt_status == NULL)
+  {
+    LOG_MSG_ERROR("GetDataPahtOptStatus: data_path_opt_status returned NULL",0,0,0);
+    *qmi_err_num = QMI_ERR_INVALID_ARG_V01;
+    return false;
+  }
+
+  qmi_error = qmi_client_send_msg_sync(this->qmi_qcmap_msgr_handle,
+                                      QMI_QCMAP_MSGR_GET_DATA_PATH_OPT_STATUS_REQ_V01,
+                                      &req_msg,
+                                      sizeof(qcmap_msgr_get_data_path_opt_status_req_msg_v01),
+                                      &resp_msg,
+                                      sizeof(qcmap_msgr_get_data_path_opt_status_resp_msg_v01),
+                                      QCMAP_MSGR_QMI_TIMEOUT_VALUE);
+  if ( ( qmi_error == QMI_TIMEOUT_ERR ) ||
+       ( qmi_error != QMI_NO_ERR ) ||
+       ( resp_msg.resp.result != QMI_NO_ERR ) )
+  {
+    LOG_MSG_ERROR("Getting Data Path opt status Failed %d : %d",
+                     qmi_error,resp_msg.resp.error,0);
+    *qmi_err_num = resp_msg.resp.error;
+    return false;
+  }
+
+  *data_path_opt_status= resp_msg.data_path_opt_status;
+  LOG_MSG_INFO1("Got Data Path Opt status success = %d",*data_path_opt_status,0,0);
+  return true;
+}
+
+/*===========================================================================
+FUNCTION SetDataPathOptStatus()
+===========================================================================*/
+/**
+  Use to enable/disable data path optimization.
+
+  @datatypes
+  qmi_error_type_v01
+
+  @param[out] qmi_err_num       Error code returned by the server.
+
+  @return
+  TRUE upon success. \n
+  FALSE upon failure.
+
+  @dependencies
+  QCMobileAP must be enabled.
+*/
+/*=========================================================================*/
+boolean
+QCMAP_Client::SetDataPathOptStatus
+(
+  boolean data_path_opt_status,
+  qmi_error_type_v01 *qmi_err_num
+)
+{
+  qcmap_msgr_set_data_path_opt_status_req_msg_v01   req_msg;
+  qcmap_msgr_set_data_path_opt_status_resp_msg_v01   resp_msg;
+
+  qmi_client_error_type qmi_error;
+  /* -------------------------------------------------------------*/
+
+  if (!qmi_err_num)
+  {
+    LOG_MSG_ERROR("Invalid parameter passed ",0,0,0);
+    return false;
+  }
+
+  memset(&req_msg, 0, sizeof(qcmap_msgr_set_data_path_opt_status_req_msg_v01));
+  memset(&resp_msg, 0, sizeof(qcmap_msgr_set_data_path_opt_status_resp_msg_v01));
+
+  req_msg.mobile_ap_handle = this->mobile_ap_handle;
+  req_msg.data_path_opt_status = data_path_opt_status;
+  QCMAP_LOG_FUNC_ENTRY();
+  LOG_MSG_INFO1("requesting to set data path optimization status",0,0,0);
+
+  qmi_error = qmi_client_send_msg_sync(this->qmi_qcmap_msgr_handle,
+                                       QMI_QCMAP_MSGR_SET_DATA_PATH_OPT_STATUS_REQ_V01,
+                                       &req_msg,
+                                       sizeof(qcmap_msgr_set_data_path_opt_status_req_msg_v01),
+                                       &resp_msg,
+                                       sizeof(qcmap_msgr_set_data_path_opt_status_resp_msg_v01),
+                                       QCMAP_MSGR_QMI_TIMEOUT_VALUE);
+
+  if ( ( qmi_error == QMI_TIMEOUT_ERR ) ||
+       ( qmi_error != QMI_NO_ERR ) ||
+       ( resp_msg.resp.result != QMI_NO_ERR ) )
+  {
+    LOG_MSG_ERROR("Setting Data Path Optimization  status Failed %d : %d",
+                                      qmi_error, resp_msg.resp.error,0);
+    *qmi_err_num = resp_msg.resp.error;
+    return false;
+  }
+
+  LOG_MSG_INFO1("Setting  Success  Data Path Optimization  status",0,0,0);
 
   return true;
 }

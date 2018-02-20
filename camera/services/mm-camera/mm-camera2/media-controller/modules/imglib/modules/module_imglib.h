@@ -453,6 +453,10 @@ void module_paaf_set_parent(mct_module_t *p_mct_mod,
   mct_module_t *p_parent);
 mct_module_t *module_ppeiscore_init(const char *name);
 void module_ppeiscore_deinit(mct_module_t *p_mct_mod);
+#ifdef CAMERA_FEATURE_PPDGCORE
+mct_module_t *module_ppdgcore_init(const char *name);
+void module_ppdgcore_deinit(mct_module_t *p_mct_mod);
+#endif
 mct_module_t *module_quadracfa_init(const char *name);
 mct_module_t *module_svhdr_init(const char *name);
 void module_svhdr_deinit(mct_module_t *p_mct_mod);

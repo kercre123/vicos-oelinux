@@ -1,7 +1,8 @@
 /* sensor_common.h
  *
- * Copyright (c) 2012-2017 Qualcomm Technologies, Inc. All Rights Reserved.
- * Qualcomm Technologies Proprietary and Confidential.
+ * Copyright (c) 2012-2017 Qualcomm Technologies, Inc.
+ * All Rights Reserved.
+ * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
 
 #ifndef __SENSOR_LIB_H_
@@ -86,6 +87,13 @@ RDI data packing, DPCM 6&8 modes, Quadra CFA"
 #define MAX_SENSOR_EFFECT 3
 #define MAX_SENSOR_OPTICAL_BLACK_REGION 2
 #define MAX_VIDEO_HDR_FRAMES 3
+
+/*SHDR Sensor layout*/
+#define SHDR_TWO_SEPARATE_FRAMES 0
+#define SHDR_INTERLEAVED_WITH_STATUS 1
+#define SHDR_INTERLEAVED_NO_STATUS 2
+#define SHDR_INTERLEAVED_NO_STATUS_2LINES 3
+#define SHDR_INTERLEAVED_NO_STATUS_2LINES_NO_BLANK 4
 
 typedef unsigned long long sensor_capability_t;
 
@@ -380,6 +388,9 @@ typedef struct {
   unsigned int start_y;
   unsigned int width;
   unsigned int height;
+  unsigned int lef_byte_offset;
+  unsigned int sef_byte_offset;
+  unsigned int sensor_layout;
 } sensor_custom_format_t;
 
 /* sensor_lib_out_info_t: store information about different resolution
@@ -396,7 +407,10 @@ typedef struct {
  * min_fps: minumim fps that can be supported for this resolution
  * max_fps: maximum fps that can be supported for this sensor
  * mode: mode / modes for which this resolution can be used
- *       SENSOR_DEFAULT_MODE / SENSOR_HFR_MODE*/
+ *       SENSOR_DEFAULT_MODE / SENSOR_HFR_MODE
+ * focal_length: shows the sensor mode is prioritise to working
+ *               with focal length
+ */
 struct sensor_lib_out_info_t {
   unsigned short x_output;
   unsigned short y_output;
@@ -414,6 +428,7 @@ struct sensor_lib_out_info_t {
   float    scale_factor;
   unsigned int is_pdaf_supported;
   sensor_custom_format_t custom_format;
+  float focal_length;
 };
 
 typedef struct {
@@ -784,6 +799,10 @@ typedef struct {
   sensorlib_pdaf_apis_t sensorlib_pdaf_api;
 
   pdaf_lib_t            pdaf_config;
+
+  /* Flag to be set if all sensor modes support focal length description */
+  unsigned int          sensor_feature_focal_length;
+
 } sensor_lib_t;
 
 #endif /* __SENSOR_LIB_H_ */

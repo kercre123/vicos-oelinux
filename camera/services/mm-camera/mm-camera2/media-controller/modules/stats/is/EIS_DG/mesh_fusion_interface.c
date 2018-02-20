@@ -6,9 +6,7 @@
  */
 #include "stats_debug.h"
 #include "mesh_fusion_interface.h"
-#include "mv.h"
-#include "mvDGCommon.h"
-#include "mesh_fusion.h"
+#include "eis_dg/mesh_fusion.h"
 #include <dlfcn.h>
 
 typedef struct {
@@ -61,6 +59,18 @@ int mesh_fusion_intf_update_win_size(
   mf_handler->sensor_win.vblank =
     is_info->sensor_out_info.fl_lines -
     mf_handler->sensor_win.output_height;
+  IS_LOW("SEN_WIN: %d %d %d %d %d %d %d %d %d %d %d",
+    mf_handler->sensor_win.input_width,
+    mf_handler->sensor_win.input_height,
+    mf_handler->sensor_win.output_width,
+    mf_handler->sensor_win.output_height,
+    mf_handler->sensor_win.start_x,
+    mf_handler->sensor_win.start_y,
+    mf_handler->sensor_win.end_x,
+    mf_handler->sensor_win.end_y,
+    mf_handler->sensor_win.binning_en,
+    mf_handler->sensor_win.hblank,
+    mf_handler->sensor_win.vblank);
 
   //camif win
   mf_handler->camif_win.input_width =
@@ -85,6 +95,19 @@ int mesh_fusion_intf_update_win_size(
   mf_handler->camif_win.hblank = 0;
   mf_handler->camif_win.vblank = 0;
 
+  IS_LOW("CAMIF_WIN: %d %d %d %d %d %d %d %d %d %d %d",
+    mf_handler->camif_win.input_width,
+    mf_handler->camif_win.input_height,
+    mf_handler->camif_win.output_width,
+    mf_handler->camif_win.output_height,
+    mf_handler->camif_win.start_x,
+    mf_handler->camif_win.start_y,
+    mf_handler->camif_win.end_x,
+    mf_handler->camif_win.end_y,
+    mf_handler->camif_win.binning_en,
+    mf_handler->camif_win.hblank,
+    mf_handler->camif_win.vblank);
+
   //ISP win
   mf_handler->vfe_win.input_width =
     mf_handler->camif_win.output_width;
@@ -106,6 +129,19 @@ int mesh_fusion_intf_update_win_size(
   mf_handler->vfe_win.binning_en = 0;
   mf_handler->vfe_win.hblank = 0;
   mf_handler->vfe_win.vblank = 0;
+
+  IS_LOW("VFE_WIN: %d %d %d %d %d %d %d %d %d %d %d",
+    mf_handler->vfe_win.input_width,
+    mf_handler->vfe_win.input_height,
+    mf_handler->vfe_win.output_width,
+    mf_handler->vfe_win.output_height,
+    mf_handler->vfe_win.start_x,
+    mf_handler->vfe_win.start_y,
+    mf_handler->vfe_win.end_x,
+    mf_handler->vfe_win.end_y,
+    mf_handler->vfe_win.binning_en,
+    mf_handler->vfe_win.hblank,
+    mf_handler->vfe_win.vblank);
 
   /*Call the update win API*/
   if(mf_handler->funct_ptr.mesh_fusion_adapt_window) {
@@ -218,6 +254,8 @@ void  mesh_fusion_intf_update_data(void *mf_handle, is_info_t *is_info){
   mf_handler->config.eis_mesh->output_o_center_y =
     mf_handler->config.eis_mesh->output_height/2;
 
+  IS_LOW("input: vfe_width %d  vfe_height %d",is_info->vfe_width[IS_VIDEO],is_info->vfe_height[IS_VIDEO]);
+  IS_LOW("output: width %d height %d",is_info->width[IS_VIDEO],is_info->height[IS_VIDEO]);
   //output mesh config
   mf_handler->config.output_mesh->mesh_vertices_num_x =is_info->num_mesh_x+1;
   mf_handler->config.output_mesh->mesh_vertices_num_y = is_info->num_mesh_y+1;
@@ -269,6 +307,7 @@ int mesh_fusion_intf_init(void **mf_handle) {
     return err;
   }
 
+  memset(mf_handler, 0, sizeof(mesh_fusion_intf));
   *mf_handle = (void *)mf_handler;
 
   //allocate memory for LDC_mesh

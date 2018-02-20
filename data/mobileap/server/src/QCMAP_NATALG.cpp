@@ -2360,7 +2360,7 @@ boolean QCMAP_NATALG::EnableNATonApps()
 /*=========================================================================*/
 boolean QCMAP_NATALG::DisableNATonApps()
 {
-  char command[MAX_COMMAND_STR_LEN];
+  char command[MAX_COMMAND_STR_LEN] = {0};
   struct in_addr addr;
   boolean ret = false;
   char publicIpAddr[QCMAP_LAN_MAX_IPV4_ADDR_SIZE];
@@ -2603,17 +2603,16 @@ boolean QCMAP_NATALG::DisableNATonApps()
 
       if (QcMapBackhaulWWAN->GetState() != QCMAP_CM_WAN_CONNECTED)
       {
-        /* Cleanup resolv.con */
-        ds_system_call(">/etc/resolv.conf", strlen(">/etc/resolv.conf"));
-
-       //update resolve.conf to add ipv6 dns server
-       if(QcMapBackhaulWWAN &&  QcMapBackhaulWWAN->dhcpv6_dns_conf.dhcpv6_enable_state  ==
-          QCMAP_MSGR_DHCPV6_MODE_UP_V01 )
-       {
-         QCMAP_Backhaul_WWAN::Update_resolv_file(ADD_V6DNS_SERVER,
-                                                 QcMapBackhaulWWAN->dhcpv6_dns_conf.pri_dns_addr,
-                                                 QcMapBackhaulWWAN->dhcpv6_dns_conf.sec_dns_addr);
-       }
+          //cleanup only the IPv4 DNS addresses
+          if(QcMapLANMgr &&
+            (QcMapBackhaulWWAN->GetProfileHandle() == QCMAP_Backhaul::GetDefaultProfileHandle()) &&
+            (QcMapBackhaulWWAN->GetProfileHandle() != 0))
+          {
+            QcMapLANMgr->DeleteDNSNameServers(QcMapBackhaulWWAN->pri_dns_ipv4_addr,
+                                              QcMapBackhaulWWAN->sec_dns_ipv4_addr);
+          } else {
+            LOG_MSG_INFO1("LAN object NULL, could not clean up IPv4 DNS addrs", 0, 0, 0);
+          }
       }
     }
     if(QcMapBackhaul->tiny_proxy_enable_state == QCMAP_MSGR_TINY_PROXY_MODE_UP_V01)
@@ -4110,6 +4109,14 @@ static unsigned char QCMAP_NATALG::GetSOCKSv5ProxyEnableCfg(qmi_error_type_v01 *
 {
   char data[2];
   QCMAP_NATALG* QcMapNatAlg = NULL;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+    return 0;
+  }
 
   if((QcMapNatAlg = GET_DEFAULT_NATALG_OBJECT()) == NULL)
   {
@@ -4155,6 +4162,14 @@ static boolean QCMAP_NATALG::EnableSOCKSv5Proxy(qmi_error_type_v01 *qmi_err_num)
   char* status = "0";
   qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
   QCMAP_NATALG* QcMapNatAlg = NULL;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+    return false;
+  }
 
   if((QcMapNatAlg = GET_DEFAULT_NATALG_OBJECT()) == NULL)
   {
@@ -4225,6 +4240,14 @@ static boolean QCMAP_NATALG::DisableSOCKSv5Proxy(qmi_error_type_v01 *qmi_err_num
 {
   QCMAP_CM_LOG_FUNC_ENTRY();
   QCMAP_NATALG* QcMapNatAlg = NULL;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    *qmi_err_num = QMI_ERR_OP_DEVICE_UNSUPPORTED_V01;
+    return false;
+  }
 
   if((QcMapNatAlg = GET_DEFAULT_NATALG_OBJECT()) == NULL)
   {
@@ -4276,10 +4299,18 @@ qcmap_msgr_socksv5_config_file_paths_v01 *socksv5_file_path
 )
 {
   char buffer[2];
-  std::string invoke_cmd("insmod /lib/modules/$(uname -r)/kernel/drivers/net/tcp_splice.ko ; "
-                         "qti_socksv5 -c ");
+  char* invoke_cmd = NULL;
+  const char* base_invoke = "insmod /lib/modules/$(uname -r)/kernel/drivers/net/tcp_splice.ko ;"
+                            " qti_socksv5 -c ";
   const char* check_cmd = "ps -aef | grep qti_socksv5 | grep -v grep";
   FILE* fp = NULL;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    return false;
+  }
 
   QCMAP_CM_LOG_FUNC_ENTRY();
 
@@ -4289,16 +4320,26 @@ qcmap_msgr_socksv5_config_file_paths_v01 *socksv5_file_path
     return false;
   }
 
-  invoke_cmd.append(socksv5_file_path->conf_file);
-  invoke_cmd.append(" -u ");
-  invoke_cmd.append(socksv5_file_path->auth_file);
-  invoke_cmd.append(" &");
+  if((invoke_cmd = (char*)calloc(1, strlen(base_invoke) + strlen(socksv5_file_path->conf_file) +
+                                    strlen(socksv5_file_path->auth_file) + strlen(" -u ") +
+                                    strlen(" &") + 1)) == NULL)
+  {
+    LOG_MSG_ERROR("Error with calloc: %s", strerror(errno), 0, 0);
+    return false;
+  }
 
-  LOG_MSG_INFO1("SOCKSv5 Invoke Cmd: %s", invoke_cmd.c_str(), 0, 0);
+  snprintf(invoke_cmd, strlen(base_invoke) + strlen(socksv5_file_path->conf_file) +
+                       strlen(socksv5_file_path->auth_file) + strlen(" -u ") + strlen(" &") + 1,
+                       "insmod /lib/modules/$(uname -r)/kernel/drivers/net/tcp_splice.ko ;"
+                       " qti_socksv5 -c %s -u %s &", socksv5_file_path->conf_file,
+                       socksv5_file_path->auth_file);
 
-  if((fp = popen(invoke_cmd.c_str(), "w")) == NULL)
+  LOG_MSG_INFO1("SOCKSv5 Invoke Cmd: %s", invoke_cmd, 0, 0);
+
+  if((fp = popen(invoke_cmd, "w")) == NULL)
   {
     LOG_MSG_INFO1("Error invoking SOCKSv5 Proxy: ", errno, 0, 0);
+    free(invoke_cmd);
     return false;
   }
   pclose(fp);
@@ -4310,6 +4351,7 @@ qcmap_msgr_socksv5_config_file_paths_v01 *socksv5_file_path
   if((fp = popen(check_cmd, "r")) == NULL)
   {
     LOG_MSG_INFO1("Error checking SOCKSv5 Proxy: ", errno, 0, 0);
+    free(invoke_cmd);
     return false;
   }
 
@@ -4317,10 +4359,12 @@ qcmap_msgr_socksv5_config_file_paths_v01 *socksv5_file_path
   if(fgets(buffer, sizeof(buffer), fp))
   {
     pclose(fp);
+    free(invoke_cmd);
     return true;
   }
   pclose(fp);
 
+  free(invoke_cmd);
   return false;
 }
 
@@ -4351,6 +4395,13 @@ boolean QCMAP_NATALG::KillSOCKSv5Proxy(void)
   char buffer;
   const char* kill_cmd = "killall -s 15 qti_socksv5; sleep 1; rmmod tcp_splice";
   FILE* fp;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    return false;
+  }
 
   QCMAP_CM_LOG_FUNC_ENTRY();
 
@@ -4393,6 +4444,13 @@ qcmap_msgr_socksv5_config_file_paths_v01 *config_file_path
 {
   char data[MAX_STRING_LENGTH];
   QCMAP_NATALG* QcMapNatAlg = NULL;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    return false;
+  }
 
   if((QcMapNatAlg = GET_DEFAULT_NATALG_OBJECT()) == NULL)
   {
@@ -4463,6 +4521,13 @@ static boolean QCMAP_NATALG::SetSOCKSv5ConfigFilePath(const char *conf_file, con
 {
   char data[MAX_STRING_LENGTH];
   QCMAP_NATALG* QcMapNatAlg = NULL;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    return false;
+  }
 
   if((QcMapNatAlg = GET_DEFAULT_NATALG_OBJECT()) == NULL)
   {
@@ -4543,6 +4608,13 @@ const char* sec_dns_ip_addr
   boolean set_sec_dns_ip_addr = false;
   boolean set_wan_ip_ver = false;
   qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    return false;
+  }
 
   if((IPV4 != wan_ip_ver) && (IPV6 != wan_ip_ver))
   {
@@ -4841,6 +4913,13 @@ boolean QCMAP_NATALG::DeleteSOCKSv5Backhaul(const char* wan_iface)
   pugi::xml_document doc;
   pugi::xml_node node, child, temp_node;
   qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    return false;
+  }
 
   if(NULL == wan_iface)
   {
@@ -4968,6 +5047,13 @@ int wan_ip_ver
   pugi::xml_node node, child, temp_node;
   qcmap_msgr_socksv5_config_file_paths_v01 socksv5_file_path;
   boolean set_wan_ip_ver = false;
+  QCMAP_ConnectionManager* QcMapMgr = QCMAP_ConnectionManager::Get_Instance(NULL, false);
+
+  if(QcMapMgr && !(IS_SOCKSV5_ALLOWED(QcMapMgr->target)))
+  {
+    LOG_MSG_INFO1("SOCKSv5 not allowed on target: %d", QcMapMgr->target, 0, 0);
+    return false;
+  }
 
   if((IPV4 != wan_ip_ver) && (IPV6 != wan_ip_ver))
   {

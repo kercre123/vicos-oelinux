@@ -27,6 +27,7 @@ $Header$
 
 when      who  what, where, why
 --------  ---  ---------------------------------------------------------------
+09/11/17  mm   Fix to block UICC commands during slot mapping
 07/24/17  mm   Fixed issue related to close channel
 07/05/17  mm   Fixed issue related to buffer overflow for slots
 07/05/17  vs   Fixed issue related channel open in pass through mode
@@ -718,6 +719,11 @@ static qbi_svc_action_e qbi_svc_msuicc_atr_q_uim2f_rsp_cb
   {
     QBI_LOG_E_0("Missing executor slot mapping info");
   }
+  else if (exec_slot_cfg.exec0_prov_complete == FALSE)
+  {
+    QBI_LOG_E_0("Slot mapping is in progress, can't perform ATR request");
+    qmi_txn->parent->status = QBI_MBIM_STATUS_BUSY;
+  }
   else if (!qmi_rsp->card_status_valid)
   {
     QBI_LOG_E_0("Missing card status TLV!");
@@ -935,6 +941,11 @@ static qbi_svc_action_e qbi_svc_msuicc_open_channel_s_uim2f_rsp_cb
       sizeof(qbi_svc_bc_ext_exec_slot_config_s)))
   {
     QBI_LOG_E_0("Missing executor slot mapping info");
+  }
+  else if (exec_slot_cfg.exec0_prov_complete == FALSE)
+  {
+    QBI_LOG_E_0("Slot mapping is in progress, can't perform open channel");
+    qmi_txn->parent->status = QBI_MBIM_STATUS_BUSY;
   }
   else if ((UIM_SLOT_1_V01 + exec_slot_cfg.exec0_slot) > MAX_SUPPORTED_SLOTS)
   {
@@ -1159,7 +1170,7 @@ static qbi_svc_action_e qbi_svc_msuicc_open_channel_s_apdu_rsp_cb_1
   uim_send_apdu_resp_msg_v01 *qmi_rsp;
   qbi_svc_msuicc_open_channel_s_req_s *req;
   uint8 *app_id;
-  uint8 apdu_header[5];
+  uint8 apdu_header[5] = { 0, };
   qbi_svc_msuicc_channel_req_info *info = NULL;
   qbi_svc_action_e action = QBI_SVC_ACTION_ABORT;
   qbi_svc_bc_ext_exec_slot_config_s exec_slot_cfg;
@@ -1169,7 +1180,6 @@ static qbi_svc_action_e qbi_svc_msuicc_open_channel_s_apdu_rsp_cb_1
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->rsp.data);
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent);
   QBI_CHECK_NULL_PTR_RET_ABORT(qmi_txn->parent->info);
-  QBI_MEMSET(apdu_header, 0, sizeof(apdu_header));
 
   qmi_rsp = (uim_send_apdu_resp_msg_v01 *) qmi_txn->rsp.data;
 
@@ -1434,6 +1444,11 @@ static qbi_svc_action_e qbi_svc_msuicc_close_channel_s_uim2f_rsp_cb
       sizeof(qbi_svc_bc_ext_exec_slot_config_s)))
   {
     QBI_LOG_E_0("Missing executor slot mapping info");
+  }
+  else if (exec_slot_cfg.exec0_prov_complete == FALSE)
+  {
+    QBI_LOG_E_0("Slot mapping is in progress, can't perform close channel");
+    qmi_txn->parent->status = QBI_MBIM_STATUS_BUSY;
   }
   else if ((UIM_SLOT_1_V01 + exec_slot_cfg.exec0_slot) > MAX_SUPPORTED_SLOTS)
   {
@@ -1987,6 +2002,11 @@ static qbi_svc_action_e qbi_svc_msuicc_apdu_s_uim2f_rsp_cb
       sizeof(qbi_svc_bc_ext_exec_slot_config_s)))
   {
     QBI_LOG_E_0("Missing executor slot mapping info");
+  }
+  else if (exec_slot_cfg.exec0_prov_complete == FALSE)
+  {
+    QBI_LOG_E_0("Slot mapping is in progress, can't perform apdu set request");
+    qmi_txn->parent->status = QBI_MBIM_STATUS_BUSY;
   }
   else if ((UIM_SLOT_1_V01 + exec_slot_cfg.exec0_slot) > MAX_SUPPORTED_SLOTS)
   {

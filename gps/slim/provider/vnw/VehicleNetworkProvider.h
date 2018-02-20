@@ -86,6 +86,7 @@ class VehicleNetworkProvider :
   /*! Callback function for CanWrapper to be called on new CAN frame
    *  reception */
   static void cbOnNewCanFrame(CwFrame* pFrame, void *userData, int ifNo);
+  static void cbOnNewBufferedCanFrame(CwFrame* pFrame, void *userData, int ifNo);
 
   /*! Instance of vehicle network configuration */
   VehicleNetworkConfiguration* m_pzVehicleNetworkCfg;

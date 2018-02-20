@@ -1,5 +1,5 @@
 /**********************************************************************
-*  Copyright (c) 2013-2014, 2016 Qualcomm Technologies, Inc.
+*  Copyright (c) 2013-2014, 2017 Qualcomm Technologies, Inc.
 *  All Rights Reserved.
 *  Confidential and Proprietary - Qualcomm Technologies, Inc.
 **********************************************************************/
@@ -1165,6 +1165,7 @@ int module_wnr_client_create(mct_module_t *p_mct_mod, mct_port_t *p_port,
   module_wnr_t *p_mod = (module_wnr_t *)p_mct_mod->module_private;
   mct_list_t *p_temp_list = NULL;
   wd_mode_t wd_mode;
+  pthread_condattr_t cond_attr;
 #ifdef _ANDROID_
   char value[PROPERTY_VALUE_MAX];
 #endif
@@ -1183,7 +1184,15 @@ int module_wnr_client_create(mct_module_t *p_mct_mod, mct_port_t *p_port,
 
   p_comp = &p_client->comp;
   pthread_mutex_init(&p_client->stream_off_mutex, NULL);
-  pthread_cond_init(&p_client->stream_off_cond, NULL);
+  rc = pthread_condattr_init(&cond_attr);
+  if (rc) {
+    IDBG_ERROR("%s: pthread_condattr_init failed", __func__);
+  }
+  rc = pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+  if (rc) {
+    IDBG_ERROR("%s: pthread_condattr_setclock failed!!!", __func__);
+  }
+  pthread_cond_init(&p_client->stream_off_cond, &cond_attr);
   pthread_mutex_init(&p_client->mutex, NULL);
   pthread_cond_init(&p_client->cond, NULL);
   p_client->state = IMGLIB_STATE_IDLE;

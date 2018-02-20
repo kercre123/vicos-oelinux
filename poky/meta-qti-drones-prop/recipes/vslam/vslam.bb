@@ -38,4 +38,10 @@ do_install_append() {
    dest=/data/vwslam/
    install -d ${D}${dest}
    install -m 0644 ${WORKDIR}/vendor/qcom/proprietary/robot/vslam/conf/readme.txt -D ${D}${dest}
+
+   dest=${WORKSPACE}/FEAT_API_VSLAM/apps_proc/vendor/qcom/proprietary/robot/
+   if [ ! -d "${dest}" ] && [ ! -d "${WORKSPACE}/prebuilt_HY11" ]; then
+       mkdir -p ${dest}
+       cp -rf ${WORKSPACE}/vendor/qcom/proprietary/robot/vslam ${dest}
+   fi
 }

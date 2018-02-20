@@ -97,6 +97,30 @@ special_mode_mask values:
       <Iot>ar1335_iot_preview</Iot>
     </ChromatixName>
     <ChromatixName sensor_resolution_index="1">
+      <ISPPreview>ar1335_preview</ISPPreview>
+      <ISPSnapshot>ar1335_preview</ISPSnapshot>
+      <ISPVideo>ar1335_preview</ISPVideo>
+      <CPPPreview>ar1335_cpp_preview</CPPPreview>
+      <CPPSnapshot>ar1335_cpp_preview</CPPSnapshot>
+      <CPPVideo>ar1335_cpp_preview</CPPVideo>
+      <CPPLiveshot>ar1335_cpp_preview</CPPLiveshot>
+      <A3Preview>ar1335_zsl_preview</A3Preview>
+      <A3Video>ar1335_zsl_preview</A3Video>
+      <Iot>ar1335_iot_preview</Iot>
+    </ChromatixName>
+    <ChromatixName sensor_resolution_index="2">
+      <ISPPreview>ar1335_preview</ISPPreview>
+      <ISPSnapshot>ar1335_preview</ISPSnapshot>
+      <ISPVideo>ar1335_preview</ISPVideo>
+      <CPPPreview>ar1335_cpp_preview</CPPPreview>
+      <CPPSnapshot>ar1335_cpp_preview</CPPSnapshot>
+      <CPPVideo>ar1335_cpp_preview</CPPVideo>
+      <CPPLiveshot>ar1335_cpp_preview</CPPLiveshot>
+      <A3Preview>ar1335_zsl_preview</A3Preview>
+      <A3Video>ar1335_zsl_preview</A3Video>
+      <Iot>ar1335_iot_preview</Iot>
+    </ChromatixName>
+    <ChromatixName sensor_resolution_index="3">
       <ISPPreview>ar1335_1080_60</ISPPreview>
       <ISPSnapshot>ar1335_1080_60</ISPSnapshot>
       <ISPVideo>ar1335_1080_60</ISPVideo>
@@ -108,7 +132,7 @@ special_mode_mask values:
       <A3Video>ar1335_a3_1080_60</A3Video>
       <Iot>ar1335_iot_svhdr</Iot>
     </ChromatixName>
-    <ChromatixName sensor_resolution_index="3">
+    <ChromatixName sensor_resolution_index="5">
       <ISPPreview>ar1335_hfr_50</ISPPreview>
       <ISPSnapshot>ar1335_hfr_50</ISPSnapshot>
       <ISPVideo>ar1335_hfr_50</ISPVideo>
@@ -120,7 +144,7 @@ special_mode_mask values:
       <A3Video>ar1335_a3_hfr_50</A3Video>
       <Iot>ar1335_iot_svhdr</Iot>
     </ChromatixName>
-    <ChromatixName sensor_resolution_index="2">
+    <ChromatixName sensor_resolution_index="4">
       <ISPPreview>ar1335_hfr_60</ISPPreview>
       <ISPSnapshot>ar1335_hfr_60</ISPSnapshot>
       <ISPVideo>ar1335_hfr_60</ISPVideo>
