@@ -114,6 +114,7 @@ class HWDeviceDRM : public HWInterface {
   void PopulateHWPanelInfo();
   void GetHWDisplayPortAndMode();
   void GetHWPanelMaxBrightness();
+  void GetHWDisplayHdcpProtocol();
   void ResetDisplayParams();
   bool EnableHotPlugDetection(int enable);
   virtual void UpdateMixerAttributes();

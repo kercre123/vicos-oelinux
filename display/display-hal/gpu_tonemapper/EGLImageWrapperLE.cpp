@@ -30,7 +30,7 @@ EGLImageWrapperLE::~EGLImageWrapperLE()
 {
 }
 
-EGLImageBufferLE *EGLImageWrapperLE::wrap(void *buf_info)
+EGLImageBufferLE *EGLImageWrapperLE::wrap(void *buf_info, void *userdata, void *userdata2)
 //-----------------------------------------------------------------------------
 {
   struct gbm_buf_info *src = reinterpret_cast<struct gbm_buf_info *>(buf_info);
@@ -39,7 +39,7 @@ EGLImageBufferLE *EGLImageWrapperLE::wrap(void *buf_info)
   std::map<int, EGLImageBufferLE *>::iterator it = eglImageBufferMap.find(src->fd);
 
   if (it == eglImageBufferMap.end()) {
-    result = new EGLImageBufferLE(src);
+    result = new EGLImageBufferLE(src, userdata, userdata2);
     eglImageBufferMap[src->fd] = result;
   } else {
     result = it->second;

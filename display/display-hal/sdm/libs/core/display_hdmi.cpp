@@ -65,7 +65,9 @@ DisplayError DisplayHDMI::Init() {
 
   error = hw_intf_->SetDisplayAttributes(active_mode_index);
   if (error != kErrorNone) {
+    DLOGE("Failed to Set Display Attributes. Error = %d", error);
     HWInterface::Destroy(hw_intf_);
+    return error;
   }
 
   error = DisplayBase::Init();

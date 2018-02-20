@@ -306,7 +306,8 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
 
 void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
                                     HWResourceInfo *hw_resource) {
-  hw_resource->max_pipe_width = info.max_linewidth;
+  if (info.max_linewidth != -1)
+    hw_resource->max_pipe_width = info.max_linewidth;
   hw_resource->max_scale_down = info.max_downscale;
   hw_resource->max_scale_up = info.max_upscale;
   hw_resource->has_decimation = info.max_horizontal_deci > 1 && info.max_vertical_deci > 1;

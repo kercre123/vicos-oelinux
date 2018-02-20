@@ -266,6 +266,8 @@ struct HWPanelInfo {
   uint32_t peak_luminance = 0;        // Panel's peak luminance level
   uint32_t average_luminance = 0;     // Panel's average luminance level
   uint32_t blackness_level = 0;       // Panel's blackness level
+  uint32_t hdcp_version = 0;          // Panel's HDCP version
+  uint32_t hdcp_interface_type = 0;   // Panel's HDCP PHY interface
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
 
@@ -283,7 +285,9 @@ struct HWPanelInfo {
             (max_fps != panel_info.max_fps) || (is_primary_panel != panel_info.is_primary_panel) ||
             (split_info != panel_info.split_info) || (s3d_mode != panel_info.s3d_mode) ||
             (left_roi_count != panel_info.left_roi_count) ||
-            (right_roi_count != panel_info.right_roi_count));
+            (right_roi_count != panel_info.right_roi_count) ||
+            (hdcp_version != panel_info.hdcp_version) ||
+            (hdcp_interface_type != panel_info.hdcp_interface_type));
   }
 
   bool operator ==(const HWPanelInfo &panel_info) {

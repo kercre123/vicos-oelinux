@@ -28,7 +28,7 @@ extern "C" {
 
 // returns an instance of Tonemapper
 Tonemapper *TonemapperFactory_GetInstance(int type, void *colorMap, int colorMapSize,
-                                          void *lutXform, int lutXformSize);
+                                          void *lutXform, int lutXformSize, bool isSecure);
 
    // destroy tonemap session
    void TonemapperFactory_Destroy();
