@@ -74,6 +74,7 @@
 #include "osi/include/log.h"
 #include "osi/include/thread.h"
 #include "osi/include/fixed_queue.h"
+#include "btcore/include/bdaddr.h"
 
 #if (BTA_AV_INCLUDED == TRUE)
 #include "sbc_encoder.h"

@@ -1327,6 +1327,8 @@ static bt_status_t register_notification_cmd_vendor(bt_bdaddr_t *bd_addr, uint8_
     avrc_cmd.reg_notif.status = AVRC_STS_NO_ERROR;
     avrc_cmd.reg_notif.event_id = event_id;
     avrc_cmd.reg_notif.pdu = AVRC_PDU_REGISTER_NOTIFICATION;
+    if(AVRC_EVT_PLAY_POS_CHANGED == event_id && event_value == 0)
+        event_value = 10;
     avrc_cmd.reg_notif.param = event_value;
     status = AVRC_BldCommand(&avrc_cmd, &p_msg);
     if (status == AVRC_STS_NO_ERROR)
@@ -1380,6 +1382,8 @@ static bt_status_t register_notification_cmd(UINT8 rc_handle, UINT8 label, uint8
     avrc_cmd.reg_notif.status = AVRC_STS_NO_ERROR;
     avrc_cmd.reg_notif.event_id = event_id;
     avrc_cmd.reg_notif.pdu = AVRC_PDU_REGISTER_NOTIFICATION;
+    if(AVRC_EVT_PLAY_POS_CHANGED == event_id && event_value == 0)
+        event_value = 10;
     avrc_cmd.reg_notif.param = event_value;
     status = AVRC_BldCommand(&avrc_cmd, &p_msg);
     if (status == AVRC_STS_NO_ERROR)
@@ -1563,6 +1567,8 @@ static void btif_avk_br_ctrl_upstreams_rsp_evt(UINT16 event, tAVRC_RESPONSE *pav
             rsp_status = (btrc_status_t)pavrc_resp->chg_path.status;
             if(BTRC_STS_NO_ERROR == rsp_status)
                 num_items = pavrc_resp->chg_path.num_items;
+            else
+                BTIF_TRACE_IMP("%s AVRC_PDU_CHANGE_PATH error: rsp_status:%x", __FUNCTION__, rsp_status);
 
             HAL_CBACK(btif_avk_rc_ctrl_vendor_callbacks,changepath_vendor_cb, &rc_addr,
                                     rsp_status,num_items);
@@ -1580,6 +1586,8 @@ static void btif_avk_br_ctrl_upstreams_rsp_evt(UINT16 event, tAVRC_RESPONSE *pav
                 uid_counter = pavrc_resp->search.uid_counter;
                 num_items = pavrc_resp->search.num_items;
             }
+            else
+                BTIF_TRACE_IMP("%s AVRC_PDU_SEARCH error: rsp_status:%x", __FUNCTION__, rsp_status);
 
             HAL_CBACK(btif_avk_rc_ctrl_vendor_callbacks,search_vendor_cb, &rc_addr,
                                     rsp_status, uid_counter, num_items);
@@ -1612,6 +1620,8 @@ static void btif_avk_br_ctrl_upstreams_rsp_evt(UINT16 event, tAVRC_RESPONSE *pav
 
                 }
             }
+            else
+                BTIF_TRACE_IMP("%s AVRC_PDU_GET_ITEM_ATTRIBUTES error: rsp_status:%x", __FUNCTION__, rsp_status);
             HAL_CBACK(btif_avk_rc_ctrl_vendor_callbacks,getitemattributes_vendor_cb, &rc_addr,
                                     rsp_status, num_attr, p_attrs);
         }
@@ -1691,6 +1701,9 @@ static void btif_avk_br_ctrl_upstreams_rsp_evt(UINT16 event, tAVRC_RESPONSE *pav
                         }
                 }
             }
+            else
+                BTIF_TRACE_IMP("%s AVRC_PDU_GET_FOLDER_ITEMS error: rsp_status:%x", __FUNCTION__, rsp_status);
+
             HAL_CBACK(btif_avk_rc_ctrl_vendor_callbacks,getfolderitems_cb, &rc_addr, startItem, endItem,
                                     rsp_status, num_items, p_folders);
         }
@@ -1956,7 +1969,7 @@ static void btif_avk_rc_ctrl_upstreams_rsp_evt(UINT16 event, tAVRC_RESPONSE *pav
 
             song_len = pavrc_resp->get_play_status.song_len;
             song_pos = pavrc_resp->get_play_status.song_pos;
-            play_status = (btrc_play_status_t)pavrc_resp->get_play_status.status;
+            play_status = (btrc_play_status_t)pavrc_resp->get_play_status.play_status;
 
             HAL_CBACK(btif_avk_rc_ctrl_vendor_callbacks,getplaystatus_rsp_vendor_cb, &rc_addr,
                                     play_status,song_len, song_pos);
@@ -2102,6 +2115,11 @@ static void handle_avk_rc_metamsg_rsp(tBTA_AVK_META_MSG *pmeta_msg)
                 register_notification_cmd(pmeta_msg->rc_handle, pmeta_msg->label, avrc_response.reg_notif.event_id, 0);
             }
         }
+        else
+        {
+            BTIF_TRACE_DEBUG(" Releasing label = %d",pmeta_msg->label);
+            release_transaction(pmeta_msg->label);
+        }
         BTIF_TRACE_DEBUG("%s: btif_avk_rc_ctrl_upstreams_rsp_evt !~", __FUNCTION__);
         btif_avk_rc_ctrl_upstreams_rsp_evt((uint16_t)avrc_response.rsp.pdu, &avrc_response,
                                scratch_buf, buf_len,pmeta_msg->p_msg->vendor.hdr.ctype, index);
@@ -2111,6 +2129,8 @@ static void handle_avk_rc_metamsg_rsp(tBTA_AVK_META_MSG *pmeta_msg)
         BTIF_TRACE_DEBUG("%s AVRC_OP_BROWSE pdu %d", __func__, avrc_response.pdu);
         btif_avk_br_ctrl_upstreams_rsp_evt((uint16_t)avrc_response.rsp.pdu, &avrc_response,
             pmeta_msg->p_msg->vendor.hdr.ctype, index);
+        BTIF_TRACE_DEBUG(" Releasing label = %d",pmeta_msg->label);
+        release_transaction(pmeta_msg->label);
     }
     else
     {
@@ -2887,6 +2907,11 @@ uint8_t scope_id, uint64_t UID, uint16_t uid_counter, uint8_t num_attrb, btrc_me
         return BT_STATUS_FAIL;
     }
 
+    if (num_attrb > AVRC_MAX_ELEM_ATTR_SIZE)
+    {
+        BTIF_TRACE_DEBUG("%s: invalid number of attributes = 0x%02x", __FUNCTION__, num_attrb);
+        return BT_STATUS_FAIL;
+    }
     CHECK_AVK_RC_CONNECTED_BY_IDX
     CHECK_AVK_BR_CONNECTED_BY_IDX
 
@@ -2903,8 +2928,9 @@ uint8_t scope_id, uint64_t UID, uint16_t uid_counter, uint8_t num_attrb, btrc_me
     avrc_cmd.get_attrs.uid = UID;
     avrc_cmd.get_attrs.uid_counter= uid_counter;
     avrc_cmd.get_attrs.attr_count = num_attrb;
-    for(int i=0; i < num_attrb; i++)
-        avrc_cmd.get_attrs.attrs[i] = p_attrs[i];
+    if(num_attrb != 255)
+        for(int i=0; i < num_attrb; i++)
+            avrc_cmd.get_attrs.attrs[i] = p_attrs[i];
 
     status = AVRC_BldCommand(&avrc_cmd, &p_msg);
     if (status != AVRC_STS_NO_ERROR) {
@@ -2950,6 +2976,12 @@ static bt_status_t get_folder_items_cmd_vendor(bt_bdaddr_t *bd_addr, uint8_t sco
         return BT_STATUS_FAIL;
     }
 
+    if (num_attrb > AVRC_MAX_ELEM_ATTR_SIZE)
+    {
+        BTIF_TRACE_DEBUG("%s: invalid number of attributes = 0x%02x", __FUNCTION__, num_attrb);
+        return BT_STATUS_FAIL;
+    }
+
     CHECK_AVK_RC_CONNECTED_BY_IDX
     CHECK_AVK_BR_CONNECTED_BY_IDX
 
@@ -2962,8 +2994,9 @@ static bt_status_t get_folder_items_cmd_vendor(bt_bdaddr_t *bd_addr, uint8_t sco
     avrc_cmd.get_items.start_item = start_item;
     avrc_cmd.get_items.end_item = end_item;
     avrc_cmd.get_items.attr_count = num_attrb;
-    for(int i=0; i < num_attrb; i++)
-        avrc_cmd.get_items.attrs[i] = attrib_ids[i];
+    if(num_attrb != 255)
+        for(int i=0; i < num_attrb; i++)
+            avrc_cmd.get_items.attrs[i] = attrib_ids[i];
 
     status = AVRC_BldCommand(&avrc_cmd, &p_msg);
     if (status != AVRC_STS_NO_ERROR) {
@@ -2995,7 +3028,6 @@ static bt_status_t get_folder_items_cmd_vendor(bt_bdaddr_t *bd_addr, uint8_t sco
 
 static bt_status_t change_folder_path_cmd_vendor(bt_bdaddr_t *bd_addr, uint8_t direction, uint8_t * uid)
 {
-    BTIF_TRACE_DEBUG("%s: direction 0x%02x uid %d", __FUNCTION__, direction, *uid);
     tAVRC_STS status = BT_STATUS_UNSUPPORTED;
     rc_transaction_t *p_transaction=NULL;
 #if (AVRC_CTLR_INCLUDED == TRUE)
@@ -3008,7 +3040,7 @@ static bt_status_t change_folder_path_cmd_vendor(bt_bdaddr_t *bd_addr, uint8_t d
         BTIF_TRACE_DEBUG("%s: uid is NULL", __FUNCTION__);
         return BT_STATUS_FAIL;
     }
-
+    BTIF_TRACE_DEBUG("%s: direction 0x%02x uid %d", __FUNCTION__, direction, *uid);
     int index = btif_avk_rc_idx_by_bdaddr(bd_addr->address);
     BTIF_TRACE_DEBUG("%s: index = %d ", __FUNCTION__, index);
     if (index >= btif_max_rc_clients)
