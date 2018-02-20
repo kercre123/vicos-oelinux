@@ -1,6 +1,7 @@
 *.pyc
 *.pyo
 /*.patch
+build*/
 pyshtables.py
 pstage/
 scripts/oe-git-proxy-socks
@@ -20,5 +21,4 @@ documentation/user-manual/user-manual.pdf
 documentation/user-manual/user-manual.tgz
 pull-*/
 bitbake/lib/toaster/contrib/tts/backlog.txt
-bitbake/lib/toaster/contrib/tts/log/*
 bitbake/lib/toaster/contrib/tts/.cache/*
