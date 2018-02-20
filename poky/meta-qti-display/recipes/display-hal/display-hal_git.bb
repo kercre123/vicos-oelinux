@@ -41,8 +41,8 @@ do_install_append () {
     install -m 0644 ${S}/libqdutils/qdMetaData.h   -D ${D}${includedir}
     install -m 0644 ${S}/libqservice/*.h   -D ${D}${includedir}
     # libhardware expects to find /usr/lib/hw/gralloc.*.so
-    install -d ${D}/usr/lib/hw
-    ln -s /usr/lib/libgralloc.so ${D}/usr/lib/hw/gralloc.default.so
+    install -d ${D}${libdir}/hw
+    ln -s ${libdir}/libgralloc.so ${D}${libdir}/hw/gralloc.default.so
 }
 
 # Both libhardware and display-hal provides gralloc_priv.h
