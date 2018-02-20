@@ -170,7 +170,7 @@ audio_io_handle_t stream_handle = 0x999;
 #endif
 
 #ifndef AUDIO_OUTPUT_FLAG_INTERACTIVE
-#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x80000000
+#define AUDIO_OUTPUT_FLAG_INTERACTIVE 0x4000000
 #endif
 
 static bool request_wake_lock(bool wakelock_acquired, bool enable)
@@ -323,6 +323,7 @@ int async_callback(qahw_stream_callback_event_t event, void *param,
     case QAHW_STREAM_CBK_EVENT_DRAIN_READY:
         fprintf(log_file, "stream %d: received event - QAHW_STREAM_CBK_EVENT_DRAIN_READY\n", params->stream_index);
         pthread_mutex_lock(&params->drain_lock);
+        params->drain_received = true;
         pthread_cond_signal(&params->drain_cond);
         pthread_mutex_unlock(&params->drain_lock);
         break;
@@ -602,7 +603,7 @@ void *start_stream_playback (void* stream_data)
     if (rc) {
         fprintf(log_file, "stream %d: could not open output stream, error - %d \n", params->stream_index, rc);
         fprintf(stderr, "stream %d: could not open output stream, error - %d \n", params->stream_index, rc);
-        pthread_exit(0);
+        return NULL;
     }
 
     fprintf(log_file, "stream %d: open output stream is success, out_handle %p\n", params->stream_index, params->out_handle);
@@ -627,14 +628,14 @@ void *start_stream_playback (void* stream_data)
             if (!(params->kvpair_values)) {
                fprintf(log_file, "stream %d: error!!No metadata for the clip\n", params->stream_index);
                fprintf(stderr, "stream %d: error!!No metadata for the clip\n", params->stream_index);
-               pthread_exit(0);;
+               return NULL;
             }
             read_kvpair(kvpair, params->kvpair_values, params->filetype);
             rc = qahw_out_set_parameters(params->out_handle, kvpair);
             if(rc){
                 fprintf(log_file, "stream %d: failed to set kvpairs\n", params->stream_index);
                 fprintf(stderr, "stream %d: failed to set kvpairs\n", params->stream_index);
-                pthread_exit(0);;
+                return NULL;
             }
             fprintf(log_file, "stream %d: kvpairs are set\n", params->stream_index);
             break;
@@ -667,7 +668,7 @@ void *start_stream_playback (void* stream_data)
         if (rc < 0) {
             fprintf(log_file, "stream %d: could not create effect command thread!\n", params->stream_index);
             fprintf(stderr, "stream %d: could not create effect command thread!\n", params->stream_index);
-            pthread_exit(0);
+            return NULL;
         }
 
         fprintf(log_file, "stream %d: loading effects\n", params->stream_index);
@@ -686,7 +687,7 @@ void *start_stream_playback (void* stream_data)
             notify_effect_command(params->ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_SET_DEVICE, sizeof(audio_devices_t), &(params->output_device));
 
             // Enable and Set default values
-            params->ethread_data->default_value = params->effect_preset_strength; 
+            params->ethread_data->default_value = params->effect_preset_strength;
             params->ethread_data->default_flag = true;
             notify_effect_command(params->ethread_data, EFFECT_CMD, QAHW_EFFECT_CMD_ENABLE, 0, NULL);
         }
@@ -759,7 +760,7 @@ void *start_stream_playback (void* stream_data)
     if (data_ptr == NULL) {
         fprintf(log_file, "stream %d: failed to allocate data buffer\n", params->stream_index);
         fprintf(stderr, "stream %d: failed to allocate data buffer\n", params->stream_index);
-        pthread_exit(0);
+        return NULL;
     }
 
     latency = qahw_out_get_latency(params->out_handle);
@@ -781,11 +782,14 @@ void *start_stream_playback (void* stream_data)
             if ((!read_complete_file && (bytes_to_read <= 0)) || (bytes_read <= 0)) {
                 fprintf(log_file, "stream %d: end of file\n", params->stream_index);
                 if (is_offload) {
-                    pthread_mutex_lock(&params->drain_lock);
+                    params->drain_received = false;
                     qahw_out_drain(params->out_handle, QAHW_DRAIN_ALL);
-                    pthread_cond_wait(&params->drain_cond, &params->drain_lock);
+                    if(!params->drain_received) {
+                        pthread_mutex_lock(&params->drain_lock);
+                        pthread_cond_wait(&params->drain_cond, &params->drain_lock);
+                        pthread_mutex_unlock(&params->drain_lock);
+                    }
                     fprintf(log_file, "stream %d: out of compress drain\n", params->stream_index);
-                    pthread_mutex_unlock(&params->drain_lock);
                 }
                 /*
                  * Caution: Below ADL log shouldnt be altered without notifying
@@ -1826,7 +1830,7 @@ audio_channel_mask_t get_channel_mask_for_name(char *name) {
     return channel_type;
 }
 
-int extract_channel_mapping(uint32_t *channel_map, const char * arg_string){
+int extract_channel_mapping(uint16_t *channel_map, const char * arg_string){
 
     char *token_string = NULL;
     char *init_ptr = NULL;
@@ -1903,6 +1907,7 @@ int extract_mixer_coeffs(qahw_mix_matrix_params_t * mm_params, const char * arg_
         token_string = NULL;
     } else
         return -EINVAL;
+    return 0;
 }
 
 #ifdef QAP

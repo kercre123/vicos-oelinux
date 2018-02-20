@@ -134,7 +134,7 @@ struct aac_enc_cfg_t {
     uint16_t      aac_fmt_flag;
     uint16_t      channel_cfg;
     uint32_t      sample_rate;
-} ;
+} __attribute__((packed));
 
 /* SBC encoder configuration structure. */
 typedef struct sbc_enc_cfg_t sbc_enc_cfg_t;
@@ -154,7 +154,7 @@ struct sbc_enc_cfg_t{
     uint32_t      alloc_method;
     uint32_t      bit_rate;
     uint32_t      sample_rate;
-};
+} __attribute__((packed));
 
 
 /* supported num_channels are Mono/Stereo
@@ -170,7 +170,7 @@ struct custom_enc_cfg_aptx_t
     uint16_t      reserved;
     uint8_t       channel_mapping[8];
     uint32_t      custom_size;
-};
+} __attribute__((packed));
 
 /*********** END of DSP configurable structures ********************/
 

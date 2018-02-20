@@ -232,4 +232,5 @@ unsigned char* platform_get_license(void* platform, int* size);
 int platform_get_max_mic_count(void *platform);
 void platform_check_and_update_copp_sample_rate(void *platform, snd_device_t snd_device,
      unsigned int stream_sr,int *sample_rate);
+int platform_get_ec_ref_loopback_snd_device(int channel_count);
 #endif // AUDIO_PLATFORM_API_H

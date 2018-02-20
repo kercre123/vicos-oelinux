@@ -97,6 +97,11 @@
 #define MAX_CHANNELS_SUPPORTED 8
 #endif
 
+typedef struct {
+    const char *id_string;
+    const int value;
+} mixer_config_lookup;
+
 struct string_to_enum {
     const char *name;
     uint32_t value;
@@ -125,6 +130,7 @@ const struct string_to_enum s_flag_name_to_enum_table[] = {
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_RAW),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_SYNC),
     STRING_TO_ENUM(AUDIO_INPUT_FLAG_TIMESTAMP),
+    STRING_TO_ENUM(AUDIO_INPUT_FLAG_COMPRESS),
 };
 
 const struct string_to_enum s_format_name_to_enum_table[] = {
@@ -179,13 +185,18 @@ const struct string_to_enum s_format_name_to_enum_table[] = {
 /* payload structure avt_device drift query */
 struct audio_avt_device_drift_stats {
     uint32_t       minor_version;
+
     /* Indicates the device interface direction as either
      * source (Tx) or sink (Rx).
     */
     uint16_t        device_direction;
-    /*params exposed to client */
+
+    /* Reference timer for drift accumulation and time stamp information.
+     * currently it only support AFE_REF_TIMER_TYPE_AVTIMER
+     */
+    uint16_t        reference_timer;
     struct audio_avt_device_drift_param drift_param;
-};
+} __attribute__((packed));
 
 static char bTable[BASE_TABLE_SIZE] = {
             'A','B','C','D','E','F','G','H','I','J','K','L',
@@ -830,7 +841,7 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
     char value[PROPERTY_VALUE_MAX] = {0};
     struct streams_io_cfg *s_info = NULL;
     struct listnode *node = NULL;
-    int direct_app_type = 0;
+    int bd_app_type = 0;
 
     ALOGV("%s: usecase->out_snd_device %s, usecase->in_snd_device %s, split_snd_device %s",
           __func__, platform_get_snd_device_name(usecase->out_snd_device),
@@ -934,11 +945,13 @@ static int send_app_type_cfg_for_device(struct audio_device *adev,
          */
         list_for_each(node, &adev->streams_output_cfg_list) {
             s_info = node_to_item(node, struct streams_io_cfg, list);
-            if (s_info->flags.out_flags == AUDIO_OUTPUT_FLAG_DIRECT)
-                direct_app_type = s_info->app_type_cfg.app_type;
+            if (s_info->flags.out_flags == (AUDIO_OUTPUT_FLAG_BD |
+                                            AUDIO_OUTPUT_FLAG_DIRECT_PCM |
+                                            AUDIO_OUTPUT_FLAG_DIRECT))
+                bd_app_type = s_info->app_type_cfg.app_type;
         }
-        if (usecase->stream.out->flags == AUDIO_OUTPUT_FLAG_INTERACTIVE)
-            app_type = direct_app_type;
+        if (usecase->stream.out->flags == (audio_output_flags_t) AUDIO_OUTPUT_FLAG_INTERACTIVE)
+            app_type = bd_app_type;
         else
             app_type = usecase->stream.out->app_type_cfg.app_type;
         app_type_cfg[len++] = app_type;
@@ -2137,8 +2150,8 @@ int audio_extn_utils_set_pan_scale_params(
 {
     int ret = -EINVAL, i = 0, j = 0;
 
-    if (mm_params == NULL && out != NULL) {
-        ALOGE("%s:: Invalid mix matrix params", __func__);
+    if (mm_params == NULL || out == NULL) {
+        ALOGE("%s:: Invalid mix matrix or out param", __func__);
         goto exit;
     }
 
@@ -2185,8 +2198,8 @@ int audio_extn_utils_set_downmix_params(
     int ret = -EINVAL, i = 0, j = 0;
     struct audio_usecase *usecase = NULL;
 
-    if (mm_params == NULL && out != NULL) {
-        ALOGE("%s:: Invalid mix matrix params", __func__);
+    if (mm_params == NULL || out == NULL) {
+        ALOGE("%s:: Invalid mix matrix or out param", __func__);
         goto exit;
     }
 
@@ -2197,6 +2210,10 @@ int audio_extn_utils_set_downmix_params(
         goto exit;
 
     usecase = get_usecase_from_list(out->dev, out->usecase);
+    if (!usecase) {
+        ALOGE("%s: Get usecase list failed!", __func__);
+        goto exit;
+    }
     out->downmix_params.num_output_channels = mm_params->num_output_channels;
     out->downmix_params.num_input_channels = mm_params->num_input_channels;
 
@@ -2240,4 +2257,63 @@ bool audio_extn_utils_is_dolby_format(audio_format_t format)
         return false;
 }
 
+int audio_extn_utils_get_bit_width_from_string(char *id_string)
+{
+    int i;
+    const mixer_config_lookup mixer_bitwidth_config[] = {{"S24_3LE", 24},
+                                                         {"S32_LE", 32},
+                                                         {"S24_LE", 24},
+                                                         {"S16_LE", 16}};
+    int num_configs = sizeof(mixer_bitwidth_config) / sizeof(mixer_bitwidth_config[0]);
 
+    for (i = 0; i < num_configs; i++) {
+        if (!strcmp(id_string, mixer_bitwidth_config[i].id_string))
+            return mixer_bitwidth_config[i].value;
+    }
+
+    return -EINVAL;
+}
+
+int audio_extn_utils_get_sample_rate_from_string(char *id_string)
+{
+    int i;
+    const mixer_config_lookup mixer_samplerate_config[] = {{"KHZ_32", 32000},
+                                                           {"KHZ_48", 48000},
+                                                           {"KHZ_96", 96000},
+                                                           {"KHZ_144", 144000},
+                                                           {"KHZ_192", 192000},
+                                                           {"KHZ_384", 384000},
+                                                           {"KHZ_44P1", 44100},
+                                                           {"KHZ_88P2", 88200},
+                                                           {"KHZ_176P4", 176400},
+                                                           {"KHZ_352P8", 352800}};
+    int num_configs = sizeof(mixer_samplerate_config) / sizeof(mixer_samplerate_config[0]);
+
+    for (i = 0; i < num_configs; i++) {
+        if (!strcmp(id_string, mixer_samplerate_config[i].id_string))
+            return mixer_samplerate_config[i].value;
+    }
+
+    return -EINVAL;
+}
+
+int audio_extn_utils_get_channels_from_string(char *id_string)
+{
+    int i;
+    const mixer_config_lookup mixer_channels_config[] = {{"One", 1},
+                                                         {"Two", 2},
+                                                         {"Three",3},
+                                                         {"Four", 4},
+                                                         {"Five", 5},
+                                                         {"Six", 6},
+                                                         {"Seven", 7},
+                                                         {"Eight", 8}};
+    int num_configs = sizeof(mixer_channels_config) / sizeof(mixer_channels_config[0]);
+
+    for (i = 0; i < num_configs; i++) {
+        if (!strcmp(id_string, mixer_channels_config[i].id_string))
+            return mixer_channels_config[i].value;
+    }
+
+    return -EINVAL;
+}
