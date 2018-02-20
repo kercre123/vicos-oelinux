@@ -14,7 +14,7 @@ mount_partition()
         if [ ! -d "${destdir}" ]; then
             mkdir "${destdir}"
         fi
-        if ! mount -t auto "/dev/$1" "${destdir}"; then
+        if ! mount -t auto "/dev/$1" "${destdir}" -o nodev,noexec,nosuid; then
                 # failed to mount
                 exit 1
         fi

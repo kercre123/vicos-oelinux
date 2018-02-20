@@ -32,7 +32,10 @@ SourcePath=/etc/initscripts/mount-data
 After=var-volatile.mount
 
 [Service]
-Restart=no
+Type=oneshot
 RemainAfterExit=yes
 ExecStart=/etc/initscripts/mount-data start
 ExecStop=/etc/initscripts/mount-data stop
+
+[Install]
+WantedBy=local-fs.target

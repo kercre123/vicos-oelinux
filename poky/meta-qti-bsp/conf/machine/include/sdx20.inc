@@ -35,7 +35,9 @@ UBINIZE_ARGS ?= "-m 4096 -p 256KiB -s 4096"
 MKUBIFS_ARGS ?= "-m 4096 -e 253952 -c 2146 -F"
 #Volume sizes
 SYSTEM_VOLUME_SIZE ?= "90MiB"
-CACHE_VOLUME_SIZE ?= "70MiB"
+#cache size to hold Full OTA update package, in case of incremental update
+#it can be reduced to 53MB (need to upgrade apps & modem separately)
+CACHE_VOLUME_SIZE ?= "96MiB"
 SYSTEMRW_VOLUME_SIZE ?= "6MiB"
 
 # Sizes for EXT4 (in bytes)

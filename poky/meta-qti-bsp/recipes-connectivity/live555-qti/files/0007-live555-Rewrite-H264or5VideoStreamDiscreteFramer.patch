@@ -1,15 +1,15 @@
-From adfc0c74932251e84549134bc0590a080df8e6c3 Mon Sep 17 00:00:00 2001
+From ef40f8d8dab99a613010f29c1d7fbbc15228884d Mon Sep 17 00:00:00 2001
 From: Jean Xiao <jianxiao@codeaurora.org>
-Date: Fri, 5 May 2017 18:01:34 +0800
+Date: Tue, 26 Sep 2017 15:31:19 +0800
 Subject: [PATCH] Rewrite H264or5VideoStreamDiscreteFramer
 
 ---
- liveMedia/H264or5VideoStreamDiscreteFramer.cpp     | 132 +++++++++++++++++----
+ liveMedia/H264or5VideoStreamDiscreteFramer.cpp     | 137 +++++++++++++++++----
  .../include/H264or5VideoStreamDiscreteFramer.hh    |   3 +
- 2 files changed, 111 insertions(+), 24 deletions(-)
+ 2 files changed, 116 insertions(+), 24 deletions(-)
 
 diff --git a/liveMedia/H264or5VideoStreamDiscreteFramer.cpp b/liveMedia/H264or5VideoStreamDiscreteFramer.cpp
-index 25451a2..c27eef9 100644
+index dae5368..5b726c6 100644
 --- a/liveMedia/H264or5VideoStreamDiscreteFramer.cpp
 +++ b/liveMedia/H264or5VideoStreamDiscreteFramer.cpp
 @@ -20,6 +20,21 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
@@ -34,7 +34,7 @@ index 25451a2..c27eef9 100644
 
  #include "H264or5VideoStreamDiscreteFramer.hh"
 
-@@ -55,32 +70,30 @@ void H264or5VideoStreamDiscreteFramer
+@@ -55,32 +70,35 @@ void H264or5VideoStreamDiscreteFramer
                       unsigned durationInMicroseconds) {
    // Get the "nal_unit_type", to see if this NAL unit is one that we want to save a copy of:
    u_int8_t nal_unit_type;
@@ -82,6 +82,11 @@ index 25451a2..c27eef9 100644
 +      } else if (nalUnitEndsAccessUnit(nal_unit_type)) {
 +          fPictureEndMarker = True;
 +      }
++  }
++
++  if (frameSize >= 4 && !memcmp("\x00\x00\x00\x01", fTo, 4)) {
++    frameSize -= 4;
++    memmove(fTo, fTo + 4, frameSize);
    }
 -
 -  fPictureEndMarker = nalUnitEndsAccessUnit(nal_unit_type);
@@ -89,7 +94,7 @@ index 25451a2..c27eef9 100644
    // Finally, complete delivery to the client:
    fFrameSize = frameSize;
    fNumTruncatedBytes = numTruncatedBytes;
-@@ -100,3 +113,74 @@ Boolean H264or5VideoStreamDiscreteFramer::nalUnitEndsAccessUnit(u_int8_t nal_uni
+@@ -100,3 +118,74 @@ Boolean H264or5VideoStreamDiscreteFramer::nalUnitEndsAccessUnit(u_int8_t nal_uni
 
    return isVCL(nal_unit_type);
  }
@@ -165,7 +170,7 @@ index 25451a2..c27eef9 100644
 +    return 0;
 +}
 diff --git a/liveMedia/include/H264or5VideoStreamDiscreteFramer.hh b/liveMedia/include/H264or5VideoStreamDiscreteFramer.hh
-index 7c52a48..931d388 100644
+index dd88ed7..65ffdd5 100644
 --- a/liveMedia/include/H264or5VideoStreamDiscreteFramer.hh
 +++ b/liveMedia/include/H264or5VideoStreamDiscreteFramer.hh
 @@ -49,6 +49,9 @@ protected:

@@ -31,8 +31,8 @@
 
 set -o xtrace
 
-if [ "$#" -ne 4 ]; then
-    echo "Usage  : $0 v1_target_files_zipfile v2_target_files_zipfile rootfs_path ext4_or_ubi"
+if [ "$#" -lt 4 ]; then
+    echo "Usage  : $0 v1_target_files_zipfile v2_target_files_zipfile rootfs_path ext4_or_ubi [-c fsconfig_file [-p prefix]]"
     echo "----------------------------------------------------------------------------------------------------"
     echo "example: $0 v1_target_files_ubi.zip  v2_target_files_ubi.zip  machine-image/1.0-r0/rootfs ubi"
     echo "example: $0 v1_target_files_ext4.zip v2_target_files_ext4.zip machine-image/1.0/rootfs ext4"
@@ -45,6 +45,14 @@ export LD_LIBRARY_PATH=${STAGING_LIBDIR_NATIVE}
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
+export FSCONFIGFOPTS=" "
+
+if [ "$#" -gt 4 ]; then
+    IFS=' ' read -a allopts <<< "$@"
+    for i in $(seq 4 $#); do
+        FSCONFIGFOPTS=$FSCONFIGFOPTS${allopts[${i}]}" "
+    done
+fi
 
 # Specify MMC or MTD type device. MTD by default
 [[ $4 = "ext4" ]] && device_type="MMC" || device_type="MTD"
@@ -57,9 +65,9 @@ mkdir -p target_files/SYSTEM
 # Generate selabel rules only if file_contexts is packed in target-files
 if grep "selinux_fc" target_files/META/misc_info.txt
 then
-    zipinfo -1 $2 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config -C -S target_files/BOOT/RAMDISK/file_contexts -D ${3} > target_files/META/filesystem_config.txt
+    zipinfo -1 $2 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config ${FSCONFIGFOPTS} -C -S target_files/BOOT/RAMDISK/file_contexts -D ${3} > target_files/META/filesystem_config.txt
 else
-    zipinfo -1 $2 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config -D ${3} > target_files/META/filesystem_config.txt
+    zipinfo -1 $2 |  awk 'BEGIN { FS="SYSTEM/" } /^SYSTEM\// {print "system/" $2}' | fs_config ${FSCONFIGFOPTS} -D ${3} > target_files/META/filesystem_config.txt
 fi
 
 
