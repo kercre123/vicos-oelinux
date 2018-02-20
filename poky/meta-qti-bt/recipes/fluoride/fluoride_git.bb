@@ -10,7 +10,8 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 DEPENDS = "common zlib btvendorhal libbt-vendor system-media"
 
 FILESPATH =+ "${WORKSPACE}:"
-SRC_URI = "file://system/bt/"
+SRC_URI = "file://system/bt/ \
+           file://vendor/qcom/opensource/bluetooth/"
 
 S = "${WORKDIR}/system/bt/"
 
