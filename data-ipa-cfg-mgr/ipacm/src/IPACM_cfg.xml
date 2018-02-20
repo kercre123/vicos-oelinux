@@ -82,6 +82,7 @@
 		</IPACMIface>
 		<IPPassthroughFlag>
 			<IPPassthroughMode>0</IPPassthroughMode>
+			<IPPassthroughMacAddr>0</IPPassthroughMacAddr>
 		</IPPassthroughFlag>
 		<IPACMPrivateSubnet>
 			<Subnet>

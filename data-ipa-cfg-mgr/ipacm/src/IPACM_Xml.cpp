@@ -155,6 +155,7 @@ static int ipacm_cfg_xml_parse_tree
 	int str_size;
 	char* content;
 	char content_buf[MAX_XML_STR_LEN];
+	struct ether_addr *eth_addr = NULL;
 
 	if (NULL == xml_node)
 		return ret_val;
@@ -219,6 +220,23 @@ static int ipacm_cfg_xml_parse_tree
 							config->ip_passthrough_mode = false;
 							IPACMDBG_H("Passthrough enable %d buf(%d)\n", config->ip_passthrough_mode, atoi(content_buf));
 						}
+					}
+				}
+				else if (IPACM_util_icmp_string((char*)xml_node->name, IP_PassthroughMacAddr_TAG) == 0)
+				{
+					IPACMDBG_H("inside IP Passthrough\n");
+					content = IPACM_read_content_element(xml_node);
+					if (content)
+					{
+						str_size = strlen(content);
+						memset(content_buf, 0, sizeof(content_buf));
+						memcpy(content_buf, (void *)content, str_size);
+						content_buf[MAX_XML_STR_LEN-1] = '\0';
+						IPACMDBG_H("IP Passthrough mac: %s\n", content_buf);
+						eth_addr = ether_aton(content_buf);
+						memset(&config->ip_passthrough_mac, 0, sizeof(config->ip_passthrough_mac));
+						if (eth_addr)
+							config->ip_passthrough_mac = *eth_addr;
 					}
 				}
 #ifdef FEATURE_IPACM_PER_CLIENT_STATS

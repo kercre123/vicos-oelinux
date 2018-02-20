@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -110,12 +110,14 @@ const char *ipacm_event_name[] = {
 	__stringify(IPA_ETH_BRIDGE_CLIENT_DEL),                /* ipacm_event_eth_bridge*/
 	__stringify(IPA_ETH_BRIDGE_WLAN_SCC_MCC_SWITCH),       /* ipacm_event_eth_bridge*/
 	__stringify(IPA_LAN_DELETE_SELF),                      /* ipacm_event_data_fid */
+#ifdef FEATURE_L2TP
 	__stringify(IPA_ADD_VLAN_IFACE),                       /* ipa_ioc_vlan_iface_info */
 	__stringify(IPA_DEL_VLAN_IFACE),                       /* ipa_ioc_vlan_iface_info */
 	__stringify(IPA_ADD_L2TP_VLAN_MAPPING),                /* ipa_ioc_l2tp_vlan_mapping_info */
 	__stringify(IPA_DEL_L2TP_VLAN_MAPPING),                /* ipa_ioc_l2tp_vlan_mapping_info */
 	__stringify(IPA_VLAN_CLIENT_INFO),                     /* ipacm_event_data_all */
 	__stringify(IPA_VLAN_IFACE_INFO),                      /* ipacm_event_data_all */
+#endif
 	__stringify(IPACM_EVENT_MAX),
 };
 
@@ -131,7 +133,6 @@ IPACM_Config::IPACM_Config()
 #ifdef FEATURE_IPACM_PER_CLIENT_STATS
 	ipacm_lan_stats_enable = false;
 	ipacm_lan_stats_enable_set = false;
-	ipacm_lan_stats_enable_wan_set = false;
 #endif
 	ipacm_odu_router_mode = false;
 	ipa_num_wlan_guest_ap = 0;
@@ -303,6 +304,8 @@ int IPACM_Config::Init(void)
 
 	ipacm_ip_passthrough_mode = cfg->ip_passthrough_mode;
 	IPACMDBG_H("ipacm_ip_passthrough_mode %d. \n", ipacm_ip_passthrough_mode);
+
+	memcpy(ipacm_ip_passthrough_mac, cfg->ip_passthrough_mac.ether_addr_octet, IPA_MAC_ADDR_SIZE);
 
 #ifdef FEATURE_IPACM_PER_CLIENT_STATS
 	if (!ipacm_lan_stats_enable_set)

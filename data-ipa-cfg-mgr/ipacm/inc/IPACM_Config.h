@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -117,10 +117,12 @@ public:
 
 	bool ipacm_ip_passthrough_mode;
 
+	/* Store ippassthrough mac */
+	uint8_t ipacm_ip_passthrough_mac[IPA_MAC_ADDR_SIZE];
+
 #ifdef FEATURE_IPACM_PER_CLIENT_STATS
 	bool ipacm_lan_stats_enable;
 	bool ipacm_lan_stats_enable_set;
-	bool ipacm_lan_stats_enable_wan_set;
 #endif
 
 	int ipa_nat_iface_entries;
