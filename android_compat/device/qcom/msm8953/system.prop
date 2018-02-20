@@ -101,10 +101,15 @@ persist.fuse_sdcard=true
 #
 ro.qc.sdk.audio.ssr=false
 ##fluencetype can be "fluence" or "fluencepro" or "none"
-ro.qc.sdk.audio.fluencetype=none
-persist.audio.fluence.voicecall=true
+ro.qc.sdk.audio.fluencetype=fluencepro
+persist.audio.fluence.voicecall=false
 persist.audio.fluence.voicerec=false
-persist.audio.fluence.speaker=true
+persist.audio.fluence.speaker=false
+persist.audio.fluence.audiorec=true
+
+#enable generic handset mic
+audio.apptype.multirec.enabled=1
+
 #Set for msm8953
 tunnel.audio.encode = false
 #Buffer size in kbytes for compress offload playback
