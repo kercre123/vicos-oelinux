@@ -30,9 +30,13 @@ do_install() {
     install -m 0755 ${S}/daemons/mrpd/mrpctl ${D}${bindir}
     install -m 0755 ${S}/daemons/gptp/linux/build/obj/daemon_cl ${D}${bindir}
     install -m 0755 ${S}/lib/avtp_pipeline/build/bin/openavb_harness ${D}${bindir}
+    install -d ${D}${libdir}
+    install -m 0755 ${S}/lib/avtp_pipeline/build/lib/*.so ${D}${libdir}
     install -d ${D}${userfsdatadir}/avb
     install -m 0644 ${S}/lib/avtp_pipeline/build/bin/*.ini ${D}${userfsdatadir}/avb
 }
 
 FILES_${PN} += "${bindir}/*"
+FILES_${PN} += "${libdir}/*"
+INSANE_SKIP_${PN} += "dev-deps"
 FILES_${PN} += "${userfsdatadir}/avb/*"
