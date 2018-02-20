@@ -37,6 +37,8 @@
 
 #define IPV4_HDR_LEN_BYTES(ihl) (ihl << 2)
 
+#define PROC_FILE_NAME "tcpsplice"
+
 #include <linux/skbuff.h>
 #include <linux/netfilter.h>
 #include <linux/types.h>
@@ -48,6 +50,39 @@
 
 #include <uapi/linux/netfilter_ipv4.h>
 #include <uapi/linux/ip.h>
+
+/***************************************************************************
+*
+* Function: tcp_splice_proc_read_cb
+*
+* Description: callback for proc entry
+*
+* Parameters: struct file* fp; //file ptr to proc entry
+*             char __user* user; //buffer filled from userspace
+*             size_t size; size of buffer from userspace
+*             loff_t* offset; //offset
+*
+* Return: ssize_t, the number of bytes needed to process in userspace buffer
+*
+***************************************************************************/
+ssize_t tcp_splice_proc_read_cb(struct file* fp, char __user* user, size_t size, loff_t* offset);
+
+/***************************************************************************
+*
+* Function: tcp_splice_proc_write_cb
+*
+* Description: callback for proc entry
+*
+* Parameters: struct file* fp; //file ptr to proc entry
+*             char __user* user; //buffer filled from userspace
+*             size_t size; size of buffer from userspace
+*             loff_t* offset; //offset
+*
+* Return: ssize_t, the number of bytes processed from userspace buffer
+*
+***************************************************************************/
+ssize_t tcp_splice_proc_write_cb(struct file* fp, const char __user* user, size_t size,
+                                 loff_t* offset);
 
 /***************************************************************************
 *
@@ -75,7 +110,7 @@ unsigned int pre_route_v4(unsigned int hooknum, struct sk_buff* skb, const struc
 *
 * Function: local_out_v4
 *
-* Description: tcp splices an skb for ip_local_out
+* Description: calls ip_local_out after checksumming skb
 *
 * Parameters: struct sk_buff* skb, //the skb
 *
@@ -155,7 +190,7 @@ unsigned int pre_route_v6(unsigned int hooknum, struct sk_buff* skb, const struc
 *
 * Function: local_out_v6
 *
-* Description: tcp splices an skb for ip6_local_out
+* Description: calls ip6_local_out after checksumming skb
 *
 * Parameters: struct sk_buff* skb, //the skb
 *
@@ -213,5 +248,17 @@ void ip_splice_v6_to_v4(unsigned int v4_daddr, unsigned int v4_saddr, unsigned s
 * Return: none
 *
 ***************************************************************************/
-static void check_for_fin_rst_tcp_splice(struct tcphdr* tcp_hdr,
-                                         struct tcp_splice_hash_entry* hash_entry);
+void check_for_fin_rst_tcp_splice(struct tcphdr* tcp_hdr, struct tcp_splice_hash_entry* hash_entry);
+
+/***************************************************************************
+*
+* Function: tcp_splice_ht_free_entry
+*
+* Description: frees struct tcp_splice_hash_entry* hash_entry, is a call_rcu callback
+*
+* Parameters:  struct rcu_head* head //ptr to rcu_head member in hash_entry
+*
+* Return: none
+*
+***************************************************************************/
+void tcp_splice_ht_free_entry(struct rcu_head* head);

@@ -34,6 +34,7 @@
 
 #include "tcp-splice-interface.h"
 
+extern int debug_mode;
 extern struct sock* nl_socket;
 extern struct sockaddr_nl userspace_addr;
 extern struct hlist_head tcp_splice_ht[1 << TCP_SPLICE_HASH_INDEX_SHIFT_SIZE];
@@ -56,7 +57,7 @@ void listenFromUserspace(struct sk_buff* skb)
 
   if(NULL == skb)
   {
-    pr_err(MODULE_NAME": %s skb NULL!\n", __func__);
+    pr_debug(MODULE_NAME": %s skb NULL!\n", __func__);
     return;
   }
 
@@ -90,21 +91,21 @@ void sendToUserspace(struct tcp_splice_hash_entry* hash_entry)
 
   if(NULL == hash_entry)
   {
-    pr_err(MODULE_NAME": %s hash_entry NULL!\n", __func__);
+    pr_debug(MODULE_NAME": %s hash_entry NULL!\n", __func__);
     return;
   }
 
   //allocate new skb, nlmsg_unicast takes care of the freeing
   if((skb = nlmsg_new(sizeof(struct userspace_relay_session), GFP_ATOMIC)) == NULL)
   {
-    pr_err(MODULE_NAME": %s skb NULL!\n", __func__);
+    pr_debug(MODULE_NAME": %s skb NULL!\n", __func__);
     return;
   }
 
   //attach the payload to the skb
   if((nlmhdr = nlmsg_put(skb, 0, 0, NLMSG_DONE, sizeof(struct userspace_relay_session), 0)) == NULL)
   {
-    pr_err(MODULE_NAME": %s nlmhdr NULL!\n", __func__);
+    pr_debug(MODULE_NAME": %s nlmhdr NULL!\n", __func__);
     kfree_skb(skb);
     return;
   }
@@ -115,7 +116,7 @@ void sendToUserspace(struct tcp_splice_hash_entry* hash_entry)
   //ptr to the head of the payload
   if((data_ptr = (struct userspace_relay_session*)NLMSG_DATA(nlmhdr)) == NULL)
   {
-    pr_err(MODULE_NAME": %s data_ptr NULL!\n", __func__);
+    pr_debug(MODULE_NAME": %s data_ptr NULL!\n", __func__);
     kfree_skb(skb);
     return;
   }
@@ -162,7 +163,6 @@ int tcp_splice_socket(struct sock* sk, int optval, void __user *user, unsigned i
     return -EINVAL;
   }
 
-
   //not checking for capabilities of user
   switch(optval)
   {
@@ -195,10 +195,15 @@ int tcp_splice_socket(struct sock* sk, int optval, void __user *user, unsigned i
       }
       sockfd_put(splice_session_info.req_socket);
 
+      if(debug_mode)
+      {
+        printSessionInfo(&splice_session_info);
+      }
+
       if(insertSpliceInfoTuple(&splice_session_info) != 0)
       {
-        pr_err(MODULE_NAME": %s error with inserting tcp splice info tuple setsockopt\n",
-               __func__);
+        pr_debug(MODULE_NAME": %s error with inserting tcp splice info tuple setsockopt\n",
+                 __func__);
         return -EBADF;
       }
 
@@ -270,14 +275,14 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
       if((cli_conn_hash = nf_conntrack_find_get(sock_net(sp_session->cli_socket->sk),
                                                 NF_CT_DEFAULT_ZONE, &conn_tuple[0])) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't find get the client socket conntrack hash\n",
+        pr_debug(MODULE_NAME": %s couldn't find get the client socket conntrack hash\n",
                  __func__);
         return -EBADF;
       }
 
       if((cli_ct = nf_ct_tuplehash_to_ctrack(cli_conn_hash)) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't convert client hash to "
+        pr_debug(MODULE_NAME": %s couldn't convert client hash to "
                  "conntrack entry\n", __func__);
         return -EBADF;
       }
@@ -301,14 +306,14 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
       if((cli_conn_hash = nf_conntrack_find_get(sock_net(sp_session->cli_socket->sk),
                                             NF_CT_DEFAULT_ZONE, &conn_tuple[0])) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't find get the client socket conntrack hash\n",
+        pr_debug(MODULE_NAME": %s couldn't find get the client socket conntrack hash\n",
                  __func__);
         return -EBADF;
       }
 
       if((cli_ct = nf_ct_tuplehash_to_ctrack(cli_conn_hash)) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't convert client hash to conntrack entry\n",
+        pr_debug(MODULE_NAME": %s couldn't convert client hash to conntrack entry\n",
                  __func__);
         return -EBADF;
       }
@@ -339,7 +344,7 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
       if((req_conn_hash = nf_conntrack_find_get(sock_net(sp_session->req_socket->sk),
                                                 NF_CT_DEFAULT_ZONE, &conn_tuple[1])) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't find get the req socket conntrack hash\n",
+        pr_debug(MODULE_NAME": %s couldn't find get the req socket conntrack hash\n",
                  __func__);
         nf_ct_put(cli_ct); //clean up
         return -EBADF;
@@ -347,7 +352,7 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
 
       if((req_ct = nf_ct_tuplehash_to_ctrack(req_conn_hash)) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't convert req hash to conntrack entry\n",
+        pr_debug(MODULE_NAME": %s couldn't convert req hash to conntrack entry\n",
                  __func__);
         nf_ct_put(cli_ct); //clean up
         return -EBADF;
@@ -371,7 +376,7 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
       if((req_conn_hash = nf_conntrack_find_get(sock_net(sp_session->req_socket->sk),
                                             NF_CT_DEFAULT_ZONE, &conn_tuple[1])) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't find get the req socket conntrack hash\n",
+        pr_debug(MODULE_NAME": %s couldn't find get the req socket conntrack hash\n",
                  __func__);
         nf_ct_put(cli_ct); //clean up
         return -EBADF;
@@ -379,7 +384,7 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
 
       if((req_ct = nf_ct_tuplehash_to_ctrack(req_conn_hash)) == NULL)
       {
-        pr_err(MODULE_NAME": %s couldn't convert req hash to conntrack entry\n",
+        pr_debug(MODULE_NAME": %s couldn't convert req hash to conntrack entry\n",
                  __func__);
         nf_ct_put(cli_ct); //clean up
         return -EBADF;
@@ -411,8 +416,8 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
       {
         //delete and free the other previous hash_entry
         pr_debug(MODULE_NAME": %s deleting previous hash_entry\n", __func__);
-        rcu_read_lock();
-        hash_for_each_possible(tcp_splice_ht, hash_entry, hash_node, key[0])
+        spin_lock_bh(&ht_lock);
+        hash_for_each_possible_rcu(tcp_splice_ht, hash_entry, hash_node, key[0])
         {
           if((hash_entry->splice_tuple.cli_dport == sp_session->cli_socket->sk->sk_dport) &&
             (hash_entry->splice_tuple.cli_sk_num_ct == cli_ct->tuplehash[0].tuple.dst.u.tcp.port) &&
@@ -421,10 +426,11 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
             (hash_entry->splice_tuple.req_sk_num_ct == req_ct->tuplehash[1].tuple.dst.u.tcp.port))
           {
             hash_del_rcu(&(hash_entry->hash_node));
-            kfree(hash_entry);
           }
         }
-        rcu_read_unlock();
+        spin_unlock_bh(&ht_lock);
+        synchronize_rcu();
+        kfree(hash_entry);
       }
 
       return -ENOMEM;
@@ -472,8 +478,8 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
       {
         //delete and free the other previous hash_entry
         pr_debug(MODULE_NAME": %s deleting previous hash_entry\n", __func__);
-        rcu_read_lock();
-        hash_for_each_possible(tcp_splice_ht, hash_entry, hash_node, key[0])
+        spin_lock_bh(&ht_lock);
+        hash_for_each_possible_rcu(tcp_splice_ht, hash_entry, hash_node, key[0])
         {
           if((hash_entry->splice_tuple.cli_dport == sp_session->cli_socket->sk->sk_dport) &&
             (hash_entry->splice_tuple.cli_sk_num_ct == cli_ct->tuplehash[0].tuple.dst.u.tcp.port) &&
@@ -482,10 +488,11 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
             (hash_entry->splice_tuple.req_sk_num_ct == req_ct->tuplehash[1].tuple.dst.u.tcp.port))
           {
             hash_del_rcu(&(hash_entry->hash_node));
-            kfree(hash_entry);
           }
         }
-        rcu_read_unlock();
+        spin_unlock_bh(&ht_lock);
+        synchronize_rcu();
+        kfree(hash_entry);
       } else {
         kfree(hash_entry);
       }
@@ -548,8 +555,8 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
       {
         //delete and free the other previous hash_entry
         pr_debug(MODULE_NAME": %s deleting previous hash_entry\n", __func__);
-        rcu_read_lock();
-        hash_for_each_possible(tcp_splice_ht, hash_entry, hash_node, key[0])
+        spin_lock_bh(&ht_lock);
+        hash_for_each_possible_rcu(tcp_splice_ht, hash_entry, hash_node, key[0])
         {
           if((hash_entry->splice_tuple.cli_dport == sp_session->cli_socket->sk->sk_dport) &&
             (hash_entry->splice_tuple.cli_sk_num_ct == cli_ct->tuplehash[0].tuple.dst.u.tcp.port) &&
@@ -558,10 +565,11 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
             (hash_entry->splice_tuple.req_sk_num_ct == req_ct->tuplehash[1].tuple.dst.u.tcp.port))
           {
             hash_del_rcu(&(hash_entry->hash_node));
-            kfree(hash_entry);
           }
         }
-        rcu_read_unlock();
+        spin_unlock_bh(&ht_lock);
+        synchronize_rcu();
+        kfree(hash_entry);
       } else {
         kfree(hash_entry);
       }
@@ -631,6 +639,7 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
 
     spin_lock_bh(&ht_lock);
     hash_add_rcu(tcp_splice_ht, &(hash_entry->hash_node), key[i]);
+    pr_debug(MODULE_NAME": inserted for key = 0x%x\n", key[i]);
     spin_unlock_bh(&ht_lock);
 
   }
@@ -640,4 +649,106 @@ int insertSpliceInfoTuple(struct tcp_splice_session_info* sp_session)
   nf_ct_put(req_ct);
 
   return 0;
+}
+
+/***************************************************************************
+*
+* Function: printSessionInfo
+*
+* Description: prints tcp splice info
+*
+* Parameters: struct tcp_splice_session_info* sp_session; //ptr to tcp splice session
+*
+* Return: none
+*
+***************************************************************************/
+void printSessionInfo(struct tcp_splice_session_info* sp_session)
+{
+  struct tcp_sock* cli_tcp_sock = NULL;
+  struct tcp_sock* req_tcp_sock = NULL;
+
+  if(NULL == sp_session)
+  {
+    pr_err(MODULE_NAME": %s : %d sp_session is NULL\n", __func__, __LINE__);
+    return;
+  }
+
+  cli_tcp_sock = tcp_sk(sp_session->cli_socket->sk);
+  req_tcp_sock = tcp_sk(sp_session->req_socket->sk);
+
+  //depending on IPv4 or IPv6 socket
+  switch(sp_session->cli_socket->sk->sk_family)
+  {
+    case AF_INET:
+    {
+      pr_info(MODULE_NAME": cli_sk_family = AF_INET\n");
+      pr_info(MODULE_NAME": cli_daddr = 0x%x\n", ntohl(sp_session->cli_socket->sk->sk_daddr));
+      pr_info(MODULE_NAME": cli_saddr = 0x%x\n", ntohl(sp_session->cli_socket->sk->sk_rcv_saddr));
+      break;
+    }
+    case AF_INET6:
+    {
+      pr_info(MODULE_NAME": cli_sk_family = AF_INET6\n");
+      pr_info(MODULE_NAME": cli_v6_daddr = ");
+      PRINTK_IPV6_ADDR(sp_session->cli_socket->sk->sk_v6_daddr);
+      pr_info(MODULE_NAME": cli_v6_rcv_saddr = ");
+      PRINTK_IPV6_ADDR(sp_session->cli_socket->sk->sk_v6_rcv_saddr);
+      break;
+    }
+    default:
+    {
+      pr_info(MODULE_NAME": cli_sk_family = 0x%x\n", sp_session->cli_socket->sk->sk_family);
+      break;
+    }
+  }
+
+  pr_info(MODULE_NAME": cli_dport = 0x%x\n", ntohs(sp_session->cli_socket->sk->sk_dport));
+  pr_info(MODULE_NAME": cli_sk_num = 0x%x\n", sp_session->cli_socket->sk->sk_num);
+  pr_info(MODULE_NAME": cli_splice_iss = 0x%x\n", cli_tcp_sock->snd_nxt);
+  pr_info(MODULE_NAME": cli_splice_irs = 0x%x\n", cli_tcp_sock->rcv_nxt);
+  pr_info(MODULE_NAME": cli_rx_opt.tstamp_ok = %u\n", cli_tcp_sock->rx_opt.tstamp_ok);
+  pr_info(MODULE_NAME": cli_rx_opt.splice_rcv_tsval = %u\n", cli_tcp_sock->rx_opt.rcv_tsval);
+  pr_info(MODULE_NAME": cli_rx_opt.splice_rcv_tsecr = %u\n", cli_tcp_sock->rx_opt.rcv_tsecr);
+  pr_info(MODULE_NAME": cli_rx_opt.wscale_ok = %u\n", cli_tcp_sock->rx_opt.wscale_ok);
+  pr_info(MODULE_NAME": cli_rx_opt.splice_snd_wscale = %u\n", cli_tcp_sock->rx_opt.snd_wscale);
+  pr_info(MODULE_NAME": cli_rx_opt.splice_rcv_wscale = %u\n", cli_tcp_sock->rx_opt.rcv_wscale);
+  pr_info(MODULE_NAME": cli_rx_opt.sack_ok = %u\n", cli_tcp_sock->rx_opt.sack_ok & TCP_SACK_SEEN);
+
+  //depending on IPv4 or IPv6 socket
+  switch(sp_session->req_socket->sk->sk_family)
+  {
+    case AF_INET:
+    {
+      pr_info(MODULE_NAME": req_sk_family = AF_INET\n");
+      pr_info(MODULE_NAME": req_daddr = 0x%x\n", ntohl(sp_session->req_socket->sk->sk_daddr));
+      pr_info(MODULE_NAME": req_saddr = 0x%x\n", ntohl(sp_session->req_socket->sk->sk_rcv_saddr));
+      break;
+    }
+    case AF_INET6:
+    {
+      pr_info(MODULE_NAME": req_sk_family = AF_INET6\n");
+      pr_info(MODULE_NAME": req_v6_daddr = ");
+      PRINTK_IPV6_ADDR(sp_session->req_socket->sk->sk_v6_daddr);
+      pr_info(MODULE_NAME": req_v6_rcv_saddr = ");
+      PRINTK_IPV6_ADDR(sp_session->req_socket->sk->sk_v6_rcv_saddr);
+      break;
+    }
+    default:
+    {
+      pr_info(MODULE_NAME": req_sk_family = 0x%x\n", sp_session->req_socket->sk->sk_family);
+      break;
+    }
+  }
+
+  pr_info(MODULE_NAME": req_dport = 0x%x\n", ntohs(sp_session->req_socket->sk->sk_dport));
+  pr_info(MODULE_NAME": req_sk_num = 0x%x\n", sp_session->req_socket->sk->sk_num);
+  pr_info(MODULE_NAME": req_splice_iss = 0x%x\n", req_tcp_sock->snd_nxt);
+  pr_info(MODULE_NAME": req_splice_irs = 0x%x\n", req_tcp_sock->rcv_nxt);
+  pr_info(MODULE_NAME": req_rx_opt.tstamp_ok = %u\n", req_tcp_sock->rx_opt.tstamp_ok);
+  pr_info(MODULE_NAME": req_rx_opt.splice_rcv_tsval = %u\n", req_tcp_sock->rx_opt.rcv_tsval);
+  pr_info(MODULE_NAME": req_rx_opt.splice_rcv_tsecr = %u\n", req_tcp_sock->rx_opt.rcv_tsecr);
+  pr_info(MODULE_NAME": req_rx_opt.wscale_ok = %u\n", req_tcp_sock->rx_opt.wscale_ok);
+  pr_info(MODULE_NAME": req_rx_opt.splice_snd_wscale = %u\n", req_tcp_sock->rx_opt.snd_wscale);
+  pr_info(MODULE_NAME": req_rx_opt.splice_rcv_wscale = %u\n", req_tcp_sock->rx_opt.rcv_wscale);
+  pr_info(MODULE_NAME": req_rx_opt.sack_ok = %u\n", req_tcp_sock->rx_opt.sack_ok & TCP_SACK_SEEN);
 }
