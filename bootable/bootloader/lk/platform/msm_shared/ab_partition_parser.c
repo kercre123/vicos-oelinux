@@ -53,7 +53,7 @@ static int boot_slot_index[AB_SUPPORTED_SLOTS];	/* store index for boot parition
 
 /* local functions. */
 static void attributes_update();
-
+static void mark_all_partitions_active(signed slot);
 /*
 	Function: To read slot attribute of
 		of the partition_entry
@@ -100,6 +100,48 @@ inline bool slot_is_bootable(struct partition_entry *partition_entries,
 		return false;
 	else
 		return true;
+}
+
+void
+partition_deactivate_slot(int slot)
+{
+	struct partition_entry *partition_entries =
+			partition_get_partition_entries();
+	int slt_index = boot_slot_index[slot];
+
+	/* Set Unbootable bit */
+	SET_BIT(partition_entries[slt_index].attribute_flag, PART_ATT_UNBOOTABLE_BIT);
+
+	/* Clear Sucess bit and Active bits */
+	CLR_BIT(partition_entries[slt_index].attribute_flag, PART_ATT_SUCCESS_BIT);
+	CLR_BIT(partition_entries[slt_index].attribute_flag, PART_ATT_ACTIVE_BIT);
+
+	/* Clear Max retry count and priority value */
+	partition_entries[slt_index].attribute_flag &= (~PART_ATT_PRIORITY_VAL &
+							~PART_ATT_MAX_RETRY_COUNT_VAL);
+
+	return;
+}
+
+void
+partition_activate_slot(int slot)
+{
+	struct partition_entry *partition_entries =
+			partition_get_partition_entries();
+	int slt_index = boot_slot_index[slot];
+
+	/* CLR Unbootable bit and Sucess bit*/
+	CLR_BIT(partition_entries[slt_index].attribute_flag, PART_ATT_UNBOOTABLE_BIT);
+	CLR_BIT(partition_entries[slt_index].attribute_flag, PART_ATT_SUCCESS_BIT);
+
+	/* Set Active bits */
+	SET_BIT(partition_entries[slt_index].attribute_flag, PART_ATT_ACTIVE_BIT);
+
+	/* Set Max retry count and priority value */
+	partition_entries[slt_index].attribute_flag |= (PART_ATT_PRIORITY_VAL |
+							PART_ATT_MAX_RETRY_COUNT_VAL);
+
+	return;
 }
 
 /*
@@ -239,9 +281,12 @@ int partition_find_active_slot()
 	unsigned boot_priority;
 	struct partition_entry *partition_entries = partition_get_partition_entries();
 
+#ifdef AB_DEBUG
+	dprintf(INFO, "partition_find_active_slot() called\n");
+#endif
 	/* Return current active slot if already found */
 	if (active_slot != INVALID)
-		return active_slot;
+		goto out;
 
 	for (boot_priority = MAX_PRIORITY;
 			boot_priority > 0; boot_priority--)
@@ -277,7 +322,8 @@ int partition_find_active_slot()
 #ifdef AB_DEBUG
 	dprintf(INFO, "Slot (%s) is Valid High Priority Slot\n", SUFFIX_SLOT(i));
 #endif
-					return i;
+					active_slot = i;
+					goto out;
 				}
 			}
 		}
@@ -287,19 +333,18 @@ int partition_find_active_slot()
 		if (count == AB_SUPPORTED_SLOTS)
 		{
 			/* Update the priority of the boot slot */
-			partition_entries[boot_slot_index[SLOT_A]].attribute_flag |=
-							((PART_ATT_PRIORITY_VAL |
-							PART_ATT_ACTIVE_VAL |
-							PART_ATT_MAX_RETRY_COUNT_VAL) &
-							(~PART_ATT_SUCCESSFUL_VAL &
-							~PART_ATT_UNBOOTABLE_VAL));
-			if (!attributes_updated)
-				attributes_updated = true;
-			return SLOT_A;
+			partition_activate_slot(SLOT_A);
+
+			active_slot = SLOT_A;
+
+			/* This is required to mark all bits as active,
+			for fresh boot post fresh flash */
+			mark_all_partitions_active(active_slot);
+			goto out;
 		}
 	}
-	/* If no valid slot */
-	return INVALID;
+out:
+	return active_slot;
 }
 
 static int
@@ -345,14 +390,10 @@ int partition_find_boot_slot()
 #endif
 	if (!boot_retry_count)
 	{
-		/* Mark slot invalide and unbootable */
-		partition_entries[slt_index].attribute_flag |=
-					(PART_ATT_UNBOOTABLE_VAL &
-					~PART_ATT_ACTIVE_VAL &
-					~PART_ATT_PRIORITY_VAL);
+		/* Mark slot invalid and unbootable */
+		partition_deactivate_slot(boot_slot);
 
 		partition_switch_slots(boot_slot, next_active_bootable_slot(partition_entries));
-
 		reboot_device(0);
 	}
 	else
@@ -384,6 +425,11 @@ void guid_update(struct partition_entry *partition_entries,
 {
 	unsigned char tmp_guid[PARTITION_TYPE_GUID_SIZE];
 
+#ifdef AB_DEBUG
+	dprintf(INFO, "Swapping GUID (%s) --> (%s) \n",
+			partition_entries[old_index].name,
+			partition_entries[new_index].name);
+#endif
 	memcpy(tmp_guid, partition_entries[old_index].type_guid,
 				PARTITION_TYPE_GUID_SIZE);
 	memcpy(partition_entries[old_index].type_guid,
@@ -454,9 +500,9 @@ mark_all_partitions_active(signed slot)
 	for (i=0; i<partition_count; i++)
 	{
 		pname = (char *)partition_entries[i].name;
- #ifdef AB_DEBUG
+#ifdef AB_DEBUG
 	dprintf(INFO, "Transversing partition %s\n", pname);
- #endif
+#endif
 		/* 1. Find partition, if it is A/B enabled. */
 		for ( j = 0; j<AB_SUPPORTED_SLOTS; j++)
 		{
@@ -487,22 +533,19 @@ void partition_mark_active_slot(signed slot)
 	if (active_slot == slot)
 		goto out;
 
-	switch (active_slot)
+	if(slot != INVALID)
 	{
-		case INVALID:
-			if (slot != SLOT_A)
-				swap_guid(SLOT_A, slot);
-		default:
-			if (slot == INVALID)
-				swap_guid(active_slot, SLOT_A);
-			else
-				swap_guid(active_slot, slot);
+		dprintf(INFO, "Marking (%s) as active\n", SUFFIX_SLOT(slot));
+
+		/* 1. Swap GUID's to new slot */
+		swap_guid(active_slot, slot);
+
+		/* 2. Set Active bit for all partitions of active slot */
+		mark_all_partitions_active(slot);
 	}
+
 	active_slot = slot;
 out:
-	/* Set Active bit for all partitions of active slot */
-	mark_all_partitions_active(slot);
-
 	if (attributes_updated)
 		attributes_update();
 

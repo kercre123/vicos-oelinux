@@ -43,14 +43,13 @@
 #include <partition_parser.h>
 #include <mmc.h>
 #include <malloc.h>
-
+#include <stdlib.h>
 #include "recovery.h"
 #include "bootimg.h"
 #include "smem.h"
 
 #define BOOT_FLAGS	1
 #define UPDATE_STATUS	2
-#define ROUND_TO_PAGE(x,y) (((x) + (y)) & (~(y)))
 
 static const int MISC_PAGES = 3;			// number of pages to save
 static const int MISC_COMMAND_PAGE = 1;		// bootloader command is this page
@@ -527,6 +526,11 @@ int write_misc(unsigned page_offset, void *buf, unsigned size)
 			return -1;
 		}
 
+		/* This will ensure, we zeored out any extra bytes
+		   we will push to emmc, to prevent information leak */
+		if (aligned_size > size)
+			memset((scratch_addr + size), 0, (aligned_size-size));
+
 		if (scratch_addr != buf)
 			memcpy(scratch_addr, buf, size);
 
@@ -568,8 +572,14 @@ int write_misc(unsigned page_offset, void *buf, unsigned size)
 			return -1;
 		}
 
+		/* This will ensure, we zeored out any extra bytes
+		   we will push, to prevent information leak */
+		if (aligned_size > size)
+			memset((scratch_addr + size), 0, (aligned_size-size));
+
 		if (scratch_addr != buf)
 			memcpy(scratch_addr, buf, size);
+
 		if (flash_write(ptn, offset, scratch_addr, aligned_size)) {
 			dprintf(CRITICAL, "Writing flash failed\n");
 			return -1;
