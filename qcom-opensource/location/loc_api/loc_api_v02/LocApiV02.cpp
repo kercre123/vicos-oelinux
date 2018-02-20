@@ -255,7 +255,7 @@ enum loc_api_adapter_err
 LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 {
   enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-  LOC_API_ADAPTER_EVENT_MASK_T newMask = mMask | (mask & ~mExcludedMask);
+  LOC_API_ADAPTER_EVENT_MASK_T newMask = mask & ~mExcludedMask;
   locClientEventMaskType qmiMask = convertMask(newMask);
   LOC_LOGD("%s:%d]: Enter mMask: %x; mask: %x; newMask: %x mQmiMask: %lld qmiMask: %lld",
            __func__, __LINE__, mMask, mask, newMask, mQmiMask, qmiMask);
@@ -2372,6 +2372,17 @@ void LocApiV02 :: reportPosition (
                locationExtended.gpsTime.gpsWeek = location_report_ptr->gpsTime.gpsWeek;
                locationExtended.gpsTime.gpsTimeOfWeekMs = location_report_ptr->gpsTime.gpsTimeOfWeekMs;
             }
+
+            if (location_report_ptr->extDOP_valid)
+            {
+               locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_EXT_DOP;
+               locationExtended.extDOP.PDOP = location_report_ptr->extDOP.PDOP;
+               locationExtended.extDOP.HDOP = location_report_ptr->extDOP.HDOP;
+               locationExtended.extDOP.VDOP = location_report_ptr->extDOP.VDOP;
+               locationExtended.extDOP.GDOP = location_report_ptr->extDOP.GDOP;
+               locationExtended.extDOP.TDOP = location_report_ptr->extDOP.TDOP;
+            }
+
             if((0 == location_report_ptr->latitude) &&
                (0 == location_report_ptr->longitude) &&
                (1 == location_report_ptr->horReliability_valid) &&
