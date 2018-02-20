@@ -49,6 +49,8 @@
 
 #include "desktop-shell-client-protocol.h"
 
+#define CLIENT_WL_OUTPUT_VERSION 3
+
 extern char **environ; /* defined by libc */
 
 struct desktop {
@@ -1155,11 +1157,27 @@ output_handle_scale(void *data,
 	window_set_buffer_scale(output->background->window, scale);
 }
 
+static void
+output_handle_hdcp(void *data, struct wl_output *wl_output,
+		   uint32_t version, uint32_t interface_type)
+{
+
+}
+
+static void
+output_handle_hdr(void *data, struct wl_output *wl_output,
+		 uint32_t is_supported)
+{
+
+}
+
 static const struct wl_output_listener output_listener = {
 	output_handle_geometry,
 	output_handle_mode,
 	output_handle_done,
-	output_handle_scale
+	output_handle_scale,
+	output_handle_hdcp,
+	output_handle_hdr
 };
 
 static int
@@ -1212,7 +1230,8 @@ create_output(struct desktop *desktop, uint32_t id)
 		return;
 
 	output->output =
-		display_bind(desktop->display, id, &wl_output_interface, 2);
+		display_bind(desktop->display, id, &wl_output_interface,
+			CLIENT_WL_OUTPUT_VERSION);
 	output->server_output_id = id;
 
 	wl_output_add_listener(output->output, &output_listener, output);

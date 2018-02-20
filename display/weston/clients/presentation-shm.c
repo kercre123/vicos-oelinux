@@ -40,6 +40,8 @@
 #include "shared/os-compatibility.h"
 #include "presentation_timing-client-protocol.h"
 
+#define CLIENT_WL_OUTPUT_VERSION 1
+
 enum run_mode {
 	RUN_MODE_FEEDBACK,
 	RUN_MODE_FEEDBACK_IDLE,
@@ -681,7 +683,7 @@ display_add_output(struct display *d, uint32_t name, uint32_t version)
 	assert(o);
 
 	o->output = wl_registry_bind(d->registry, name,
-				     &wl_output_interface, 1);
+				     &wl_output_interface, CLIENT_WL_OUTPUT_VERSION);
 	o->name = name;
 	wl_list_insert(&d->output_list, &o->link);
 }

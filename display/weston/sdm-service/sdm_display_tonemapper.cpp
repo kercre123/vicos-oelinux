@@ -55,6 +55,7 @@ ToneMapSession::~ToneMapSession() {
   gpu_tone_mapper_ = nullptr;
   FreeIntermediateBuffers();
   buffer_info_.clear();
+  buffer_allocator_ = nullptr;
 }
 
 DisplayError ToneMapSession::AllocateIntermediateBuffers(const Layer *layer) {
@@ -119,8 +120,8 @@ bool ToneMapSession::IsSameToneMapConfig(Layer *layer) {
           (buffer.color_metadata.transfer == tone_map_config_.transfer) &&
           (layer->request.flags.secure == tone_map_config_.secure) &&
           (layer->request.format == tone_map_config_.format) &&
-          (layer->request.width == UINT32(buffer.width)) &&
-          (layer->request.height == UINT32(buffer.height)));
+          (layer->request.width == UINT32(buffer.unaligned_width)) &&
+          (layer->request.height == UINT32(buffer.unaligned_height)));
 }
 
 int SdmDisplayToneMapper::HandleToneMap(LayerStack *layer_stack) {
@@ -216,8 +217,9 @@ void SdmDisplayToneMapper::ToneMap(Layer* layer, ToneMapSession *session) {
   gbuf_info.format = gbm_format;
 
   void *src_hnd = static_cast<void *>(&gbuf_info);
-
-  fence_fd = session->gpu_tone_mapper_->blit(dst_hnd, src_hnd, merged_fd);
+  buffer_allocator_->GetGbmDeviceHandle(&layer->userdata2);
+  fence_fd = session->gpu_tone_mapper_->blit(dst_hnd, src_hnd, merged_fd, layer->userdata,
+                                              layer->userdata2);
   DumpToneMapOutput(session, &fence_fd);
 
   session->UpdateBuffer(fence_fd, &layer->input_buffer);
@@ -261,7 +263,7 @@ void SdmDisplayToneMapper::SetFrameDumpConfig(uint32_t count) {
 
 void SdmDisplayToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) {
 
-  DLOGI("Not supported");
+  DLOGD("Not supported");
 }
 
 DisplayError SdmDisplayToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *session_index) {
@@ -298,7 +300,8 @@ DisplayError SdmDisplayToneMapper::AcquireToneMapSession(Layer *layer, uint32_t 
   session->gpu_tone_mapper_ = TonemapperFactory_GetInstance(session->tone_map_config_.type,
                                                             layer->lut_3d.lutEntries,
                                                             layer->lut_3d.dim,
-                                                            grid_entries, grid_size);
+                                                            grid_entries, grid_size,
+                                                            layer->request.flags.secure);
   if (session->gpu_tone_mapper_ == NULL) {
     delete session;
     return kErrorNotSupported;

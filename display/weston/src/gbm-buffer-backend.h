@@ -108,6 +108,7 @@ struct gbm_buffer {
     uint32_t stride[MAX_NUM_PLANES];
     int32_t  num_planes;
     void *user_data;
+    struct gbm_bo *bo;
     gbm_buffer_user_data_destroy_func user_data_destroy_func;
 };
 

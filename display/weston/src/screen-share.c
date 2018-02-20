@@ -44,6 +44,8 @@
 #include "shared/os-compatibility.h"
 #include "fullscreen-shell-client-protocol.h"
 
+#define WL_BACKEND_OUTPUT_VERSION 1
+
 struct shared_output {
 	struct weston_output *output;
 	struct wl_listener output_destroyed;
@@ -689,7 +691,7 @@ registry_handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, "wl_output") == 0 && !so->parent.output) {
 		so->parent.output =
 			wl_registry_bind(registry,
-					 id, &wl_output_interface, 1);
+					 id, &wl_output_interface, WL_BACKEND_OUTPUT_VERSION);
 	} else if (strcmp(interface, "wl_seat") == 0) {
 		ss_seat_create(so, id);
 	} else if (strcmp(interface, "wl_shm") == 0) {

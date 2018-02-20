@@ -79,6 +79,8 @@ typedef void *EGLContext;
 #include "ivi-application-client-protocol.h"
 #define IVI_SURFACE_ID 9000
 
+#define CLIENT_WL_OUTPUT_VERSION 3
+
 struct shm_pool;
 
 struct global {
@@ -5040,11 +5042,28 @@ display_handle_mode(void *data,
 	}
 }
 
+static void
+output_handle_hdcp(void *data, struct wl_output *wl_output,
+		   uint32_t version, uint32_t interface_type)
+{
+
+}
+
+static void
+output_handle_hdr(void *data, struct wl_output *wl_output,
+		 uint32_t is_supported)
+{
+
+}
+
+
 static const struct wl_output_listener output_listener = {
 	display_handle_geometry,
 	display_handle_mode,
 	display_handle_done,
-	display_handle_scale
+	display_handle_scale,
+	output_handle_hdcp,
+	output_handle_hdr
 };
 
 static void
@@ -5056,7 +5075,7 @@ display_add_output(struct display *d, uint32_t id)
 	output->display = d;
 	output->scale = 1;
 	output->output =
-		wl_registry_bind(d->registry, id, &wl_output_interface, 2);
+		wl_registry_bind(d->registry, id, &wl_output_interface, CLIENT_WL_OUTPUT_VERSION);
 	output->server_output_id = id;
 	wl_list_insert(d->output_list.prev, &output->link);
 
@@ -5335,7 +5354,7 @@ registry_handle_global(void *data, struct wl_registry *registry, uint32_t id,
 	struct display *d = data;
 	struct global *global;
 
-	global = xmalloc(sizeof *global);
+	global = xzalloc(sizeof *global);
 	global->name = id;
 	global->interface = strdup(interface);
 	global->version = version;
@@ -5529,6 +5548,7 @@ handle_display_data(struct task *task, uint32_t events)
 	struct epoll_event ep;
 	int ret;
 
+	memset(&ep, 0, sizeof(ep));
 	display->display_fd_events = events;
 
 	if (events & EPOLLERR || events & EPOLLHUP) {
@@ -5814,6 +5834,7 @@ display_watch_fd(struct display *display,
 {
 	struct epoll_event ep;
 
+	memset(&ep, 0, sizeof(ep));
 	ep.events = events;
 	ep.data.ptr = task;
 	epoll_ctl(display->epoll_fd, EPOLL_CTL_ADD, fd, &ep);
@@ -5832,6 +5853,7 @@ display_run(struct display *display)
 	struct epoll_event ep[16];
 	int i, count, ret;
 
+	memset(&ep, 0, sizeof(ep));
 	display->running = 1;
 	while (1) {
 		while (!wl_list_empty(&display->deferred_list)) {
