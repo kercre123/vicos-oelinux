@@ -30182,3 +30182,10 @@
 
 
 #define MII_AUX_CTRL		0x12	/* Auxillary control register */
+#define MAC_GMIIAR_CR_CLK_2035		(0x00000200)
+#define MAC_GMIIAR_SKAP_EN			(0x00000010)
+#define MAC_GMIIAR_GOC_RD			(0x0000000C)
+#define MAC_GMIIAR_GOC_WR			(0x00000004)
+#define MAC_GMIIAR_GOC_RD_INC		(0x00000008)
+#define MAC_GMIIAR_C45E_EN			(0x00000002)
+#define MAC_GMIIAR_GB_EN			(0x00000001)

@@ -269,6 +269,11 @@ static void DWC_ETH_QOS_free_rx_queue_struct(struct DWC_ETH_QOS_prv_data *pdata)
 	for (chInx = 0; chInx < pdata->rx_dma_ch_cnt; chInx++) {
 		rx_desc_data = &pdata->rx_dma_ch[chInx].rx_desc_data;
 
+		if (rx_desc_data->rx_buf_ptrs) {
+			kfree(rx_desc_data->rx_buf_ptrs);
+			rx_desc_data->rx_buf_ptrs = NULL;
+		}
+
 		if (rx_desc_data->rx_desc_dma_addrs) {
 			kfree(rx_desc_data->rx_desc_dma_addrs);
 			rx_desc_data->rx_desc_dma_addrs = NULL;
@@ -408,6 +413,13 @@ static void DWC_ETH_QOS_free_tx_queue_struct(struct DWC_ETH_QOS_prv_data *pdata)
 
 	for (chInx = 0; chInx < pdata->tx_dma_ch_cnt; chInx++) {
 		tx_desc_data = &pdata->tx_dma_ch[chInx].tx_desc_data;
+
+		if (pdata->ipa_enabled) {
+			if (tx_desc_data->tx_ipa_buff_addrs) {
+				kfree(tx_desc_data->tx_ipa_buff_addrs);
+				tx_desc_data->tx_ipa_buff_addrs = NULL;
+			}
+		}
 
 		if (tx_desc_data->tx_buf_ptrs) {
 			kfree(tx_desc_data->tx_buf_ptrs);
