@@ -10,4 +10,4 @@ libqmmf_jpeg_encoder_la_CPPFLAGS += -I$(EXIF_CFLAGS)
 libqmmf_jpeg_encoder_la_CPPFLAGS += -I$(OMXCORE_CFLAGS)
 libqmmf_jpeg_encoder_la_CPPFLAGS += -I$(OPENMAX_CFLAGS)
 libqmmf_jpeg_encoder_la_CPPFLAGS += -std=c++14 -std=gnu++0x -std=c++0x -std=gnu++11 -Wall -Wextra -Werror
-libqmmf_jpeg_encoder_la_LDFLAGS  := -lutils -lpthread -ldl -llog
+libqmmf_jpeg_encoder_la_LDFLAGS  := -lutils -lpthread -ldl -llog -ljpeg

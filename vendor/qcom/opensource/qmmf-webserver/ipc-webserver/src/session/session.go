@@ -168,18 +168,21 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
     chinfo, _ = CMap.ChMap_Get(ChList[ch])
 
+    var vam_flag bool
     for index := FR; index < MAX; index++ {
         if sessinfo.ProxyConf[index].Status {
             // remove vam config
-            chinfo, ch = Vam_tmp_one_streaming(sessinfo)
+            chinfo, ch, vam_flag = Vam_open_streaming()
 
-            Vam_remove_config(chinfo, ch, index)
-
-            chinfo, ch = Vam_tmp_one_streaming(sessinfo)
-
-            // vam off
-            Switch_vam_off(chinfo, sess, ch)
+            if vam_flag == true {
+                Vam_remove_config(chinfo, ch, index)
+            }
         }
+    }
+
+    chinfo, ch, vam_flag = Vam_open_streaming()
+    if vam_flag == true {
+        Switch_vam_off(chinfo, sess, ch)
     }
 
     // ch revert

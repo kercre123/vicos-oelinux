@@ -85,15 +85,11 @@ void RtspServerInterface::QuePushData(const char *enc_type,
       que->pps = (char *)malloc(sizeof(char) * (size));
       memcpy(que->pps, buffer, size);
       que->pps_size = size;
-      que->is_pps = true;
       return;
     }
     if (buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0x00 &&
         buffer[3] == 0x01 && buffer[4] == 0x65) {
-      if (que->is_pps != true) {
-        bufferSize = que->pps_size;
-      }
-      que->is_pps = false;
+      bufferSize = que->pps_size;
     }
   } else if (!strncmp(enc_type, "HEVC", strlen("HEVC"))) {
     if (buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0x00 &&
@@ -105,16 +101,12 @@ void RtspServerInterface::QuePushData(const char *enc_type,
       que->pps = (char *)malloc(sizeof(char) * (size));
       memcpy(que->pps, buffer, size);
       que->pps_size = size;
-      que->is_pps = true;
       return;
     }
 
     if (buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0x00 &&
         buffer[3] == 0x01 && buffer[4] == 0x26) {
-      if (que->is_pps != true) {
-        bufferSize = que->pps_size;
-      }
-      que->is_pps = false;
+      bufferSize = que->pps_size;
     }
   }
 

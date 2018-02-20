@@ -76,7 +76,8 @@ type Track_Id struct {
     RtspId      int
     RecordingId int
     VamId       int
-    AudioId     int
+    PreAudioId  int
+    RecAudioId  int
 }
 
 type Sess_id struct {
@@ -109,7 +110,8 @@ type Channel struct {
     Status        State
     VideoConf     VConf
     TrackIds      Track_Id
-    OvId          string
+    PreOvId       string
+    RecOvId       string
     OverlayStatus bool
     OverlayType   int
     OverlayConf   [3]OvConf

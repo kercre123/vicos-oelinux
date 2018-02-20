@@ -340,6 +340,14 @@ typedef struct qmmf_module_t {
                           struct qmmf_overlay_param_t *params);
   qmmf_db_result (*database_command) (struct qmmf_module_t *module,
                                       struct qmmf_db_param_t *params);
+
+  int32_t (*audio_player_connect) (struct qmmf_module_t *module);
+  int32_t (*audio_player_prepare) (struct qmmf_module_t *module);
+  int32_t (*audio_player_start) (struct qmmf_module_t *module);
+  int32_t (*audio_player_stop) (struct qmmf_module_t *module);
+  int32_t (*audio_player_delete) (struct qmmf_module_t *module);
+  int32_t (*audio_player_disconnect) (struct qmmf_module_t *module);
+
   void *priv;
 } qmmf_module;
 

@@ -43,7 +43,7 @@ func Monitor_camera_ip() {
     conn, err := net.DialTCP("tcp", nil, tcpAddr)
 
     if err != nil {
-        log.Printf("dial error:", err)
+        log.Printf("dial error:%v", err)
         return
     }
 

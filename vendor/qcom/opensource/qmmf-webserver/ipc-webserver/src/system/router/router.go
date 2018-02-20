@@ -103,6 +103,7 @@ var sroute = map[string]fn{
     "/vamconfig":       vam.VamConfigHandler,
     "/vamremoveconfig": vam.VamRemoveConfigHandler,
     "/vamenroll":       vam.VamEnrollHandler,
+    "/vamdisenroll":    vam.VamDisEnrollHandler,
     "/overlay":         overlay.OverlayHandler,
 }
 

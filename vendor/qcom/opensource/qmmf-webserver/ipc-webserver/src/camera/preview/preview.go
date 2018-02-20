@@ -41,8 +41,8 @@ func __check_camera_res(chinfo Channel) bool {
     if __preview_num >= MaxRtspNum {
         return false
     }
-    log.Printf("__check_camera_res value: %v \n", ResolutionConf[chinfo.VideoConf.Resolution])
-    log.Printf("__check_camera_res res: %v \n", CameraRes)
+    log.Printf("preview __check_camera_res value: %v \n", ResolutionConf[chinfo.VideoConf.Resolution])
+    log.Printf("preview __check_camera_res res: %v \n", CameraRes)
     // check res
     if (CameraRes - ResolutionConf[chinfo.VideoConf.Resolution]) < 0 {
         return false
@@ -74,7 +74,7 @@ func __preview_on(chinfo Channel, stream int) bool {
             return false
         }
 
-        if !Create_audio_track(chinfo.TrackIds.AudioId,
+        if !Create_audio_track(chinfo.TrackIds.PreAudioId,
         chinfo.Sids.PreviewId, 2) {
             return false
         }
@@ -100,11 +100,12 @@ func __preview_off(chinfo Channel) bool {
 
     // MpegTs
     if chinfo.Stream == Ts {
-        if !Delete_audio_track(chinfo.TrackIds.AudioId,
+        if !Delete_audio_track(chinfo.TrackIds.PreAudioId,
         chinfo.Sids.PreviewId) {
             return false
         }
     }
+
     return true
 }
 
@@ -361,4 +362,85 @@ func PreviewHandler(w http.ResponseWriter, r *http.Request) {
         }
         __preview_get(w, chinfo, sess, sessinfo)
     }
+}
+
+func Preview_video_off(chinfo Channel, sess string, ch int) bool {
+    log.Printf("Preview previewoff PCounter:%v \n", chinfo.PCounter)
+
+    // real preview off
+    if !__preview_off(chinfo) {
+        return false
+    }
+
+    // preview counter -1
+    chinfo.PCounter--
+
+    __save_channel_state(chinfo, ch, Normal)
+
+    __deal_camera_res(chinfo, Normal)
+    // delete preview num
+    __preview_num--
+    // update session status
+    __update_session_preview_st(sess, false)
+
+    Close_rtsp_proxy(RTSP, sess)
+    return true
+}
+
+func Preview_video_on(sess string, ch int, stream int) bool {
+    chinfo, _ := CMap.ChMap_Get(ChList[ch])
+
+    chState := chinfo.Status
+
+    log.Printf("__switch_preview_on chinfo chstate: %v \n", chState)
+    log.Printf("__switch_preview_on chinfo PCounter: %v \n", chinfo.PCounter)
+    log.Printf("__switch_preview_on MaxRtspSessNum:%v \n", MaxRtspSessNum)
+
+    // check pCounter
+    if chinfo.PCounter >= MaxRtspSessNum {
+        return false
+    }
+
+    // preview on
+    if chState == Preview {
+        if chinfo.Stream != stream {
+            return false
+        }
+        // update session status
+        __update_session_preview_st(sess, true)
+        // preview counter +1
+        chinfo.PCounter++
+        CMap.ChMap_Set(ChList[ch], chinfo)
+        // resp ok
+        return false
+    }
+
+    // check camera res
+    if !__check_camera_res(chinfo) {
+        return false
+    }
+
+    // check state
+    if chState == Recording {
+        return false
+    }
+
+    if !__preview_on(chinfo, stream) {
+        return false
+    }
+
+    // preview counter +1
+    chinfo.PCounter++
+    chinfo.Stream = stream
+    CMap.ChMap_Set(ChList[ch], chinfo)
+    // save map
+    __save_channel_state(chinfo, ch, Preview)
+    // deal camera res
+    __deal_camera_res(chinfo, Preview)
+    // add preview num
+    __preview_num++
+    // update session status
+    __update_session_preview_st(sess, true)
+
+    return true
 }
