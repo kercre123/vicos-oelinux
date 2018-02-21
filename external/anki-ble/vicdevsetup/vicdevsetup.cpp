@@ -50,9 +50,12 @@ void VicDevSetup::OnReceiveMessage(const int connection_id,
 {
   logv("OnReceiveMessage(id = %d, char_uuid = '%s', value.size = %d)",
        connection_id, characteristic_uuid.c_str(), value.size());
-  if (connection_id == connection_id_
-      && characteristic_uuid == Anki::kCentralToPeripheralCharacteristicUUID) {
-    HandleIncomingMessageFromCentral(value);
+  if (connection_id == connection_id_) {
+    if (characteristic_uuid == Anki::kAppWriteCharacteristicUUID) {
+      HandleIncomingMessageFromCentral(value);
+    } else if (characteristic_uuid == Anki::kAppWriteEncryptedCharacteristicUUID) {
+      HandleIncomingMessageFromCentralEncrypted(value);
+    }
   }
 }
 
@@ -180,14 +183,36 @@ void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& m
   }
 
 }
-void VicDevSetup::SendMessageToConnectedCentral(const std::vector<uint8_t>& value)
+void VicDevSetup::HandleIncomingMessageFromCentralEncrypted(const std::vector<uint8_t>& message)
+{
+  if (message.size() < 2) {
+    return;
+  }
+
+  uint8_t size = message[0];
+  uint8_t msgID = message[1];
+
+  switch (msgID) {
+    // Only handle a ping request.  This is just for testing.
+  case Anki::VictorMsg_Command::MSG_B2V_CORE_PING_REQUEST:
+    logi("Received ping request");
+    SendMessageToConnectedCentral({0x01, Anki::VictorMsg_Command::MSG_V2B_CORE_PING_RESPONSE},
+                                  Anki::kAppReadEncryptedCharacteristicUUID);
+    break;
+  default:
+    break;
+  }
+
+}
+void VicDevSetup::SendMessageToConnectedCentral(const std::vector<uint8_t>& value,
+                                                const std::string& char_uuid)
 {
   if (connection_id_ == -1) {
     return;
   }
   if (value.size() <= Anki::kAnkiVictorMsgMaxSize) {
     SendMessage(connection_id_,
-                Anki::kPeripheralToCentralCharacteristicUUID,
+                char_uuid,
                 true,
                 value);
   } else {
@@ -212,13 +237,14 @@ void VicDevSetup::SendMessageToConnectedCentral(const std::vector<uint8_t>& valu
       std::copy(value.begin() + offset,
                 value.begin() + offset + msgSize - 1,
                 std::back_inserter(message));
-      SendMessageToConnectedCentral(message);
+      SendMessageToConnectedCentral(message, char_uuid);
       offset += (msgSize - 1);
     }
   }
 }
 
-void VicDevSetup::SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value)
+void VicDevSetup::SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value,
+                                                const std::string& char_uuid)
 {
   if (connection_id_ == -1) {
     return;
@@ -227,17 +253,18 @@ void VicDevSetup::SendMessageToConnectedCentral(uint8_t msgID, const std::vector
                              value.size() + 1);
   std::vector<uint8_t> msg {msgSize, msgID};
   msg.insert(std::end(msg), std::begin(value), std::end(value));
-  SendMessageToConnectedCentral(msg);
+  SendMessageToConnectedCentral(msg, char_uuid);
 }
 
-void VicDevSetup::SendMessageToConnectedCentral(uint8_t msgID, const std::string& str)
+void VicDevSetup::SendMessageToConnectedCentral(uint8_t msgID, const std::string& str,
+                                                const std::string& char_uuid)
 {
   if (connection_id_ == -1) {
     return;
   }
   std::vector<uint8_t> value(str.begin(), str.end());
   value.push_back(0);
-  SendMessageToConnectedCentral(msgID, value);
+  SendMessageToConnectedCentral(msgID, value, char_uuid);
 }
 
 void VicDevSetup::SendOutputToConnectedCentral(int rc, const std::string& output)

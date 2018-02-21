@@ -32,19 +32,25 @@ static std::mutex sMutex;
 
 static Anki::BLEAdvertiseSettings sBLEAdvertiseSettings;
 static BluetoothGattService sBluetoothGattService;
-static int sCentralToPeripheralCharacteristicHandle = -1;
-static int sPeripheralToCentralCharacteristicHandle = -1;
+static int sAppWriteCharacteristicHandle = -1;
+static int sAppReadCharacteristicHandle = -1;
+static int sAppWriteEncryptedCharacteristicHandle = -1;
+static int sAppReadEncryptedCharacteristicHandle = -1;
 static int sCCCDescriptorHandle = -1;
+static int sCCCDescriptorEncryptedHandle = -1;
 
 static bool sAdvertising = false;
 static bool sConnected = false;
 static int sConnectionId = -1;
 static bool sCongested = false;
 static uint16_t sCCCValue = kCCCDefaultValue;
+static uint16_t sCCCEncryptedValue = kCCCDefaultValue;
 
-static std::vector<uint8_t> sPeripheralToCentralValue;
+static std::vector<uint8_t> sAppReadValue;
+static std::vector<uint8_t> sAppReadEncryptedValue;
 
 typedef struct Notification {
+  int characteristic_handle;
   int confirm;
   std::vector<uint8_t> value;
 } Notification;
@@ -56,13 +62,23 @@ void TransmitNextNotification()
   bool transmitted = false;
   while (!sCongested && !transmitted && !sNotificationQueue.empty()) {
     const Notification& notification = sNotificationQueue.front();
-    if (sConnected && sConnectionId > 0 && (sCCCValue != kCCCDefaultValue)
-        && SendGattIndication(sPeripheralToCentralCharacteristicHandle,
+    uint16_t cccValue;
+    if (notification.characteristic_handle == sAppReadCharacteristicHandle) {
+      cccValue = sCCCValue;
+    } else if (notification.characteristic_handle == sAppReadEncryptedCharacteristicHandle) {
+      cccValue = sCCCEncryptedValue;
+    }
+    if (sConnected && sConnectionId > 0 && (cccValue != kCCCDefaultValue)
+        && SendGattIndication(notification.characteristic_handle,
                               sConnectionId,
-                              (sCCCValue == kCCCIndicationValue) ? notification.confirm : 0,
+                              (cccValue == kCCCIndicationValue) ? notification.confirm : 0,
                               notification.value)) {
       transmitted = true;
-      sPeripheralToCentralValue = notification.value;
+      if (notification.characteristic_handle == sAppReadCharacteristicHandle) {
+        sAppReadValue = notification.value;
+      } else if (notification.characteristic_handle == sAppReadEncryptedCharacteristicHandle) {
+        sAppReadEncryptedValue = notification.value;
+      }
     } else {
       logi("Failed to send notification");
       if (sConnected && sConnectionId) {
@@ -76,13 +92,15 @@ void TransmitNextNotification()
   }
 }
 
-static void SendMessageToConnectedCentral(int confirm, const std::vector<uint8_t>& value)
+static void SendMessageToConnectedCentral(int characteristic_handle,
+                                          int confirm,
+                                          const std::vector<uint8_t>& value)
 {
   if (!sConnected) {
     return;
   }
 
-  sNotificationQueue.push_back((Notification) {confirm, value});
+  sNotificationQueue.push_back((Notification) {characteristic_handle, confirm, value});
   if (sNotificationQueue.size() == 1) {
     TransmitNextNotification();
   }
@@ -92,7 +110,9 @@ static void PeripheralConnectionCallback(int conn_id, int connected) {
   std::lock_guard<std::mutex> lock(sMutex);
   sConnected = (bool) connected;
   sCCCValue = kCCCDefaultValue;
-  sPeripheralToCentralValue.clear();
+  sCCCEncryptedValue = kCCCDefaultValue;
+  sAppReadValue.clear();
+  sAppReadEncryptedValue.clear();
   sNotificationQueue.clear();
   sCongested = false;
   if (connected) {
@@ -111,11 +131,18 @@ static void PeripheralReadCallback(int conn_id, int trans_id, int attr_handle, i
   std::vector<uint8_t>& value = dummy;
   int error = kGattErrorReadNotPermitted;
 
-  if (attr_handle == sPeripheralToCentralCharacteristicHandle) {
+  if (attr_handle == sAppReadCharacteristicHandle) {
     if (offset != 0) {
       error = kGattErrorInvalidOffset;
     } else {
-      value = sPeripheralToCentralValue;
+      value = sAppReadValue;
+      error = kGattErrorNone;
+    }
+  } else if (attr_handle == sAppReadEncryptedCharacteristicHandle) {
+    if (offset != 0) {
+      error = kGattErrorInvalidOffset;
+    } else {
+      value = sAppReadEncryptedValue;
       error = kGattErrorNone;
     }
   }
@@ -129,10 +156,13 @@ static void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, 
   std::vector<uint8_t> response;
   int error = kGattErrorNone;
 
-  if (attr_handle == sPeripheralToCentralCharacteristicHandle) {
+  if (attr_handle == sAppReadCharacteristicHandle
+      || attr_handle == sAppReadEncryptedCharacteristicHandle) {
     error = kGattErrorWriteNotPermitted;
-  } else if (attr_handle == sCentralToPeripheralCharacteristicHandle) {
-    sPeripheral->OnReceiveMessage(conn_id, Anki::kCentralToPeripheralCharacteristicUUID, value);
+  } else if (attr_handle == sAppWriteCharacteristicHandle) {
+    sPeripheral->OnReceiveMessage(conn_id, Anki::kAppWriteCharacteristicUUID, value);
+  } else if (attr_handle == sAppWriteEncryptedCharacteristicHandle) {
+    sPeripheral->OnReceiveMessage(conn_id, Anki::kAppWriteEncryptedCharacteristicUUID, value);
   } else if (attr_handle == sCCCDescriptorHandle) {
     error = kGattErrorCCCDImproperlyConfigured;
     if (value.size() == 2) {
@@ -140,7 +170,22 @@ static void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, 
       if (ccc == kCCCDefaultValue || ccc == kCCCNotificationValue || ccc == kCCCIndicationValue) {
         uint16_t old_ccc = sCCCValue;
         sCCCValue = ccc;
-        if ((old_ccc == kCCCDefaultValue) && (sCCCValue != kCCCDefaultValue)) {
+        if ((old_ccc == kCCCDefaultValue) && (sCCCValue != kCCCDefaultValue)
+            && (sCCCEncryptedValue != kCCCDefaultValue)) {
+          sPeripheral->OnInboundConnectionChange(conn_id, 1);
+        }
+        error = kGattErrorNone;
+      }
+    }
+  } else if (attr_handle == sCCCDescriptorEncryptedHandle) {
+    error = kGattErrorCCCDImproperlyConfigured;
+    if (value.size() == 2) {
+      uint16_t ccc = ((value[1] << 8) | value[0]);
+      if (ccc == kCCCDefaultValue || ccc == kCCCNotificationValue || ccc == kCCCIndicationValue) {
+        uint16_t old_ccc = sCCCEncryptedValue;
+        sCCCEncryptedValue = ccc;
+        if ((old_ccc == kCCCDefaultValue) && (sCCCEncryptedValue != kCCCDefaultValue)
+            && (sCCCValue != kCCCDefaultValue)) {
           sPeripheral->OnInboundConnectionChange(conn_id, 1);
         }
         error = kGattErrorNone;
@@ -193,9 +238,16 @@ void Peripheral::OnSendMessage(const int connection_id,
                                const std::vector<uint8_t>& value)
 {
   if (sConnected
-      && sConnectionId == connection_id
-      && characteristic_uuid == Anki::kPeripheralToCentralCharacteristicUUID) {
-    SendMessageToConnectedCentral(reliable ? 1 : 0, value);
+      && sConnectionId == connection_id) {
+    int characteristic_handle;
+    if (characteristic_uuid == kAppReadCharacteristicUUID) {
+      characteristic_handle = sAppReadCharacteristicHandle;
+    } else if (characteristic_uuid == kAppReadEncryptedCharacteristicUUID) {
+      characteristic_handle = sAppReadEncryptedCharacteristicHandle;
+    } else {
+      return;
+    }
+    SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
   }
 }
 
@@ -237,29 +289,51 @@ bool StartBLEPeripheral() {
   sBluetoothGattService.congestion_cb = PeripheralCongestionCallback;
   sBluetoothGattService.service_handle = -1;
 
-  BluetoothGattCharacteristic peripheralToCentralCharacteristic;
-  peripheralToCentralCharacteristic.uuid = Anki::kPeripheralToCentralCharacteristicUUID;
-  peripheralToCentralCharacteristic.properties =
+  BluetoothGattCharacteristic appReadCharacteristic;
+  appReadCharacteristic.uuid = Anki::kAppReadCharacteristicUUID;
+  appReadCharacteristic.properties =
       (kGattCharacteristicPropNotify | kGattCharacteristicPropRead);
-  peripheralToCentralCharacteristic.permissions = kGattPermRead;
-  peripheralToCentralCharacteristic.char_handle = -1;
+  appReadCharacteristic.permissions = kGattPermRead;
+  appReadCharacteristic.char_handle = -1;
 
   BluetoothGattDescriptor cccDescriptor;
   cccDescriptor.uuid = Anki::kCCCDescriptorUUID;
   cccDescriptor.permissions = (kGattPermRead | kGattPermWrite);
   cccDescriptor.desc_handle = -1;
-  peripheralToCentralCharacteristic.descriptors.push_back(cccDescriptor);
+  appReadCharacteristic.descriptors.push_back(cccDescriptor);
 
-  sBluetoothGattService.characteristics.push_back(peripheralToCentralCharacteristic);
+  sBluetoothGattService.characteristics.push_back(appReadCharacteristic);
 
-  BluetoothGattCharacteristic centralToPeripheralCharacteristic;
-  centralToPeripheralCharacteristic.uuid = Anki::kCentralToPeripheralCharacteristicUUID;
-  centralToPeripheralCharacteristic.properties =
+  BluetoothGattCharacteristic appWriteCharacteristic;
+  appWriteCharacteristic.uuid = Anki::kAppWriteCharacteristicUUID;
+  appWriteCharacteristic.properties =
       (kGattCharacteristicPropWrite | kGattCharacteristicPropWriteNoResponse);
-  centralToPeripheralCharacteristic.permissions = kGattPermWrite;
-  centralToPeripheralCharacteristic.char_handle = -1;
-  sBluetoothGattService.characteristics.push_back(centralToPeripheralCharacteristic);
+  appWriteCharacteristic.permissions = kGattPermWrite;
+  appWriteCharacteristic.char_handle = -1;
+  sBluetoothGattService.characteristics.push_back(appWriteCharacteristic);
 
+  BluetoothGattCharacteristic appReadEncryptedCharacteristic;
+  appReadEncryptedCharacteristic.uuid = Anki::kAppReadEncryptedCharacteristicUUID;
+  appReadEncryptedCharacteristic.properties =
+      (kGattCharacteristicPropNotify | kGattCharacteristicPropRead);
+  appReadEncryptedCharacteristic.permissions = kGattPermRead;
+  appReadEncryptedCharacteristic.char_handle = -1;
+
+  BluetoothGattDescriptor cccDescriptorEncrypted;
+  cccDescriptorEncrypted.uuid = Anki::kCCCDescriptorUUID;
+  cccDescriptorEncrypted.permissions = (kGattPermRead | kGattPermWrite);
+  cccDescriptorEncrypted.desc_handle = -1;
+  appReadEncryptedCharacteristic.descriptors.push_back(cccDescriptorEncrypted);
+
+  sBluetoothGattService.characteristics.push_back(appReadEncryptedCharacteristic);
+
+  BluetoothGattCharacteristic appWriteEncryptedCharacteristic;
+  appWriteEncryptedCharacteristic.uuid = Anki::kAppWriteEncryptedCharacteristicUUID;
+  appWriteEncryptedCharacteristic.properties =
+      (kGattCharacteristicPropWrite | kGattCharacteristicPropWriteNoResponse);
+  appWriteEncryptedCharacteristic.permissions = kGattPermWrite;
+  appWriteEncryptedCharacteristic.char_handle = -1;
+  sBluetoothGattService.characteristics.push_back(appWriteEncryptedCharacteristic);
 
   if (!AddGattService(&sBluetoothGattService)) {
     loge("Failed to add Anki BLE peripheral service");
@@ -269,14 +343,23 @@ bool StartBLEPeripheral() {
   logv("Anki BLE peripheral service added.");
 
   for (auto const& cit : sBluetoothGattService.characteristics) {
-    if (cit.uuid == Anki::kCentralToPeripheralCharacteristicUUID) {
-      sCentralToPeripheralCharacteristicHandle = cit.char_handle;
-    } else if (cit.uuid == Anki::kPeripheralToCentralCharacteristicUUID) {
-      sPeripheralToCentralCharacteristicHandle = cit.char_handle;
-    }
-    for (auto const& dit: cit.descriptors) {
-      if (dit.uuid == Anki::kCCCDescriptorUUID) {
-        sCCCDescriptorHandle = dit.desc_handle;
+    if (cit.uuid == Anki::kAppWriteCharacteristicUUID) {
+      sAppWriteCharacteristicHandle = cit.char_handle;
+    } else if (cit.uuid == Anki::kAppReadCharacteristicUUID) {
+      sAppReadCharacteristicHandle = cit.char_handle;
+      for (auto const& dit: cit.descriptors) {
+        if (dit.uuid == Anki::kCCCDescriptorUUID) {
+          sCCCDescriptorHandle = dit.desc_handle;
+        }
+      }
+    } else if (cit.uuid == Anki::kAppWriteEncryptedCharacteristicUUID) {
+      sAppWriteEncryptedCharacteristicHandle = cit.char_handle;
+    } else if (cit.uuid == Anki::kAppReadEncryptedCharacteristicUUID) {
+      sAppReadEncryptedCharacteristicHandle = cit.char_handle;
+      for (auto const& dit: cit.descriptors) {
+        if (dit.uuid == Anki::kCCCDescriptorUUID) {
+          sCCCDescriptorEncryptedHandle = dit.desc_handle;
+        }
       }
     }
   }

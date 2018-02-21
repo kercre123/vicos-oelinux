@@ -11,6 +11,7 @@
  **/
 
 #include "ipc-client.h"
+#include "anki_ble_uuids.h"
 #include "exec_command.h"
 
 class VicDevSetup : public Anki::BluetoothDaemon::IPCClient {
@@ -35,9 +36,13 @@ class VicDevSetup : public Anki::BluetoothDaemon::IPCClient {
 
  private:
   void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message);
-  void SendMessageToConnectedCentral(const std::vector<uint8_t>& value);
-  void SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value);
-  void SendMessageToConnectedCentral(uint8_t msgID, const std::string& str);
+  void HandleIncomingMessageFromCentralEncrypted(const std::vector<uint8_t>& message);
+  void SendMessageToConnectedCentral(const std::vector<uint8_t>& value,
+                                     const std::string& char_uuid = Anki::kAppReadCharacteristicUUID);
+  void SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value,
+                                     const std::string& char_uuid = Anki::kAppReadCharacteristicUUID);
+  void SendMessageToConnectedCentral(uint8_t msgID, const std::string& str,
+                                     const std::string& char_uuid = Anki::kAppReadCharacteristicUUID);
   void SendOutputToConnectedCentral(int rc, const std::string& output);
   void ExecCommandInBackgroundAndSendOutputToCentral(const std::vector<std::string>& args);
   void SendHeartBeat();
