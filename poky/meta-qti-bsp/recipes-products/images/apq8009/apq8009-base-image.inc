@@ -54,8 +54,20 @@ IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'gdbserver', d)}"
 
 # Below is to generate sparse ext4 system image (OE by default supports raw ext4 images)
 SELINUX_FILE_CONTEXTS = "${IMAGE_ROOTFS}/etc/selinux/mls/contexts/files/file_contexts"
+CONFIG_FILE = "${COREBASE}/meta-qti-bsp/files/config_files/anki_user_config"
+
 do_makesystem() {
 
-    make_ext4fs -s -a / -S ${SELINUX_FILE_CONTEXTS} -l ${SYSTEM_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4 ${IMAGE_ROOTFS}
+    echo "================ Creating system ================="
+    echo "IMAGE_ROOTFS=" ${IMAGE_ROOTFS}
+    echo "SELINUX_FILE_CONTEXTS=" ${SELINUX_FILE_CONTEXTS}
+    echo "SYSTEM_SIZE_EXT4="  ${SYSTEM_SIZE_EXT4}
+    echo "DEPLOY_DIR_IMAGE=" ${DEPLOY_DIR_IMAGE}
+    echo "MACHINE=" ${MACHINE}
+    echo "SYSTEMRW_SIZE_EXT4=" ${SYSTEMRW_SIZE_EXT4}
+    which make_ext4fs
+
+
+    make_ext4fs -s -a / -C ${CONFIG_FILE} -S ${SELINUX_FILE_CONTEXTS} -l ${SYSTEM_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4 ${IMAGE_ROOTFS}
     make_ext4fs  -l ${SYSTEMRW_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-systemrw.ext4
 }
