@@ -19,8 +19,8 @@
 namespace Anki {
 
 const std::string kAnkiBLEService_128_BIT_UUID("D55E356B-59CC-4265-9D5F-3C61E9DFD70F");
-const std::string kCentralToPeripheralCharacteristicUUID("7D2A4BDA-D29B-4152-B725-2491478C5CD7");
-const std::string kPeripheralToCentralCharacteristicUUID("30619F2D-0F54-41BD-A65A-7588D8C85B45");
+const std::string kAppWriteCharacteristicUUID("7D2A4BDA-D29B-4152-B725-2491478C5CD7");
+const std::string kAppReadCharacteristicUUID("30619F2D-0F54-41BD-A65A-7588D8C85B45");
 const std::string kCCCDescriptorUUID("00002902-0000-1000-8000-00805F9B34FB");
 
 } // namespace Anki

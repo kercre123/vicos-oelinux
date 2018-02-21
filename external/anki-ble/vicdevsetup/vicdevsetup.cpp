@@ -51,7 +51,7 @@ void VicDevSetup::OnReceiveMessage(const int connection_id,
   logv("OnReceiveMessage(id = %d, char_uuid = '%s', value.size = %d)",
        connection_id, characteristic_uuid.c_str(), value.size());
   if (connection_id == connection_id_
-      && characteristic_uuid == Anki::kCentralToPeripheralCharacteristicUUID) {
+      && characteristic_uuid == Anki::kAppWriteCharacteristicUUID) {
     HandleIncomingMessageFromCentral(value);
   }
 }
@@ -187,7 +187,7 @@ void VicDevSetup::SendMessageToConnectedCentral(const std::vector<uint8_t>& valu
   }
   if (value.size() <= Anki::kAnkiVictorMsgMaxSize) {
     SendMessage(connection_id_,
-                Anki::kPeripheralToCentralCharacteristicUUID,
+                Anki::kAppReadCharacteristicUUID,
                 true,
                 value);
   } else {
