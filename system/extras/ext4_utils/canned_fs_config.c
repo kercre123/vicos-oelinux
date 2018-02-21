@@ -59,6 +59,10 @@ int load_canned_fs_config(const char* fn) {
 		p->uid = atoi(strtok(NULL, " "));
 		p->gid = atoi(strtok(NULL, " "));
 		p->mode = strtol(strtok(NULL, " "), NULL, 8);   // mode is in octal
+		printf("p->path = %s\n", p->path);	
+		printf("p->uid = %d\n", p->uid);
+		printf("p->gid = %d\n", p->gid);
+		printf("p->mode = %d\n", p->mode);
 		p->capabilities = 0;
 
 		char* token = NULL;
