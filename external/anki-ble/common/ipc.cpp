@@ -205,6 +205,10 @@ void IPCEndpoint::SendQueuedMessagesToPeer(const int sockfd)
       }
       OnSendError(sockfd, errno);
       break;
+    } else if (bytesSent < packed_message.size()) {
+      loge("ipc-endpoint: send sent %zd bytes, expecting %zu bytes", bytesSent, packed_message.size());
+      OnSendError(sockfd, EIO);
+      break;
     } else {
       search->second->EraseMessageFromFrontOfQueue();
     }

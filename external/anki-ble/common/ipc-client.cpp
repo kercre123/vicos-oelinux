@@ -131,6 +131,22 @@ void IPCClient::OnReceiveIPCMessage(const int sockfd,
         OnScanResults(args->error, records);
       }
       break;
+    case IPCMessageType::OnOutboundConnectionChange:
+      {
+        logv("ipc-client: OnOutboundConnectionChange");
+        OnOutboundConnectionChangeArgs* args = (OnOutboundConnectionChangeArgs *) data.data();
+        std::vector<GattDbRecord> records;
+        for (int i = 0 ; i < args->num_gatt_db_records ; i++) {
+          GattDbRecord record = {0};
+          memcpy(&record, &(args->records[i]), sizeof(record));
+          records.push_back(record);
+        }
+        OnOutboundConnectionChange(std::string(args->address),
+                                   args->connected,
+                                   args->connection_id,
+                                   records);
+      }
+      break;
     default:
       loge("ipc-client: Unknown IPC message : %d", (int) type);
       break;
@@ -182,6 +198,15 @@ void IPCClient::StartScan(const std::string& serviceUUID)
   StartScanArgs args = {0};
   strncpy(args.service_uuid, serviceUUID.c_str(), sizeof(args.service_uuid) - 1);
   SendIPCMessageToServer(IPCMessageType::StartScan,
+                         sizeof(args),
+                         (uint8_t *) &args);
+}
+
+void IPCClient::ConnectToPeripheral(const std::string& address)
+{
+  ConnectToPeripheralArgs args = {0};
+  strncpy(args.address, address.c_str(), sizeof(args.address) - 1);
+  SendIPCMessageToServer(IPCMessageType::ConnectToPeripheral,
                          sizeof(args),
                          (uint8_t *) &args);
 }

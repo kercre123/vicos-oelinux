@@ -12,9 +12,14 @@
 
 #pragma once
 
+#include "bluetooth_gatt.h"
+
 #include <vector>
 
-typedef void (*ConnectionCallback)(int conn_id, int connected);
+namespace Anki {
+namespace BluetoothStack {
+
+typedef void (*InboundConnectionCallback)(int conn_id, int connected);
 typedef void (*RequestReadCallback)(int conn_id, int trans_id, int attr_handle, int offset);
 typedef void (*RequestWriteCallback)(int conn_id, int trans_id, int attr_handle, int offset,
                                      bool need_rsp, const std::vector<uint8_t>& value);
@@ -23,3 +28,19 @@ typedef void (*CongestionCallback)(int conn_id, bool congested);
 typedef void (*ScanResultCallback)(const std::string& address,
                                    const int rssi,
                                    const std::vector<uint8_t>& adv_data);
+typedef void (*OutboundConnectionCallback)(const std::string& address,
+                                           const int connected,
+                                           const BluetoothGattConnection& connection);
+
+typedef struct Callbacks {
+  InboundConnectionCallback inbound_connection_cb;
+  RequestReadCallback request_read_cb;
+  RequestWriteCallback request_write_cb;
+  IndicationSentCallback indication_sent_cb;
+  CongestionCallback congestion_cb;
+  ScanResultCallback scan_result_cb;
+  OutboundConnectionCallback outbound_connection_cb;
+} Callbacks;
+
+} // namespace BluetoothStack
+} // namespace Anki

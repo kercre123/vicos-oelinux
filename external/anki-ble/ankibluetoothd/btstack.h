@@ -21,6 +21,8 @@
 namespace Anki {
 namespace BluetoothStack {
 
+
+void SetCallbacks(Callbacks* cbs);
 bool LoadBtStack();
 void UnLoadBtStack();
 bool EnableAdapter();
@@ -41,7 +43,8 @@ bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings);
 bool StopAdvertisement();
 
-bool StartScan(const bool enable, ScanResultCallback callback);
+bool StartScan(const bool enable);
+bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct);
 
 } // namespace BluetoothStack
 } // namespace Anki

@@ -54,6 +54,21 @@ std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr) {
   return std::string(str);
 }
 
+void bt_bdaddr_t_from_string(const std::string& address, bt_bdaddr_t* bda) {
+  memset(bda, 0, sizeof(*bda));
+  int index = 0;
+  int offset = 0;
+  while (index < 6 && offset < (address.length() - 1)) {
+    char high = address[offset++];
+    if (std::isxdigit(high)) {
+      uint8_t val = hex_char_to_byte(high) * 16;
+      char low = address[offset++];
+      val += hex_char_to_byte(low);
+      bda->address[index++] = val;
+    }
+  }
+}
+
 std::string bt_uuid_t_to_string(const bt_uuid_t* uuid) {
   char str[37];
 
@@ -87,6 +102,15 @@ void bt_uuid_t_from_string(const std::string& uuidStr, bt_uuid_t* uuid) {
 bool bt_uuid_t_equals(const bt_uuid_t* uuid1, const bt_uuid_t* uuid2) {
   return (0 == memcmp(uuid1->uu, uuid2->uu, sizeof(uuid1->uu)));
 }
+
+bool bt_uuid_string_equals(const std::string& uuidStr1, const std::string& uuidStr2) {
+  bt_uuid_t uuid1 = {0};
+  bt_uuid_t uuid2 = {0};
+  bt_uuid_t_from_string(uuidStr1, &uuid1);
+  bt_uuid_t_from_string(uuidStr2, &uuid2);
+  return bt_uuid_t_equals(&uuid1, &uuid2);
+}
+
 
 std::string bt_status_t_to_string(const bt_status_t status) {
   switch(status) {

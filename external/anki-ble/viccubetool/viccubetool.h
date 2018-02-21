@@ -29,6 +29,10 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
  protected:
   virtual void OnScanResults(int error,
                              const std::vector<Anki::BluetoothDaemon::ScanResultRecord>& records);
+  virtual void OnOutboundConnectionChange(const std::string& address,
+                                          const int connected,
+                                          const int connection_id,
+                                          const std::vector<Anki::BluetoothDaemon::GattDbRecord>& records);
 
  private:
   void OnConnectedToDaemon();
@@ -44,5 +48,6 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   std::vector<std::string> args_;
   ev::timer* connect_retry_timer_ = nullptr;
   ev::timer* stop_scan_timer_ = nullptr;
+  std::map<std::string, Anki::BluetoothDaemon::ScanResultRecord> scan_records_;
 };
 

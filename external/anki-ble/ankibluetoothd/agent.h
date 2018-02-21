@@ -24,9 +24,7 @@ namespace BluetoothDaemon {
 
 class Agent : public IPCServer {
  public:
-  Agent(struct ev_loop* loop)
-      : IPCServer(loop) {}
-
+  Agent(struct ev_loop* loop);
   bool StartPeripheral();
 
  protected:
@@ -40,12 +38,13 @@ class Agent : public IPCServer {
   virtual void StopAdvertising();
   virtual void StartScan(const std::string& serviceUUID);
   virtual void StopScan();
+  virtual void ConnectToPeripheral(const std::string& address);
 
  private:
   void TransmitNextNotification();
   void SendMessageToConnectedCentral(int characteristic_handle,
                                      int confirm, const std::vector<uint8_t>& value);
-  void PeripheralConnectionCallback(int conn_id, int connected);
+  void InboundConnectionCallback(int conn_id, int connected);
   void PeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
   void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, int offset,
                                bool need_rsp, const std::vector<uint8_t>& value);
@@ -54,8 +53,11 @@ class Agent : public IPCServer {
   void CentralScanResultCallback(const std::string& address,
                                  int rssi,
                                  const std::vector<uint8_t>& adv_data);
+  void OutboundConnectionCallback(const std::string& address,
+                                  const int connected,
+                                  const BluetoothGattConnection& connection);
 
-  static void StaticPeripheralConnectionCallback(int conn_id, int connected);
+  static void StaticInboundConnectionCallback(int conn_id, int connected);
   static void StaticPeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
   static void StaticPeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, int offset,
                                       bool need_rsp, const std::vector<uint8_t>& value);
@@ -64,6 +66,9 @@ class Agent : public IPCServer {
   static void StaticCentralScanResultCallback(const std::string& address,
                                               int rssi,
                                               const std::vector<uint8_t>& adv_data);
+  static void StaticOutboundConnectionCallback(const std::string& address,
+                                               const int connected,
+                                               const BluetoothGattConnection& connection);
 
   std::mutex mutex_;
   BLEAdvertiseSettings ble_advertise_settings_;

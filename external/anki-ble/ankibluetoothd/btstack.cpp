@@ -1,5 +1,5 @@
 /**
- * File: btstack.h
+ * File: btstack.cpp
  *
  * Author: seichert
  * Created: 1/10/2018
@@ -12,9 +12,11 @@
 
 #include "btstack.h"
 
+#include "anki_ble_uuids.h"
 #include "log.h"
 #include "btutils.h"
 #include "gatt_constants.h"
+#include "taskExecutor.h"
 #include <hardware/bluetooth.h>
 #include <hardware/bt_gatt.h>
 #include <hardware/bt_gatt_client.h>
@@ -23,8 +25,11 @@
 #include <hardware/vendor.h>
 #include <string.h>
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <deque>
+#include <map>
 #include <mutex>
 #include <string>
 #include <sstream>
@@ -38,6 +43,11 @@ namespace BluetoothStack {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
+static TaskExecutor sTaskExecutor(sDefaultLoop);
+
+static struct Callbacks sCallbacks = {0};
 
 /* To register for the client and server GATT interface, we need to provide uuids.
  * These uuids were generated with uuidgen on the desktop to avoid having to generate
@@ -70,7 +80,145 @@ static int sBtGattClientIf;
 static int sBtGattServerIf;
 
 static BluetoothGattService* sBluetoothGattService;
-static ScanResultCallback sScanResultCallback = nullptr;
+
+typedef struct BluetoothGattWriteItem {
+  bool is_descriptor;
+  int conn_id;
+  int handle;
+  int write_type;
+  std::vector<uint8_t> value;
+  BluetoothGattWriteItem(bool is_descriptor,
+                         int conn_id,
+                         int handle,
+                         int write_type,
+                         const std::vector<uint8_t>& value)
+      : is_descriptor(is_descriptor)
+      , conn_id(conn_id)
+      , handle(handle)
+      , write_type(write_type)
+      , value(value) {}
+} BluetoothGattWriteItem;
+
+static std::deque<BluetoothGattWriteItem> sGattWriteQueue;
+static bool sGattWriteClearToSend = true;
+
+enum class BluetoothGattConnectionStatus {
+  Invalid = 0,
+    Connecting,
+    DiscoveringServices,
+    GettingGattDb,
+    RegisteringForNotifications,
+    WritingCCCDescriptors,
+    Connected,
+};
+
+typedef struct BluetoothGattConnectionInfo {
+  BluetoothGattConnectionStatus status;
+  BluetoothGattConnection connection;
+  BluetoothGattConnectionInfo()
+      : BluetoothGattConnectionInfo("") {}
+  BluetoothGattConnectionInfo(const std::string &address)
+      : connection(BluetoothGattConnection(address))
+      , status(BluetoothGattConnectionStatus::Connecting) {}
+} BluetoothGattConnectionInfo;
+
+static std::map<std::string, BluetoothGattConnectionInfo> sOutboundConnections;
+
+static std::map<std::string, BluetoothGattConnectionInfo>::iterator
+FindOutboundConnectionById(const int conn_id)
+{
+  auto search =
+      std::find_if(sOutboundConnections.begin(),
+                   sOutboundConnections.end(),
+           [conn_id] (const std::pair<std::string, BluetoothGattConnectionInfo>& p) -> bool {
+                     return (p.second.connection.conn_id == conn_id);
+                   });
+  return search;
+}
+
+static bt_status_t DisconnectOutboundConnectionById(const int conn_id)
+{
+  if (!sBtGattInterface || !sBtGattClientIf) {
+    return BT_STATUS_NOT_READY;
+  }
+  bt_bdaddr_t bda = {0};
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search != sOutboundConnections.end()) {
+    bt_bdaddr_t_from_string(search->second.connection.address, &bda);
+  }
+  bt_status_t status = sBtGattInterface->client->disconnect(sBtGattClientIf, &bda, conn_id);
+  if (search != sOutboundConnections.end()) {
+    if (sCallbacks.outbound_connection_cb) {
+      sCallbacks.outbound_connection_cb(search->second.connection.address,
+                                        0,
+                                        search->second.connection);
+    }
+    sOutboundConnections.erase(search->second.connection.address);
+  }
+  return status;
+}
+
+static void TransmitNextWriteItem() {
+  if (!sGattWriteClearToSend) {
+    return;
+  }
+  bool transmitted = false;
+  while (!sGattWriteQueue.empty() && !transmitted) {
+    BluetoothGattWriteItem writeItem = sGattWriteQueue.front();
+    sGattWriteQueue.pop_front();
+    auto search = FindOutboundConnectionById(writeItem.conn_id);
+    if (search != sOutboundConnections.end()) {
+      sGattWriteClearToSend = false;
+      sTaskExecutor.Wake([writeItem]() {
+          bt_status_t bt_status;
+          if (writeItem.is_descriptor) {
+            logv("Calling write_descriptor(conn_id = %d, handle = %d)",
+                 writeItem.conn_id, writeItem.handle);
+            bt_status =
+                sBtGattInterface->client->write_descriptor(writeItem.conn_id,
+                                                           writeItem.handle,
+                                                           writeItem.write_type,
+                                                           writeItem.value.size(),
+                                                           0 /* auth_req */,
+                                                           (char *) writeItem.value.data());
+          } else {
+            logv("Calling write_characteristic(conn_id = %d, handle = %d)",
+                 writeItem.conn_id, writeItem.handle);
+            bt_status =
+                sBtGattInterface->client->write_characteristic(writeItem.conn_id,
+                                                               writeItem.handle,
+                                                               writeItem.write_type,
+                                                               writeItem.value.size(),
+                                                               0 /* auth_req */,
+                                                               (char *) writeItem.value.data());
+          }
+          if (bt_status != BT_STATUS_SUCCESS) {
+            std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+            (void) DisconnectOutboundConnectionById(writeItem.conn_id);
+          }
+        });
+      transmitted = true;
+    }
+  }
+}
+
+static void QueueWriteItem(const bool is_descriptor,
+                           const int conn_id,
+                           const int handle,
+                           const int write_type,
+                           const std::vector<uint8_t>& value) {
+
+  BluetoothGattWriteItem writeItem(is_descriptor,
+                                   conn_id,
+                                   handle,
+                                   write_type,
+                                   value);
+  sGattWriteQueue.push_back(writeItem);
+  if (sGattWriteQueue.size() == 1) {
+    TransmitNextWriteItem();
+  }
+}
+
 
 static bool set_wake_alarm(uint64_t delay_millis, bool should_wake, alarm_cb cb,
                          void *data) {
@@ -345,36 +493,126 @@ void btgattc_scan_result_cb(bt_bdaddr_t* bda, int rssi, uint8_t* adv_data)
   logv("%s(bda = %s, rssi = %d, adv_data = %s)",
        __FUNCTION__, address.c_str(),
        rssi, bt_value_to_string(advertising_data.size(), advertising_data.data()).c_str());
-  if (sScanResultCallback) {
-    sScanResultCallback(address, rssi, advertising_data);
+  if (sCallbacks.scan_result_cb) {
+    sCallbacks.scan_result_cb(address, rssi, advertising_data);
   }
 }
 
 void btgattc_open_cb(int conn_id, int status, int clientIf, bt_bdaddr_t* bda)
 {
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   bt_status_t bt_status = (bt_status_t) status;
+  std::string address = bt_bdaddr_t_to_string(bda);
   logv("%s(conn_id = %d, status = %s, clientIf = %d, bda = %s)",
        __FUNCTION__, conn_id, bt_status_t_to_string(bt_status).c_str(),
-       clientIf, bt_bdaddr_t_to_string(bda).c_str());
+       clientIf, address.c_str());
+  auto search = sOutboundConnections.find(address);
+  if (search != sOutboundConnections.end()) {
+    BluetoothGattConnection& connection = search->second.connection;
+    connection.conn_id = conn_id;
+    if (bt_status == BT_STATUS_SUCCESS) {
+      search->second.status = BluetoothGattConnectionStatus::DiscoveringServices;
+      bt_status = sBtGattInterface->client->search_service(conn_id, nullptr);
+    }
+    if (bt_status != BT_STATUS_SUCCESS) {
+      if (sCallbacks.outbound_connection_cb) {
+        sCallbacks.outbound_connection_cb(address, 0, connection);
+      }
+      sOutboundConnections.erase(address);
+      return;
+    }
+  }
 }
 
 void btgattc_close_cb(int conn_id, int status, int clientIf, bt_bdaddr_t* bda)
 {
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   bt_status_t bt_status = (bt_status_t) status;
+  std::string address = bt_bdaddr_t_to_string(bda);
   logv("%s(conn_id = %d, status = %s, clientIf = %d, bda = %s)",
        __FUNCTION__, conn_id, bt_status_t_to_string(bt_status).c_str(),
-       clientIf, bt_bdaddr_t_to_string(bda).c_str());
+       clientIf, address.c_str());
+  auto search = sOutboundConnections.find(address);
+  if (search != sOutboundConnections.end()) {
+    search->second.connection.conn_id = conn_id;
+    if (sCallbacks.outbound_connection_cb) {
+      sCallbacks.outbound_connection_cb(address, 0, search->second.connection);
+    }
+    sOutboundConnections.erase(address);
+  }
 }
 
 void btgattc_search_complete_cb(int conn_id, int status)
 {
-  logv("%s", __FUNCTION__);
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  bt_status_t bt_status = (bt_status_t) status;
+  logv("%s(conn_id = %d, status = %s)",
+       __FUNCTION__, conn_id, bt_status_t_to_string(bt_status).c_str());
+
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    // If this is not a connection we are tracking, then disconnect
+    (void) DisconnectOutboundConnectionById(conn_id);
+    return;
+  }
+  BluetoothGattConnection& connection = search->second.connection;
+
+  if (bt_status == BT_STATUS_SUCCESS) {
+    search->second.status = BluetoothGattConnectionStatus::GettingGattDb;
+    bt_status = sBtGattInterface->client->get_gatt_db(conn_id);
+  }
+
+  if (bt_status != BT_STATUS_SUCCESS) {
+    (void) DisconnectOutboundConnectionById(conn_id);
+  }
 }
 
+
+static int sConnIdRegisterForNotification = 0;
 void btgattc_register_for_notification_cb(int conn_id, int registered,
                                           int status, uint16_t handle)
 {
-  logv("%s", __FUNCTION__);
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  bt_status_t bt_status = (bt_status_t) status;
+  logv("%s(conn_id = %d, registered = %d, status = %s, handle = %d)",
+       __FUNCTION__, conn_id, registered, bt_status_t_to_string(bt_status).c_str(), handle);
+
+  if (!conn_id) {
+    conn_id = sConnIdRegisterForNotification;
+  }
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    (void) DisconnectOutboundConnectionById(conn_id);
+    return;
+  }
+
+  BluetoothGattConnection& connection = search->second.connection;
+  if ((bt_status != BT_STATUS_SUCCESS) || !registered) {
+    (void) DisconnectOutboundConnectionById(conn_id);
+    return;
+  }
+  for (auto& service : connection.services) {
+    if (service.start_handle <= handle && handle <= service.end_handle) {
+      for (auto& characteristic : service.characteristics) {
+        if (characteristic.char_handle == handle) {
+          characteristic.registered_for_notifications = true;
+          // Now write the CCC descriptor
+          for (auto& descriptor : characteristic.descriptors) {
+            if (bt_uuid_string_equals(Anki::kCCCDescriptorUUID, descriptor.uuid)) {
+              search->second.status = BluetoothGattConnectionStatus::WritingCCCDescriptors;
+
+              std::vector<uint8_t> value({0x01, 0x00});
+              QueueWriteItem(true,
+                             conn_id,
+                             descriptor.desc_handle,
+                             kGattWriteTypeWithResponse,
+                             value);
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 void btgattc_notify_cb(int conn_id, btgatt_notify_params_t *p_data)
@@ -406,7 +644,47 @@ void btgattc_read_descriptor_cb(int conn_id, int status, btgatt_read_params_t *p
 
 void btgattc_write_descriptor_cb(int conn_id, int status, uint16_t handle)
 {
-  logv("%s", __FUNCTION__);
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  bt_status_t bt_status = (bt_status_t) status;
+  logv("%s(conn_id = %d, status = %s, handle = %d)",
+       __FUNCTION__, conn_id, bt_status_t_to_string(bt_status).c_str(), handle);
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    DisconnectOutboundConnectionById(conn_id);
+    return;
+  }
+
+  if (bt_status != BT_STATUS_SUCCESS) {
+    DisconnectOutboundConnectionById(conn_id);
+    return;
+  }
+
+  bool outbound_connection_complete = true;
+  BluetoothGattConnection& connection = search->second.connection;
+  for (auto & service : connection.services) {
+    for (auto & characteristic : service.characteristics) {
+      if (characteristic.properties & kGattCharacteristicPropNotify) {
+        for (auto & descriptor : characteristic.descriptors) {
+          if (bt_uuid_string_equals(Anki::kCCCDescriptorUUID, descriptor.uuid)) {
+            if (descriptor.desc_handle == handle) {
+              descriptor.descriptor_written = true;
+            } else if (!descriptor.descriptor_written) {
+              outbound_connection_complete = false;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (outbound_connection_complete) {
+    search->second.status = BluetoothGattConnectionStatus::Connected;
+    if (sCallbacks.outbound_connection_cb) {
+      sCallbacks.outbound_connection_cb(connection.address, 1, connection);
+    }
+  }
+  sGattWriteClearToSend = true;
+  TransmitNextWriteItem();
 }
 
 void btgattc_remote_rssi_cb(int client_if,bt_bdaddr_t* bda, int rssi, int status)
@@ -500,7 +778,54 @@ void btgattc_scan_parameter_setup_completed_cb(int client_if, btgattc_error_t st
 
 void btgattc_get_gatt_db_cb(int conn_id, btgatt_db_element_t *db, int count)
 {
-  logv("%s", __FUNCTION__);
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  logv("%s(conn_id = %d, db = %p, count = %d)",
+       __FUNCTION__, conn_id, db, count);
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    DisconnectOutboundConnectionById(conn_id);
+    return;
+  }
+  BluetoothGattConnection& connection = search->second.connection;
+  std::vector<BluetoothGattService> services;
+  for (int i = 0 ; i < count; i++) {
+    std::string uuidStr = bt_uuid_t_to_string(&(db[i].uuid));
+    if ((db[i].type == BTGATT_DB_PRIMARY_SERVICE)
+        || (db[i].type == BTGATT_DB_SECONDARY_SERVICE)
+        || (db[i].type == BTGATT_DB_INCLUDED_SERVICE)) {
+      BluetoothGattService service(uuidStr,
+                                   db[i].attribute_handle,
+                                   db[i].start_handle,
+                                   db[i].end_handle);
+      services.push_back(service);
+    } else if (db[i].type == BTGATT_DB_CHARACTERISTIC) {
+      BluetoothGattService& lastService = services.back();
+      BluetoothGattCharacteristic characteristic(uuidStr,
+                                                 db[i].properties,
+                                                 0,
+                                                 db[i].attribute_handle);
+      lastService.characteristics.push_back(characteristic);
+      if (db[i].properties & kGattCharacteristicPropNotify) {
+        bt_bdaddr_t bda = {0};
+        bt_bdaddr_t_from_string(connection.address, &bda);
+        sConnIdRegisterForNotification = conn_id;
+        bt_status_t bt_status =
+            sBtGattInterface->client->register_for_notification(sBtGattClientIf,
+                                                                &bda,
+                                                                db[i].attribute_handle);
+
+        if (bt_status != BT_STATUS_SUCCESS) {
+          DisconnectOutboundConnectionById(conn_id);
+          return;
+        }
+      }
+    } else if (db[i].type == BTGATT_DB_DESCRIPTOR) {
+      BluetoothGattDescriptor descriptor(uuidStr, 0, db[i].attribute_handle);
+      services.back().characteristics.back().descriptors.push_back(descriptor);
+    }
+  }
+  connection.services = services;
+  return;
 }
 
 static const btgatt_client_callbacks_t sGattClientCallbacks = {
@@ -551,10 +876,16 @@ void btgatts_register_server_cb(int status, int server_if, bt_uuid_t *app_uuid)
 
 void btgatts_connection_cb(int conn_id, int server_if, int connected, bt_bdaddr_t *bda)
 {
+  std::string address = bt_bdaddr_t_to_string(bda);
   logv("%s(conn_id = %d, server_if = %d, connected = %d, bda = %s)",
-       __FUNCTION__, conn_id, server_if, connected, bt_bdaddr_t_to_string(bda).c_str());
-  if (sBluetoothGattService && sBluetoothGattService->connection_cb) {
-    sBluetoothGattService->connection_cb(conn_id, connected);
+       __FUNCTION__, conn_id, server_if, connected, address.c_str());
+
+  if (sCallbacks.inbound_connection_cb) {
+    // Make sure this isn't an outbound connection
+    auto search = sOutboundConnections.find(address);
+    if (search == sOutboundConnections.end()) {
+      sCallbacks.inbound_connection_cb(conn_id, connected);
+    }
   }
 }
 
@@ -734,8 +1065,8 @@ void btgatts_request_read_cb(int conn_id, int trans_id, bt_bdaddr_t *bda, int at
   logv("%s(conn_id = %d, trans_id = %d, bda = %s, attr_handle = %d, offset = %d, is_long = %s)",
        __FUNCTION__, conn_id, trans_id, bt_bdaddr_t_to_string(bda).c_str(),
        attr_handle, offset, is_long ? "true" : "false");
-  if (sBluetoothGattService && sBluetoothGattService->request_read_cb) {
-    sBluetoothGattService->request_read_cb(conn_id, trans_id, attr_handle, offset);
+  if (sCallbacks.request_read_cb) {
+    sCallbacks.request_read_cb(conn_id, trans_id, attr_handle, offset);
   }
 }
 
@@ -754,14 +1085,14 @@ void btgatts_request_write_cb(int conn_id, int trans_id, bt_bdaddr_t *bda, int a
                         kGattErrorRequestNotSupported, offset, dummy);
     return;
   }
-  if (sBluetoothGattService && sBluetoothGattService->request_write_cb) {
+  if (sCallbacks.request_write_cb) {
     std::vector<uint8_t> val(value, value + length);
-    sBluetoothGattService->request_write_cb(conn_id,
-                                            trans_id,
-                                            attr_handle,
-                                            offset,
-                                            need_rsp,
-                                            val);
+    sCallbacks.request_write_cb(conn_id,
+                                trans_id,
+                                attr_handle,
+                                offset,
+                                need_rsp,
+                                val);
   }
 }
 
@@ -782,8 +1113,8 @@ void btgatts_indication_sent_cb(int conn_id, int status)
 {
   logv("%s(conn_id = %d, status = %s)",
        __FUNCTION__, conn_id, bt_gatt_error_to_string(status).c_str());
-  if (sBluetoothGattService && sBluetoothGattService->indication_sent_cb) {
-    sBluetoothGattService->indication_sent_cb(conn_id, status);
+  if (sCallbacks.indication_sent_cb) {
+    sCallbacks.indication_sent_cb(conn_id, status);
   }
 }
 
@@ -791,8 +1122,8 @@ void btgatts_congestion_cb(int conn_id, bool congested)
 {
   logv("%s(conn_id = %d, congested = %s)",
        __FUNCTION__, conn_id, congested ? "true" : "false");
-  if (sBluetoothGattService && sBluetoothGattService->congestion_cb) {
-    sBluetoothGattService->congestion_cb(conn_id, congested);
+  if (sCallbacks.congestion_cb) {
+    sCallbacks.congestion_cb(conn_id, congested);
   }
 }
 
@@ -829,6 +1160,14 @@ static btgatt_callbacks_t sGattCallbacks = {
 #ifdef __cplusplus
 }
 #endif
+
+void SetCallbacks(Callbacks* cbs) {
+  if (cbs) {
+    memcpy(&sCallbacks, cbs, sizeof(sCallbacks));
+  } else {
+    memset(&sCallbacks, 0, sizeof(sCallbacks));
+  }
+}
 
 bool LoadBtStack() {
   hw_module_t *module;
@@ -1245,9 +1584,8 @@ bool DisconnectGattPeer(int conn_id)
   return true;
 }
 
-bool StartScan(const bool enable, ScanResultCallback callback)
+bool StartScan(const bool enable)
 {
-  sScanResultCallback = callback;
   if (!sBtGattInterface || !sBtGattInterface->client) {
     return false;
   }
@@ -1258,6 +1596,39 @@ bool StartScan(const bool enable, ScanResultCallback callback)
     loge("Failed to %s scanning. status = %s",
          enable ? "start" : "stop",
          bt_status_t_to_string(status).c_str());
+    return false;
+  }
+
+  return true;
+}
+
+// From Fluoride's stack/include/bt_types.h
+#define BT_TRANSPORT_LE 2
+
+bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct)
+{
+  logv("ConnectToBLEPeripheral(address = %s, is_direct = %s)",
+       address.c_str(), is_direct ? "true" : "false");
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  if (!sBtGattInterface || !sBtGattInterface->client) {
+    return false;
+  }
+  auto search = sOutboundConnections.find(address);
+  if (search != sOutboundConnections.end()) {
+    return true;
+  }
+  BluetoothGattConnectionInfo info(address);
+  sOutboundConnections[address] = info;
+  bt_bdaddr_t bda;
+  bt_bdaddr_t_from_string(address, &bda);
+  bt_status_t status = sBtGattInterface->client->connect(sBtGattClientIf,
+                                                         &bda,
+                                                         is_direct,
+                                                         BT_TRANSPORT_LE);
+  if (status != BT_STATUS_SUCCESS) {
+    loge("Failed to connect to %s. status = %s",
+         address.c_str(), bt_status_t_to_string(status).c_str());
+    sOutboundConnections.erase(address);
     return false;
   }
 

@@ -98,13 +98,40 @@ void VicCubeTool::OnScanResults(int error,
     return;
   }
   for (auto const& r : records) {
+    scan_records_[r.address] = r;
     std::cout << r.address << " '" << r.local_name << "' " << "rssi = " << r.rssi << std::endl;
   }
 }
 
 void VicCubeTool::ConnectToCube(const std::string& address) {
-  std::cerr << "Sorry, connect is not yet implemented" << std::endl;
+  ConnectToPeripheral(address);
 }
+
+void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
+                                             const int connected,
+                                             const int connection_id,
+                                             const std::vector<Anki::BluetoothDaemon::GattDbRecord>& records) {
+  std::cout << "OnOutboundConnectionChange - address = " << address
+            << ", connected = " << connected
+            << ", connection_id = " << connection_id << std::endl;
+  for (auto const& r : records) {
+    std::cout << std::string(r.uuid) << " " << static_cast<int>(r.type);
+    if (r.handle) {
+      std::cout << ", handle = " << r.handle;
+    }
+    if (r.start_handle) {
+      std::cout << ", start_handle = " << r.start_handle;
+    }
+    if (r.end_handle) {
+      std::cout << ", end_handle = " << r.end_handle;
+    }
+    if (r.properties) {
+      std::cout << ", properties = " << r.properties;
+    }
+    std::cout << std::endl;
+  }
+}
+
 
 void VicCubeTool::FlashCube(const std::string& address, const std::string& pathToFirmware) {
   std::cerr << "Sorry, flash is not yet implemented" << std::endl;

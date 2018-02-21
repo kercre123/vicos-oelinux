@@ -42,7 +42,7 @@ const size_t kAddressSize = 18;
 const size_t kLocalNameSize = 32;
 const size_t kManufacturerDataMaxSize = 32;
 const size_t kMaxAdvertisingLength = 62;
-const size_t kIPCMessageMaxSize = 1024;
+const size_t kIPCMessageMaxSize = 4096;
 const size_t kIPCMessageMaxLength = kIPCMessageMaxSize - 12;
 
 enum class IPCMessageType {
@@ -59,6 +59,8 @@ enum class IPCMessageType {
     StartScan,
     StopScan,
     OnScanResults,
+    ConnectToPeripheral,
+    OnOutboundConnectionChange
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -120,6 +122,34 @@ typedef struct __attribute__ ((__packed__)) OnScanResultsArgs {
   int record_count;
   ScanResultRecord records[];
 } OnScanResultsArgs;
+
+typedef struct __attribute__ ((__packed__)) ConnectToPeripheralArgs {
+  char address[kAddressSize];
+} ConnectToPeripheralArgs;
+
+
+enum class GattDbRecordType {
+  Service,
+  Characteristic,
+  Descriptor
+};
+
+typedef struct __attribute__ ((__packed__)) GattDbRecord {
+  char uuid[k128BitUUIDSize];
+  GattDbRecordType type;
+  uint16_t handle;
+  uint16_t start_handle;
+  uint16_t end_handle;
+  int properties;
+} GattDbRecord;
+
+typedef struct __attribute__ ((__packed__)) OnOutboundConnectionChangeArgs {
+  char address[kAddressSize];
+  int connected;
+  int connection_id;
+  int num_gatt_db_records;
+  GattDbRecord records[];
+} OnOutboundConnectionChangeArgs;
 
 class IPCEndpoint {
  public:

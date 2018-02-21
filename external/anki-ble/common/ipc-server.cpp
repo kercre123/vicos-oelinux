@@ -135,6 +135,13 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
         StopScan();
       }
       break;
+    case IPCMessageType::ConnectToPeripheral:
+      logv("ipc-server: ConnectToPeripheral received");
+      {
+        ConnectToPeripheralArgs* args = (ConnectToPeripheralArgs *) data.data();
+        ConnectToPeripheral(std::string(args->address));
+      }
+      break;
     default:
       loge("ipc-server: Unknown IPC message (%d)", (int) type);
       break;
@@ -198,6 +205,29 @@ void IPCServer::OnScanResults(int error, const std::vector<ScanResultRecord>& re
     memcpy(&(args->records[i]), &(records[i]), sizeof(ScanResultRecord));
   }
   SendMessageToAllPeers(IPCMessageType::OnScanResults,
+                        args_length,
+                        (uint8_t *) args);
+  free(args);
+}
+
+void IPCServer::OnOutboundConnectionChange(const std::string& address,
+                                           const int connected,
+                                           const int connection_id,
+                                           const std::vector<GattDbRecord>& records)
+{
+  logv("ipc-server: OnOutboundConnectionChange(address = %s, connected = %d, connection_id = %d, records.size = %d)",
+       address.c_str(), connected, connection_id, records.size());
+  OnOutboundConnectionChangeArgs* args;
+  uint32_t args_length = sizeof(*args) + (sizeof(GattDbRecord) * records.size());
+  args = (OnOutboundConnectionChangeArgs *) malloc_zero(args_length);
+  strncpy(args->address, address.c_str(), sizeof(args->address) - 1);
+  args->connected = connected;
+  args->connection_id = connection_id;
+  args->num_gatt_db_records = records.size();
+  for (int i = 0 ; i < args->num_gatt_db_records ; i++) {
+    memcpy(&(args->records[i]), &(records[i]), sizeof(GattDbRecord));
+  }
+  SendMessageToAllPeers(IPCMessageType::OnOutboundConnectionChange,
                         args_length,
                         (uint8_t *) args);
   free(args);
