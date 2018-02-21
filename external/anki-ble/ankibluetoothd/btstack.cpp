@@ -542,6 +542,9 @@ bt_status_t AddNextCharacteristicOrDescriptor() {
                                                             &uuid,
                                                             it.properties,
                                                             it.permissions);
+      if (result != BT_STATUS_SUCCESS) {
+        loge("add_characteristic returned %s", bt_status_t_to_string(result).c_str());
+      }
       break;
     }
     for (auto const& dit : it.descriptors) {
@@ -553,6 +556,9 @@ bt_status_t AddNextCharacteristicOrDescriptor() {
                                                           sBluetoothGattService->service_handle,
                                                           &uuid,
                                                           dit.permissions);
+        if (result != BT_STATUS_SUCCESS) {
+          loge("add_descriptor returned %s", bt_status_t_to_string(result).c_str());
+        }
         break;
       }
     }
@@ -605,11 +611,13 @@ void btgatts_characteristic_added_cb(int status, int server_if, bt_uuid_t *char_
        bt_uuid_t_to_string(char_id).c_str(), srvc_handle, char_handle);
   if (bt_status == BT_STATUS_SUCCESS) {
     for (auto & it : sBluetoothGattService->characteristics) {
-      bt_uuid_t uuid;
-      bt_uuid_t_from_string(it.uuid, &uuid);
-      if (bt_uuid_t_equals(&uuid, char_id)) {
-        it.char_handle = char_handle;
-        break;
+      if (it.char_handle < 0) {
+        bt_uuid_t uuid;
+        bt_uuid_t_from_string(it.uuid, &uuid);
+        if (bt_uuid_t_equals(&uuid, char_id)) {
+          it.char_handle = char_handle;
+          break;
+        }
       }
     }
     bt_status = AddNextCharacteristicOrDescriptor();
@@ -635,12 +643,14 @@ void btgatts_descriptor_added_cb(int status, int server_if, bt_uuid_t *descr_id,
     bool found = false;
     for (auto & it : sBluetoothGattService->characteristics) {
       for (auto & dit : it.descriptors) {
-        bt_uuid_t uuid;
-        bt_uuid_t_from_string(dit.uuid, &uuid);
-        if (bt_uuid_t_equals(&uuid, descr_id)) {
-          dit.desc_handle = descr_handle;
-          found = true;
-          break;
+        if (dit.desc_handle < 0) {
+          bt_uuid_t uuid;
+          bt_uuid_t_from_string(dit.uuid, &uuid);
+          if (bt_uuid_t_equals(&uuid, descr_id)) {
+            dit.desc_handle = descr_handle;
+            found = true;
+            break;
+          }
         }
       }
       if (found) {
@@ -987,7 +997,10 @@ bool AddGattService(BluetoothGattService* service) {
   srvc_id.id.inst_id = 0;
   srvc_id.is_primary = 1;
 
-  int num_handles = 3 + service->characteristics.size();
+  // 1 handle for the service
+  // 2 handles for each characteristic (don't know why it isn't just 1)
+  // 1 handle for each descriptor
+  int num_handles = 1 + (2 * service->characteristics.size());
   for (auto const& it : service->characteristics) {
     num_handles += it.descriptors.size();
   }
