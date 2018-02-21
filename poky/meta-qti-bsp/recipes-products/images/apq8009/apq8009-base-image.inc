@@ -65,9 +65,11 @@ do_makesystem() {
     echo "DEPLOY_DIR_IMAGE=" ${DEPLOY_DIR_IMAGE}
     echo "MACHINE=" ${MACHINE}
     echo "SYSTEMRW_SIZE_EXT4=" ${SYSTEMRW_SIZE_EXT4}
+    echo "CONFIG_FILE=" ${CONFIG_FILE}
     which make_ext4fs
 
-
+    echo "making the sparse ext4 file system"
     make_ext4fs -s -a / -C ${CONFIG_FILE} -S ${SELINUX_FILE_CONTEXTS} -l ${SYSTEM_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4 ${IMAGE_ROOTFS}
+    echo "making the raw ext4 file system"
     make_ext4fs  -l ${SYSTEMRW_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-systemrw.ext4
 }
