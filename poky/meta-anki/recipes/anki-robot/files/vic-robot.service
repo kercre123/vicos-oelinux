@@ -8,7 +8,7 @@ ConditionFileIsExecutable=/anki/bin/vic-robot
 
 [Service]
 EnvironmentFile=/anki/etc/vic-robot.env
-Restart=always
+Restart=no
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-robot $VIC_ROBOT_OPTS
 Nice=-20
 # Uncomment next line to set CPUAffinity (required isolcpus kernel arg)

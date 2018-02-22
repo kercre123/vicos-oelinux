@@ -11,7 +11,7 @@ ConditionFileIsExecutable=/anki/bin/vic-anim
 
 [Service]
 EnvironmentFile=/anki/etc/vic-anim.env
-Restart=always
+Restart=no
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-anim $VIC_ANIM_OPTS
 Nice=-2
 

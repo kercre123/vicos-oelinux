@@ -10,7 +10,7 @@ ConditionFileIsExecutable=/anki/bin/vic-engine
 
 [Service]
 EnvironmentFile=/anki/etc/vic-engine.env
-Restart=always
+Restart=no
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-engine $VIC_ENGINE_OPTS
 
 [Install]

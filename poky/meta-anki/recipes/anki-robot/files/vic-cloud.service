@@ -10,7 +10,7 @@ ConditionFileIsExecutable=/anki/bin/vic-cloud
 
 [Service]
 EnvironmentFile=/anki/etc/vic-cloud.env
-Restart=always
+Restart=no
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-cloud $VIC_CLOUD_OPTS
 
 [Install]
