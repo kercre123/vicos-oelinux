@@ -39,6 +39,7 @@ bin_PROGRAMS = make_ext4fs
 
 make_ext4fs_SOURCES := make_ext4fs_main.c canned_fs_config.c
 make_ext4fs_CFLAGS  := $(AM_CFLAGS)
+make_ext4fs_CFLAGS  += -g
 make_ext4fs_CFLAGS  += -DANDROID
 make_ext4fs_CFLAGS  += -DHOST
 make_ext4fs_LDADD   := libext4_utils.la
