@@ -1,1 +1,39 @@
-/usr/share/robot/file1 1500 891 777
+# 
+# This file contains parameters 
+# alowing the setting up of the ownership and permissions of 
+# of directories and files including executable
+# 
+usr 0 0 755 
+
+usr/share 0 0 755 
+
+# 
+# robot, bluetooth, net directories
+#
+usr/share/robot 1500 891 644 
+usr/share/bluetooth 1501 892 644
+usr/share/net 1502 893 644
+
+#
+# Sample data files for robot user
+#
+usr/share/robot/file1 1500 891  
+usr/share/robot/file2 1500 891  
+
+#
+# Sample data file for bluetooth user
+# 
+usr/share/bluetooth/file2 1501 892 644
+usr/share/bluetooth/file3 1501 892 644
+
+#
+# Sample data file for net user
+# 
+usr/share/net/file3 1502 893 644
+usr/share/net/file4 1502 893 644
+
+#
+# Daemons ownership and permissions
+#
+usr/bin 0 0 755 
+usr/bin/ankibluetoothd 1501 892 755
