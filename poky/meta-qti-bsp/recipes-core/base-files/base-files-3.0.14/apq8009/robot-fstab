@@ -7,7 +7,7 @@ devpts               /dev/pts        devpts    mode=0620,gid=5       0  0
 usbdevfs             /proc/bus/usb   usbdevfs  noauto                0  0
 tmpfs                /media/ram      tmpfs     defaults,noauto       0  0
 
-PARTLABEL=userdata   /data           auto      defaults              0  2
+PARTLABEL=userdata   /data           auto      defaults,nofail       0  2
 PARTLABEL=modem      /firmware       vfat      defaults              0  0
-PARTLABEL=persist    /persist        auto      defaults,noauto       0  0
-PARTLABEL=cache      /cache          auto      defaults,noauto       0  0
+PARTLABEL=persist    /persist        auto      defaults              0  0
+PARTLABEL=oem        /factory        auto      defaults,ro,nofail    0  2
