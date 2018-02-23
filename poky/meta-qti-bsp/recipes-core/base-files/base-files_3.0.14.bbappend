@@ -13,6 +13,8 @@ SRC_URI_append += "file://systemd/persist.mount"
 SRC_URI_append += "file://systemd/proc-bus-usb.mount"
 SRC_URI_append += "file://systemd/var-volatile.mount"
 SRC_URI_append += "file://systemd/dash.mount"
+SRC_URI_append_apq8009 += "file://apq8009/robot-fstab"
+SRC_URI_append_apq8009 += "file://apq8009/selinux-robot-fstab"
 
 dirs755 += "/media/cf /media/net /media/ram \
             /media/union /media/realroot /media/hdd \
@@ -28,9 +30,17 @@ do_install_append(){
     install -m 755 -o diag -g diag -d ${D}/media
     install -m 755 -o diag -g diag -d ${D}/mnt/sdcard
     if ${@base_contains('DISTRO_FEATURES','selinux','true','false',d)}; then
-      install -m 0644 ${WORKDIR}/selinux-fstab ${D}${sysconfdir}/fstab
+      if [  ${BASEMACHINE} == "apq8009" ]; then
+        install -m 0644 ${WORKDIR}/${BASEMACHINE}/selinux-robot-fstab ${D}${sysconfdir}/fstab
+      else
+        install -m 0644 ${WORKDIR}/selinux-fstab ${D}${sysconfdir}/fstab
+      fi
     else
-      install -m 0644 ${WORKDIR}/fstab ${D}${sysconfdir}/fstab
+      if [  ${BASEMACHINE} == "apq8009" ]; then
+        install -m 0644 ${WORKDIR}/${BASEMACHINE}/robot-fstab ${D}${sysconfdir}/fstab
+      else
+        install -m 0644 ${WORKDIR}/fstab ${D}${sysconfdir}/fstab
+      fi
     fi
     if ${@base_contains('DISTRO_FEATURES','systemd','true','false',d)}; then
      if ${@base_contains('DISTRO_FEATURES','nand-boot','false','true',d)}; then
