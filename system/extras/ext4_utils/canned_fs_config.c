@@ -49,32 +49,37 @@ int load_canned_fs_config(const char* fn) {
 	}
 
 	char line[PATH_MAX + 200];
+	memset(line, 0, PATH_MAX + 200);
 	while (fgets(line, sizeof(line), f)) {
-		while (canned_used >= canned_alloc) {
-			canned_alloc = (canned_alloc+1) * 2;
-			canned_data = (Path*) realloc(canned_data, canned_alloc * sizeof(Path));
-		}
-		Path* p = canned_data + canned_used;
-		p->path = strdup(strtok(line, " "));
-		p->uid = atoi(strtok(NULL, " "));
-		p->gid = atoi(strtok(NULL, " "));
-		p->mode = strtol(strtok(NULL, " "), NULL, 8);   // mode is in octal
-		printf("p->path = %s\n", p->path);	
-		printf("p->uid = %d\n", p->uid);
-		printf("p->gid = %d\n", p->gid);
-		printf("p->mode = %d\n", p->mode);
-		p->capabilities = 0;
+                if (line[0]  != '\r' && line[0] != '\n' && line[0] != '#') {
+                  printf("processing line: %s\n", line);
+		  while (canned_used >= canned_alloc) {
+		  	canned_alloc = (canned_alloc+1) * 2;
+		  	canned_data = (Path*) realloc(canned_data, canned_alloc * sizeof(Path));
+		  }
+		  Path* p = canned_data + canned_used;
+		  p->path = strdup(strtok(line, " "));
+		  p->uid = atoi(strtok(NULL, " "));
+		  p->gid = atoi(strtok(NULL, " "));
+		  p->mode = strtol(strtok(NULL, " "), NULL, 8);   // mode is in octal
+		  printf("p->path = %s\n", p->path);	
+		  printf("p->uid = %d\n", p->uid);
+		  printf("p->gid = %d\n", p->gid);
+		  printf("p->mode = %d\n", p->mode);
+		  p->capabilities = 0;
 
-		char* token = NULL;
-		do {
-			token = strtok(NULL, " ");
-			if (token && strncmp(token, "capabilities=", 13) == 0) {
-				p->capabilities = strtoll(token+13, NULL, 0);
-				break;
-			}
-		} while (token);
+		  char* token = NULL;
+		  do {
+			  token = strtok(NULL, " ");
+			  if (token && strncmp(token, "capabilities=", 13) == 0) {
+				  p->capabilities = strtoll(token+13, NULL, 0);
+				  break;
+			  }
+		  } while (token);
 
-		canned_used++;
+		  canned_used++;
+                }
+	        memset(line, 0, PATH_MAX + 200);
 	}
 
 	fclose(f);
