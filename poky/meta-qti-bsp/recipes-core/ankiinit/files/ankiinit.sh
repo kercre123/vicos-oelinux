@@ -35,4 +35,12 @@ echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # Print the ID on the face
 SERIALNO=`tr ' ' '\n' < /proc/cmdline | awk -F= /androidboot.serialno/'{print $2}'`
 echo 2 1 $SERIALNO | /system/bin/display
-setprop ro.serialno $SERIALNO
+
+# And put the serial number in properties
+for i in `seq 1 5`;
+do
+    setprop ro.serialno $SERIALNO
+    if test ! -z `getprop ro.serialno`; then break; fi
+    sleep 1;
+done
+exit 0
