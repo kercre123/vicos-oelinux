@@ -1,0 +1,6 @@
+#!/bin/sh
+
+if [ ! -d /data/lib/connman ]; then
+    mkdir -p /data/lib/connman
+    cp -r /var/lib/connman/* /data/lib/connman
+fi

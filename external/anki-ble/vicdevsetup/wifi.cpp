@@ -212,7 +212,7 @@ void EnableWiFiInterface(const bool enable, ExecCommandCallback callback) {
 
 static std::string GetPathToWiFiConfigFile()
 {
-  return "/var/lib/connman/wifi.config";
+  return "/data/lib/connman/wifi.config";
 }
 
 std::map<std::string, std::string> UnPackWiFiConfig(const std::vector<uint8_t>& packed) {

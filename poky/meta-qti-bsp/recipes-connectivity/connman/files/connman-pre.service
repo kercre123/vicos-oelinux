@@ -1,0 +1,14 @@
+[Unit]
+Description=Connection service preparation
+After=init_post_boot.service
+Before=connman.service
+Wants=connman.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /etc/default/connman
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+
