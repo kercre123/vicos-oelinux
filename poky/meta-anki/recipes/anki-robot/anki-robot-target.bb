@@ -11,6 +11,7 @@ DEPENDS += "vic-robot"
 DEPENDS += "vic-anim"
 DEPENDS += "vic-engine"
 DEPENDS += "vic-cloud"
+DEPENDS += "vic-webserver"
 DEPENDS += "anki-audio-init"
 
 inherit systemd
