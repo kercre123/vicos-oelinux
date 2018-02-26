@@ -1,16 +1,21 @@
-#Include the robot settings
+#
+# Include the robot settings
+#
 
 # Get base product settings
 require apq8009-base-image.inc
+
 # These two lines below is a workaround to remove init-mss,
 # since packagegroup-ss-mgr just include reboot-daemon and init-mss
 IMAGE_INSTALL_remove = "packagegroup-ss-mgr"
 IMAGE_INSTALL += "reboot-daemon"
+
+# Add additional components
+IMAGE_INSTALL += "system-core-debuggerd"
 IMAGE_INSTALL += "e2fsprogs"
 IMAGE_INSTALL += "start-scripts-userfs-reset"
 IMAGE_INSTALL += "chrony"
 IMAGE_INSTALL += "chronyc"
-
 IMAGE_INSTALL += "openssh"
 IMAGE_INSTALL += "connman connman-client connman-tools"
 IMAGE_INSTALL += "iw"
