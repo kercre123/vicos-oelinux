@@ -15,9 +15,6 @@ do_install_append() {
   install -d ${D}${sysconfdir}/systemd/system/  
   install -m 0644 ${WORKDIR}/anki-audio-init.service \
     -D ${D}${sysconfdir}/systemd/system/anki-audio-init.service
-  install -d ${D}${sysconfdir}/systemd/system/anki-robot.target.wants/
-  ln -sf /etc/systemd/system/anki-audio-init.service \
-    ${D}${sysconfdir}/systemd/system/anki-robot.target.wants/anki-audio-init.service
 }
 
 SYSTEMD_SERVICE_${PN} = "anki-audio-init.service"

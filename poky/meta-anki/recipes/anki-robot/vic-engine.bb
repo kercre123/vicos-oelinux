@@ -13,10 +13,6 @@ do_install_append () {
    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
        install -d ${D}${systemd_unitdir}/system/
        install -m 0644 ${WORKDIR}/${SERVICE_FILE} -D ${D}${systemd_unitdir}/system/${SERVICE_FILE}
-       install -d ${D}${systemd_unitdir}/system/anki-robot.target.wants/
-       # enable the service for anki-robot.target
-       ln -sf ${systemd_unitdir}/system/${SERVICE_FILE} \
-            ${D}${systemd_unitdir}/system/anki-robot.target.wants/${SERVICE_FILE}
    fi
 }
 

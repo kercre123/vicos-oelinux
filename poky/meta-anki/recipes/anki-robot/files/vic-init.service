@@ -1,0 +1,20 @@
+#
+# poky/meta-anki/recipes/anki-robot/files/vic-init.service
+#
+[Unit]
+Description=Victor init service
+SourcePath=/anki/bin/vic-init.sh
+PartOf=anki-robot.target
+
+Wants=anki-audio-init.service
+After=anki-audio-init.service
+
+ConditionFileIsExecutable=/anki/bin/vic-init.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/anki/bin/vic-init.sh
+
+[Install]
+WantedBy=anki-robot.target

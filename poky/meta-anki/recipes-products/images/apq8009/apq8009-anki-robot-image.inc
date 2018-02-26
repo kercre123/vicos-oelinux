@@ -1,4 +1,5 @@
 #Include the robot settings
+IMAGE_INSTALL += "vic-init"
 IMAGE_INSTALL += "vic-robot"
 IMAGE_INSTALL += "vic-anim"
 IMAGE_INSTALL += "vic-engine"

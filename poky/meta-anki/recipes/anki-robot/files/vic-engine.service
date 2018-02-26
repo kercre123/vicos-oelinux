@@ -1,9 +1,10 @@
 [Unit]
 Description=Victor engine daemon
 SourcePath=/anki/bin/vic-engine
-After=vic-anim.service
-Wants=vic-anim.service
 PartOf=anki-robot.target
+
+Wants=vic-anim.service
+After=vic-anim.service
 
 ConditionFileIsExecutable=/usr/bin/logwrapper
 ConditionFileIsExecutable=/anki/bin/vic-engine

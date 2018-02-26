@@ -7,6 +7,7 @@ SERVICE_FILE = "anki-robot.target"
 
 SRC_URI = "file://${SERVICE_FILE}"
 
+DEPENDS += "vic-init"
 DEPENDS += "vic-robot"
 DEPENDS += "vic-anim"
 DEPENDS += "vic-engine"

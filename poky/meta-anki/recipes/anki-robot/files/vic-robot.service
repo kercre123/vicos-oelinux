@@ -3,6 +3,9 @@ Description=Victor robot daemon
 SourcePath=/anki/bin/vic-robot
 PartOf=anki-robot.target
 
+Wants=vic-init.service
+After=vic-init.service
+
 ConditionFileIsExecutable=/usr/bin/logwrapper
 ConditionFileIsExecutable=/anki/bin/vic-robot
 
