@@ -28,7 +28,7 @@ ankibluetoothd_CC = @CC@
 ankibluetoothd_SOURCES = 	main.cpp \
 				btstack.cpp \
 				btutils.cpp \
-				peripheral.cpp \
+				agent.cpp \
 				device_info.cpp \
 				$(COMMON_DIR)/fileutils.cpp \
 				$(COMMON_DIR)/taskExecutor.cpp \

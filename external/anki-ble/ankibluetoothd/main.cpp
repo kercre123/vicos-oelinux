@@ -14,14 +14,14 @@
 #include "btstack.h"
 #include "device_info.h"
 #include "log.h"
-#include "peripheral.h"
+#include "agent.h"
 
 #include <unistd.h>
 
 static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
 
 static void ExitHandler(int status = 0) {
-  UnLoadBtStack();
+  Anki::BluetoothStack::UnLoadBtStack();
   _exit(status);
 }
 
@@ -43,23 +43,23 @@ int main(int argc, char *argv[]) {
 
   setAndroidLoggingTag("ankibtd");
   setMinLogLevel(kLogLevelVerbose);
-  if (!LoadBtStack()) {
+  if (!Anki::BluetoothStack::LoadBtStack()) {
     ExitHandler(1);
   }
-  if (!EnableAdapter()) {
+  if (!Anki::BluetoothStack::EnableAdapter()) {
     ExitHandler(1);
   }
   std::string adapterName = std::string("VICTOR_") + GetDeviceSerialNumber();
-  if (!SetAdapterName(adapterName)) {
+  if (!Anki::BluetoothStack::SetAdapterName(adapterName)) {
     ExitHandler(1);
   }
-  if (!RegisterGattClient()) {
+  if (!Anki::BluetoothStack::RegisterGattClient()) {
     ExitHandler(1);
   }
-  if (!RegisterGattServer()) {
+  if (!Anki::BluetoothStack::RegisterGattServer()) {
     ExitHandler(1);
   }
-  if (!StartBLEPeripheral()) {
+  if (!StartBLEAgent()) {
     ExitHandler(1);
   }
   ev_loop(sDefaultLoop, 0);
