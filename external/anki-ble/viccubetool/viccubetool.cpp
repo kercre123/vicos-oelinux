@@ -66,7 +66,12 @@ void VicCubeTool::OnConnectedToDaemon() {
     if (args_.size() > 1) {
       address_ = args_[1];
     }
-    ConnectToCube(address_);
+    if (address_.empty()) {
+      connect_to_first_cube_found_ = true;
+      ScanForCubes();
+    } else {
+      ConnectToCube(address_);
+    }
   } else if (AreCaseInsensitiveStringsEqual(command, "flash")) {
     FlashCube(address_, args_[1]);
   } else if (AreCaseInsensitiveStringsEqual(command, "disconnect")) {
@@ -100,6 +105,11 @@ void VicCubeTool::OnScanResults(int error,
   for (auto const& r : records) {
     scan_records_[r.address] = r;
     std::cout << r.address << " '" << r.local_name << "' " << "rssi = " << r.rssi << std::endl;
+    if (connect_to_first_cube_found_) {
+      connect_to_first_cube_found_ = false;
+      StopScan();
+      ConnectToCube(r.address);
+    }
   }
 }
 

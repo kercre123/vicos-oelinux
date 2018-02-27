@@ -49,5 +49,6 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   ev::timer* connect_retry_timer_ = nullptr;
   ev::timer* stop_scan_timer_ = nullptr;
   std::map<std::string, Anki::BluetoothDaemon::ScanResultRecord> scan_records_;
+  bool connect_to_first_cube_found_;
 };
 
