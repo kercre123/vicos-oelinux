@@ -83,6 +83,10 @@ void VicCubeTool::OnConnectedToDaemon() {
 
 void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
   StopScan();
+  if (scan_records_.empty()) {
+    std::cerr << "No cubes found.  Exiting..." << std::endl;
+    _exit(1);
+  }
 }
 
 void VicCubeTool::ScanForCubes() {
@@ -139,6 +143,9 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
       std::cout << ", properties = " << r.properties;
     }
     std::cout << std::endl;
+  }
+  if (address == address_ && !connected) {
+    _exit(0);
   }
 }
 

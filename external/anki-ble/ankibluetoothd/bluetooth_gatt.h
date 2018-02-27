@@ -79,7 +79,8 @@ typedef struct BluetoothGattConnection {
   std::string address;
   std::vector<BluetoothGattService> services;
   BluetoothGattConnection()
-      : conn_id(-1) {}
+      : BluetoothGattConnection("") {}
   BluetoothGattConnection(const std::string& address)
-      : address(address) {}
+      : conn_id(-1)
+      , address(address) {}
 } BluetoothGattConnection;

@@ -1584,8 +1584,16 @@ bool DisconnectGattPeer(int conn_id)
   return true;
 }
 
+static bool sScanning = false;
+void TimeoutScanning() {
+  if (sScanning) {
+    StartScan(false);
+  }
+}
+
 bool StartScan(const bool enable)
 {
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   if (!sBtGattInterface || !sBtGattInterface->client) {
     return false;
   }
@@ -1599,7 +1607,40 @@ bool StartScan(const bool enable)
     return false;
   }
 
+  sScanning = enable;
+
+  if (enable) {
+    // Timeout Scanning after 1 minute
+    auto f = std::bind(&TimeoutScanning);
+    auto when = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 60);
+    sTaskExecutor.WakeAfter(f, when);
+  }
+
   return true;
+}
+
+void TimeoutConnectionAttempt(const std::string& address)
+{
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  auto search = sOutboundConnections.find(address);
+  if (search == sOutboundConnections.end()) {
+    return;
+  }
+  BluetoothGattConnectionInfo& info = search->second;
+  if (info.status == BluetoothGattConnectionStatus::Connected) {
+    return;
+  }
+  BluetoothGattConnection& connection = info.connection;
+  if (connection.conn_id != -1) {
+    DisconnectOutboundConnectionById(connection.conn_id);
+  } else {
+    if (sCallbacks.outbound_connection_cb) {
+      sCallbacks.outbound_connection_cb(address,
+                                        0,
+                                        connection);
+    }
+    sOutboundConnections.erase(address);
+  }
 }
 
 // From Fluoride's stack/include/bt_types.h
@@ -1631,6 +1672,11 @@ bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct)
     sOutboundConnections.erase(address);
     return false;
   }
+
+  // Timeout connection attempts after 2 minutes
+  auto f = std::bind(&TimeoutConnectionAttempt, address);
+  auto when = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 120);
+  sTaskExecutor.WakeAfter(f, when);
 
   return true;
 }
