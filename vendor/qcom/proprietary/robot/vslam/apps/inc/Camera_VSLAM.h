@@ -80,7 +80,10 @@ struct VSLAMCameraParams
       PREVIEW,
       VIDEO
    };
-   VSLAMCameraParams()
+
+
+
+   VSLAMCameraParams() : distortionCoefficient() // 0.f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  )
    {
       // default values
       gain = 1.f;
@@ -91,6 +94,8 @@ struct VSLAMCameraParams
 
       inputPixelWidth = 640;
       inputPixelHeight = 480;
+      outputPixelWidth = 640;
+      outputPixelHeight = 480;
       useIllControl = false;
       captureMode = PREVIEW;
       inputFormat = RAW_FORMAT;
@@ -105,6 +110,7 @@ struct VSLAMCameraParams
       //cpaConfiguration.cpaType = MVCPA_MODE_HISTOGRAM;
 
       func = CAM_FUNC_OPTIC_FLOW;
+      cpaFrameSkip = 4;
    }
 
    float gain;
@@ -124,11 +130,13 @@ struct VSLAMCameraParams
    int32_t outputPixelWidth;
    int32_t outputPixelHeight;
 
+   DistortionModel distortionModel;
    float32_t inputCameraMatrix[9];
-   float32_t distortionCoefficient[8];
+   float32_t distortionCoefficient[12];
    float32_t outputCameraMatrix[9];
 
    mvCPA_Configuration cpaConfiguration;
+   int32_t cpaFrameSkip;
    bool useCPA;
 
 };
@@ -141,6 +149,8 @@ public:
 
    Camera_VSLAM();
    ~Camera_VSLAM();
+
+   Camera_VSLAM( const Camera_VSLAM & ) = delete;
 
    void setCaptureParams( const VSLAMCameraParams& params );
 

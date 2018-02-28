@@ -20,15 +20,7 @@ Queue for wheel encoder pose, vslam pose and fusion pose
 extern queue_mt<mvWEFPoseVelocityTime> gWEPoseQueue;
 extern queue_mt<mvWEFPoseStateTime> gVSLAMPoseQueue;
 extern queue_mt<mvWEFPoseVelocityTime> gFsuionPoseQueue;
-
-/**--------------------------------------------------------------------------
-@brief
-Queue for wheel encoder pose, vslam pose and fusion pose
-Used for motion pattern
---------------------------------------------------------------------------**/
-extern queue_mt<mvWEFPoseVelocityTime> gMotionWEPoseQueue;
-extern queue_mt<mvWEFPoseStateTime> gMotionVSLAMPoseQueue;
-extern queue_mt<mvPose6DRT> gMotionFsuionPoseQueue;
+ 
 
 typedef struct _WEFParameter
 {
@@ -40,7 +32,7 @@ typedef struct _WEFParameter
 @brief
 Start sensor fusion
 --------------------------------------------------------------------------**/
-mvWEF * StartFS( const mvPose6DET* poseVB, const bool loadMapFirst, const bool vslamStateBadAsFail );
+mvWEF * StartFS( const mvPose6DET* poseVB, const bool loadMapFirst, const bool vslamStateBadAsFail, const bool dofRestriction );
 
 /**--------------------------------------------------------------------------
 @brief

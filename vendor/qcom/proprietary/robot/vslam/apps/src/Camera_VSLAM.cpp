@@ -12,7 +12,9 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 #include <stdio.h>
 #include <string.h>
 
-//const float32_t rowPeriodUs = 19.3333f;
+#ifdef WIN32
+#include <time.h>
+#endif
 
 Camera_VSLAM::Camera_VSLAM()
 {
@@ -91,10 +93,14 @@ double getArchClock()
    const char archTimerTickPath[] = "/sys/kernel/boot_adsp/arch_qtimer";
    char archTicksStr[20] = "";
    static const double clockFreq = 1 / 19.2;
+   int64_t archTicks = 0;
    FILE * archClockfp = fopen( archTimerTickPath, "r" );
-   fread( archTicksStr, 16, 1, archClockfp );
-   int64_t archTicks = strtoll( archTicksStr, 0, 16 );
-   fclose( archClockfp );
+   if( archClockfp != NULL )
+   {
+      fread( archTicksStr, 16, 1, archClockfp );
+      archTicks = strtoll( archTicksStr, 0, 16 );
+      fclose( archClockfp );
+   }
    return archTicks*clockFreq*1e3;
 #else
    return 0;
@@ -119,7 +125,7 @@ void Camera_VSLAM::findClocksOffsetForCamera()
 void Camera_VSLAM::onPreviewFrame( ICameraFrame *frame )
 {
    static uint32_t countP = 0;
-   printf( "on preview frame!\n" );
+   //printf( "+++++on preview frame! timestamp=%lld\n", frame->timeStamp );
    //printVSLAMSTATE();
    if( THREAD_RUNNING == false )
    {
@@ -137,7 +143,7 @@ void Camera_VSLAM::onPreviewFrame( ICameraFrame *frame )
          undistortionEngine.undistort( frame->data, mOutputImageBuf );
          visualiser->PublishUndistortedImage( frame->timeStamp + clockOffset, mOutputImageBuf, eagleCaptureParams.outputPixelWidth, eagleCaptureParams.outputPixelHeight );
          callback( frame->timeStamp + clockOffset, mOutputImageBuf );
-         if( countP % 4 == 3 )
+         if( countP % eagleCaptureParams.cpaFrameSkip == 0 )
          {
             CallCPA();
          }
@@ -363,8 +369,8 @@ bool Camera_VSLAM::init()
    
    mOutputImageBuf = new uint8_t[eagleCaptureParams.outputPixelWidth * eagleCaptureParams.outputPixelHeight];
 
-   undistortionEngine.init( eagleCaptureParams.inputCameraMatrix, eagleCaptureParams.distortionCoefficient, eagleCaptureParams.outputCameraMatrix,
-                            eagleCaptureParams.inputPixelWidth, eagleCaptureParams.inputPixelHeight,
+   undistortionEngine.init( eagleCaptureParams.inputCameraMatrix, eagleCaptureParams.distortionModel, eagleCaptureParams.distortionCoefficient, 
+                            eagleCaptureParams.inputPixelWidth, eagleCaptureParams.inputPixelHeight, eagleCaptureParams.outputCameraMatrix,
                             eagleCaptureParams.outputPixelWidth, eagleCaptureParams.outputPixelHeight );
    return true;
 }
@@ -394,17 +400,17 @@ void Camera_VSLAM::printCapabilities()
    printf( "available preview sizes:\n" );
    for( size_t i = 0; i < cameraCaps.pSizes.size(); i++ )
    {
-      printf( "%ld: %d x %d\n", i, cameraCaps.pSizes[i].width, cameraCaps.pSizes[i].height );
+      printf( "%d: %d x %d\n", i, cameraCaps.pSizes[i].width, cameraCaps.pSizes[i].height );
    }
    printf( "available video sizes:\n" );
    for( size_t i = 0; i < cameraCaps.vSizes.size(); i++ )
    {
-      printf( "%ld: %d x %d\n", i, cameraCaps.vSizes[i].width, cameraCaps.vSizes[i].height );
+      printf( "%d: %d x %d\n", i, cameraCaps.vSizes[i].width, cameraCaps.vSizes[i].height );
    }
    printf( "available focus modes:\n" );
    for( size_t i = 0; i < cameraCaps.focusModes.size(); i++ )
    {
-      printf( "%ld: %s\n", i, cameraCaps.focusModes[i].c_str() );
+      printf( "%d: %s\n", i, cameraCaps.focusModes[i].c_str() );
    }
    printf( "available whitebalance modes:\n" );
    for( size_t i = 0; i < cameraCaps.wbModes.size(); i++ )
@@ -414,7 +420,7 @@ void Camera_VSLAM::printCapabilities()
    printf( "available ISO modes:\n" );
    for( size_t i = 0; i < cameraCaps.isoModes.size(); i++ )
    {
-      printf( "%ld: %s\n", i, cameraCaps.isoModes[i].c_str() );
+      printf( "%d: %s\n", i, cameraCaps.isoModes[i].c_str() );
    }
    printf( "available brightness values:\n" );
    printf( "min=%d, max=%d, step=%d\n", cameraCaps.brightness.min,
@@ -429,13 +435,13 @@ void Camera_VSLAM::printCapabilities()
    printf( "available preview fps ranges:\n" );
    for( size_t i = 0; i < cameraCaps.previewFpsRanges.size(); i++ )
    {
-      printf( "%ld: [%d, %d]\n", i, cameraCaps.previewFpsRanges[i].min,
+      printf( "%d: [%d, %d]\n", i, cameraCaps.previewFpsRanges[i].min,
               cameraCaps.previewFpsRanges[i].max );
    }
    printf( "available video fps values:\n" );
    for( size_t i = 0; i < cameraCaps.videoFpsValues.size(); i++ )
    {
-      printf( "%ld: %d\n", i, cameraCaps.videoFpsValues[i] );
+      printf( "%d: %d\n", i, cameraCaps.videoFpsValues[i] );
    }
 }
 
@@ -541,6 +547,7 @@ void Camera_VSLAM::addCallback( CameraCallback _callback )
    callback = _callback;
 }
 
+
 static int  cpa_count = 0;
 void Camera_VSLAM::CallCPA()
 {
@@ -551,6 +558,7 @@ void Camera_VSLAM::CallCPA()
 
       mvCPA_AddFrame( cpa, (uint8_t*)mOutputImageBuf, eagleCaptureParams.outputPixelWidth );// config.camera.pixelWidth, config.camera.pixelHeight, config.camera.memoryStride );
       mvCPA_GetValues( cpa, &exposure, &gain );
+      
       cpa_count++;
 
       float m = 0.0f;

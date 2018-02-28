@@ -19,19 +19,29 @@ public:
 
    virtual void PublishOriginalImage( const uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight );
    virtual void PublishUndistortedImage( const uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight );
-   virtual void ShowPoints( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight );
+   virtual vslamStatus ShowPoints( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight, std::string title = "" );
    virtual void PublishRobotPose( const mvWEFPoseVelocityTime & pose );
-   virtual void PublishCameraPose( const mvWEFPoseStateTime & pose, const uint8_t * image = NULL, int imageWidth = 0, int imageHeight = 0 );
+   virtual void PublishCameraPose( const mvWEFPoseStateTime & pose, const vslamStatus & status, std::string title = "" );
    virtual void PublishCorrectedCameraPose( const mvWEFPoseStateTime & VSLAMPoseCorrected );
-   virtual void PublishExposureGain( float32_t exposure, float32_t gain, int exposureValue, int gainValue, float mean_brightness )
+   virtual void PublishExposureGain( float32_t /*exposure*/, float32_t /*gain*/, int /*exposureValue*/, int /*gainValue*/, float /*mean_brightness*/ )
    {};
+   virtual void PublishVSLAMSchedulerState( const std::string & str )
+   {
+      fprintf( fpLogVSLAMSchedulerState, "%s\n", str.c_str());
+   }
+   virtual void ShowKeyframeLocationAndTrajectory( MapFocuser &, char * windowsName );
 
 protected:
    FILE *fpLogWEFOutput = nullptr;
+   FILE *fpLogWEFOutputQuatenion = nullptr;
 
    FILE *fpLogVSLAM = nullptr;
+   FILE *fpLogVSLAMSecondary = nullptr;
    FILE *fpLogVSLAMCorrected = nullptr;
-   
+
+   FILE *fpLogVSLAMSchedulerState = nullptr;
+
+   std::string outputDir;
    
 };
 #endif //__VISUALIZATION_H__

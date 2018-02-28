@@ -17,23 +17,21 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 #include <VSLAM_internal.h>
 #include "mvvwslam_ros/OdometryVSLAM.h"
 #include <ros/ros.h>
-static void EtoQuaternion( double pitch, double roll, double yaw, double quaternion[4] );
 
-Visualiser_ROS::Visualiser_ROS( const char * outputPath, uint32_t outputEveryNFrame ): Visualiser(outputPath)
+Visualiser_ROS::Visualiser_ROS( const char * outputPath, uint32_t outputEveryNFrame ) : Visualiser( outputPath )
 {
-   std::string output( outputPath );
-   fpLogWEFInput = openLogFile( (output + "fusion_input.csv").c_str() );
-
    ros::NodeHandle nh_vslam;
    image_transport::ImageTransport it( nh_vslam );
    labelledImagePub = it.advertise( "/vslam/image_labelled", 1 );
+   labelledImagePubSecondary = it.advertise( "/vslam/image_labelled_secondary", 1 );
 
    pub_fusion = nh_vslam.advertise<nav_msgs::Odometry>( "robot_odom", 10 );
 
-   pub_state = nh_vslam.advertise<std_msgs::String>( "vslam_state", 10 );
-   pub_cpaParameter  = nh_vslam.advertise<std_msgs::String>( "cpa_parameter", 10 );
+   pub_cpaParameter = nh_vslam.advertise<std_msgs::String>( "cpa_parameter", 10 );
+   pub_vslamSchedulerState = nh_vslam.advertise<std_msgs::String>( "vslam_scheduler_state", 10 );
 
    pubCameraOdom = nh_vslam.advertise<mvvwslam_ros::OdometryVSLAM>( "vslam_odom", 33 );
+   pubCameraOdomSecondary = nh_vslam.advertise<mvvwslam_ros::OdometryVSLAM>( "vslam_odom_secondary", 33 );
    pubVSLAMOdom_Raw = nh_vslam.advertise<nav_msgs::Odometry>( "vslam_odom_raw", 33 );
    cameraOdomCount = 0;
 
@@ -54,6 +52,7 @@ Visualiser_ROS::Visualiser_ROS( const char * outputPath, uint32_t outputEveryNFr
    undistortedImagePub = it.advertise( "/vslam/image_undistorted", 1 );
 
    frameIndex = 0;
+   frameIndexSecondary = 0;
    _outputEveryNFrame = outputEveryNFrame;
 }
 
@@ -62,32 +61,61 @@ Visualiser_ROS::~Visualiser_ROS()
 
 }
 
-void Visualiser_ROS::ShowPoints( const mvWEFPoseStateTime & poseWithTime, const uint8_t * image, int imageWidth, int imageHeight  )
+vslamStatus Visualiser_ROS::ShowPoints( const mvWEFPoseStateTime & poseWithTime, const uint8_t * image, int imageWidth, int imageHeight, std::string title )
 {
-   frameIndex++;
-   if( frameIndex < _outputEveryNFrame )
+   if( 0 == title.compare( "secondary" ) )
    {
-      return;
-   }
-   cv::Mat rview;
-   DrawLabelledImage( poseWithTime, image, imageWidth, imageHeight, rview );
+      frameIndexSecondary++;
+      if( frameIndexSecondary < _outputEveryNFrame )
+      {
+         return GetVSLAMStatus( image, imageWidth, imageHeight, parameter.pVSlamSecondaryObj );
+      }
+      cv::Mat rview;
+      vslamStatus status = DrawLabelledImage( poseWithTime, image, imageWidth, imageHeight, rview, parameter.pVSlamSecondaryObj );
 
-   if( labelledImagePub.getNumSubscribers() > 0 ) //  && (frameIndex % frameSkip) == 0)
+      if( labelledImagePubSecondary.getNumSubscribers() > 0 )
+      {
+         //VSLAM_INFO("send image frame index = %d, stamp = %f", frameIndex, (double)timestamp*1e-9);
+         sensor_msgs::ImagePtr image = cv_bridge::CvImage( std_msgs::Header(), "bgr8", rview ).toImageMsg();
+         image->header.stamp.fromNSec( poseWithTime.timestampUs * 1000 );
+
+         labelledImagePubSecondary.publish( *image );
+      }
+      frameIndexSecondary = 0;
+
+      return status;
+   }
+   else
    {
-      //VSLAM_INFO("send image frame index = %d, stamp = %f", frameIndex, (double)timestamp*1e-9);
-      sensor_msgs::ImagePtr image = cv_bridge::CvImage( std_msgs::Header(), "bgr8", rview ).toImageMsg();
-      image->header.stamp.fromNSec( poseWithTime.timestampUs * 1000 );
+      assert( 0 == title.compare( "primary" ) );
 
-      labelledImagePub.publish( *image );
+      frameIndex++;
+      if( frameIndex < _outputEveryNFrame )
+      {
+         return GetVSLAMStatus( image, imageWidth, imageHeight, parameter.pVSlamObj );;
+      }
+      cv::Mat rview;
+      vslamStatus status = DrawLabelledImage( poseWithTime, image, imageWidth, imageHeight, rview, parameter.pVSlamObj );
+
+      if( labelledImagePub.getNumSubscribers() > 0 )
+      {
+         //VSLAM_INFO("send image frame index = %d, stamp = %f", frameIndex, (double)timestamp*1e-9);
+         sensor_msgs::ImagePtr image = cv_bridge::CvImage( std_msgs::Header(), "bgr8", rview ).toImageMsg();
+         image->header.stamp.fromNSec( poseWithTime.timestampUs * 1000 );
+
+         labelledImagePub.publish( *image );
+      }
+      frameIndex = 0;
+
+      return status;
    }
-   frameIndex = 0;
 }
 
 void Visualiser_ROS::PublishOriginalImage( uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight )
 {
    cv::Mat rview;
    GetOriginalImage( image, rview, imageWidth, imageHeight );
-   if( originalImagePub.getNumSubscribers() > 0 ) //  && (frameIndex % frameSkip) == 0)
+   if( originalImagePub.getNumSubscribers() > 0 )
    {
       //VSLAM_INFO("send image frame index = %d, stamp = %f", frameIndex, (double)timestamp*1e-9);
       sensor_msgs::ImagePtr image = cv_bridge::CvImage( std_msgs::Header(), "mono8", rview ).toImageMsg();
@@ -99,10 +127,10 @@ void Visualiser_ROS::PublishOriginalImage( uint64_t stamp, const uint8_t * image
 
 void Visualiser_ROS::PublishUndistortedImage( const uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight )
 {
-   if( undistortedImagePub.getNumSubscribers() > 0 ) //  && (frameIndex % frameSkip) == 0)
+   if( undistortedImagePub.getNumSubscribers() > 0 )
    {
       cv::Mat rview( imageHeight, imageWidth, CV_8UC1 );
-      memcpy( rview.data, image, imageHeight * imageWidth );    
+      memcpy( rview.data, image, imageHeight * imageWidth );
       sensor_msgs::ImagePtr image = cv_bridge::CvImage( std_msgs::Header(), "mono8", rview ).toImageMsg();
       image->header.stamp.fromNSec( stamp );
 
@@ -153,27 +181,11 @@ void Visualiser_ROS::PublishRobotPose( const mvWEFPoseVelocityTime & pose )
 
 }
 
-static void EtoQuaternion( double pitch, double roll, double yaw, double quaternion[4] )
-{
-   double t0 = std::cos( yaw * 0.5 );
-   double t1 = std::sin( yaw * 0.5 );
-   double t2 = std::cos( roll * 0.5 );
-   double t3 = std::sin( roll * 0.5 );
-   double t4 = std::cos( pitch * 0.5 );
-   double t5 = std::sin( pitch * 0.5 );
-
-   quaternion[0] = t0 * t2 * t4 + t1 * t3 * t5;  //w
-   quaternion[1] = t0 * t3 * t4 - t1 * t2 * t5;  //x
-   quaternion[2] = t0 * t2 * t5 + t1 * t3 * t4;  //y
-   quaternion[3] = t1 * t2 * t4 - t0 * t3 * t5;  //z
-}
-
-void Visualiser_ROS::PublishCameraPose( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight )
+void Visualiser_ROS::PublishCameraPose( const mvWEFPoseStateTime & pose, const vslamStatus & status, std::string title )
 {
    mvvwslam_ros::OdometryVSLAM cameraOdom;
 
    cameraOdom.odom.header.seq = cameraOdomCount++;
-   cameraOdom.odom.child_frame_id = "camera";
    cameraOdom.odom.header.frame_id = "odom";
 
    InitOdom( cameraOdom.odom );
@@ -189,11 +201,6 @@ void Visualiser_ROS::PublishCameraPose( const mvWEFPoseStateTime & pose, const u
    }
    cameraOdom.odom.header.stamp.fromNSec( time );
 
-   if( image != NULL )
-   {
-      GetVSLAMStatus( image, imageWidth, imageHeight );
-   }
-
    mvPose6DRT2ROSTopic( pose.poseWithState.pose, cameraOdom.odom );
 
    cameraOdom.matchedPointNum = status._MatchedMapPointNum;
@@ -202,37 +209,22 @@ void Visualiser_ROS::PublishCameraPose( const mvWEFPoseStateTime & pose, const u
    cameraOdom.stddevIllumination = status._BrightnessVar;
    cameraOdom.state = pose.poseWithState.poseQuality;
 
-   nav_msgs::Odometry odom;
-   odom = cameraOdom.odom;
-   pubCameraOdom.publish( cameraOdom );
-   pubVSLAMOdom_Raw.publish( odom );
-
-   std::string state_string;
-   switch( pose.poseWithState.poseQuality )
+   if( 0 == title.compare( "secondary" ) )
    {
-      case MV_VSLAM_TRACKING_STATE_FAILED:
-         state_string = "TRACKING_FAILED";
-         break;
-      case MV_VSLAM_TRACKING_STATE_INITIALIZING:
-         state_string = "INITIALIZING";
-         break;
-      case MV_VSLAM_TRACKING_STATE_GREAT:
-      case MV_VSLAM_TRACKING_STATE_GOOD:
-      case MV_VSLAM_TRACKING_STATE_OK:
-         state_string = "GOOD_QUALITY";
-         break;
-      case MV_VSLAM_TRACKING_STATE_BAD:
-      case MV_VSLAM_TRACKING_STATE_APPROX:
-         state_string = "BAD_QUALITY";
-         break;
-      case MV_VSLAM_TRACKING_STATE_RELOCATED:
-      default:
-         state_string = "RELOCATED";
+      cameraOdom.odom.child_frame_id = "camera_secondary";
+      pubCameraOdomSecondary.publish( cameraOdom );
    }
-   std_msgs::String stateMsg;
-   stateMsg.data = state_string.c_str();
-   pub_state.publish( stateMsg );
+   else
+   {
+      assert( 0 == title.compare( "primary" ) );
+      cameraOdom.odom.child_frame_id = "camera";
 
+      nav_msgs::Odometry odom;
+      odom = cameraOdom.odom;
+
+      pubVSLAMOdom_Raw.publish( odom );
+      pubCameraOdom.publish( cameraOdom );
+   }
 }
 
 void Visualiser_ROS::PublishCorrectedCameraPose( const mvWEFPoseStateTime & pose )
@@ -260,7 +252,7 @@ void Visualiser_ROS::mvPose6DRT2ROSTopic( const mvPose6DRT & pose, nav_msgs::Odo
    odom.pose.pose.position.y = pose.matrix[1][3];
    odom.pose.pose.position.z = pose.matrix[2][3];
    double quaternion[4];
-   RtoQuaternion( pose.matrix, quaternion );   
+   RtoQuaternion( pose.matrix, quaternion );
 
    odom.pose.pose.orientation.x = quaternion[1];
    odom.pose.pose.orientation.y = quaternion[2];
@@ -271,9 +263,13 @@ void Visualiser_ROS::mvPose6DRT2ROSTopic( const mvPose6DRT & pose, nav_msgs::Odo
 void Visualiser_ROS::PublishExposureGain( float32_t exposure, float32_t gain, int exposureValue, int gainValue, float mean_brightness )
 {
    char strCPA[200];
-   sprintf( strCPA, "Exposure:%f,Gain:%f, real exposure:%d, real gain:%d, mean_brightness:%f", exposure, gain, exposureValue,  gainValue, mean_brightness );
+   sprintf( strCPA, "Exposure:%f,Gain:%f, real exposure:%d, real gain:%d, mean_brightness:%f", exposure, gain, exposureValue, gainValue, mean_brightness );
    std::string showCPA( strCPA );
    std_msgs::String cpa_status;
    cpa_status.data = showCPA;
    pub_cpaParameter.publish( cpa_status );
+}
+
+void Visualiser_ROS::ShowKeyframeLocationAndTrajectory(MapFocuser&, char *)
+{
 }

@@ -6,15 +6,16 @@
    mv.h
 
 @brief
-   Machine Vision
+   Common data structures and utilities for the Machine Vision SDK.
 
 @mainpage
    Machine Vision SDK
 
 @version
-   1.1.3
+   1.1.6
 
-   The release numbering scheme follows conventions in <a href="http://www.semver.org/">www.semver.org</a>
+   The release numbering scheme follows conventions in 
+   <a href="http://www.semver.org/">www.semver.org</a>
 
 @section Overview
    QTI's Machine Vision SDK provides highly runtime optimized and state of
@@ -24,6 +25,8 @@
    - Camera Parameter Adjustment (CPA) for auto gain and exposure control.
    - Depth from Stereo (DFS) for dense depth mapping.
    - Downward Facing Tracker (DFT) for relative localization.
+   - Stereo Auto-Calibration (SAC) for online calibration of a stereo camera 
+     rig.
    - Sequence Reader/Write (SRW) for reading and writing MV data sequences.
    - Visual Inertial Simultaneous Localization and Mapping (VISLAM) for 6-DOF
      localization and pose estimation.
@@ -91,7 +94,7 @@ extern "C"
 
    /************************************************************************//**
    @brief
-      Tracking state quality
+      Tracking state quality.
    ****************************************************************************/
    typedef enum
    {
@@ -116,28 +119,40 @@ extern "C"
 
    /************************************************************************//**
    @brief
-      Camera calibration parameters.  
-   @remark
-      There is a tool provided with the SDK for generating this information.
+      Camera calibration parameters.  This information could come from any
+      calibration procedure including the CAC feature within this library.\n
+
+      The coordinate system is centered on the camera.
+      The positive x-axis of camera points from the center principle point 
+      along that row of pixels in memory address increasing order.  The y-axis
+      points down from the camera center along a column of pixels also in memory
+      address increasing order but with a stride of the row width.  The z-axis 
+      points directly out along the optical axis.
+      
+      \n\b NOTE:  This is the same coordinate system used by OpenCV.
    @param pixelWidth
-      Width of the image in pixels
+      Width of the image in pixels.
    @param pixelHeight
-      Height of the image in pixels
+      Height of the image in pixels.
    @param memoryStride
       Memory width in bytes to the same pixel one row below.
    @param uvOffset
       Optional memory offset to UV plane for NV21 images.
    @param principalPoint[2]
-      Principal point [x,y].
+      Principal point [u, v] in pixels is defined relative to camera origin
+      in pixel space where [0, 0] is the upper-left image corner, u runs towards 
+      right along the row, and v runs downward along the column.
    @param focalLength[2]
-      Focal length [x,y].
+      Focal length [x, y] in pixels.
    @param distortion
       Distortion coefficients.  All unused array elements must be set to 0.
    @param distortionModel
       The distortion model is limited to the following values:
       - \b 0 = No distortion model\n
       - \b 4 = Four parameter polynomial [k1, k2, p1, p2].  Compatible with 
-              oldest Matlab Toolbox.  To fill from OpenCV, declare cv::Mat for 
+              the oldest Caltech Matlab Calibration Toolbox 
+              (http://www.vision.caltech.edu/bouguetj/calib_doc/).  To fill from
+              OpenCV, declare cv::Mat for 
               distortions with 5 rows (1 columns), set it to zeros and use flag
               cv::CALIB_FIX_K3 with cv::calibrateCamera.\n
       - \b 5 = Five parameter polynomial [k1, k2, p1, p2, k3].  Compatible with 
@@ -146,9 +161,9 @@ extern "C"
               cv::calibrateCamera.\n
       - \b 8 = Eight parameter rational polynomial (\i i.e., 
               CV_CALIB_RATIONAL_MODEL) [k1, k2, p1, p2, k3, k4, k5, k6].\n
-      - \b 10 = FishEye model [S.Shah, "Intrinsic Parameter Calibration Procedure
-               for a (High-Distortion) Fish-eye Lens Camera with Distortion 
-               Model and Accuracy Estimation"].
+      - \b 10 = FishEye model [S.Shah, "Intrinsic Parameter Calibration 
+               Procedure for a (High-Distortion) Fish-eye Lens Camera with  
+               Distortion Model and Accuracy Estimation"].
                To fill from OpenCV, use cv::fisheye::calibrate.
    ****************************************************************************/
    typedef struct
@@ -170,16 +185,37 @@ extern "C"
 
    /************************************************************************//**
    @brief
-      Configuration of stereo rig.
+      Stereo rig configuration.  This information could come from any
+      calibration procedure including the SAC feature within this library.\n
+
+      The coordinate system is centered on camera[0].
+      The positive x-axis of camera[0] points from the camera[0] center along 
+      the line between the cameras to the center of camera[1].  The y-axis 
+      points down from the camera[0] center.  The z-axis points directly out 
+      along the camera[0] optical axis.  This is the same coordinate system used
+      by OpenCV.\n
    @param translation[3]
-      Relative distance in meters between cameras.
+      Relative distance in meters added to the camera[1] origin to align to the
+      coordinate system of camera[0].  Therefore translation[0] is usually a
+      negative number.
+      \n translation[0] = x-axis translation along the line between cameras.
+      \n translation[1] = y-axis translation downward.
+      \n translation[2] = z-axis translation (defined from the x-y plane).
+      \n\b NOTE:  Same as self.T from ROS camera calibration tool and same as T
+      from OpenCV cvStereoCalibrate() function.
    @param rotation[3]
       Relative rotation between cameras.  The rotation is a scaled axis-angle 
-      vector representation of the rotation between the two cameras. 
+      vector representation of the rotation between the two cameras also known
+      as the Rodrigues' rotation formula.  See https://jsfiddle.net/1gej4qyp/ 
+      for example of converting a rotation matrix to scales-axis representation.
+      
+      \n\b NOTE:  Same as R from OpenCV cvStereoCalibrate() function.  The ROS 
+      calibration tool output self.R would be the input rotation matrix to the
+      Rodrigues' formula.
    @param camera[2]
       Left/right camera calibrations.
    @param correctionFactors[4]
-      Polynomial coefficients for distance correction function.
+      Polynomial coefficients for a distance-to-distance correction function.
    ****************************************************************************/
    typedef struct
    {
@@ -215,14 +251,14 @@ extern "C"
 
    /************************************************************************//**
    @brief
-       Pose information in Euler-Translation form.
+      Pose information in Euler-Translation form.
    @param translation[3]
       Translation vector in use defined units.
    @param euler[3]
       Euler angles in the Tait-Bryan ZYX convention.
-      \n euler[0] = rotation about x-axis
-      \n euler[1] = rotation about y-axis
-      \n euler[2] = rotation about z-axis (defined from y-axis)
+      \n euler[0] = rotation about x-axis.
+      \n euler[1] = rotation about y-axis.
+      \n euler[2] = rotation about z-axis (defined from y-axis).
    ****************************************************************************/
    typedef struct
    {
@@ -264,9 +300,9 @@ extern "C"
    @brief
       Convert Rotation-Translation pose to Euler-Translation.  Follows 
       Tait-Bryan convention so that:
-      \n euler[0] = rotation about x-axis
-      \n euler[1] = rotation about y-axis
-      \n euler[2] = rotation about z-axis (defined from y-axis)
+      \n euler[0] = rotation about x-axis.
+      \n euler[1] = rotation about y-axis.
+      \n euler[2] = rotation about z-axis (defined from y-axis).
    ****************************************************************************/
    MV_API void mvPose6DRTto6DET( mvPose6DRT* pose, mvPose6DET* mvPose );
 
@@ -290,7 +326,7 @@ extern "C"
    @brief
       OpenGL helper function.
    @param transpose
-      Flag of whether transpose is needed
+      Flag of whether transpose is needed.
    ****************************************************************************/
    MV_API void mvGetGLProjectionMatrix( mvCameraConfiguration* camera,
                                         float64_t nearClip, float64_t farClip,
@@ -299,20 +335,20 @@ extern "C"
 
    /************************************************************************//**
    @brief
-      Get Yaw, Pitch and Roll of camera pose (assuming NIDEC coordinate system) 
-      Z up, Y right, X out of target and camera system is x right, y down and z 
-      out of camera
+      Get Yaw, Pitch, and Roll of camera pose in target coordinate system
+      (Z up, Y right, X out of target and camera system is x right, y down and z
+      out of camera).
    @param pose
-      Pose to calculate angles from
+      Pose to calculate angles from.
    @param yaw
       Results of yaw calculation, rotation of x axis direction y (in x/y plane)
-      (target coordinates)
+      (target coordinates).
    @param pitch
-      Results of pitch calculation, rotation of z axis direction x (in z/x plane)
-      (target coordinates)
+      Results of pitch calculation, rotation of z axis direction x
+      (in z/x plane) (target coordinates).
    @param roll
       Results of roll calculation, rotation of z axis direction y (in z/y plane)
-      (target coordinates)
+      (target coordinates).
    ****************************************************************************/
    MV_API void mvPoseAngles( mvPose6DRT* pose, float* yaw, float* pitch, 
                              float* roll );
