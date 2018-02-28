@@ -13,7 +13,6 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 #include "mvWEF.h"
 
 
-
 extern std::vector<std::string> imageList;
 extern int sequence;
 
@@ -33,6 +32,9 @@ extern queue_mt<mvWEFPoseVelocityTime> gMotionWEPoseQueue;
 #endif
 
 using namespace camera;
+extern bool gVSALMRunning;
+extern VSLAMParameter vslamPara;
+
 VirtualSensorDevice::VirtualSensorDevice( const char * configureFile )
 {
    sequence = 0;
@@ -41,7 +43,9 @@ VirtualSensorDevice::VirtualSensorDevice( const char * configureFile )
    mWheel = NULL;
    lastImageIndex = 0;
    curImageIndex = 0;
-   mWheel = new VirtualWheel( wheelodomName );
+
+   if(vslamPara.wheelEnabled)
+     mWheel = new VirtualWheel( wheelodomName );
 }
 
 VirtualSensorDevice::~VirtualSensorDevice()
@@ -83,6 +87,7 @@ void VirtualSensorDevice::virtualSensorDeviceProc()
    size_t indexDot, index;
    int64_t timeStamp = 0;
    std::string stamp;
+   bool isWheelodomValid = true; //change to false only when wheel.txt contains some errors. If there is no wheel.txt, its value keeps untouched
 
    const uint32_t imageWidth = 640;
    const uint32_t imageHeight = 480;
@@ -91,15 +96,13 @@ void VirtualSensorDevice::virtualSensorDeviceProc()
    memset( imageBuf, 0, pixelNum / 4 * 5 );
 
    cameraMutex.lock();
-   mvWEFPoseVelocityTime wheelodom;   
-   bool firstWheelodomValid = false;
-   if( mWheel )
-   {
-      firstWheelodomValid = mWheel->GetWheelOdom( wheelodom );
-   }
+   mvWEFPoseVelocityTime wheelodom;
    lastImageIndex = imageList.size();
-   for( curImageIndex = sequence; curImageIndex < lastImageIndex; curImageIndex++ )
+
+   if(vslamPara.wheelEnabled)
    {
+     for( curImageIndex = sequence; curImageIndex < lastImageIndex && isWheelodomValid; curImageIndex++ )
+     {
 
       image = cv::imread( imageList[curImageIndex] );
       printf( "%s\n", imageList[curImageIndex].c_str() );
@@ -120,7 +123,7 @@ void VirtualSensorDevice::virtualSensorDeviceProc()
       }
       uint8_t * srcImage = (uint8_t *)iImage.data;
       uint8_t * desImage = imageBuf;
-      for( uint32_t i = 0; i < pixelNum; i += 4, srcImage += 4, desImage += 5 )
+      for( uint32_t i = 0; i < pixelNum && srcImage != NULL; i += 4, srcImage += 4, desImage += 5 )
       {
          memcpy( desImage, srcImage, sizeof( uint8_t ) * 4 );
       }
@@ -129,26 +132,33 @@ void VirtualSensorDevice::virtualSensorDeviceProc()
       index = imageList[curImageIndex].find_last_of( '_' );
       stamp = imageList[curImageIndex].substr( index + 1, indexDot - index - 1 );
       timeStamp = std::stoll( stamp );
+
+      // skip images if wheel is ahead of camera too much
+      static bool frameSkiped = false;
+      if( mWheel && !frameSkiped )
+      {
+         frameSkiped = true;
+         bool isWheelodomValid = mWheel->GetWheelOdom( wheelodom );
+         if( isWheelodomValid )
+         {
+            int64_t timeDelta = timeStamp - wheelodom.timestampUs; // timestampUs is actually in Nanosecond here
+            if( timeDelta < 0 )
+            {
+               curImageIndex += (uint32_t)(-timeDelta) / 66000000;
+               continue;
+            }
+         }
+      }
+
+
       VirtualCameraFrame frame( (uint8_t *)imageBuf, timeStamp );
       mListener->onPreviewFrame( &frame );
 
-      if( firstWheelodomValid )
-      {
-         int64_t timeDelta;
-         timeDelta = timeStamp - wheelodom.timestampUs;
-         if( timeDelta > -20000000 )
-         {
-            wheelodom.timestampUs /= 1000;
-            gWEPoseQueueWheel2VSLAM.check_push( wheelodom );
-            gWEPoseQueue.check_push( wheelodom );
-            firstWheelodomValid = false;
-         }
-      }
-      if( mWheel && firstWheelodomValid == false )
+      if( mWheel )
       {
          // reading wheel odom data
          int64_t timeDelta;
-         bool isWheelodomValid;
+
          do
          {
             isWheelodomValid = mWheel->GetWheelOdom( wheelodom );
@@ -169,8 +179,101 @@ void VirtualSensorDevice::virtualSensorDeviceProc()
          } while( timeDelta > -20000000 && isWheelodomValid );
       }
 
-      VSLAM_MASTER_SLEEP( 50 );
+      VSLAM_MASTER_SLEEP( 50 ); // sleep to make sure both primary and secondary can access g_ImageBuf
+
+      if( !gVSALMRunning )
+          break;
+     }
    }
+   //infinite mode without wheel
+   else
+   {
+       uint32_t img_idx = 0;
+       uint32_t loop_time;
+
+       for(loop_time = 0; loop_time < 10000; loop_time++ ) //more than 24 hours is enough
+       {
+          //from begin to end
+          for( curImageIndex = sequence; curImageIndex < lastImageIndex; curImageIndex++ )
+          {
+           image = cv::imread( imageList[curImageIndex] );
+           printf( "%s\n", imageList[curImageIndex].c_str() );
+           if( nullptr == image.data )
+           {
+              printf( "Cannot read image with name: %s\n", imageList[curImageIndex].c_str() );
+              imageList.resize( curImageIndex );
+              break;
+           }
+
+           if( image.channels() != 1 )
+           {
+              cv::cvtColor( image, iImage, cv::COLOR_BGR2GRAY );
+           }
+           else
+           {
+              iImage = image;
+           }
+           uint8_t * srcImage = (uint8_t *)iImage.data;
+           uint8_t * desImage = imageBuf;
+           for( uint32_t i = 0; i < pixelNum; i += 4, srcImage += 4, desImage += 5 )
+           {
+              memcpy( desImage, srcImage, sizeof( uint8_t ) * 4 );
+           }
+
+           img_idx++;
+           timeStamp = 66000ll * img_idx;
+
+           VirtualCameraFrame frame( (uint8_t *)imageBuf, timeStamp );
+           mListener->onPreviewFrame( &frame );
+
+           VSLAM_MASTER_SLEEP( 50 ); // sleep to make sure both primary and secondary can access g_ImageBuf
+
+           if( !gVSALMRunning )
+               goto stop;
+          }
+
+          //from end to begin
+          for( curImageIndex = lastImageIndex -1 ; curImageIndex >= 0; curImageIndex-- )
+          {
+           image = cv::imread( imageList[curImageIndex] );
+           printf( "%s\n", imageList[curImageIndex].c_str() );
+           if( nullptr == image.data )
+           {
+              printf( "Cannot read image with name: %s\n", imageList[curImageIndex].c_str() );
+              imageList.resize( curImageIndex );
+              break;
+           }
+
+           if( image.channels() != 1 )
+           {
+              cv::cvtColor( image, iImage, cv::COLOR_BGR2GRAY );
+           }
+           else
+           {
+              iImage = image;
+           }
+           uint8_t * srcImage = (uint8_t *)iImage.data;
+           uint8_t * desImage = imageBuf;
+           for( uint32_t i = 0; i < pixelNum; i += 4, srcImage += 4, desImage += 5 )
+           {
+              memcpy( desImage, srcImage, sizeof( uint8_t ) * 4 );
+           }
+
+           img_idx++;
+           timeStamp = 66000ll * img_idx;
+
+           VirtualCameraFrame frame( (uint8_t *)imageBuf, timeStamp );
+           mListener->onPreviewFrame( &frame );
+
+           VSLAM_MASTER_SLEEP( 50 ); // sleep to make sure both primary and secondary can access g_ImageBuf
+
+           if( !gVSALMRunning )
+               goto stop;
+          }
+       }
+   }
+
+stop:
    exitMainThread();
    delete[] imageBuf;
 

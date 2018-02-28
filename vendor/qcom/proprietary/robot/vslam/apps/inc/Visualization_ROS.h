@@ -26,25 +26,33 @@ public:
 
    virtual void PublishOriginalImage( const uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight );
    virtual void PublishUndistortedImage( const uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight );
-   virtual void ShowPoints( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight );
+   virtual vslamStatus ShowPoints( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight, std::string title = "" );
    virtual void PublishRobotPose( const mvWEFPoseVelocityTime & pose );
-   virtual void PublishCameraPose( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight );
+   virtual void PublishCameraPose( const mvWEFPoseStateTime & pose, const vslamStatus & status, std::string title = "" );
    virtual void PublishCorrectedCameraPose( const mvWEFPoseStateTime& );
    virtual void PublishExposureGain( float32_t exposure, float32_t gain, int exposureValue, int gainValue, float mean_brightness );
-
+   virtual void PublishVSLAMSchedulerState( const std::string & str )
+   {
+      std_msgs::String vslamSchedulerState;
+      vslamSchedulerState.data = str;
+      pub_vslamSchedulerState.publish( vslamSchedulerState );
+   }
+   virtual void ShowKeyframeLocationAndTrajectory(MapFocuser&, char *);
 
 private:
 
-   int frameIndex;
+   int frameIndex, frameIndexSecondary;
    uint32_t _outputEveryNFrame;
 
    image_transport::Publisher labelledImagePub;
+   image_transport::Publisher labelledImagePubSecondary;
    image_transport::Publisher originalImagePub;
    image_transport::Publisher undistortedImagePub;
    ros::Publisher pub_fusion;
    nav_msgs::Odometry odom_;
 
    ros::Publisher pubCameraOdom;
+   ros::Publisher pubCameraOdomSecondary;
    int32_t cameraOdomCount;
 
    ros::Publisher pubCorrectedCameraOdom;
@@ -59,7 +67,7 @@ private:
 
    ros::Publisher pub_keyframeNum;
    ros::Publisher pub_cpaParameter;
-   ros::Publisher pub_state;
+   ros::Publisher pub_vslamSchedulerState;
 
 };
 

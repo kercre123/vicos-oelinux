@@ -26,24 +26,24 @@ const bool PLAYBACK = false;
 #ifdef ROS_BASED
 const bool PLAYBACK = false;
 #else
-const bool PLAYBACK = false;
+const bool PLAYBACK = true;
 #endif
 #endif
 const int SleepTimeInMillisecond = 2;
 
 extern class Visualiser * visualiser;
 
-extern std::atomic <bool> noThreadruning;
-
-
 typedef struct _vslamparameter
 {
 public:
    // for keyframe creation
    float minDistance;
-   float minDistanceAngle;
-   float minAngleAngle;
+   float minAngle;
+   float cutoffDepth;
+   float convexFactor;
+   float deadZone;
    int minDelay;
+   bool useDynamicThreshold;
 
    //for partial map loading
    bool enablePartialLoading;
@@ -56,16 +56,20 @@ public:
    int delayLoading; /*minimum interval (# of frames) between two loading operations*/
 
    mvVSLAM* pVSlamObj;
+   mvVSLAM* pVSlamSecondaryObj;
 
    VSLAMParameter externalPara;
 
 public:
    _vslamparameter()
    {
-      minDistance = 0.25f;
-      minDistanceAngle = 0.1f;
-      minAngleAngle = 0.15f;
-      minDelay = 8;
+      minDistance = 0.28f;
+      minAngle = 0.12f;
+	  cutoffDepth = 2.5f;
+	  convexFactor = 2.0f;
+	  deadZone = 0.3f;
+	  useDynamicThreshold = true;
+      minDelay = 6;
 
       enablePartialLoading = false;
       radiusLargerSlice = 2;
@@ -78,6 +82,7 @@ public:
       delayLoading = 8;
 
       pVSlamObj = NULL;
+      pVSlamSecondaryObj = NULL;
    }
 
 } vslamparameterInternal;

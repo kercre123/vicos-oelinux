@@ -19,10 +19,6 @@ int ParseEngineParameters( const char * parameterFile, vslamparameterInternal & 
    if( !cfg.is_open() )
    {
       printf( "Fail to open configuration file: %s. Set default value. \n", fullName.c_str() );
-      parameter.minDistance = 0.2f;
-      parameter.minDistanceAngle = 0.1f;
-      parameter.minAngleAngle = 0.1f;
-      parameter.minDelay = 6;
       return 0;
    }
 
@@ -47,21 +43,36 @@ int ParseEngineParameters( const char * parameterFile, vslamparameterInternal & 
          iss >> parameter.minDistance;
          printf( "MinDistane for keyframe creator:       %f\n", parameter.minDistance );
       }
-      else if( itemName.compare( "MinDistanceAngle" ) == 0 )
+      else if( itemName.compare( "MinAngle" ) == 0 )
       {
-         iss >> parameter.minDistanceAngle;
-         printf( "MinDistanceAngle for keyframe creator: %f\n", parameter.minDistanceAngle );
+         iss >> parameter.minAngle;
+         printf( "MinAngle for keyframe creator: %f\n", parameter.minAngle );
       }
-      else if( itemName.compare( "MinAngleAngle" ) == 0 )
+      else if( itemName.compare( "CutoffDepth" ) == 0 )
       {
-         iss >> parameter.minAngleAngle;
-         printf( "MinAngleAngle for keyframe creator: %f\n", parameter.minAngleAngle );
+         iss >> parameter.cutoffDepth;
+         printf( "CutoffDepth for keyframe creator: %f\n", parameter.cutoffDepth);
       }
+	  else if (itemName.compare("ConvexFactor") == 0)
+	  {
+		  iss >> parameter.convexFactor;
+		  printf("ConvexFactor for keyframe creator: %f\n", parameter.convexFactor);
+	  }
+	  else if (itemName.compare("DeadZone") == 0)
+	  {
+		  iss >> parameter.deadZone;
+		  printf("DeadZone for keyframe creator: %f\n", parameter.deadZone);
+	  }
       else if( itemName.compare( "MinDelay" ) == 0 )
       {
          iss >> parameter.minDelay;
          printf( "MinDelay for keyframe creator:       %d\n", parameter.minDelay );
       }
+	  else if (itemName.compare("UseDynamicThreshold") == 0)
+	  {
+		  iss >> parameter.useDynamicThreshold;
+		  printf("UseDynamicThreshold for keyframe creator:       %d\n", parameter.useDynamicThreshold);
+	  }
    }
    return 0;
 }

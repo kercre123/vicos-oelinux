@@ -7,12 +7,14 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 
 #include "ScaleEstimation.h"
 #include "mvVWSLAM_app.h"
+#include <Visualization.h>
 #include <cmath>
 #include <numeric>
 #include <algorithm>
 
 ScaleEstimator gScaleEstimator;
 extern std::string Program_Root;
+extern class Visualiser * visualiser;
 
 void eulerToSO3( const float* euler, float * rotation )
 {
@@ -62,7 +64,7 @@ float32_t getOriDist( float32_t ori1, float32_t ori2 )
    }
    else if( dist < -1 * PI )
    {
-      dist += 2 * PI;
+      dist += (float)(2 * PI);
    }
    else if( dist < PI )
    {
@@ -70,7 +72,7 @@ float32_t getOriDist( float32_t ori1, float32_t ori2 )
    }
    else if( dist <= 2 * PI )
    {
-      dist = 2 * PI - dist;
+      dist = (float)(2 * PI - dist);
    }
    else
    {
@@ -79,102 +81,7 @@ float32_t getOriDist( float32_t ori1, float32_t ori2 )
 
    return dist;
 }
-
-
-bool ScaleEstimator::initialize()
-{
-   std::string strTranslation( "WEF.Tvb=" );
-   std::string strRotation( "WEF.Rvb=" );
-   float32_t translation[3];
-   float32_t rotation[3];
-
-   const char* parameterFile = "Configuration/vslam.cfg";// "/Configuration/WEF.cfg";
-   std::string fullName = Program_Root + parameterFile;
-   bool retVal = false;
-   std::string params;
-   FILE *fp;
-   fp = fopen( fullName.c_str(), "r" );
-   const int size = 256;
-   char linemsg[size];
-   int count = 0;
-   if( fp == NULL )
-      return retVal;
-   while( NULL != fgets( linemsg, size - 1, fp ) )
-   {
-      linemsg[size - 1] = 0;
-      std::string str( linemsg );
-      int len = str.length(); // strlen(linemsg);
-      if( linemsg[0] == '#' || len < 2 )
-         // comment line or empty string
-         continue;
-
-      // deal with UNIX or Windows Line terminator
-      if( linemsg[len - 1] == '\n' || linemsg[len - 1] == '\r' )
-      {
-         linemsg[len - 1] = '\0';
-      }
-      if( linemsg[len - 2] == '\n' || linemsg[len - 2] == '\r' )
-      {
-         linemsg[len - 2] = '\0';
-      }
-      //len = strlen(linemsg);
-      if( len < 1 )
-         // comment line or empty string
-         continue;
-
-      // parse the parameters from the input line
-      size_t resultT = str.find( "WEF.Tvb " );
-      size_t resultR = str.find( "WEF.Rvb " );
-      //if (str.find_first_of(strTranslation) != std::string::npos)
-      if( resultT == 0 )
-      {
-         int startIndex = str.find( strTranslation.c_str() ) + strTranslation.length();
-         for( int i = 0; i < 3; i++ )
-         {
-            std::string subStr = str.substr( startIndex );
-            int endIndex = subStr.find_first_of( "\t" );
-            // should check whether found or not
-            std::string dataStr = subStr.substr( 0, endIndex - 1 );
-            translation[i] = (float)atof( dataStr.c_str() );
-            startIndex = startIndex + endIndex + 1;
-         }
-         count++;
-      }
-      else if( resultR == 0 )//if (str.find_first_of(strRotation) != std::string::npos)
-      {
-         int startIndex = str.find( strRotation.c_str() ) + strRotation.length();
-         for( int i = 0; i < 3; i++ )
-         {
-            std::string subStr = str.substr( startIndex );
-            int endIndex = subStr.find_first_of( "\t" );
-            // should check whether found or not
-            std::string dataStr = subStr.substr( 0, endIndex - 1 );
-            rotation[i] = (float)atof( dataStr.c_str() );
-            startIndex = startIndex + endIndex + 1;
-         }
-         count++;
-      }
-      else
-      {
-         continue;
-      }
-   }
-   fclose( fp );
-
-   if( count == 2 )
-   {
-      retVal = true;
-      for( int i = 0; i < 3; i++ )
-      {
-         mPoseVBr[i] = rotation[i];
-         mPoseVBt[i] = translation[i];
-      }
-   }
-
-   return retVal;
-}
-
-
+  
 
 void ScaleEstimator::setScaleEstimationStatus( ScaleEstimationStatus status )
 {
@@ -256,11 +163,11 @@ ScaleEstimationStatus ScaleEstimator::getScaleEstimationStatus()
 
 void ScaleEstimator::setReinitTransformAndScalar()
 {
-   bool result = estimateScale();
+   bool result = estimateScale( 0.04f );
    failScaleFlag = !result;
 
-   wePoseQueue.clear();
-   vslamPoseQueue.clear();
+   wePoseQ.clear();
+   vslamPoseQ.clear();
 }
 
 
@@ -371,7 +278,7 @@ void addVector( float32_t * pose1, float32_t * pose2, float32_t scale, float32_t
 
 
 //#define debug_tranformation_flag
-bool ScaleEstimator::determineTransform( std::vector<mvWEFPoseStateTime> vslamPoseQ, std::vector<mvWEFPoseVelocityTime> wePoseQ )
+bool ScaleEstimator::determineTransform()
 {
    bool result = false;
    float32_t tempR[9];
@@ -550,6 +457,9 @@ bool ScaleEstimator::determineTransform( std::vector<mvWEFPoseStateTime> vslamPo
    addVector( Tsvk, tempT, -1.0, Tsv0 );
 
    // Rotation matrix to axis-angle conversion  
+   //Start pose of the scale estimation in the VSLAM coordination 
+   float32_t mPoseVWt[3];
+   float32_t mPoseVWr[3];
    rotationMetrix2axisAngle( Rsv0, mPoseVWr );
    mPoseVWt[0] = Tsv0[0]; mPoseVWt[1] = Tsv0[1]; mPoseVWt[2] = Tsv0[2];
 
@@ -577,35 +487,150 @@ bool ScaleEstimator::determineTransform( std::vector<mvWEFPoseStateTime> vslamPo
    return result;
 }
 
-
-bool ScaleEstimator::estimateScale()
+float32_t distWe( mvWEFPoseVelocityTime pose1, mvWEFPoseVelocityTime  pose2)
 {
-   // processing the vslam pose data
-   std::vector<mvWEFPoseVelocityTime> wePoseQ;
-   std::vector<mvWEFPoseStateTime> vslamPoseQ;
+   float32_t dist = sqrt( (pose1.pose.translation[0] - pose2.pose.translation[0]) * (pose1.pose.translation[0] - pose2.pose.translation[0])
+                                          + (pose1.pose.translation[1] - pose2.pose.translation[1]) * (pose1.pose.translation[1] - pose2.pose.translation[1])
+                                          + (pose1.pose.translation[2] - pose2.pose.translation[2]) * (pose1.pose.translation[2] - pose2.pose.translation[2]) );
+   return dist;
+}
+
+float32_t distVSLAM( mvWEFPoseStateTime pose1, mvWEFPoseStateTime  pose2 )
+{
+   float32_t x1 = pose1.poseWithState.pose.matrix[0][3];
+   float32_t y1 = pose1.poseWithState.pose.matrix[1][3];
+   float32_t z1 = pose1.poseWithState.pose.matrix[2][3];
+    
+   float32_t x2 = pose2.poseWithState.pose.matrix[0][3];
+   float32_t y2 = pose2.poseWithState.pose.matrix[1][3];
+   float32_t z2 = pose2.poseWithState.pose.matrix[2][3];
+
+   float32_t dist = sqrt( (x1 - x2) * (x1 - x2)
+                          + (y1 - y2) * (y1 - y2)
+                          + (z1 - z2) * (z1 - z2) );
+   return dist;
+}
+
+ScaleVerificationStatus ScaleEstimator::scaleVerification()
+{
+   ScaleVerificationStatus status = ScaleVerificationStatus::ScaleVerificationOngoing;
+   if( wePoseQ.size() < 2 )
+   {
+      return status;
+   }
+  
+   mvWEFPoseVelocityTime firstWheelPose = wePoseQ[0];
+   mvWEFPoseVelocityTime lastWheelPose = wePoseQ[wePoseQ.size() - 1];
+    
+   mvWEFPoseStateTime firstVSLAMPose = vslamPoseQ[0];
+   mvWEFPoseStateTime lastVSLAMPose = vslamPoseQ[vslamPoseQ.size() - 1];
+
+   float32_t weDist = distWe( firstWheelPose , lastWheelPose );
+   float32_t vslamDist = distVSLAM( firstVSLAMPose, lastVSLAMPose );
+
+   if( weDist > scaleVerificationV.smallDistThreshold && !scaleVerificationV.isVerifiedSmall)
+   { 
+      scaleVerificationV.isVerifiedSmall = true;
+
+      float32_t localScale = (float32_t)(weDist / vslamDist);
+      float32_t tmp = fabs( localScale / scale - 1.0f );
+      if( fabs( localScale / scale - 1.0 ) > scaleVerificationV.scaleRatioThreshold )
+      {
+         //scaleVerificationV.failTimes++;
+      }
+      else
+      {
+         scaleVerificationV.passTimes++;
+      }
+
+      printf( "SMALL: scaleVerificationV.failCnt = %d scaleVerificationV.passCnt = %d verScale = %f estScale = %f scaleRatio = %f\n",
+              scaleVerificationV.failTimes, scaleVerificationV.passTimes, localScale, scale, tmp );
+
+      std::string dataUsage = "smallScaleVerification";
+      visualiser->RecordPoseForScaleEstimation( vslamPoseQ, wePoseQ, dataUsage );
+      printf( "%s\n", dataUsage.c_str() ); 
+   }
+   else if( weDist > scaleVerificationV.largeDistThreshold )
+   {
+      float32_t localScale = (float32_t)(weDist / vslamDist);
+      float32_t tmp = fabs( localScale / scale - 1.0f );
+      if( fabs( localScale / scale - 1.0 ) > scaleVerificationV.scaleRatioThreshold )
+      {
+         scaleVerificationV.failTimes++;
+      }
+      else
+      {
+         scaleVerificationV.passTimes++;
+      }
+
+      printf( "LARGER: scaleVerificationV.failCnt = %d scaleVerificationV.passCnt = %d verScale = %f estScale = %f scaleRatio = %f\n",
+              scaleVerificationV.failTimes, scaleVerificationV.passTimes, localScale, scale, tmp );
+
+      std::string dataUsage = "largeScaleVerification";
+      visualiser->RecordPoseForScaleEstimation( vslamPoseQ, wePoseQ, dataUsage );
+      printf( "%s\n", dataUsage.c_str() );
+      //wePoseQ.clear();
+      //vslamPoseQ.clear();
+   }
+      
+   if( (scaleVerificationV.failTimes + scaleVerificationV.passTimes) >= scaleVerificationV.verfiNum )
+   {
+      if(scaleVerificationV.passTimes > scaleVerificationV.failTimes )
+         status = ScaleVerificationStatus::ScaleVerificationPass;
+      else
+         status = ScaleVerificationStatus::ScaleVerificationFail; 
+   }
+
+   //if( weDist > scaleVerificationV.largeDistThreshold )
+   //{
+   //   float32_t localScale = (float32_t)(weDist / vslamDist);
+   //   float32_t tmp = fabs( localScale / scale - 1.0 );
+   //   if( fabs( localScale / scale - 1.0 ) > scaleVerificationV.scaleRatioThreshold )
+   //   {
+   //      scaleVerificationV.failTimes++; 
+   //   }
+   //   else
+   //   {
+   //      scaleVerificationV.passTimes++; 
+   //   }
+
+   //   printf("scaleVerificationV.failCnt = %d scaleVerificationV.passCnt = %d verScale = %f estScale = %f scaleRatio = %f\n", 
+   //           scaleVerificationV.failTimes, scaleVerificationV.passTimes, localScale, scale, tmp);
+
+   //   std::string dataUsage = "scaleVerification";
+   //   visualiser->RecordPoseForScaleEstimation( vslamPoseQ, wePoseQ, dataUsage );
+   //   printf("%s\n", dataUsage);
+   //   wePoseQ.clear();
+   //   vslamPoseQ.clear();
+   //}
+
+   //if( (scaleVerificationV.failTimes + scaleVerificationV.passTimes) >= scaleVerificationV.verfiNum )
+   //{
+   //   if(scaleVerificationV.passTimes > scaleVerificationV.failTimes )
+   //      status = ScaleVerificationStatus::ScaleVerificationPass;
+   //   else
+   //      status = ScaleVerificationStatus::ScaleVerificationFail; 
+   //}
+    
+   return status; 
+}
+
+bool ScaleEstimator::estimateScale( const float minDist2 )
+{
    mvWEFPoseStateTime vslamPose1, vslamPose2;
    mvWEFPoseVelocityTime wePose1, wePose2;
 
    double weDistance = 0;
    double vslamDistance = 0;
-   bool hasPoseFlag = vslamPoseQueue.try_pop( vslamPose1 );
+   // processing the vslam pose data
+   bool hasPoseFlag = vslamPoseQ.size() > 1;
    if( hasPoseFlag == false )
       return false;
-   vslamPoseQ.push_back( vslamPose1 );
-   while( vslamPoseQueue.try_pop( vslamPose2 ) )
-   {
-      vslamPoseQ.push_back( vslamPose2 );
-   }
 
    // processing the wheel pose data
-   hasPoseFlag = wePoseQueue.try_pop( wePose1 );
+   hasPoseFlag = wePoseQ.size() > 1;
    if( hasPoseFlag == false )
       return false;
-   wePoseQ.push_back( wePose1 );
-   while( wePoseQueue.try_pop( wePose2 ) )
-   {
-      wePoseQ.push_back( wePose2 );
-   }
 
 #ifdef debug_file_
    // for debug
@@ -640,10 +665,12 @@ bool ScaleEstimator::estimateScale()
 
    if( true )
    {
+      std::string dataUsage = "scaleEstimation";
+      visualiser->RecordPoseForScaleEstimation( vslamPoseQ, wePoseQ, dataUsage );
       posePair* posePairQ = new posePair[vslamPoseQ.size()];
 
       unsigned int posePairQLen = 0;
-      bool successScaleCalFlag = mvWEF_EstimateScale( (mvWEFPoseStateTime*)&(*vslamPoseQ.begin()), vslamPoseQ.size(), (mvWEFPoseVelocityTime*)&(*wePoseQ.begin()), wePoseQ.size(), &scale, posePairQ, &posePairQLen );
+      bool successScaleCalFlag = mvWEF_EstimateScale( (mvWEFPoseStateTime*)&(*vslamPoseQ.begin()), vslamPoseQ.size(), (mvWEFPoseVelocityTime*)&(*wePoseQ.begin()), wePoseQ.size(), minDist2, &scale, posePairQ, &posePairQLen );
       bool successTransformCalFlag = true;
       if( successScaleCalFlag )
       {
@@ -656,7 +683,7 @@ bool ScaleEstimator::estimateScale()
             wePoseQ.push_back( posePairQ[0].wePose );
             vslamPoseQ.push_back( posePairQ[posePairQLen - 1].pose );
             wePoseQ.push_back( posePairQ[posePairQLen - 1].wePose );
-            successTransformCalFlag = determineTransform( vslamPoseQ, wePoseQ );
+            successTransformCalFlag = determineTransform();
          }
          else
          {
@@ -746,7 +773,7 @@ bool ScaleEstimator::estimateScale()
       bool successTransformCalFlag = true;
       if( gScaleEstimator.lastGoodvslamPose.timestampUs != -1 )
       {
-         successTransformCalFlag = determineTransform( vslamPoseQ, wePoseQ );
+         successTransformCalFlag = determineTransform();
       }
       else
       {

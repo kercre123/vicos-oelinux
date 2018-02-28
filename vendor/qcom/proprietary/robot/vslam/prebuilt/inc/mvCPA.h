@@ -55,11 +55,11 @@ extern "C"
    /************************************************************************//**
    @brief
       CPA algorithm mode.
-      - MVCPA_MODE_LEGACY:  Unlikely to be the best choice for any use case.
+    - MVCPA_MODE_LEGACY:  Unlikely to be the best choice for any use case.
       \n\b WARNING:  to be deprecated.
-      - MVCPA_MODE_COST:  A good trade off of illumination for viewable images
+    - MVCPA_MODE_COST:  A good trade off of illumination for viewable images
       while still favoring computer vision needs over illumination.
-      - MVCPA_MODE_HISTOGRAM:  Most focused towards computer vision needs and
+    - MVCPA_MODE_HISTOGRAM:  Most focused towards computer vision needs and
       best at supporting higher speeds of camera movement.
    ****************************************************************************/
    typedef enum
@@ -73,9 +73,9 @@ extern "C"
    /************************************************************************//**
    @brief
       CPA image format.
-      - MVCPA_FORMAT_GRAY8:  8-bit grayscale format
-      - MVCPA_FORMAT_RAW10:  Android 10-bit raw format
-      - MVCPA_FORMAT_RAW12:  Android 12-bit raw format
+      - MVCPA_FORMAT_GRAY8:  8-bit grayscale format.
+      - MVCPA_FORMAT_RAW10:  Android 10-bit raw format.
+      - MVCPA_FORMAT_RAW12:  Android 12-bit raw format.
    ****************************************************************************/
    typedef enum
    {
@@ -87,7 +87,7 @@ extern "C"
 
    /************************************************************************//**
    @brief
-      Configuration parameters for initializing mvCPA
+      Configuration parameters for initializing mvCPA.
    @details
       MVCPA_MODE_HISTOGRAM follows the steps below, and stops when desired frame
       brightness is achieved:
@@ -97,22 +97,22 @@ extern "C"
       4. Increase gain until hitting max
       5. Increase exposure until hitting max
    @param width
-      Input image width
+      Input image width.
    @param height
-      Input image height
+      Input image height.
    @param format
-      Input image format
+      Input image format.
    @param cpaType
-      CPA algorithm type
+      CPA algorithm type.
    @param legacyCost
-      Parameters for cpaType MVCPA_MODE_LEGACY or MVCPA_MODE_COST
+      Parameters for cpaType MVCPA_MODE_LEGACY or MVCPA_MODE_COST.
    @param startExposure
       Initial exposure value (normalized to 0.0 - 1.0 range).
    @param startGain
       Initial gain value (normalized to 0.0 - 1.0 range).
    @param filterSize
       Internal filter size for exposure and gain changes [larger the slower
-      convergence (0 = no filtering)]
+      convergence (0 = no filtering)].
    @param gainCost
       Cost to increase gain used for cost based approach.  Guidelines:
       \n gainCost and exposureCost ratio will in the long run be the ratio
@@ -123,8 +123,19 @@ extern "C"
       \n If sum < 1.0 brightness goal is more important.
    @param exposureCost
       Cost to increase exposure.
+   @param enableHistogramCost
+      Turns on extra saturation protection for cost based algorithm.
+   @param thresholdUnderflowed
+      Allowed brightness margin based on default goal 128 (e.g., with 
+      systemBrightnessMargin 30, the brightness goal can be dynamically in
+      [98, 158].
+   @param thresholdSaturated
+      Overexposure threshold on mean brightness of a single block.
+   @param systemBrightnessMargin
+      Underexposure threshold on mean brightness of a single block.
+
    @param histogram
-      Parameters for cpaType MVCPA_MODE_HISTOGRAM
+      Parameters for cpaType MVCPA_MODE_HISTOGRAM.
    @param exposureMin
       Minimum exposure value (0 < exposureMin).
       Typically very close to 0, such as 0.001.
@@ -174,7 +185,7 @@ extern "C"
          uint32_t filterSize = 2;
          float32_t gainCost = 0.3333f;
          float32_t exposureCost = 1.0f;
-         bool enableHistogramCost = 0;
+         bool enableHistogramCost = false;
          uint8_t thresholdUnderflowed = 0;
          uint8_t thresholdSaturated = 255;
          float32_t systemBrightnessMargin = 0.f;
@@ -196,20 +207,20 @@ extern "C"
 
    /************************************************************************//**
    @brief
-      Initialize Camera Parameter Adjustment (CPA) object
+      Initialize Camera Parameter Adjustment (CPA) object.
    @param cpaConfig
       Configuration parameters to initialize CPA.
    @return
-      Pointer to CPA object; returns NULL if failed
+      Pointer to CPA object; returns NULL if failed.
    ****************************************************************************/
    MV_API mvCPA* mvCPA_Initialize( const mvCPA_Configuration* cpaConfig );
 
 
    /************************************************************************//**
    @brief
-      Deinitialize Camera Parameter Adjustment (CPA) object
+      Deinitialize Camera Parameter Adjustment (CPA) object.
    @param pmObj
-      Pointer to CPA object
+      Pointer to CPA object.
    ****************************************************************************/
    void MV_API mvCPA_Deinitialize( mvCPA* pObj );
 
@@ -219,15 +230,15 @@ extern "C"
       Add image to adjust exposure and gain parameters on. (Assumption is that
       this was taking with last returned parameters).
    @param pObj
-      Pointer to CPA object
+      Pointer to CPA object.
    @param pixels
-      Pointer to Luminance pixels of camera frame
+      Pointer to Luminance pixels of camera frame.
    @param width
-      Width of the given frame data
+      Width of the given frame data.
    @param height
-      Height of the given frame data
+      Height of the given frame data.
    @param stride
-      Stride of the given frame data
+      Stride of the given frame data.
    ****************************************************************************/
    MV_API void mvCPA_AddFrame( mvCPA* pObj, const uint8_t* pixels,
                                uint32_t stride );
@@ -235,13 +246,13 @@ extern "C"
 
    /************************************************************************//**
    @brief
-      Access estimated exposure and gain values
+      Access estimated exposure and gain values.
    @param pObj
-      Pointer to CPA object
+      Pointer to CPA object.
    @param exposure
-      Pointer to returned new exposure value estimation
+      Pointer to returned new exposure value estimation.
    @param gain
-      Pointer to returned new gain values estimation
+      Pointer to returned new gain values estimation.
    ****************************************************************************/
    MV_API void mvCPA_GetValues( mvCPA* pObj, float32_t* exposure,
                                 float32_t* gain );
