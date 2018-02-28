@@ -21,6 +21,7 @@ bin_PROGRAMS = viccubetool
 viccubetool_CC = @CC@
 viccubetool_SOURCES = 	main.cpp \
 			viccubetool.cpp \
+			$(COMMON_DIR)/crc32.cpp \
 			$(COMMON_DIR)/fileutils.cpp \
 			$(COMMON_DIR)/stringutils.cpp \
 			$(COMMON_DIR)/taskExecutor.cpp \

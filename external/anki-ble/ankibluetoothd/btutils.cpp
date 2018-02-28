@@ -33,7 +33,7 @@ static uint8_t hex_char_to_byte(char input) {
   return 0;
 }
 
-std::string bt_value_to_string(int length, uint8_t* value) {
+std::string bt_value_to_string(int length, const uint8_t* value) {
   if (!value) {
     return "<null>";
   }
@@ -74,7 +74,7 @@ std::string bt_uuid_t_to_string(const bt_uuid_t* uuid) {
 
   const uint8_t* u = uuid->uu;
   snprintf(str, sizeof(str),
-           "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+           "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
            u[15], u[14], u[13], u[12],
            u[11], u[10],
            u[9], u[8],
@@ -146,12 +146,54 @@ std::string bt_status_t_to_string(const bt_status_t status) {
       return "BT_STATUS_WAKELOCK_ERROR";
     default:
       {
-        if ((int) status == 0x85) {
-          return "GATT_ERROR";
+        int int_status = (int) status;
+        switch(int_status) {
+          case kGattErrorIllegalParameter:
+            return "GATT_ERROR_ILLEGAL_PARAMETER";
+          case kGattErrorNoResources:
+            return "GATT_ERROR_NO_RESOURCES";
+          case kGattErrorInternalError:
+            return "GATT_ERROR_INTERNAL_ERROR";
+          case kGattErrorWrongState:
+            return "GATT_ERROR_WRONG_STATE";
+          case kGattErrorDbFull:
+            return "GATT_ERROR_DB_FULL";
+          case kGattErrorBusy:
+            return "GATT_ERROR_BUSY";
+          case kGattErrorError:
+            return "GATT_ERROR";
+          case kGattErrorCmdStarted:
+            return "GATT_ERROR_CMD_STARTED";
+          case kGattErrorPending:
+            return "GATT_ERROR_PENDING";
+          case kGattErrorAuthFail:
+            return "GATT_ERROR_AUTH_FAIL";
+          case kGattErrorMore:
+            return "GATT_ERROR_MORE";
+          case kGattErrorInvalidConfig:
+            return "GATT_ERROR_INVALID_CONFIG";
+          case kGattErrorServiceStarted:
+            return "GATT_ERROR_SERVICE_STARTED";
+          case kGattErrorEncryptedNoMITM:
+            return "GATT_ERROR_ENCRYPTED_NO_MITM";
+          case kGattErrorNotEncrypted:
+            return "GATT_ERROR_NOT_ENCRYPTED";
+          case kGattErrorCongested:
+            return "GATT_ERROR_CONGESTED";
+          case kGattErrorCCCDImproperlyConfigured:
+            return "GATT_ERROR_CCCD_IMPROPERLY_CONFIGURED";
+          case kGattErrorProcedureInProgress:
+            return "GATT_ERROR_PROCEDURE_IN_PROGRESS";
+          case kGattErrorOutOfRange:
+            return "GATT_ERROR_OUT_OF_RANGE";
+          default:
+            {
+              std::ostringstream oss;
+              oss << "Unknown (" << int_status << ")";
+              return oss.str();
+            }
+            break;
         }
-        std::ostringstream oss;
-        oss << "Unknown (" << (int) status << ")";
-        return oss.str();
       }
   }
 }

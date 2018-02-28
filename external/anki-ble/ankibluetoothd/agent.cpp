@@ -43,6 +43,7 @@ Agent::Agent(struct ev_loop* loop)
   cbs.congestion_cb = &Agent::StaticPeripheralCongestionCallback;
   cbs.scan_result_cb = &Agent::StaticCentralScanResultCallback;
   cbs.outbound_connection_cb = &Agent::StaticOutboundConnectionCallback;
+  cbs.notification_received_cb = &Agent::StaticNotificationReceivedCallback;
   Anki::BluetoothStack::SetCallbacks(&cbs);
 }
 
@@ -346,7 +347,23 @@ void Agent::StaticOutboundConnectionCallback(const std::string& address,
   }
 }
 
+void Agent::NotificationReceivedCallback(const std::string& address,
+                                         const int conn_id,
+                                         const std::string& char_uuid,
+                                         const std::vector<uint8_t>& value)
+{
+  OnReceiveMessage(conn_id, char_uuid, value);
+}
 
+void Agent::StaticNotificationReceivedCallback(const std::string& address,
+                                               const int conn_id,
+                                               const std::string& char_uuid,
+                                               const std::vector<uint8_t>& value)
+{
+  if (sAgent) {
+    sAgent->NotificationReceivedCallback(address, conn_id, char_uuid, value);
+  }
+}
 
 void Agent::OnNewIPCClient(const int sockfd)
 {
@@ -369,6 +386,8 @@ void Agent::SendMessage(const int connection_id,
       return;
     }
     SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
+  } else {
+    (void) BluetoothStack::WriteGattCharacteristic(connection_id, characteristic_uuid, reliable, value);
   }
 }
 
@@ -514,7 +533,7 @@ void Agent::StopScan() {
 }
 
 void Agent::ConnectToPeripheral(const std::string& address) {
-  bool result = BluetoothStack::ConnectToBLEPeripheral(address, false);
+  bool result = BluetoothStack::ConnectToBLEPeripheral(address, true);
   if (!result) {
     std::vector<GattDbRecord> records;
     OnOutboundConnectionChange(address, 0, 0, records);

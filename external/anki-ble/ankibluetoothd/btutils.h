@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-std::string bt_value_to_string(int length, uint8_t* value);
+std::string bt_value_to_string(int length, const uint8_t* value);
 std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr);
 void bt_bdaddr_t_from_string(const std::string& address, bt_bdaddr_t* bda);
 std::string bt_uuid_t_to_string(const bt_uuid_t* uuid);

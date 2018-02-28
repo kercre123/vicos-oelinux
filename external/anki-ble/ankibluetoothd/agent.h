@@ -56,6 +56,11 @@ class Agent : public IPCServer {
   void OutboundConnectionCallback(const std::string& address,
                                   const int connected,
                                   const BluetoothGattConnection& connection);
+  void NotificationReceivedCallback(const std::string& address,
+                                    const int conn_id,
+                                    const std::string& char_uuid,
+                                    const std::vector<uint8_t>& value);
+
 
   static void StaticInboundConnectionCallback(int conn_id, int connected);
   static void StaticPeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
@@ -69,6 +74,10 @@ class Agent : public IPCServer {
   static void StaticOutboundConnectionCallback(const std::string& address,
                                                const int connected,
                                                const BluetoothGattConnection& connection);
+  static void StaticNotificationReceivedCallback(const std::string& address,
+                                                 const int conn_id,
+                                                 const std::string& char_uuid,
+                                                 const std::vector<uint8_t>& value);
 
   std::mutex mutex_;
   BLEAdvertiseSettings ble_advertise_settings_;

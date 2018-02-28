@@ -38,6 +38,10 @@ bool DisconnectGattPeer(int conn_id);
 bool RemoveGattService(BluetoothGattService* service);
 bool SendGattIndication(int attribute_handle, int conn_id, int confirm,
                         const std::vector<uint8_t>& value);
+bool WriteGattCharacteristic(const int conn_id,
+                             const std::string& uuid,
+                             const bool reliable,
+                             const std::vector<uint8_t>& value);
 bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
                   const std::vector<uint8_t>& value);
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings);

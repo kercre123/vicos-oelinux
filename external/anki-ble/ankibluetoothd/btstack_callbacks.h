@@ -31,6 +31,10 @@ typedef void (*ScanResultCallback)(const std::string& address,
 typedef void (*OutboundConnectionCallback)(const std::string& address,
                                            const int connected,
                                            const BluetoothGattConnection& connection);
+typedef void (*NotificationReceivedCallback)(const std::string& address,
+                                             const int conn_id,
+                                             const std::string& char_uuid,
+                                             const std::vector<uint8_t>& value);
 
 typedef struct Callbacks {
   InboundConnectionCallback inbound_connection_cb;
@@ -40,6 +44,7 @@ typedef struct Callbacks {
   CongestionCallback congestion_cb;
   ScanResultCallback scan_result_cb;
   OutboundConnectionCallback outbound_connection_cb;
+  NotificationReceivedCallback notification_received_cb;
 } Callbacks;
 
 } // namespace BluetoothStack
