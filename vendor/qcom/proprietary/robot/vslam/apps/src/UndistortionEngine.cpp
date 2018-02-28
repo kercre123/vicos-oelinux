@@ -6,6 +6,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 *******************************************************************************/
 
 #include "UndistortionEngine.h"
+#include "math.h"
 
 UndistortionEngine::UndistortionEngine()
 {
@@ -23,10 +24,6 @@ UndistortionEngine::~UndistortionEngine()
       delete[] indBL;
    }
 
-   //if( wind != NULL )
-   //{
-   //   delete[] wind;
-   //}
    if (wx != NULL)
    {
       delete [] wx;
@@ -40,15 +37,38 @@ UndistortionEngine::~UndistortionEngine()
 
 }
 
-bool UndistortionEngine::init( float32_t cameraMatrix[9], float32_t distCoeffs[8], float32_t newCameraMatrix[9],
-                            int32_t inptWidth, int32_t inputHeight, int32_t outputPixelWidth, int outputPixelHeight )
+bool UndistortionEngine::init( float32_t cameraMatrix[9], DistortionModel dModel, float32_t * distCoeffs, int32_t pixelWidth, int32_t pixelHeight,
+                               float32_t newCameraMatrix[9], int32_t outputPixelWidth, int outputPixelHeight )
 { 
   
    outputHeight = outputPixelHeight;
    outputWidth = outputPixelWidth;
 
-   PrepareRemap( cameraMatrix, distCoeffs, newCameraMatrix,
-                 inptWidth, inputHeight, outputPixelWidth, outputPixelHeight );
+   float32_t * mapX = new float32_t[outputWidth * outputHeight];
+   float32_t * mapY = new float32_t[outputWidth * outputHeight];
+
+   indBL = new indBL_t[outputWidth*outputHeight];
+   wx = new uint8_t[outputWidth*outputHeight];
+   wy = new uint8_t[outputWidth*outputHeight];
+
+   switch( dModel )
+   {
+      case RationalModel_12:
+         CalMapRational12( cameraMatrix, distCoeffs, newCameraMatrix, outputWidth, outputHeight, mapX, mapY );
+         break;
+      case FisheyeModel_4:
+         CalMapFisheye4( cameraMatrix, distCoeffs, newCameraMatrix, outputWidth, outputHeight, mapX, mapY );
+         break;
+      default:
+         break;
+   }
+   
+
+   GetRemapindexBL_RawFormat( mapX, mapY, outputWidth, outputHeight, pixelWidth, pixelHeight, indBL );
+
+   delete[] mapX;
+   delete[] mapY;
+
    return true;
 }
 
@@ -278,8 +298,7 @@ void UndistortionEngine::RemapBL_2( unsigned char * __restrict src, unsigned cha
 void UndistortionEngine::RemapBL_2( unsigned char * __restrict src, unsigned char * __restrict dst, struct indBL_t * __restrict idx,
                      unsigned char * __restrict wx, unsigned char * __restrict wy, int w, int h )
 {
-   int i;  
-   //int all = eagleCaptureParams.outputPixelWidth * eagleCaptureParams.outputPixelHeight;
+   int i;     
    int all = w*h;
    
    for( i = 0; i < all; ++i )
@@ -288,8 +307,7 @@ void UndistortionEngine::RemapBL_2( unsigned char * __restrict src, unsigned cha
       unsigned char p2 = src[idx[i].indBL2];
       unsigned char p3 = src[idx[i].indBL3];
       unsigned char p4 = src[idx[i].indBL4];
-      //unsigned char w1 = wind[i].wx;
-      //unsigned char w2 = wind[i].wy;
+      
       unsigned char w1 = wx[i];
       unsigned char w2 = wy[i];
       unsigned char r1 = (((p2*w1 + (QLEVEL - w1)*p1) + QLEVEL_H) >> QLEVEL_0);
@@ -316,8 +334,6 @@ void UndistortionEngine::GetRemapindexBL_RawFormat( float32_t * mapX, float32_t 
          int interXX = (int( (pointX[0] - x0) * QLEVEL + 0.5f )) & 0x1F;
          int interYY = (int( (pointY[0] - y0) * QLEVEL + 0.5f )) & 0x1F;
 
-         //wind[i*outputWidth + j].wx = interXX;
-         //wind[i*outputWidth + j].wy = interYY;
          wx[i*outputWidth + j] = interXX;
          wy[i*outputWidth + j] = interYY;
 
@@ -331,51 +347,6 @@ void UndistortionEngine::GetRemapindexBL_RawFormat( float32_t * mapX, float32_t 
 
       }
    }
-}
-
-void UndistortionEngine::PrepareRemap( float32_t cameraMatrix[9], float32_t distCoeffs[8], float32_t newCameraMatrix[9],
-                                    int32_t inputWidth, int32_t inputHeight, int32_t outputWidth, int32_t outputHeight )
-{
-   float32_t * cM = (float32_t *)cameraMatrix, *newCM = (float32_t *)newCameraMatrix;
-   float32_t * dC = (float32_t *)distCoeffs;
-
-   float32_t * mapX = new float32_t[outputWidth * outputHeight];
-   float32_t * mapY = new float32_t[outputWidth * outputHeight];
-
-   float32_t * pointX = mapX;
-   float32_t * pointY = mapY;
-   for( int i = 0; i < outputHeight; i++ )
-   {
-      for( int j = 0; j < outputWidth; j++ )
-      {
-         float32_t x = (j - newCM[2]) / newCM[0];
-         float32_t y = (i - newCM[5]) / newCM[4];
-         float32_t r2 = x * x + y * y;
-         float32_t r4 = r2 * r2;
-         float32_t r6 = r4 * r2;
-         float32_t rational1 = 1 + dC[0] * r2 + dC[1] * r4 + dC[4] * r6;
-         float32_t rational2 = 1 + dC[5] * r2 + dC[6] * r4 + dC[7] * r6;
-         float32_t rational = rational1 / rational2;
-         float32_t x1 = x * rational + 2 * dC[2] * x *y + dC[3] * (r2 + 2 * x);
-         float32_t y1 = y * rational + dC[2] * (r2 + 2 * y) + 2 * dC[3] * x * y;
-         pointX[0] = x1 * cM[0] + cM[2];
-         pointX++;
-         pointY[0] = y1 * cM[4] + cM[5];
-         pointY++;
-
-      }
-   }
-
-   indBL = new indBL_t[outputWidth*outputHeight];
-
-   //wind = new wind_t[outputWidth*outputHeight];
-   wx = new uint8_t[outputWidth*outputHeight];
-   wy = new uint8_t[outputWidth*outputHeight];
-
-   GetRemapindexBL_RawFormat( mapX, mapY, outputWidth, outputHeight, inputWidth, inputHeight, indBL );
-
-   delete[] mapX;
-   delete[] mapY;
 }
 
 void UndistortionEngine::GetRemapindexBL( float32_t * mapX, float32_t * mapY, int outputWidth, int32_t outputHeight,
@@ -406,4 +377,69 @@ void UndistortionEngine::GetRemapindexBL( float32_t * mapX, float32_t * mapY, in
       }
    }
 
+}
+
+void UndistortionEngine::CalMapRational12( float32_t cameraMatrix[9], float32_t * distCoeffs, float32_t newCameraMatrix[9], int outputWidth, int outputHeight, float32_t * mapX, float32_t * mapY )
+{
+
+   float32_t * pointX = mapX;
+   float32_t * pointY = mapY;
+   for( int i = 0; i < outputHeight; i++ )
+   {
+      for( int j = 0; j < outputWidth; j++ )
+      {
+         float32_t x = (j - newCameraMatrix[2]) / newCameraMatrix[0];
+         float32_t y = (i - newCameraMatrix[5]) / newCameraMatrix[4];
+         float32_t r2 = x * x + y * y;
+         float32_t r4 = r2 * r2;
+         float32_t r6 = r4 * r2;
+         float32_t rational1 = 1 + distCoeffs[0] * r2 + distCoeffs[1] * r4 + distCoeffs[4] * r6;
+         float32_t rational2 = 1 + distCoeffs[5] * r2 + distCoeffs[6] * r4 + distCoeffs[7] * r6;
+         float32_t rational = rational1 / rational2;
+         float32_t x1 = x * rational + 2 * distCoeffs[2] * x * y + distCoeffs[3] * (r2 + 2 * x * x) + distCoeffs[8] * r2 + distCoeffs[9] * r4;
+         float32_t y1 = y * rational + distCoeffs[2] * (r2 + 2 * y * y) + 2 * distCoeffs[3] * x * y + distCoeffs[10] * r2 + distCoeffs[11] * r4;
+         pointX[0] = x1 * cameraMatrix[0] + cameraMatrix[2];
+         pointX++;
+         pointY[0] = y1 * cameraMatrix[4] + cameraMatrix[5];
+         pointY++;
+      }
+   }
+}
+
+void UndistortionEngine::CalMapFisheye4( float32_t cameraMatrix[9], float32_t distCoeffs[4], float32_t newCameraMatrix[9], int outputWidth, int outputHeight, float32_t * mapX, float32_t * mapY )
+{
+
+   float32_t * pointX = mapX;
+   float32_t * pointY = mapY;
+   for( int i = 0; i < outputHeight; i++ )
+   {
+      for( int j = 0; j < outputWidth; j++ )
+      {
+         float32_t x = (j - newCameraMatrix[2]) / newCameraMatrix[0];
+         float32_t y = (i - newCameraMatrix[5]) / newCameraMatrix[4];
+         float64_t r = sqrt(x * x + y * y);
+         float32_t theta = (float32_t) atan( r );
+         float32_t theta2 = theta * theta;
+         float32_t theta4 = theta2 * theta2;
+         float32_t theta6 = theta2 * theta4;
+         float32_t theta8 = theta4 * theta4;
+         float32_t thetad = theta * (1 + distCoeffs[0] * theta2 + distCoeffs[1] * theta4 + distCoeffs[2] * theta6 + distCoeffs[3]*theta8);
+         float32_t x1;
+         float32_t y1;
+         if( r < 1e-5 )  //r is too small
+         {
+            x1 = x;
+            y1 = y;
+         }
+         else
+         {
+            x1 = x * thetad / (float32_t)r;
+            y1 = y * thetad / (float32_t)r;
+         }
+         pointX[0] = x1 * cameraMatrix[0] + cameraMatrix[2];
+         pointX++;
+         pointY[0] = y1 * cameraMatrix[4] + cameraMatrix[5];
+         pointY++;
+      }
+   }
 }

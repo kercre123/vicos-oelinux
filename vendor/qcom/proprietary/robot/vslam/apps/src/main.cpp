@@ -21,6 +21,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 
 #include <iostream>
 #include "Visualization_NonRos.h"
+#include "MapFocuser.h"
 
 #include <string>
 
@@ -131,9 +132,10 @@ int main( int argc, char** argv )
 
    mainProc();
    delete visualiser;
+
 #ifdef WIN32
    mvVSLAM_DLLGlue_Deinitialize();
 #endif //WIN32
 
-
+   return 0;
 }

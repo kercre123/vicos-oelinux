@@ -25,11 +25,11 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 
 typedef struct _vslamStatus
 {
-   float32_t _BrightnessMean;
-   float32_t _BrightnessVar;
-   int32_t _KeyframeNum;
-   int32_t _MatchedMapPointNum;
-   int32_t _MisMatchedMapPointNum;
+   float32_t _BrightnessMean = 0.f;
+   float32_t _BrightnessVar = 0.f;
+   int32_t _KeyframeNum = 0;
+   int32_t _MatchedMapPointNum = 0;
+   int32_t _MisMatchedMapPointNum = 0;
 
 } vslamStatus;
 
@@ -41,6 +41,8 @@ enum TokenFusionInput
    kScaleEsVSLAM
 };
 
+class MapFocuser;
+
 class Visualiser
 {
 public:
@@ -50,21 +52,24 @@ public:
 
    virtual void PublishOriginalImage( const uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight ) = 0;
    virtual void PublishUndistortedImage( const uint64_t stamp, const uint8_t * image, int imageWidth, int imageHeight ) = 0;
-   virtual void ShowPoints( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight ) = 0;
+   virtual vslamStatus ShowPoints( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight, std::string title = "" ) = 0;
    virtual void PublishRobotPose( const mvWEFPoseVelocityTime & pose ) = 0;
-   virtual void PublishCameraPose( const mvWEFPoseStateTime & pose, const uint8_t * image = NULL, int imageWidth = 0, int imageHeight = 0 ) = 0;
+   virtual void PublishCameraPose( const mvWEFPoseStateTime & pose, const vslamStatus & status, std::string title = "" ) = 0;
    virtual void PublishCorrectedCameraPose( const mvWEFPoseStateTime & VSLAMPoseCorrected ) = 0;
    virtual void PublishExposureGain( float32_t exposure, float32_t gain, int exposureValue, int gainValue, float mean_brightness ) = 0;
+   virtual void PublishVSLAMSchedulerState( const std::string & str ) = 0;
+   virtual void ShowKeyframeLocationAndTrajectory(MapFocuser &, char * windowsName) = 0;
 
    virtual void RecordWheelOdom( const mvWEFPoseVelocityTime & WEPose );
    virtual void RecordVSLAMOdom( const mvWEFPoseStateTime & VSLAMPose, TokenFusionInput token );
    virtual void RecordFusedPose();
+   virtual void RecordPoseForScaleEstimation( std::vector<mvWEFPoseStateTime>& vslamPoseQ, std::vector<mvWEFPoseVelocityTime>& wePoseQ, std::string dataUsage );
 protected:
 
 #ifdef OPENCV_SUPPORTED
-   void DrawLabelledImage( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight, cv::Mat & view );
+   vslamStatus DrawLabelledImage( const mvWEFPoseStateTime & pose, const uint8_t * image, int imageWidth, int imageHeight, cv::Mat & view, mvVSLAM* pVSlamObj );
    void GetOriginalImage( const uint8_t * image, cv::Mat & view, uint32_t widthFrame, uint32_t heightFrame );
-   void GetVSLAMStatus( const uint8_t * image, int imageWidth, int imageHeight );
+   vslamStatus GetVSLAMStatus( const uint8_t * image, int imageWidth, int imageHeight, mvVSLAM* pVSlamObj );
 #endif
    FILE* openLogFile( const char* nameLogFile );
    vslamStatus GetStatus()
@@ -74,8 +79,10 @@ protected:
 
    vslamStatus status;
    FILE *fpLogWEFInput = nullptr;
+   FILE *fpLogScaleEstimation = nullptr;
 };
 
 void RtoQuaternion( const float32_t matrix[3][4], double quaternion[4] );
+void EtoQuaternion( double roll, double pitch, double yaw, double quaternion[4] );
 
 #endif //__VISUALIZATION_H__

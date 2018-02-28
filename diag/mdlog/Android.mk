@@ -18,7 +18,7 @@ LOCAL_MODULE_TAGS := optional debug
 LOCAL_SHARED_LIBRARIES := $(commonSharedLibraries)
 
 ifdef TARGET_FS_CONFIG_GEN
-LOCAL_STATIC_LIBRARIES := liboemaids
+LOCAL_CFLAGS += -DTARGET_FS_CONFIG_GEN
 endif
 
 LOCAL_MODULE_OWNER := qti

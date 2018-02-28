@@ -20,7 +20,9 @@ mv_vwslam_SOURCES := \
      src/Visualization_NonRos.cpp \
      src/UndistortionEngine.cpp \
      src/VSLAM.cpp \
-     src/WEF.cpp
+     src/WEF.cpp  \
+     src/VSLAMScheduler.cpp \
+     src/MapFocuser.cpp
 
 mv_vwslam_CPPFLAGS = -O2
 mv_vwslam_CPPFLAGS += -g

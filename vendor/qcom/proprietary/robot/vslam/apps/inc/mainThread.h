@@ -11,7 +11,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 void mainProc();
 
 /* the first 3 numbers are CRD mv version */
-#define VSLAM_APP_VERSION "1.1.3.0"
+#define VSLAM_APP_VERSION "1.1.6.2"
 #define INIT_MODE_NONE   -1
 
 #endif //__MAIN_THREAD_H__

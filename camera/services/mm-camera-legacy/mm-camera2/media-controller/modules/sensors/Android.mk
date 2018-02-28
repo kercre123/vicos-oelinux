@@ -16,6 +16,10 @@ else ifeq ($(call is-board-platform-in-list, msm8909),true)
 LOCAL_CFLAGS  += -DMSM8909_SENSORS
 endif
 
+ifeq ($(ROBOT_TARGET),true)
+LOCAL_CFLAGS  += -DROBOT_SENSORS
+endif
+
 #LOCAL_CFLAGS += -Werror
 ifeq ($(call is-board-platform-in-list, msm8909),true)
 LOCAL_CFLAGS  += -DAF_2X13_FILTER_SUPPORT
