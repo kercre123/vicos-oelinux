@@ -679,7 +679,10 @@ boolean mct_pipeline_send_ctrl_events(mct_pipeline_t *pipeline,
   parm_buffer_new_t *h_table = (parm_buffer_new_t *)pipeline->config_parm;
   parm_entry_type_new_t *curr_param = NULL;
 
-  CDBG_ERROR("%s: Send Set Parm events", __func__);
+  /*
+  ** <anki> VIC-602: Don't report normal operation as error </anki>
+  */
+  CDBG("%s: Send Set Parm events", __func__);
 
   if (event_type == MCT_EVENT_CONTROL_SET_PARM) {
     p_table = pipeline->pending_set_parm;
