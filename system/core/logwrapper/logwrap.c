@@ -486,6 +486,16 @@ static void child(int argc, char* argv[]) {
     }
 }
 
+/* <anki> VIC-1543: Forward SIGTERM to child process </anki> */
+static pid_t child_pid = 0;
+
+static void sigforward(int signum)
+{
+    if (child_pid > 0) {
+        kill(child_pid, signum);
+    }
+}
+
 int android_fork_execvp_ext(int argc, char* argv[], int *status, bool ignore_int_quit,
         int log_target, bool abbreviated, char *file_path) {
     pid_t pid;
@@ -549,6 +559,10 @@ int android_fork_execvp_ext(int argc, char* argv[], int *status, bool ignore_int
 
         child(argc, argv);
     } else {
+        /* <anki> VIC-1543: Forward SIGTERM to child </anki> */
+        child_pid = pid;
+        signal(SIGTERM, sigforward);
+
         close(child_ptty);
         if (ignore_int_quit) {
             struct sigaction ignact;
