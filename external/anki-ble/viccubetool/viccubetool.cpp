@@ -172,14 +172,14 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
   if (connection_id == -1 || connection_id != connection_id_) {
     return;
   }
-  if (characteristic_uuid == Anki::kCubeAppVersion_128_BIT_UUID) {
+  if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kCubeAppVersion_128_BIT_UUID)) {
     if (!value.empty()) {
       std::cout << "APP VERSION: " << std::string(value.begin(), value.end()) << std::endl;
       std::cout << "Done flashing firmware" << std::endl;
       task_executor_->WakeAfter(std::bind(&IPCClient::Disconnect, this, connection_id_),
                                 std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 5));
     }
-  } else if (characteristic_uuid == Anki::kCubeAppRead_128_BIT_UUID) {
+  } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kCubeAppRead_128_BIT_UUID)) {
     std::cout << "APP DATA: " << std::string(value.begin(), value.end()) << std::endl;
   }
 }

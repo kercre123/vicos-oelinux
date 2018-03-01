@@ -378,9 +378,9 @@ void Agent::SendMessage(const int connection_id,
 {
   if (connected_ && inbound_connection_id_ == connection_id) {
     int characteristic_handle;
-    if (characteristic_uuid == Anki::kAppReadCharacteristicUUID) {
+    if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadCharacteristicUUID)) {
       characteristic_handle = app_read_characteristic_handle_;
-    } else if (characteristic_uuid == Anki::kAppReadEncryptedCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadEncryptedCharacteristicUUID)) {
       characteristic_handle = app_read_encrypted_characteristic_handle_;
     } else {
       return;
@@ -489,21 +489,21 @@ bool Agent::StartPeripheral()
   logv("Anki BLE peripheral service added.");
 
   for (auto const& cit : bluetooth_gatt_service_.characteristics) {
-    if (cit.uuid == Anki::kAppWriteCharacteristicUUID) {
+    if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppWriteCharacteristicUUID)) {
       app_write_characteristic_handle_ = cit.char_handle;
-    } else if (cit.uuid == Anki::kAppReadCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppReadCharacteristicUUID)) {
       app_read_characteristic_handle_ = cit.char_handle;
       for (auto const& dit: cit.descriptors) {
-        if (dit.uuid == Anki::kCCCDescriptorUUID) {
+        if (AreCaseInsensitiveStringsEqual(dit.uuid,Anki::kCCCDescriptorUUID)) {
           app_read_ccc_descriptor_handle_ = dit.desc_handle;
         }
       }
-    } else if (cit.uuid == Anki::kAppWriteEncryptedCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppWriteEncryptedCharacteristicUUID)) {
       app_write_encrypted_characteristic_handle_ = cit.char_handle;
-    } else if (cit.uuid == Anki::kAppReadEncryptedCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppReadEncryptedCharacteristicUUID)) {
       app_read_encrypted_characteristic_handle_ = cit.char_handle;
       for (auto const& dit: cit.descriptors) {
-        if (dit.uuid == Anki::kCCCDescriptorUUID) {
+        if (AreCaseInsensitiveStringsEqual(dit.uuid, Anki::kCCCDescriptorUUID)) {
           app_read_encrypted_ccc_descriptor_handle_ = dit.desc_handle;
         }
       }
