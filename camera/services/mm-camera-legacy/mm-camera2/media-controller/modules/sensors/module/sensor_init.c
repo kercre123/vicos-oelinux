@@ -40,8 +40,7 @@
 #if defined(ROBOT_SENSORS)
 #undef BOARD_SENSORS
 #define BOARD_SENSORS \
-  "ov7251", \
-  "imx241",
+  "ov8856_f8v05a"
 #endif
 
 static const char *sensor_libs[] = {
