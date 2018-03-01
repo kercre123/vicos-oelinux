@@ -26,6 +26,9 @@
 
 void VicDevSetup::OnInboundConnectionChange(int connection_id, int connected)
 {
+  if (!connected && (connection_id != connection_id_)) {
+    return;
+  }
   logv("OnInboundConnectionChange(id = %d, connected = %d)",
        connection_id,
        connected);

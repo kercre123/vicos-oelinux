@@ -942,6 +942,7 @@ void btgatts_register_server_cb(int status, int server_if, bt_uuid_t *app_uuid)
 
 void btgatts_connection_cb(int conn_id, int server_if, int connected, bt_bdaddr_t *bda)
 {
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   std::string address = bt_bdaddr_t_to_string(bda);
   logv("%s(conn_id = %d, server_if = %d, connected = %d, bda = %s)",
        __FUNCTION__, conn_id, server_if, connected, address.c_str());

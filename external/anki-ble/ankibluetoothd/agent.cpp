@@ -99,6 +99,10 @@ void Agent::SendMessageToConnectedCentral(int characteristic_handle,
 
 void Agent::InboundConnectionCallback(int conn_id, int connected) {
   std::lock_guard<std::mutex> lock(mutex_);
+  if (!connected && (conn_id != inbound_connection_id_)) {
+    // This is false disconnect notice that is really for an outbound connection.
+    return;
+  }
   connected_ = (bool) connected;
   app_read_ccc_value_ = kCCCDefaultValue;
   app_read_value_.clear();
