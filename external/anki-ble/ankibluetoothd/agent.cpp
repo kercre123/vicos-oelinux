@@ -36,14 +36,14 @@ Agent::Agent(struct ev_loop* loop)
     : IPCServer(loop)
 {
   Anki::BluetoothStack::Callbacks cbs = {0};
-  cbs.inbound_connection_cb = &Agent::StaticInboundConnectionCallback;
+  cbs.inbound_connection_cb = &Agent::StaticPeripheralInboundConnectionCallback;
   cbs.request_read_cb = &Agent::StaticPeripheralReadCallback;
   cbs.request_write_cb = &Agent::StaticPeripheralWriteCallback;
   cbs.indication_sent_cb = &Agent::StaticPeripheralIndicationSentCallback;
   cbs.congestion_cb = &Agent::StaticPeripheralCongestionCallback;
   cbs.scan_result_cb = &Agent::StaticCentralScanResultCallback;
-  cbs.outbound_connection_cb = &Agent::StaticOutboundConnectionCallback;
-  cbs.notification_received_cb = &Agent::StaticNotificationReceivedCallback;
+  cbs.outbound_connection_cb = &Agent::StaticCentralOutboundConnectionCallback;
+  cbs.notification_received_cb = &Agent::StaticCentralNotificationReceivedCallback;
   Anki::BluetoothStack::SetCallbacks(&cbs);
 }
 
@@ -97,7 +97,7 @@ void Agent::SendMessageToConnectedCentral(int characteristic_handle,
   }
 }
 
-void Agent::InboundConnectionCallback(int conn_id, int connected) {
+void Agent::PeripheralInboundConnectionCallback(int conn_id, int connected) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (!connected && (conn_id != inbound_connection_id_)) {
     // This is false disconnect notice that is really for an outbound connection.
@@ -238,9 +238,9 @@ void Agent::CentralScanResultCallback(const std::string& address,
   OnScanResults(0, records);
 }
 
-void Agent::OutboundConnectionCallback(const std::string& address,
-                                       const int connected,
-                                       const BluetoothGattConnection& connection)
+void Agent::CentralOutboundConnectionCallback(const std::string& address,
+                                              const int connected,
+                                              const BluetoothGattConnection& connection)
 {
   std::vector<GattDbRecord> records;
   for (auto & service : connection.services) {
@@ -273,30 +273,30 @@ void Agent::OutboundConnectionCallback(const std::string& address,
                              records);
 }
 
-void Agent::StaticOutboundConnectionCallback(const std::string& address,
-                                             const int connected,
-                                             const BluetoothGattConnection& connection)
+void Agent::StaticCentralOutboundConnectionCallback(const std::string& address,
+                                                    const int connected,
+                                                    const BluetoothGattConnection& connection)
 {
   if (sAgent) {
-    sAgent->OutboundConnectionCallback(address, connected, connection);
+    sAgent->CentralOutboundConnectionCallback(address, connected, connection);
   }
 }
 
-void Agent::NotificationReceivedCallback(const std::string& address,
-                                         const int conn_id,
-                                         const std::string& char_uuid,
-                                         const std::vector<uint8_t>& value)
+void Agent::CentralNotificationReceivedCallback(const std::string& address,
+                                                const int conn_id,
+                                                const std::string& char_uuid,
+                                                const std::vector<uint8_t>& value)
 {
   OnReceiveMessage(conn_id, char_uuid, value);
 }
 
-void Agent::StaticNotificationReceivedCallback(const std::string& address,
-                                               const int conn_id,
-                                               const std::string& char_uuid,
-                                               const std::vector<uint8_t>& value)
+void Agent::StaticCentralNotificationReceivedCallback(const std::string& address,
+                                                      const int conn_id,
+                                                      const std::string& char_uuid,
+                                                      const std::vector<uint8_t>& value)
 {
   if (sAgent) {
-    sAgent->NotificationReceivedCallback(address, conn_id, char_uuid, value);
+    sAgent->CentralNotificationReceivedCallback(address, conn_id, char_uuid, value);
   }
 }
 
@@ -349,8 +349,8 @@ void Agent::StopAdvertising()
   advertising_ = !BluetoothStack::StopAdvertisement();
 }
 
-void Agent::StaticInboundConnectionCallback(int conn_id, int connected) {
-  sAgent->InboundConnectionCallback(conn_id, connected);
+void Agent::StaticPeripheralInboundConnectionCallback(int conn_id, int connected) {
+  sAgent->PeripheralInboundConnectionCallback(conn_id, connected);
 }
 
 void Agent::StaticPeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset) {

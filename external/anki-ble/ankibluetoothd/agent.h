@@ -44,7 +44,7 @@ class Agent : public IPCServer {
   void TransmitNextNotification();
   void SendMessageToConnectedCentral(int characteristic_handle,
                                      int confirm, const std::vector<uint8_t>& value);
-  void InboundConnectionCallback(int conn_id, int connected);
+  void PeripheralInboundConnectionCallback(int conn_id, int connected);
   void PeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
   void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, int offset,
                                bool need_rsp, const std::vector<uint8_t>& value);
@@ -53,16 +53,16 @@ class Agent : public IPCServer {
   void CentralScanResultCallback(const std::string& address,
                                  int rssi,
                                  const std::vector<uint8_t>& adv_data);
-  void OutboundConnectionCallback(const std::string& address,
-                                  const int connected,
-                                  const BluetoothGattConnection& connection);
-  void NotificationReceivedCallback(const std::string& address,
-                                    const int conn_id,
-                                    const std::string& char_uuid,
-                                    const std::vector<uint8_t>& value);
+  void CentralOutboundConnectionCallback(const std::string& address,
+                                         const int connected,
+                                         const BluetoothGattConnection& connection);
+  void CentralNotificationReceivedCallback(const std::string& address,
+                                           const int conn_id,
+                                           const std::string& char_uuid,
+                                           const std::vector<uint8_t>& value);
 
 
-  static void StaticInboundConnectionCallback(int conn_id, int connected);
+  static void StaticPeripheralInboundConnectionCallback(int conn_id, int connected);
   static void StaticPeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
   static void StaticPeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, int offset,
                                       bool need_rsp, const std::vector<uint8_t>& value);
@@ -71,13 +71,13 @@ class Agent : public IPCServer {
   static void StaticCentralScanResultCallback(const std::string& address,
                                               int rssi,
                                               const std::vector<uint8_t>& adv_data);
-  static void StaticOutboundConnectionCallback(const std::string& address,
-                                               const int connected,
-                                               const BluetoothGattConnection& connection);
-  static void StaticNotificationReceivedCallback(const std::string& address,
-                                                 const int conn_id,
-                                                 const std::string& char_uuid,
-                                                 const std::vector<uint8_t>& value);
+  static void StaticCentralOutboundConnectionCallback(const std::string& address,
+                                                      const int connected,
+                                                      const BluetoothGattConnection& connection);
+  static void StaticCentralNotificationReceivedCallback(const std::string& address,
+                                                        const int conn_id,
+                                                        const std::string& char_uuid,
+                                                        const std::vector<uint8_t>& value);
 
   std::mutex mutex_;
   BLEAdvertiseSettings ble_advertise_settings_;
