@@ -458,12 +458,12 @@ void Agent::StartScan(const std::string& serviceUUID) {
   scan_filter_service_uuid_ = serviceUUID;
   scanning_ = true;
   logv("Agent::StartScan(serviceUUID = '%s')", serviceUUID.c_str());
-  (void) BluetoothStack::StartScan(true);
+  (void) BluetoothStack::SetScanning(true);
 }
 
 void Agent::StopScan() {
   scanning_ = false;
-  (void) BluetoothStack::StartScan(false);
+  (void) BluetoothStack::SetScanning(false);
   scan_filter_service_uuid_.clear();
 }
 

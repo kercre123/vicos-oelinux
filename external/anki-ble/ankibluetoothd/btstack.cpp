@@ -1739,11 +1739,11 @@ bool DisconnectGattPeer(int conn_id)
 static bool sScanning = false;
 void TimeoutScanning() {
   if (sScanning) {
-    StartScan(false);
+    SetScanning(false);
   }
 }
 
-bool StartScan(const bool enable)
+bool SetScanning(const bool enable)
 {
   std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   if (!sBtGattInterface || !sBtGattInterface->client) {
