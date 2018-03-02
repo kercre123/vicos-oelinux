@@ -85,17 +85,12 @@ class Agent : public IPCServer {
   int app_write_characteristic_handle_ = -1;
   int app_read_characteristic_handle_ = -1;
   int app_read_ccc_descriptor_handle_ = -1;
-  int app_write_encrypted_characteristic_handle_ = -1;
-  int app_read_encrypted_characteristic_handle_ = -1;
-  int app_read_encrypted_ccc_descriptor_handle_ = -1;
   bool advertising_ = false;
   bool connected_ = false;
   int inbound_connection_id_ = -1;
   bool congested_ = false;
   uint16_t app_read_ccc_value_ = kCCCDefaultValue;
   std::vector<uint8_t> app_read_value_;
-  uint16_t app_read_encrypted_ccc_value_ = kCCCDefaultValue;
-  std::vector<uint8_t> app_read_encrypted_value_;
 
   typedef struct Notification {
     int characteristic_handle;
