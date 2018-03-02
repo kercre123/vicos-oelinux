@@ -1,1 +1,1 @@
-SUBDIRS = ankibluetoothd vicdevsetup
+SUBDIRS = ankibluetoothd vicdevsetup viccubetool

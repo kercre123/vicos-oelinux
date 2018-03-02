@@ -88,3 +88,13 @@ const int kGattErrorCongested = 0x8f;
 const int kGattErrorCCCDImproperlyConfigured = 0xfd;
 const int kGattErrorProcedureInProgress = 0xfe;
 const int kGattErrorOutOfRange = 0xff;
+
+const uint8_t kADTypeFlags = 0x01;
+const uint8_t kADTypeCompleteListOf16bitServiceClassUUIDs = 0x03;
+const uint8_t kADTypeCompleteListOf128bitServiceClassUUIDs = 0x07;
+const uint8_t kADTypeCompleteLocalName = 0x09;
+const uint8_t kADTypeManufacturerSpecificData = 0xff;
+
+const uint8_t kGattWriteTypeNoResponse = 1;
+const uint8_t kGattWriteTypeWithResponse = 2;
+const uint8_t kGattWriteTypePrepare = 3;

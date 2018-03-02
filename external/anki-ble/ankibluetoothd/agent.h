@@ -24,9 +24,7 @@ namespace BluetoothDaemon {
 
 class Agent : public IPCServer {
  public:
-  Agent(struct ev_loop* loop)
-      : IPCServer(loop) {}
-
+  Agent(struct ev_loop* loop);
   bool StartPeripheral();
 
  protected:
@@ -38,24 +36,48 @@ class Agent : public IPCServer {
   virtual void Disconnect(const int connection_id);
   virtual void StartAdvertising();
   virtual void StopAdvertising();
+  virtual void StartScan(const std::string& serviceUUID);
+  virtual void StopScan();
+  virtual void ConnectToPeripheral(const std::string& address);
 
  private:
   void TransmitNextNotification();
   void SendMessageToConnectedCentral(int characteristic_handle,
                                      int confirm, const std::vector<uint8_t>& value);
-  void PeripheralConnectionCallback(int conn_id, int connected);
+  void PeripheralInboundConnectionCallback(int conn_id, int connected);
   void PeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
   void PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, int offset,
                                bool need_rsp, const std::vector<uint8_t>& value);
   void PeripheralIndicationSentCallback(int conn_id, int status);
   void PeripheralCongestionCallback(int conn_id, bool congested);
+  void CentralScanResultCallback(const std::string& address,
+                                 int rssi,
+                                 const std::vector<uint8_t>& adv_data);
+  void CentralOutboundConnectionCallback(const std::string& address,
+                                         const int connected,
+                                         const BluetoothGattConnection& connection);
+  void CentralNotificationReceivedCallback(const std::string& address,
+                                           const int conn_id,
+                                           const std::string& char_uuid,
+                                           const std::vector<uint8_t>& value);
 
-  static void StaticPeripheralConnectionCallback(int conn_id, int connected);
+
+  static void StaticPeripheralInboundConnectionCallback(int conn_id, int connected);
   static void StaticPeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset);
   static void StaticPeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, int offset,
                                       bool need_rsp, const std::vector<uint8_t>& value);
   static void StaticPeripheralIndicationSentCallback(int conn_id, int status);
   static void StaticPeripheralCongestionCallback(int conn_id, bool congested);
+  static void StaticCentralScanResultCallback(const std::string& address,
+                                              int rssi,
+                                              const std::vector<uint8_t>& adv_data);
+  static void StaticCentralOutboundConnectionCallback(const std::string& address,
+                                                      const int connected,
+                                                      const BluetoothGattConnection& connection);
+  static void StaticCentralNotificationReceivedCallback(const std::string& address,
+                                                        const int conn_id,
+                                                        const std::string& char_uuid,
+                                                        const std::vector<uint8_t>& value);
 
   std::mutex mutex_;
   BLEAdvertiseSettings ble_advertise_settings_;
@@ -82,6 +104,8 @@ class Agent : public IPCServer {
   } Notification;
 
   std::deque<Notification> notification_queue_;
+  bool scanning_;
+  std::string scan_filter_service_uuid_;
 };
 
 } // namespace BluetoothDaemon

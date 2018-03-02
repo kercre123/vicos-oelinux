@@ -12,6 +12,8 @@
 
 #include "btutils.h"
 #include "gatt_constants.h"
+#include "stringutils.h"
+#include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <sstream>
@@ -31,23 +33,15 @@ static uint8_t hex_char_to_byte(char input) {
   return 0;
 }
 
-std::string bt_value_to_string(int length, uint8_t* value) {
-  if (length < 0) {
-    return "";
-  }
-  if (value) {
-    std::ostringstream oss;
-    char hex[17] = "0123456789abcdef";
-    for (int i = 0 ; i < length && i < 20 ; i++) {
-      if (i > 0) {
-        oss << " ";
-      }
-      oss << hex[(value[i] >> 4) & 0xf] << hex[value[i] & 0xf];
-    }
-    return oss.str();
-  } else {
+std::string bt_value_to_string(int length, const uint8_t* value) {
+  if (!value) {
     return "<null>";
   }
+  if (length < 1) {
+    return "";
+  }
+  std::vector<uint8_t> v(value, value + length);
+  return byteVectorToHexString(v, 1, true);
 }
 
 std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr) {
@@ -60,12 +54,27 @@ std::string bt_bdaddr_t_to_string(const bt_bdaddr_t* addr) {
   return std::string(str);
 }
 
+void bt_bdaddr_t_from_string(const std::string& address, bt_bdaddr_t* bda) {
+  memset(bda, 0, sizeof(*bda));
+  int index = 0;
+  int offset = 0;
+  while (index < 6 && offset < (address.length() - 1)) {
+    char high = address[offset++];
+    if (std::isxdigit(high)) {
+      uint8_t val = hex_char_to_byte(high) * 16;
+      char low = address[offset++];
+      val += hex_char_to_byte(low);
+      bda->address[index++] = val;
+    }
+  }
+}
+
 std::string bt_uuid_t_to_string(const bt_uuid_t* uuid) {
   char str[37];
 
   const uint8_t* u = uuid->uu;
   snprintf(str, sizeof(str),
-           "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+           "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
            u[15], u[14], u[13], u[12],
            u[11], u[10],
            u[9], u[8],
@@ -93,6 +102,15 @@ void bt_uuid_t_from_string(const std::string& uuidStr, bt_uuid_t* uuid) {
 bool bt_uuid_t_equals(const bt_uuid_t* uuid1, const bt_uuid_t* uuid2) {
   return (0 == memcmp(uuid1->uu, uuid2->uu, sizeof(uuid1->uu)));
 }
+
+bool bt_uuid_string_equals(const std::string& uuidStr1, const std::string& uuidStr2) {
+  bt_uuid_t uuid1 = {0};
+  bt_uuid_t uuid2 = {0};
+  bt_uuid_t_from_string(uuidStr1, &uuid1);
+  bt_uuid_t_from_string(uuidStr2, &uuid2);
+  return bt_uuid_t_equals(&uuid1, &uuid2);
+}
+
 
 std::string bt_status_t_to_string(const bt_status_t status) {
   switch(status) {
@@ -128,12 +146,54 @@ std::string bt_status_t_to_string(const bt_status_t status) {
       return "BT_STATUS_WAKELOCK_ERROR";
     default:
       {
-        if ((int) status == 0x85) {
-          return "GATT_ERROR";
+        int int_status = (int) status;
+        switch(int_status) {
+          case kGattErrorIllegalParameter:
+            return "GATT_ERROR_ILLEGAL_PARAMETER";
+          case kGattErrorNoResources:
+            return "GATT_ERROR_NO_RESOURCES";
+          case kGattErrorInternalError:
+            return "GATT_ERROR_INTERNAL_ERROR";
+          case kGattErrorWrongState:
+            return "GATT_ERROR_WRONG_STATE";
+          case kGattErrorDbFull:
+            return "GATT_ERROR_DB_FULL";
+          case kGattErrorBusy:
+            return "GATT_ERROR_BUSY";
+          case kGattErrorError:
+            return "GATT_ERROR";
+          case kGattErrorCmdStarted:
+            return "GATT_ERROR_CMD_STARTED";
+          case kGattErrorPending:
+            return "GATT_ERROR_PENDING";
+          case kGattErrorAuthFail:
+            return "GATT_ERROR_AUTH_FAIL";
+          case kGattErrorMore:
+            return "GATT_ERROR_MORE";
+          case kGattErrorInvalidConfig:
+            return "GATT_ERROR_INVALID_CONFIG";
+          case kGattErrorServiceStarted:
+            return "GATT_ERROR_SERVICE_STARTED";
+          case kGattErrorEncryptedNoMITM:
+            return "GATT_ERROR_ENCRYPTED_NO_MITM";
+          case kGattErrorNotEncrypted:
+            return "GATT_ERROR_NOT_ENCRYPTED";
+          case kGattErrorCongested:
+            return "GATT_ERROR_CONGESTED";
+          case kGattErrorCCCDImproperlyConfigured:
+            return "GATT_ERROR_CCCD_IMPROPERLY_CONFIGURED";
+          case kGattErrorProcedureInProgress:
+            return "GATT_ERROR_PROCEDURE_IN_PROGRESS";
+          case kGattErrorOutOfRange:
+            return "GATT_ERROR_OUT_OF_RANGE";
+          default:
+            {
+              std::ostringstream oss;
+              oss << "Unknown (" << int_status << ")";
+              return oss.str();
+            }
+            break;
         }
-        std::ostringstream oss;
-        oss << "Unknown (" << (int) status << ")";
-        return oss.str();
       }
   }
 }

@@ -28,6 +28,7 @@
 struct ev_loop;
 namespace ev {
 class io;
+class timer;
 } // namespace ev
 
 namespace Anki {
@@ -35,8 +36,13 @@ namespace BluetoothDaemon {
 const std::string kSocketName("/data/misc/bluetooth/abtd.socket");
 const char kIPCMessageMagic[4] = {'i', 'p', 'c', 'f'};
 const uint32_t kIPCMessageVersion = 1;
-const size_t kUUIDSize = 37;
-const size_t kIPCMessageMaxSize = 1024;
+const size_t k128BitUUIDSize = 37;
+const size_t k16BitUUIDSize = 5;
+const size_t kAddressSize = 18;
+const size_t kLocalNameSize = 32;
+const size_t kManufacturerDataMaxSize = 32;
+const size_t kMaxAdvertisingLength = 62;
+const size_t kIPCMessageMaxSize = 4096;
 const size_t kIPCMessageMaxLength = kIPCMessageMaxSize - 12;
 
 enum class IPCMessageType {
@@ -49,7 +55,12 @@ enum class IPCMessageType {
     Disconnect,
     StartAdvertising,
     StopAdvertising,
-    OnPeripheralStateUpdate
+    OnPeripheralStateUpdate,
+    StartScan,
+    StopScan,
+    OnScanResults,
+    ConnectToPeripheral,
+    OnOutboundConnectionChange
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -61,7 +72,7 @@ typedef struct __attribute__ ((__packed__)) IPCMessage {
 
 typedef struct __attribute__ ((__packed__)) SendMessageArgs {
   int connection_id;
-  char characteristic_uuid[kUUIDSize];
+  char characteristic_uuid[k128BitUUIDSize];
   bool reliable;
   uint32_t length;
   uint8_t value[];
@@ -74,7 +85,7 @@ typedef struct __attribute__ ((__packed__)) OnInboundConnectionChangeArgs {
 
 typedef struct __attribute__ ((__packed__)) OnReceiveMessageArgs {
   int connection_id;
-  char characteristic_uuid[kUUIDSize];
+  char characteristic_uuid[k128BitUUIDSize];
   uint32_t length;
   uint8_t value[];
 } OnReceiveMessageArgs;
@@ -89,6 +100,61 @@ typedef struct __attribute__ ((__packed__)) OnPeripheralStateUpdateArgs {
   int connected;
   bool congested;
 } OnPeripheralStateUpdateArgs;
+
+typedef struct __attribute__ ((__packed__)) StartScanArgs {
+  char service_uuid[k128BitUUIDSize];
+} StartScanArgs;
+
+typedef struct __attribute__ ((__packed__)) ScanResultRecord {
+  char address[kAddressSize] = {0};
+  int rssi = 0;
+  int num_service_uuids = 0;
+  char service_uuids[4][k128BitUUIDSize] = {{0}};
+  char local_name[kLocalNameSize] = {0};
+  int manufacturer_data_len = 0;
+  uint8_t manufacturer_data[kManufacturerDataMaxSize] = {0};
+  int advertisement_length = 0;
+  uint8_t advertisement_data[kMaxAdvertisingLength] = {0};
+  ScanResultRecord() {}
+  ScanResultRecord(const std::string& address,
+                   const int rssi,
+                   const std::vector<uint8_t>& adv_data);
+  bool HasServiceUUID(const std::string& uuid);
+} ScanResultRecord;
+
+typedef struct __attribute__ ((__packed__)) OnScanResultsArgs {
+  int error;
+  int record_count;
+  ScanResultRecord records[];
+} OnScanResultsArgs;
+
+typedef struct __attribute__ ((__packed__)) ConnectToPeripheralArgs {
+  char address[kAddressSize];
+} ConnectToPeripheralArgs;
+
+
+enum class GattDbRecordType {
+  Service,
+  Characteristic,
+  Descriptor
+};
+
+typedef struct __attribute__ ((__packed__)) GattDbRecord {
+  char uuid[k128BitUUIDSize];
+  GattDbRecordType type;
+  uint16_t handle;
+  uint16_t start_handle;
+  uint16_t end_handle;
+  int properties;
+} GattDbRecord;
+
+typedef struct __attribute__ ((__packed__)) OnOutboundConnectionChangeArgs {
+  char address[kAddressSize];
+  int connected;
+  int connection_id;
+  int num_gatt_db_records;
+  GattDbRecord records[];
+} OnOutboundConnectionChangeArgs;
 
 class IPCEndpoint {
  public:

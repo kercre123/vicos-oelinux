@@ -19,6 +19,7 @@
 #include "gatt_constants.h"
 #include "include_ev.h"
 #include "log.h"
+#include "stringutils.h"
 
 #include <algorithm>
 #include <deque>
@@ -30,6 +31,21 @@ static Anki::BluetoothDaemon::Agent* sAgent = nullptr;
 
 namespace Anki {
 namespace BluetoothDaemon {
+
+Agent::Agent(struct ev_loop* loop)
+    : IPCServer(loop)
+{
+  Anki::BluetoothStack::Callbacks cbs = {0};
+  cbs.inbound_connection_cb = &Agent::StaticPeripheralInboundConnectionCallback;
+  cbs.request_read_cb = &Agent::StaticPeripheralReadCallback;
+  cbs.request_write_cb = &Agent::StaticPeripheralWriteCallback;
+  cbs.indication_sent_cb = &Agent::StaticPeripheralIndicationSentCallback;
+  cbs.congestion_cb = &Agent::StaticPeripheralCongestionCallback;
+  cbs.scan_result_cb = &Agent::StaticCentralScanResultCallback;
+  cbs.outbound_connection_cb = &Agent::StaticCentralOutboundConnectionCallback;
+  cbs.notification_received_cb = &Agent::StaticCentralNotificationReceivedCallback;
+  Anki::BluetoothStack::SetCallbacks(&cbs);
+}
 
 void Agent::TransmitNextNotification()
 {
@@ -81,8 +97,12 @@ void Agent::SendMessageToConnectedCentral(int characteristic_handle,
   }
 }
 
-void Agent::PeripheralConnectionCallback(int conn_id, int connected) {
+void Agent::PeripheralInboundConnectionCallback(int conn_id, int connected) {
   std::lock_guard<std::mutex> lock(mutex_);
+  if (!connected && (conn_id != inbound_connection_id_)) {
+    // This is false disconnect notice that is really for an outbound connection.
+    return;
+  }
   connected_ = (bool) connected;
   app_read_ccc_value_ = kCCCDefaultValue;
   app_read_value_.clear();
@@ -200,6 +220,86 @@ void Agent::PeripheralCongestionCallback(int conn_id, bool congested) {
   }
 }
 
+void Agent::CentralScanResultCallback(const std::string& address,
+                                      int rssi,
+                                      const std::vector<uint8_t>& adv_data) {
+  if (!scanning_) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  ScanResultRecord record(address, rssi, adv_data);
+
+  if (!scan_filter_service_uuid_.empty() && !record.HasServiceUUID(scan_filter_service_uuid_)) {
+    return;
+  }
+
+  std::vector<ScanResultRecord> records;
+  records.push_back(record);
+  OnScanResults(0, records);
+}
+
+void Agent::CentralOutboundConnectionCallback(const std::string& address,
+                                              const int connected,
+                                              const BluetoothGattConnection& connection)
+{
+  std::vector<GattDbRecord> records;
+  for (auto & service : connection.services) {
+    GattDbRecord service_record = {0};
+    strncpy(service_record.uuid, service.uuid.c_str(), sizeof(service_record.uuid) - 1);
+    service_record.type = GattDbRecordType::Service;
+    service_record.handle = service.service_handle;
+    service_record.start_handle = service.start_handle;
+    service_record.end_handle = service.end_handle;
+    records.push_back(service_record);
+    for (auto & characteristic : service.characteristics) {
+      GattDbRecord char_record = {0};
+      strncpy(char_record.uuid, characteristic.uuid.c_str(), sizeof(char_record.uuid) - 1);
+      char_record.type = GattDbRecordType::Characteristic;
+      char_record.handle = characteristic.char_handle;
+      char_record.properties = characteristic.properties;
+      records.push_back(char_record);
+      for (auto & descriptor : characteristic.descriptors) {
+        GattDbRecord desc_record = {0};
+        strncpy(desc_record.uuid, descriptor.uuid.c_str(), sizeof(desc_record.uuid) - 1);
+        desc_record.type = GattDbRecordType::Descriptor;
+        desc_record.handle = descriptor.desc_handle;
+        records.push_back(desc_record);
+      }
+    }
+  }
+  OnOutboundConnectionChange(connection.address,
+                             connected,
+                             connection.conn_id,
+                             records);
+}
+
+void Agent::StaticCentralOutboundConnectionCallback(const std::string& address,
+                                                    const int connected,
+                                                    const BluetoothGattConnection& connection)
+{
+  if (sAgent) {
+    sAgent->CentralOutboundConnectionCallback(address, connected, connection);
+  }
+}
+
+void Agent::CentralNotificationReceivedCallback(const std::string& address,
+                                                const int conn_id,
+                                                const std::string& char_uuid,
+                                                const std::vector<uint8_t>& value)
+{
+  OnReceiveMessage(conn_id, char_uuid, value);
+}
+
+void Agent::StaticCentralNotificationReceivedCallback(const std::string& address,
+                                                      const int conn_id,
+                                                      const std::string& char_uuid,
+                                                      const std::vector<uint8_t>& value)
+{
+  if (sAgent) {
+    sAgent->CentralNotificationReceivedCallback(address, conn_id, char_uuid, value);
+  }
+}
+
 void Agent::OnNewIPCClient(const int sockfd)
 {
   (void) sockfd; // not used for now
@@ -213,14 +313,16 @@ void Agent::SendMessage(const int connection_id,
 {
   if (connected_ && inbound_connection_id_ == connection_id) {
     int characteristic_handle;
-    if (characteristic_uuid == Anki::kAppReadCharacteristicUUID) {
+    if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadCharacteristicUUID)) {
       characteristic_handle = app_read_characteristic_handle_;
-    } else if (characteristic_uuid == Anki::kAppReadEncryptedCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadEncryptedCharacteristicUUID)) {
       characteristic_handle = app_read_encrypted_characteristic_handle_;
     } else {
       return;
     }
     SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
+  } else {
+    (void) BluetoothStack::WriteGattCharacteristic(connection_id, characteristic_uuid, reliable, value);
   }
 }
 
@@ -247,8 +349,8 @@ void Agent::StopAdvertising()
   advertising_ = !BluetoothStack::StopAdvertisement();
 }
 
-void Agent::StaticPeripheralConnectionCallback(int conn_id, int connected) {
-  sAgent->PeripheralConnectionCallback(conn_id, connected);
+void Agent::StaticPeripheralInboundConnectionCallback(int conn_id, int connected) {
+  sAgent->PeripheralInboundConnectionCallback(conn_id, connected);
 }
 
 void Agent::StaticPeripheralReadCallback(int conn_id, int trans_id, int attr_handle, int offset) {
@@ -268,60 +370,49 @@ void Agent::StaticPeripheralCongestionCallback(int conn_id, bool congested) {
   sAgent->PeripheralCongestionCallback(conn_id, congested);
 }
 
+void Agent::StaticCentralScanResultCallback(const std::string& address,
+                                            int rssi,
+                                            const std::vector<uint8_t>& adv_data) {
+  sAgent->CentralScanResultCallback(address, rssi, adv_data);
+}
+
+
 bool Agent::StartPeripheral()
 {
-  bluetooth_gatt_service_.uuid = Anki::kAnkiBLEService_128_BIT_UUID;
-  bluetooth_gatt_service_.connection_cb = &Agent::StaticPeripheralConnectionCallback;
-  bluetooth_gatt_service_.request_read_cb = &Agent::StaticPeripheralReadCallback;
-  bluetooth_gatt_service_.request_write_cb = &Agent::StaticPeripheralWriteCallback;
-  bluetooth_gatt_service_.indication_sent_cb = &Agent::StaticPeripheralIndicationSentCallback;
-  bluetooth_gatt_service_.congestion_cb = &Agent::StaticPeripheralCongestionCallback;
-  bluetooth_gatt_service_.service_handle = -1;
+  bluetooth_gatt_service_ = BluetoothGattService(Anki::kAnkiBLEService_128_BIT_UUID);
 
-  BluetoothGattCharacteristic appReadCharacteristic;
-  appReadCharacteristic.uuid = Anki::kAppReadCharacteristicUUID;
-  appReadCharacteristic.properties =
-      (kGattCharacteristicPropNotify | kGattCharacteristicPropRead);
-  appReadCharacteristic.permissions = kGattPermRead;
-  appReadCharacteristic.char_handle = -1;
+  BluetoothGattCharacteristic
+      appReadCharacteristic(Anki::kAppReadCharacteristicUUID,
+                            (kGattCharacteristicPropNotify | kGattCharacteristicPropRead),
+                            kGattPermRead);
 
-  BluetoothGattDescriptor appReadCCCDescriptor;
-  appReadCCCDescriptor.uuid = Anki::kCCCDescriptorUUID;
-  appReadCCCDescriptor.permissions = (kGattPermRead | kGattPermWrite);
-  appReadCCCDescriptor.desc_handle = -1;
+  BluetoothGattDescriptor appReadCCCDescriptor(Anki::kCCCDescriptorUUID, (kGattPermRead | kGattPermWrite));
   appReadCharacteristic.descriptors.push_back(appReadCCCDescriptor);
 
   bluetooth_gatt_service_.characteristics.push_back(appReadCharacteristic);
 
-  BluetoothGattCharacteristic appWriteCharacteristic;
-  appWriteCharacteristic.uuid = Anki::kAppWriteCharacteristicUUID;
-  appWriteCharacteristic.properties =
-      (kGattCharacteristicPropWrite | kGattCharacteristicPropWriteNoResponse);
-  appWriteCharacteristic.permissions = kGattPermWrite;
-  appWriteCharacteristic.char_handle = -1;
+  BluetoothGattCharacteristic
+      appWriteCharacteristic(Anki::kAppWriteCharacteristicUUID,
+                             (kGattCharacteristicPropWrite | kGattCharacteristicPropWriteNoResponse),
+                             kGattPermWrite);
+
   bluetooth_gatt_service_.characteristics.push_back(appWriteCharacteristic);
 
-  BluetoothGattCharacteristic appReadEncryptedCharacteristic;
-  appReadEncryptedCharacteristic.uuid = Anki::kAppReadEncryptedCharacteristicUUID;
-  appReadEncryptedCharacteristic.properties =
-      (kGattCharacteristicPropNotify | kGattCharacteristicPropRead);
-  appReadEncryptedCharacteristic.permissions = kGattPermRead;
-  appReadEncryptedCharacteristic.char_handle = -1;
+  BluetoothGattCharacteristic
+      appReadEncryptedCharacteristic(Anki::kAppReadEncryptedCharacteristicUUID,
+                                     (kGattCharacteristicPropNotify | kGattCharacteristicPropRead),
+                                     kGattPermRead);
 
-  BluetoothGattDescriptor appReadEncryptedCCCDescriptor;
-  appReadEncryptedCCCDescriptor.uuid = Anki::kCCCDescriptorUUID;
-  appReadEncryptedCCCDescriptor.permissions = (kGattPermRead | kGattPermWrite);
-  appReadEncryptedCCCDescriptor.desc_handle = -1;
+  BluetoothGattDescriptor
+      appReadEncryptedCCCDescriptor(Anki::kCCCDescriptorUUID, (kGattPermRead | kGattPermWrite));
   appReadEncryptedCharacteristic.descriptors.push_back(appReadEncryptedCCCDescriptor);
 
   bluetooth_gatt_service_.characteristics.push_back(appReadEncryptedCharacteristic);
 
-  BluetoothGattCharacteristic appWriteEncryptedCharacteristic;
-  appWriteEncryptedCharacteristic.uuid = Anki::kAppWriteEncryptedCharacteristicUUID;
-  appWriteEncryptedCharacteristic.properties =
-      (kGattCharacteristicPropWrite | kGattCharacteristicPropWriteNoResponse);
-  appWriteEncryptedCharacteristic.permissions = kGattPermWrite;
-  appWriteEncryptedCharacteristic.char_handle = -1;
+  BluetoothGattCharacteristic
+      appWriteEncryptedCharacteristic(Anki::kAppWriteEncryptedCharacteristicUUID,
+                                      (kGattCharacteristicPropWrite | kGattCharacteristicPropWriteNoResponse),
+                                      kGattPermWrite);
   bluetooth_gatt_service_.characteristics.push_back(appWriteEncryptedCharacteristic);
 
 
@@ -333,21 +424,21 @@ bool Agent::StartPeripheral()
   logv("Anki BLE peripheral service added.");
 
   for (auto const& cit : bluetooth_gatt_service_.characteristics) {
-    if (cit.uuid == Anki::kAppWriteCharacteristicUUID) {
+    if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppWriteCharacteristicUUID)) {
       app_write_characteristic_handle_ = cit.char_handle;
-    } else if (cit.uuid == Anki::kAppReadCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppReadCharacteristicUUID)) {
       app_read_characteristic_handle_ = cit.char_handle;
       for (auto const& dit: cit.descriptors) {
-        if (dit.uuid == Anki::kCCCDescriptorUUID) {
+        if (AreCaseInsensitiveStringsEqual(dit.uuid,Anki::kCCCDescriptorUUID)) {
           app_read_ccc_descriptor_handle_ = dit.desc_handle;
         }
       }
-    } else if (cit.uuid == Anki::kAppWriteEncryptedCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppWriteEncryptedCharacteristicUUID)) {
       app_write_encrypted_characteristic_handle_ = cit.char_handle;
-    } else if (cit.uuid == Anki::kAppReadEncryptedCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppReadEncryptedCharacteristicUUID)) {
       app_read_encrypted_characteristic_handle_ = cit.char_handle;
       for (auto const& dit: cit.descriptors) {
-        if (dit.uuid == Anki::kCCCDescriptorUUID) {
+        if (AreCaseInsensitiveStringsEqual(dit.uuid, Anki::kCCCDescriptorUUID)) {
           app_read_encrypted_ccc_descriptor_handle_ = dit.desc_handle;
         }
       }
@@ -361,6 +452,27 @@ bool Agent::StartPeripheral()
 
   logv("Anki BLE peripheral service started.");
   return true;
+}
+
+void Agent::StartScan(const std::string& serviceUUID) {
+  scan_filter_service_uuid_ = serviceUUID;
+  scanning_ = true;
+  logv("Agent::StartScan(serviceUUID = '%s')", serviceUUID.c_str());
+  (void) BluetoothStack::SetScanning(true);
+}
+
+void Agent::StopScan() {
+  scanning_ = false;
+  (void) BluetoothStack::SetScanning(false);
+  scan_filter_service_uuid_.clear();
+}
+
+void Agent::ConnectToPeripheral(const std::string& address) {
+  bool result = BluetoothStack::ConnectToBLEPeripheral(address, true);
+  if (!result) {
+    std::vector<GattDbRecord> records;
+    OnOutboundConnectionChange(address, 0, 0, records);
+  }
 }
 
 } // namespace BluetoothDaemon

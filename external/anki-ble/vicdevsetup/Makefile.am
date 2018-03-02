@@ -36,7 +36,8 @@ vicdevsetup_SOURCES =	vicdevsetup.cpp \
 			$(COMMON_DIR)/ipc.cpp \
 			$(COMMON_DIR)/memutils.cpp \
 			$(COMMON_DIR)/taskExecutor.cpp \
-			$(COMMON_DIR)/fileutils.cpp
+			$(COMMON_DIR)/fileutils.cpp \
+			$(COMMON_DIR)/stringutils.cpp
 
 EXTRA_vicdevsetup_DEPENDENCIES = connmanbus.c connmanbus.h
 

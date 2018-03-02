@@ -4,5 +4,5 @@ AM_INIT_AUTOMAKE([-Wall gnu foreign])
 AM_MAINTAINER_MODE
 AC_PROG_CC
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_SUBDIRS([ankibluetoothd vicdevsetup])
+AC_CONFIG_SUBDIRS([ankibluetoothd vicdevsetup viccubetool])
 AC_OUTPUT

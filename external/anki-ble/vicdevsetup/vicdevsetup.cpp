@@ -16,6 +16,7 @@
 #include "exec_command.h"
 #include "log.h"
 #include "ssh.h"
+#include "stringutils.h"
 #include "wifi.h"
 
 #include <algorithm>
@@ -25,6 +26,9 @@
 
 void VicDevSetup::OnInboundConnectionChange(int connection_id, int connected)
 {
+  if (!connected && (connection_id != connection_id_)) {
+    return;
+  }
   logv("OnInboundConnectionChange(id = %d, connected = %d)",
        connection_id,
        connected);
@@ -48,12 +52,12 @@ void VicDevSetup::OnReceiveMessage(const int connection_id,
                                    const std::string& characteristic_uuid,
                                    const std::vector<uint8_t>& value)
 {
-  logv("OnReceiveMessage(id = %d, char_uuid = '%s', value.size = %d)",
+  logv("OnReceiveMessage(connection_id = %d, char_uuid = '%s', value.size = %d)",
        connection_id, characteristic_uuid.c_str(), value.size());
   if (connection_id == connection_id_) {
-    if (characteristic_uuid == Anki::kAppWriteCharacteristicUUID) {
+    if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kAppWriteCharacteristicUUID)) {
       HandleIncomingMessageFromCentral(value);
-    } else if (characteristic_uuid == Anki::kAppWriteEncryptedCharacteristicUUID) {
+    } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kAppWriteEncryptedCharacteristicUUID)) {
       HandleIncomingMessageFromCentralEncrypted(value);
     }
   }
