@@ -11,8 +11,11 @@
  **/
 
 #include "ipc.h"
+#include "anki_ble_uuids.h"
+#include "gatt_constants.h"
 #include "include_ev.h"
 #include "log.h"
+#include "stringutils.h"
 
 #include <unistd.h>
 
@@ -279,6 +282,112 @@ void IPCEndpoint::PeerState::EraseMessageFromFrontOfQueue()
         read_write_watcher_->set(read_write_watcher_->fd, ev::READ);
       });
   }
+}
+
+ScanResultRecord::ScanResultRecord(const std::string& address,
+                                   const int rssi,
+                                   const std::vector<uint8_t>& adv_data)
+{
+  strncpy(this->address, address.c_str(), sizeof(this->address) - 1);
+  this->rssi = rssi;
+
+  auto it = adv_data.begin();
+  while (it != adv_data.end()) {
+    uint8_t length = *it;
+    if (length == 0) {
+      break;
+    }
+    it++;
+    uint8_t type = *it;
+    if (length > 1) {
+      if (std::distance(adv_data.begin(), it) + length > adv_data.size()) {
+        break;
+      }
+      std::vector<uint8_t> data(it + 1, it + length);
+      switch(type) {
+        case kADTypeFlags:
+          // ignore for now
+          break;
+        case kADTypeCompleteListOf16bitServiceClassUUIDs:
+          {
+            size_t sz = data.size();
+            size_t offset = 0;
+            while ((num_service_uuids < 4) && ((offset + 2) <= sz)) {
+              std::vector<uint8_t> v(data.begin() + offset, data.begin() + offset + 2);
+              std::reverse(std::begin(v), std::end(v));
+              std::string short_uuid = byteVectorToHexString(v);
+              std::string full_uuid = kBluetoothBase_128_BIT_UUID;
+              full_uuid.replace(4, 4, short_uuid);
+              strncpy(service_uuids[num_service_uuids],
+                      full_uuid.c_str(),
+                      sizeof(service_uuids[num_service_uuids]));
+              num_service_uuids++;
+              offset += 2;
+            }
+          }
+          break;
+        case kADTypeCompleteListOf128bitServiceClassUUIDs:
+          {
+            size_t sz = data.size();
+            size_t offset = 0;
+            while ((num_service_uuids < 4) && ((offset + 16) <= sz)) {
+              std::vector<uint8_t> v(data.begin() + offset, data.begin() + offset + 16);
+              std::reverse(std::begin(v), std::end(v));
+              auto it = v.begin();
+              std::vector<int> lengths = {4,2,2,2,6};
+              std::string uuidString;
+              for (auto l : lengths) {
+                if (it != v.begin()) {
+                  uuidString.push_back('-');
+                }
+                std::vector<uint8_t> part(it, it + l);
+                uuidString += byteVectorToHexString(part);
+                it += l;
+              }
+              strncpy(service_uuids[num_service_uuids],
+                      uuidString.c_str(),
+                      sizeof(service_uuids[num_service_uuids]));
+              num_service_uuids++;
+              offset += 16;
+            }
+          }
+          break;
+        case kADTypeCompleteLocalName:
+          {
+            strncpy(local_name,
+                    (char *) data.data(),
+                    std::min(sizeof(local_name) - 1, (size_t) length - 1));
+          }
+          break;
+        case kADTypeManufacturerSpecificData:
+          {
+            manufacturer_data_len = length - 1;
+            memcpy(manufacturer_data,
+                   data.data(),
+                   std::min(sizeof(manufacturer_data), (size_t) length - 1));
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    it += length;
+  }
+  advertisement_length = adv_data.size();
+  memcpy(advertisement_data,
+         adv_data.data(),
+         std::min(sizeof(advertisement_data), (size_t) advertisement_length));
+
+}
+
+bool ScanResultRecord::HasServiceUUID(const std::string& uuid)
+{
+  for (int i = 0 ; i < num_service_uuids; i++) {
+    if (AreCaseInsensitiveStringsEqual(std::string(service_uuids[i]), uuid)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace BluetoothDaemon

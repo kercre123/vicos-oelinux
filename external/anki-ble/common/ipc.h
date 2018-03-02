@@ -106,15 +106,20 @@ typedef struct __attribute__ ((__packed__)) StartScanArgs {
 } StartScanArgs;
 
 typedef struct __attribute__ ((__packed__)) ScanResultRecord {
-  char address[kAddressSize];
-  int rssi;
-  bool is_victor_cube;
-  bool has_device_information_service;
-  char local_name[kLocalNameSize];
-  int manufacturer_data_len;
-  uint8_t manufacturer_data[kManufacturerDataMaxSize];
-  int advertisement_length;
-  uint8_t advertisement_data[kMaxAdvertisingLength];
+  char address[kAddressSize] = {0};
+  int rssi = 0;
+  int num_service_uuids = 0;
+  char service_uuids[4][k128BitUUIDSize] = {{0}};
+  char local_name[kLocalNameSize] = {0};
+  int manufacturer_data_len = 0;
+  uint8_t manufacturer_data[kManufacturerDataMaxSize] = {0};
+  int advertisement_length = 0;
+  uint8_t advertisement_data[kMaxAdvertisingLength] = {0};
+  ScanResultRecord() {}
+  ScanResultRecord(const std::string& address,
+                   const int rssi,
+                   const std::vector<uint8_t>& adv_data);
+  bool HasServiceUUID(const std::string& uuid);
 } ScanResultRecord;
 
 typedef struct __attribute__ ((__packed__)) OnScanResultsArgs {

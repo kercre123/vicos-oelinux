@@ -33,6 +33,7 @@ const std::string kCubeAppWrite_128_BIT_UUID("0EA75290-6759-A58D-7948-598C4E02D9
 const std::string kCubeAppRead_128_BIT_UUID("43EF14AF-5FB1-7B81-3647-2A9477824CAB");
 
 // Generic
+const std::string kBluetoothBase_128_BIT_UUID("00000000-0000-1000-8000-00805F9B34FB");
 const std::string kDeviceInfoService_128_BIT_UUID("0000180A-0000-1000-8000-00805F9B34FB");
 const std::string kDeviceInformationService_16_BIT_UUID("180A");
 const std::string kCUDDescriptorUUID("00002901-0000-1000-8000-00805F9B34FB");

@@ -124,7 +124,7 @@ void IPCClient::OnReceiveIPCMessage(const int sockfd,
         OnScanResultsArgs* args = (OnScanResultsArgs *) data.data();
         std::vector<ScanResultRecord> records;
         for (int i = 0 ; i < args->record_count; i++) {
-          ScanResultRecord record = {0};
+          ScanResultRecord record;
           memcpy(&record, &(args->records[i]), sizeof(record));
           records.push_back(record);
         }
