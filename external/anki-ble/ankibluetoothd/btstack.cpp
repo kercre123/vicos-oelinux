@@ -653,7 +653,7 @@ void btgattc_notify_cb(int conn_id, btgatt_notify_params_t *p_data)
 {
   std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   if (!p_data) {
-    loge("%s(conn_id). p_data is null", conn_id);
+    loge("%s(conn_id = %d). p_data is null", __FUNCTION__, conn_id);
     return;
   }
   std::string address = bt_bdaddr_t_to_string(&(p_data->bda));
@@ -666,9 +666,16 @@ void btgattc_notify_cb(int conn_id, btgatt_notify_params_t *p_data)
 
   auto search = sOutboundConnections.find(address);
   if (search == sOutboundConnections.end()) {
+    loge("%s(conn_id = %d). %s not found in outbound connections",
+         __FUNCTION__, conn_id, address.c_str());
     return;
   }
   std::string char_uuid = GetCharacteristicUUIDFromConnIDAndHandle(conn_id, p_data->handle);
+  if (char_uuid.empty()) {
+    loge("%s(conn_id = %d). could not find uuid for handle (%d)",
+         __FUNCTION__, conn_id, p_data->handle);
+    return;
+  }
   std::vector<uint8_t> value(p_data->value, p_data->value + p_data->len);
   sCallbacks.notification_received_cb(address, conn_id, char_uuid, value);
 }
