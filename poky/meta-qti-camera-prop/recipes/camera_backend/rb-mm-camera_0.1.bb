@@ -110,6 +110,9 @@ export TARGET_LIBRARY_SUPPRESS_LIST="libcamera_client libhardware libsync libui 
         libqservice libbinder libgui libstlport libandroid libxml2 libz"
 
 do_compile () {
+    if [ "${MACHINE}" == "apq8009-robot" ]; then
+        export ROBOT_TARGET=true
+    fi
     # Current support is limited to 32-bit build
     if [ "${MLPREFIX}" == "lib32-" ] || [ "${MLPREFIX}" == "" -a "${TUNE_ARCH}" == "arm" ]; then
         androidmk_setenv

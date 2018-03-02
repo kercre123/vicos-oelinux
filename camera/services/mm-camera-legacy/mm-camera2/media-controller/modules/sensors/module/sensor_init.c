@@ -37,6 +37,13 @@
   "oem_camera4",
 #endif
 
+#if defined(ROBOT_SENSORS)
+#undef BOARD_SENSORS
+#define BOARD_SENSORS \
+  "ov7251", \
+  "imx241",
+#endif
+
 static const char *sensor_libs[] = {
   BOARD_SENSORS
 };

@@ -1308,12 +1308,19 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 {
 	const char *val;
 	int id;
+	int cipher_set = 0;
+	int owe;
 
 	id = add_network_common(dut, conn, ifname, cmd);
 	if (id < 0)
 		return id;
 
+	val = get_param(cmd, "Type");
+	owe = val && strcasecmp(val, "OWE") == 0;
+
 	val = get_param(cmd, "keyMgmtType");
+	if (!val && owe)
+		val = "OWE";
 	if (val == NULL) {
 		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Missing keyMgmtType");
 		return 0;
@@ -1332,33 +1339,113 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		   strcasecmp(val, "wpa2-wpa-ent") == 0) {
 		if (set_network(ifname, id, "proto", "WPA WPA2") < 0)
 			return -2;
+	} else if (strcasecmp(val, "SuiteB") == 0) {
+		if (set_network(ifname, id, "proto", "WPA2") < 0)
+			return -2;
+	} else if (strcasecmp(val, "OWE") == 0) {
 	} else {
 		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Unrecognized keyMgmtType value");
 		return 0;
 	}
 
 	val = get_param(cmd, "encpType");
-	if (val == NULL) {
-		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Missing encpType");
+	if (val) {
+		cipher_set = 1;
+		if (strcasecmp(val, "tkip") == 0) {
+			if (set_network(ifname, id, "pairwise", "TKIP") < 0)
+				return -2;
+		} else if (strcasecmp(val, "aes-ccmp") == 0) {
+			if (set_network(ifname, id, "pairwise", "CCMP") < 0)
+				return -2;
+		} else if (strcasecmp(val, "aes-ccmp-tkip") == 0) {
+			if (set_network(ifname, id, "pairwise",
+					"CCMP TKIP") < 0)
+				return -2;
+		} else if (strcasecmp(val, "aes-gcmp") == 0) {
+			if (set_network(ifname, id, "pairwise", "GCMP") < 0)
+				return -2;
+			if (set_network(ifname, id, "group", "GCMP") < 0)
+				return -2;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unrecognized encpType value");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "PairwiseCipher");
+	if (val) {
+		cipher_set = 1;
+		/* TODO: Support space separated list */
+		if (strcasecmp(val, "AES-GCMP-256") == 0) {
+			if (set_network(ifname, id, "pairwise", "GCMP-256") < 0)
+				return -2;
+		} else if (strcasecmp(val, "AES-CCMP-256") == 0) {
+			if (set_network(ifname, id, "pairwise",
+					"CCMP-256") < 0)
+				return -2;
+		} else if (strcasecmp(val, "AES-GCMP-128") == 0) {
+			if (set_network(ifname, id, "pairwise",	"GCMP") < 0)
+				return -2;
+		} else if (strcasecmp(val, "AES-CCMP-128") == 0) {
+			if (set_network(ifname, id, "pairwise",	"CCMP") < 0)
+				return -2;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unrecognized PairwiseCipher value");
+			return 0;
+		}
+	}
+
+	if (!cipher_set && !owe) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing encpType and PairwiseCipher");
 		return 0;
 	}
-	if (strcasecmp(val, "tkip") == 0) {
-		if (set_network(ifname, id, "pairwise", "TKIP") < 0)
-			return -2;
-	} else if (strcasecmp(val, "aes-ccmp") == 0) {
-		if (set_network(ifname, id, "pairwise", "CCMP") < 0)
-			return -2;
-	} else if (strcasecmp(val, "aes-ccmp-tkip") == 0) {
-		if (set_network(ifname, id, "pairwise", "CCMP TKIP") < 0)
-			return -2;
-	} else if (strcasecmp(val, "aes-gcmp") == 0) {
-		if (set_network(ifname, id, "pairwise", "GCMP") < 0)
-			return -2;
-		if (set_network(ifname, id, "group", "GCMP") < 0)
-			return -2;
-	} else {
-		send_resp(dut, conn, SIGMA_INVALID, "errorCode,Unrecognized encpType value");
-		return 0;
+
+	val = get_param(cmd, "GroupCipher");
+	if (val) {
+		if (strcasecmp(val, "AES-GCMP-256") == 0) {
+			if (set_network(ifname, id, "group", "GCMP-256") < 0)
+				return -2;
+		} else if (strcasecmp(val, "AES-CCMP-256") == 0) {
+			if (set_network(ifname, id, "group", "CCMP-256") < 0)
+				return -2;
+		} else if (strcasecmp(val, "AES-GCMP-128") == 0) {
+			if (set_network(ifname, id, "group", "GCMP") < 0)
+				return -2;
+		} else if (strcasecmp(val, "AES-CCMP-128") == 0) {
+			if (set_network(ifname, id, "group", "CCMP") < 0)
+				return -2;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unrecognized GroupCipher value");
+			return 0;
+		}
+	}
+
+	val = get_param(cmd, "GroupMgntCipher");
+	if (val) {
+		const char *cipher;
+
+		if (strcasecmp(val, "BIP-GMAC-256") == 0) {
+			cipher = "BIP-GMAC-256";
+		} else if (strcasecmp(val, "BIP-CMAC-256") == 0) {
+			cipher = "BIP-CMAC-256";
+		} else if (strcasecmp(val, "BIP-GMAC-128") == 0) {
+			cipher = "BIP-GMAC-128";
+		} else if (strcasecmp(val, "BIP-CMAC-128") == 0) {
+			cipher = "AES-128-CMAC";
+		} else {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Unsupported GroupMgntCipher");
+			return 0;
+		}
+		if (set_network(ifname, id, "group_mgmt", cipher) < 0) {
+			send_resp(dut, conn, SIGMA_INVALID,
+				  "errorCode,Failed to set GroupMgntCipher");
+			return 0;
+		}
 	}
 
 	dut->sta_pmf = STA_PMF_DISABLED;
@@ -1390,6 +1477,7 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
+	const char *type = get_param(cmd, "Type");
 	const char *ifname, *val, *alg;
 	int id;
 
@@ -1408,7 +1496,35 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "keyMgmtType");
 	alg = get_param(cmd, "micAlg");
 
-	if (alg && strcasecmp(alg, "SHA-256") == 0) {
+	if (type && strcasecmp(type, "SAE") == 0) {
+		if (val && strcasecmp(val, "wpa2-ft") == 0) {
+			if (set_network(ifname, id, "key_mgmt", "FT-SAE") < 0)
+				return -2;
+		} else {
+			if (set_network(ifname, id, "key_mgmt", "SAE") < 0)
+				return -2;
+		}
+		if (wpa_command(ifname, "SET sae_groups ") != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to clear sae_groups to default");
+			return -2;
+		}
+	} else if (type && strcasecmp(type, "PSK-SAE") == 0) {
+		if (val && strcasecmp(val, "wpa2-ft") == 0) {
+			if (set_network(ifname, id, "key_mgmt",
+					"FT-SAE FT-PSK") < 0)
+				return -2;
+		} else {
+			if (set_network(ifname, id, "key_mgmt",
+					"SAE WPA-PSK") < 0)
+				return -2;
+		}
+		if (wpa_command(ifname, "SET sae_groups ") != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to clear sae_groups to default");
+			return -2;
+		}
+	} else if (alg && strcasecmp(alg, "SHA-256") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-PSK-SHA256") < 0)
 			return -2;
 	} else if (alg && strcasecmp(alg, "SHA-1") == 0) {
@@ -1434,8 +1550,31 @@ static int cmd_sta_set_psk(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "passPhrase");
 	if (val == NULL)
 		return -1;
-	if (set_network_quoted(ifname, id, "psk", val) < 0)
-		return -2;
+	if (type && strcasecmp(type, "SAE") == 0) {
+		if (set_network_quoted(ifname, id, "sae_password", val) < 0)
+			return -2;
+	} else {
+		if (set_network_quoted(ifname, id, "psk", val) < 0)
+			return -2;
+	}
+
+	val = get_param(cmd, "ECGroupID");
+	if (val) {
+		char buf[50];
+
+		snprintf(buf, sizeof(buf), "SET sae_groups %u", atoi(val));
+		if (wpa_command(ifname, buf) != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to clear sae_groups");
+			return -2;
+		}
+	}
+
+	val = get_param(cmd, "InvalidSAEElement");
+	if (val) {
+		free(dut->sae_commit_override);
+		dut->sae_commit_override = strdup(val);
+	}
 
 	return 1;
 }
@@ -1460,7 +1599,11 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "keyMgmtType");
 	alg = get_param(cmd, "micAlg");
 
-	if (alg && strcasecmp(alg, "SHA-256") == 0) {
+	if (val && strcasecmp(val, "SuiteB") == 0) {
+		if (set_network(ifname, id, "key_mgmt", "WPA-EAP-SUITE-B-192") <
+		    0)
+			return -2;
+	} else if (alg && strcasecmp(alg, "SHA-256") == 0) {
 		if (set_network(ifname, id, "key_mgmt", "WPA-EAP-SHA256") < 0)
 			return -2;
 	} else if (alg && strcasecmp(alg, "SHA-1") == 0) {
@@ -1530,6 +1673,33 @@ ca_cert_selected:
 	}
 
 	return id;
+}
+
+
+static int set_tls_cipher(const char *ifname, int id, const char *cipher)
+{
+	const char *val;
+
+	if (!cipher)
+		return 0;
+
+	if (strcasecmp(cipher, "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384") == 0)
+		val = "ECDHE-ECDSA-AES256-GCM-SHA384";
+	else if (strcasecmp(cipher,
+			    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384") == 0)
+		val = "ECDHE-RSA-AES256-GCM-SHA384";
+	else if (strcasecmp(cipher, "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384") == 0)
+		val = "DHE-RSA-AES256-GCM-SHA384";
+	else if (strcasecmp(cipher,
+			    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256") == 0)
+		val = "ECDHE-ECDSA-AES128-GCM-SHA256";
+	else
+		return -1;
+
+	/* Need to clear phase1="tls_suiteb=1" to allow cipher enforcement */
+	set_network_quoted(ifname, id, "phase1", "");
+
+	return set_network_quoted(ifname, id, "openssl_ciphers", val);
 }
 
 
@@ -1633,6 +1803,27 @@ static int cmd_sta_set_eaptls(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (set_network_quoted(ifname, id, "private_key_passwd", "wifi") < 0)
 		return -2;
+
+	val = get_param(cmd, "keyMgmtType");
+	if (val && strcasecmp(val, "SuiteB") == 0) {
+		val = get_param(cmd, "CertType");
+		if (val && strcasecmp(val, "RSA") == 0) {
+			if (set_network_quoted(ifname, id, "phase1",
+					       "tls_suiteb=1") < 0)
+				return -2;
+		} else {
+			if (set_network_quoted(ifname, id, "openssl_ciphers",
+					       "SUITEB192") < 0)
+				return -2;
+		}
+
+		val = get_param(cmd, "TLSCipher");
+		if (set_tls_cipher(ifname, id, val) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Unsupported TLSCipher value");
+			return -3;
+		}
+	}
 
 	return 1;
 }
@@ -1885,6 +2076,46 @@ static int sta_set_open(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
+		       struct sigma_cmd *cmd)
+{
+	const char *intf = get_param(cmd, "Interface");
+	const char *ifname, *val;
+	int id;
+
+	if (intf == NULL)
+		return -1;
+
+	if (strcmp(intf, get_main_ifname()) == 0)
+		ifname = get_station_ifname();
+	else
+		ifname = intf;
+
+	id = set_wpa_common(dut, conn, ifname, cmd);
+	if (id < 0)
+		return id;
+
+	if (set_network(ifname, id, "key_mgmt", "OWE") < 0)
+		return -2;
+
+	val = get_param(cmd, "ECGroupID");
+	if (val && strcmp(val, "0") == 0) {
+		if (wpa_command(ifname,
+				"VENDOR_ELEM_ADD 13 ff23200000783590fb7440e03d5b3b33911f86affdcc6b4411b707846ac4ff08ddc8831ccd") != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set OWE DH Param element override");
+			return -2;
+		}
+	} else if (val && set_network(ifname, id, "owe_group", val) < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to clear owe_group");
+		return -2;
+	}
+
+	return 1;
+}
+
+
 static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
@@ -1898,7 +2129,11 @@ static int cmd_sta_set_security(struct sigma_dut *dut, struct sigma_conn *conn,
 
 	if (strcasecmp(type, "OPEN") == 0)
 		return sta_set_open(dut, conn, cmd);
-	if (strcasecmp(type, "PSK") == 0)
+	if (strcasecmp(type, "OWE") == 0)
+		return sta_set_owe(dut, conn, cmd);
+	if (strcasecmp(type, "PSK") == 0 ||
+	    strcasecmp(type, "PSK-SAE") == 0 ||
+	    strcasecmp(type, "SAE") == 0)
 		return cmd_sta_set_psk(dut, conn, cmd);
 	if (strcasecmp(type, "EAPTLS") == 0)
 		return cmd_sta_set_eaptls(dut, conn, cmd);
@@ -2064,7 +2299,7 @@ static int cmd_sta_set_wmm(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *sba = get_param(cmd, "Sba");
 	int direction;
 	int handle;
-	float sba_fv;
+	float sba_fv = 0;
 	int fixed_int;
 	int psb_ts;
 
@@ -2117,7 +2352,8 @@ static int cmd_sta_set_wmm(struct sigma_dut *dut, struct sigma_conn *conn,
 			fixed_int = 0;
 		}
 
-		sba_fv = atof(sba);
+		if (sba)
+			sba_fv = atof(sba);
 
 		dut->dialog_token++;
 		handle = 7000 + dut->dialog_token;
@@ -2261,6 +2497,16 @@ static int cmd_sta_associate(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (wpa_command(get_station_ifname(), buf) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set DEV_CONFIGURE_IE RSNE override");
+			return 0;
+		}
+	}
+
+	if (dut->sae_commit_override) {
+		snprintf(buf, sizeof(buf), "SET sae_commit_override %s",
+			 dut->sae_commit_override);
+		if (wpa_command(get_station_ifname(), buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set SAE commit override");
 			return 0;
 		}
 	}
@@ -4825,6 +5071,13 @@ static int cmd_sta_reset_default(struct sigma_dut *dut,
 	free(dut->rsne_override);
 	dut->rsne_override = NULL;
 
+	free(dut->sae_commit_override);
+	dut->sae_commit_override = NULL;
+
+	dut->dpp_conf_id = -1;
+
+	wpa_command(intf, "VENDOR_ELEM_REMOVE 13 *");
+
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
 	return 1;
@@ -6159,6 +6412,9 @@ static int cmd_sta_send_frame_hs2_neighsolreq(struct sigma_dut *dut,
 	char buf[200];
 	const char *ip = get_param(cmd, "SenderIP");
 
+	if (!ip)
+		return 0;
+
 	snprintf(buf, sizeof(buf), "ndisc6 -nm %s %s -r 4", ip, intf);
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
 	if (system(buf) == 0) {
@@ -6203,28 +6459,28 @@ static int cmd_sta_send_frame_hs2_arpannounce(struct sigma_dut *dut,
 	char buf[200];
 	char ip[16];
 	int s;
+	struct ifreq ifr;
+	struct sockaddr_in saddr;
 
 	s = socket(PF_INET, SOCK_DGRAM, 0);
-	if (s >= 0) {
-		struct ifreq ifr;
-		struct sockaddr_in saddr;
-
-		memset(&ifr, 0, sizeof(ifr));
-		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
-		if (ioctl(s, SIOCGIFADDR, &ifr) < 0) {
-			sigma_dut_print(dut, DUT_MSG_INFO, "Failed to get "
-					"%s IP address: %s",
-					ifname, strerror(errno));
-			close(s);
-			return -1;
-		} else {
-			memcpy(&saddr, &ifr.ifr_addr,
-			       sizeof(struct sockaddr_in));
-			strlcpy(ip, inet_ntoa(saddr.sin_addr), sizeof(ip));
-		}
-		close(s);
-
+	if (s < 0) {
+		perror("socket");
+		return -1;
 	}
+
+	memset(&ifr, 0, sizeof(ifr));
+	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	if (ioctl(s, SIOCGIFADDR, &ifr) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to get %s IP address: %s",
+				ifname, strerror(errno));
+		close(s);
+		return -1;
+	}
+	close(s);
+
+	memcpy(&saddr, &ifr.ifr_addr, sizeof(struct sockaddr_in));
+	strlcpy(ip, inet_ntoa(saddr.sin_addr), sizeof(ip));
 
 	snprintf(buf, sizeof(buf), "arping -I %s -s %s %s -c 4", ifname, ip,
 		 ip);
@@ -6256,6 +6512,8 @@ static int cmd_sta_send_frame_hs2_arpreply(struct sigma_dut *dut,
 	val = get_param(cmd, "DestIP");
 	if (val)
 		inet_aton(val, &taddr.sin_addr);
+	else
+		return -2;
 
 	if (get_wpa_status(get_station_ifname(), "address", addr,
 			   sizeof(addr)) < 0)

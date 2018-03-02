@@ -4,6 +4,7 @@ Copyright (c) 2017 Qualcomm Technologies, Inc.
 All Rights Reserved.
 Confidential and Proprietary - Qualcomm Technologies, Inc.
 *******************************************************************************/
+#include "VSLAMScheduler.h"
 #include "mainThread.h"
 #include <thread>
 #include "Queue.h"
@@ -34,16 +35,28 @@ Camera_VSLAM * vslamCamera = NULL;
 bool              mainThreadExited = false;
 
 void     INThandler( int );
-//static void exitMainThread();
 
 VSLAMParameter vslamPara;
 WEFParameter   wefPara;
 int32_t ParseCameraParameters( const char * parameterFile, VSLAMCameraParams & eagleCameraParams );
-extern void cameraProc();
+void ParseScaleEstimationParameters( const char * parameterFile, ScaleEstimator & scaleEstimationParams, const VSLAMParameter currentPara );
 
-int32_t failPoseNum = 100;
+extern void cameraProc();
+extern void cameraSecondaryProc();
 
 extern queue_mt<mvWEFPoseVelocityTime> gWEPoseQueueWheel2VSLAM;
+
+MapFocuser* mapFocuser;
+MapFocuser* mapFocuserSecondary;
+
+/**--------------------------------------------------------------------------
+@brief
+Queue for wheel encoder pose, vslam pose and fusion pose
+Used for motion pattern
+--------------------------------------------------------------------------**/
+extern queue_mt<mvWEFPoseVelocityTime> gMotionWEPoseQueue;
+extern queue_mt<mvWEFPoseStateTime> gMotionVSLAMPoseQueue;
+extern queue_mt<mvPose6DRT> gMotionFsuionPoseQueue;
 
 void wefProc()
 {
@@ -66,16 +79,19 @@ void wefProc()
       visualiser->PublishRobotPose( fusionPose );
    }
 
-	printf( "wefProc Thread exit\n" );
+   printf( "wefProc Thread exit\n" );
+}
+
+void publishState( const char * str, int64_t timestampUs )
+{
+   char strTemp[100];
+   sprintf( strTemp, "%lld,%s", timestampUs, str );
+   visualiser->PublishVSLAMSchedulerState( std::string( strTemp ) );
 }
 
 void vslamProc()
 {
-   int failCnt = 0;
-
    StartVSLAM();
-
-   gScaleEstimator.initialize();
 
    if( vslamCamera )
    {
@@ -87,6 +103,8 @@ void vslamProc()
       return;
    }
 
+   VSLAMPoseWithFeedback pose = VSLAMPoseWithFeedback( mvWEFPoseStateTime() );
+   VSLAMScheduler *instance = VSLAMScheduler::getInstance();
    while( true )
    {
       if( THREAD_RUNNING == false )
@@ -94,73 +112,114 @@ void vslamProc()
          break;
       }
 
-      // Get vslam pose
-      mvWEFPoseStateTime pose = GetPose();
-
-      if( pose.timestampUs == 0 )
+      switch( instance->getState() )
       {
-         continue;
-      }
-      else if( pose.timestampUs == -1 )
-      {
-         exitMainThread();
-         continue;
-      }
-
-      // Change the save map flag from false to true in case 
-      //   target-based initialization with the high quality VSLAM pose 
-      if( gScaleEstimator.isSaveMapFlag == false
-          && (pose.poseWithState.poseQuality == MV_VSLAM_TRACKING_STATE_GREAT ||
-               pose.poseWithState.poseQuality == MV_VSLAM_TRACKING_STATE_GOOD ||
-               pose.poseWithState.poseQuality == MV_VSLAM_TRACKING_STATE_OK)
-          && gScaleEstimator.getScaleEstimationStatus() == ScaleEstimationStatus::IDLE )
-      {
-         gScaleEstimator.isSaveMapFlag = true;
-      }
-
-      gVSLAMPoseQueue.check_push( pose );
-      gMotionVSLAMPoseQueue.check_push( pose );
-
-      switch( gScaleEstimator.getScaleEstimationStatus() )
-      {
-         case ScaleEstimationStatus::IDLE:
-            if( pose.poseWithState.poseQuality == MV_VSLAM_TRACKING_STATE_FAILED )
+         case VSLAMScheduler::kSTATE_PRIMARY:
+         {
+            gVSLAMPoseRawQueue.wait_and_pop( pose );
+            if( VSLAMScheduler::kFB_MAPEXPORTED == pose.feedback )
             {
-               failCnt++;
-               if( failCnt > failPoseNum ) // function handle 
+               instance->setState( VSLAMScheduler::kSTATE_SECONDARY_IMPORT );
+               instance->activateSecondary();
+            }
+            if( gScaleEstimator.getScaleEstimationStatus() == ScaleEstimationStatus::IDLE )
+               gVSLAMPoseQueue.check_push( pose.pose );
+
+            gMotionVSLAMPoseQueue.check_push( pose.pose );
+
+            publishState( "kSTATE_PRIMARY", pose.pose.timestampUs );
+            break;
+         }
+         case VSLAMScheduler::kSTATE_SECONDARY_IMPORT:
+         {
+            gVSLAMPoseRawSecondaryQueue.wait_and_pop( pose );
+
+            if( VSLAMScheduler::kFB_MAPIMPORTED == pose.feedback )
+            {
+               instance->setState( VSLAMScheduler::kSTATE_CONCURRENT );
+            }
+            gVSLAMPoseRawQueue.wait_and_pop( pose );
+
+            gVSLAMPoseQueue.check_push( pose.pose );
+            gMotionVSLAMPoseQueue.check_push( pose.pose );
+
+            publishState( "kSTATE_SECONDARY_IMPORT", pose.pose.timestampUs );
+            break;
+         }
+         case VSLAMScheduler::kSTATE_CONCURRENT:
+         {
+            VSLAMPoseWithFeedback poseSecondary = VSLAMPoseWithFeedback( mvWEFPoseStateTime() );
+            gVSLAMPoseRawSecondaryQueue.wait_and_pop( poseSecondary );
+            gVSLAMPoseRawQueue.wait_and_pop( pose );
+
+            gMotionVSLAMPoseQueue.check_push( pose.pose );
+            if( VSLAMScheduler::kFB_SCALEACQUIRED == pose.feedback && VSLAMScheduler::kFB_RELOCATED == poseSecondary.feedback )
+            {
+               //TODO: select between initialization and relocation
+               instance->setState( VSLAMScheduler::kSTATE_SECONDARY );
+               instance->deactivatePrimary();
+
+               gVSLAMPoseQueue.check_push( poseSecondary.pose );
+               gMotionVSLAMPoseQueue.check_push( poseSecondary.pose );
+
+               publishState( "kSTATE_CONCURRENT_s", poseSecondary.pose.timestampUs );
+            }
+            else
+            {
+               if( VSLAMScheduler::kFB_SCALEACQUIRED == pose.feedback )
                {
-                  gScaleEstimator.setScaleEstimationStatus( ScaleEstimationStatus::PREPARE_FOR_SCALE_ESTIMATION );
-                  failCnt = 0;
+                  instance->setState( VSLAMScheduler::kSTATE_PRIMARY );
+                  instance->deactivateSecondary();
+                  gVSLAMPoseQueue.check_push( pose.pose );
+                  publishState( "kSTATE_CONCURRENT_p", pose.pose.timestampUs );
+               }
+               else
+               {
+                  if( VSLAMScheduler::kFB_RELOCATED == poseSecondary.feedback )
+                     instance->setState( VSLAMScheduler::kSTATE_SECONDARY );
+                  gVSLAMPoseQueue.check_push( poseSecondary.pose );
+                  publishState( "kSTATE_CONCURRENT_s", poseSecondary.pose.timestampUs );
                }
             }
-            else
+            break;
+         }
+         case VSLAMScheduler::kSTATE_SECONDARY:
+         {
+            if( ScaleEstimationStatus::IDLE == gScaleEstimator.getScaleEstimationStatus() )
             {
-               failCnt = 0;
+               // make sure primary vslam in IDLE state if deactivated
+               instance->deactivatePrimary();
             }
-            break;
-         case ScaleEstimationStatus::PREPARE_FOR_SCALE_ESTIMATION:
-            break;
-         case ScaleEstimationStatus::READY_TO_MOTION_FOR_SCALE_ESTIMATION:
-            break;
-         case ScaleEstimationStatus::START_POSE_COLLECTION_FOR_SCALE_ESTIMAION:
-            break;
-         case ScaleEstimationStatus::SCALE_ESTIMATOR:
-            gScaleEstimator.setReinitTransformAndScalar();
-            if( !gScaleEstimator.failScaleFlag )
+
+            gVSLAMPoseRawSecondaryQueue.wait_and_pop( pose );
+            if( VSLAMScheduler::kFB_MAPEXPORTED == pose.feedback )
             {
-               gScaleEstimator.setScaleEstimationStatus( ScaleEstimationStatus::SUCCESS_SCALE_ESTIMAION );
+               assert( MV_VSLAM_TRACKING_STATE_FAILED == pose.pose.poseWithState.poseQuality );
+               instance->setState( VSLAMScheduler::kSTATE_PRIMARY_IMPORT );
+               instance->activatePrimary();
             }
-            else
+
+            gVSLAMPoseQueue.check_push( pose.pose );
+            gMotionVSLAMPoseQueue.check_push( pose.pose );
+            publishState( "kSTATE_SECONDARY", pose.pose.timestampUs );
+            break;
+         }
+         case VSLAMScheduler::kSTATE_PRIMARY_IMPORT:
+         {
+            gVSLAMPoseRawQueue.wait_and_pop( pose );
+
+            if( VSLAMScheduler::kFB_MAPIMPORTED == pose.feedback )
             {
-               gScaleEstimator.setScaleEstimationStatus( ScaleEstimationStatus::FAIL_SCALE_ESTIMAION );
+               instance->setState( VSLAMScheduler::kSTATE_CONCURRENT );
             }
+            gVSLAMPoseRawSecondaryQueue.wait_and_pop( pose );
+
+            gVSLAMPoseQueue.check_push( pose.pose );
+            gMotionVSLAMPoseQueue.check_push( pose.pose );
+            publishState( "kSTATE_PRIMARY_IMPORT", pose.pose.timestampUs );
             break;
-         case ScaleEstimationStatus::SUCCESS_SCALE_ESTIMAION:
-            printf( "Should not call here!\n" );
-            break;
-         case ScaleEstimationStatus::FAIL_SCALE_ESTIMAION:
-            break;
-         default: // IDLE
+         }
+         default:
             break;
       }
    }
@@ -180,15 +239,7 @@ void motionProc()
    {
       MOTION_PATTERN motion_pattern;
       gMotionPatternQueue.wait_and_pop( motion_pattern );
-      setMotionPattern( motion_pattern );
-      if( (motion_pattern == TARGETLESS_INIT_PATTERN && gMotionPatternQueue.empty()
-            && (gScaleEstimator.getScaleEstimationStatus() == ScaleEstimationStatus::READY_TO_MOTION_FOR_SCALE_ESTIMATION
-                 || gScaleEstimator.getScaleEstimationStatus() == ScaleEstimationStatus::IDLE))
-          || gScaleEstimator.getScaleEstimationStatus() == ScaleEstimationStatus::START_POSE_COLLECTION_FOR_SCALE_ESTIMAION )
-      {
-         gScaleEstimator.setScaleEstimationStatus( ScaleEstimationStatus::START_POSE_COLLECTION_FOR_SCALE_ESTIMAION );
-         setMotionPattern( MOTION_PATTERN::SCALE_ESTIMATION_PATTERN );
-      }
+      setMotionPattern( motion_pattern ); 
       MOTION_PATTERN n_motion_pattern = motion_pattern;
    }
    printf( "motionProc Thread exit\n" );
@@ -197,9 +248,19 @@ void motionProc()
 
 void mainProc()
 {
+   printf( "\nMV version: %s\n\n", mvVersion() );
    THREAD_RUNNING = true;
-   ParseVWSLAMConf( VWSLAM_Configuration, vslamPara, wefPara );
+   int re = ParseVWSLAMConf( VWSLAM_Configuration, vslamPara, wefPara );
+   if( re != 0 )
+   {
+      return;
+   }
    signal( SIGINT, INThandler );
+
+   mapFocuser = new MapFocuser;
+   mapFocuserSecondary = new MapFocuser;
+   mapFocuser->SetCrossCalibrationMatrix(vslamPara.baselinkInVSLAM[0]);
+   mapFocuserSecondary->SetCrossCalibrationMatrix(vslamPara.baselinkInVSLAM[0]);
 
    VSLAMCameraParams eagleCameraParams;
    if( ParseCameraParameters( "Configuration/vslam.cfg", eagleCameraParams ) != 0 )
@@ -236,17 +297,25 @@ void mainProc()
    vslamCameraConfig.distortion[7] = 0;
    vslamCameraConfig.distortionModel = 0;
 
-   gWEF = StartFS( &wefPara.poseVB, RELOCALIZATION == vslamPara.initMode, wefPara.vslamStateBadAsFail );
+   gWEF = StartFS( &wefPara.poseVB, RELOCALIZATION == vslamPara.initMode, wefPara.vslamStateBadAsFail, vslamPara.useExternalConstraint );
    InitializeVSLAM( vslamPara );
 
    SetInitMode( vslamPara, "8009Map" );
+   if( vslamPara.alwaysOnRelocation )
+   {
+      SetInitModeSecondary();
+   }
 
+   ParseScaleEstimationParameters( "Configuration/vslam.cfg", gScaleEstimator, vslamPara ); 
+    
    std::thread wefThread( wefProc );
    std::thread cameraThread( cameraProc );
+   std::thread cameraSecondaryThread( cameraSecondaryProc );
    std::thread vslamThread( vslamProc );
    std::thread motionThread( motionProc );
    wefThread.join();
    cameraThread.join();
+   cameraSecondaryThread.join();
    vslamThread.join();
    motionThread.join();
 
@@ -257,6 +326,9 @@ void mainProc()
    ReleaseFS( gWEF );
 
    delete vslamCamera;
+   delete mapFocuser;
+   delete mapFocuserSecondary;
+
    mainThreadExited = true;
 }
 
@@ -272,6 +344,10 @@ void exitMainThread()
 
    StopVSLAM();
 
+   mvWEFPoseVelocityTime wheelodom{ 0 };
+   wheelodom.timestampUs = 0;
+   gWEPoseQueueWheel2VSLAM.check_push( wheelodom );
+
    if( vslamCamera )
    {
       uint8_t image[16];
@@ -280,11 +356,10 @@ void exitMainThread()
       vslamCamera->onPreviewFrame( &frame );
    }
 
-   mvWEFPoseVelocityTime wheelodom;
-   wheelodom.timestampUs = 0;
-   gWEPoseQueueWheel2VSLAM.check_push( wheelodom );
    gWEPoseQueue.check_push( wheelodom );
 
    mvWEFPoseVelocityTime curWEPose{ 0 };
    gMotionWEPoseQueue.check_push( curWEPose );
 }
+
+

@@ -14,6 +14,7 @@ Visualiser::Visualiser( const char * outputPath )
 {
    std::string output( outputPath );
    fpLogWEFInput = openLogFile( (output + "fusion_input.csv").c_str() );
+   fpLogScaleEstimation = openLogFile( (output + "scale_estimation.csv").c_str() );
 }
 
 Visualiser:: ~Visualiser()
@@ -21,6 +22,10 @@ Visualiser:: ~Visualiser()
    if( fpLogWEFInput )
    {
       fclose( fpLogWEFInput );
+   }
+   if( fpLogScaleEstimation )
+   {
+      fclose( fpLogScaleEstimation );
    }
 }
 
@@ -60,6 +65,34 @@ void Visualiser::RecordFusedPose()
       fprintf( fpLogWEFInput, "%d\n", kGettingFPose );
 }
 
+void Visualiser::RecordPoseForScaleEstimation( std::vector<mvWEFPoseStateTime>& vslamPoseQ, std::vector<mvWEFPoseVelocityTime>& wePoseQ, std::string dataUsage )
+{
+   static size_t cntEstimation;
+   if( nullptr != fpLogScaleEstimation )
+   {
+      if( dataUsage.compare("scaleEstimation") == 0 )
+         cntEstimation++;
+      fprintf( fpLogScaleEstimation, "%d,%d,%d\n", cntEstimation, vslamPoseQ.size(), wePoseQ.size() );
+      for( size_t i = 0; i < vslamPoseQ.size(); i++ )
+      {
+         fprintf( fpLogScaleEstimation, "%s,%lld,%d,", dataUsage.c_str(), vslamPoseQ[i].timestampUs, vslamPoseQ[i].poseWithState.poseQuality );
+         for( size_t j = 0; j < 12; j++ )
+         {
+            fprintf( fpLogScaleEstimation, "%f,", vslamPoseQ[i].poseWithState.pose.matrix[0][j] );
+         }
+         fprintf( fpLogScaleEstimation, "\n" );
+      }
+      for( size_t i = 0; i < wePoseQ.size(); i++ )
+      {
+         fprintf( fpLogScaleEstimation, "%s,%lld,%f,%f,%f,%f,%f,%f,%f,%f\n", dataUsage.c_str(), wePoseQ[i].timestampUs,
+                  wePoseQ[i].pose.translation[0], wePoseQ[i].pose.translation[1], wePoseQ[i].pose.translation[2],
+                  wePoseQ[i].pose.euler[0], wePoseQ[i].pose.euler[1], wePoseQ[i].pose.euler[2],
+                  wePoseQ[i].velocityLinear, wePoseQ[i].velocityAngular );
+      }
+   }
+}
+
+
 FILE* Visualiser::openLogFile( const char* nameLogFile )
 {
    FILE *fpLog = fopen( nameLogFile, "w" );
@@ -77,7 +110,7 @@ FILE* Visualiser::openLogFile( const char* nameLogFile )
 
 #ifdef OPENCV_SUPPORTED
 #include <opencv2/opencv.hpp>
-void Visualiser::DrawLabelledImage( const mvWEFPoseStateTime & poseWithTime, const uint8_t * image, int widthFrame, int heightFrame, cv::Mat & rview )
+vslamStatus Visualiser::DrawLabelledImage( const mvWEFPoseStateTime & poseWithTime, const uint8_t * image, int widthFrame, int heightFrame, cv::Mat & rview, mvVSLAM* pObj )
 {
    rview = cv::Mat( heightFrame, widthFrame, CV_8UC1 );
    memcpy( rview.data, image, heightFrame* widthFrame );
@@ -88,13 +121,12 @@ void Visualiser::DrawLabelledImage( const mvWEFPoseStateTime & poseWithTime, con
    //imwrite( fileName, rview );
 
    mvVSLAMTrackingPose pose = poseWithTime.poseWithState;
-   mvVSLAM* pVSlamObj = parameter.pVSlamObj;
 
-   int newObservNum = mvVSLAM_HasTrackedObservation( pVSlamObj );
+   int newObservNum = mvVSLAM_HasTrackedObservation( pObj );
    if( newObservNum > 0 )
    {
       MV_TrackedObservation* observBuf = new MV_TrackedObservation[newObservNum];
-      newObservNum = mvVSLAM_GetObservation( pVSlamObj, observBuf, newObservNum );
+      newObservNum = mvVSLAM_GetObservation( pObj, observBuf, newObservNum );
 
       if( pose.poseQuality != MV_VSLAM_TRACKING_STATE_FAILED )
       {
@@ -123,7 +155,7 @@ void Visualiser::DrawLabelledImage( const mvWEFPoseStateTime & poseWithTime, con
    //cv::flip( rview, rview0, -1 );
    //rview = rview0;
 
-   GetVSLAMStatus( image, widthFrame, heightFrame );
+   vslamStatus status = GetVSLAMStatus( image, widthFrame, heightFrame, pObj );
 
    char strFrame[50];
    cv::Scalar color( 255, 0, 0 );
@@ -141,15 +173,23 @@ void Visualiser::DrawLabelledImage( const mvWEFPoseStateTime & poseWithTime, con
    {
       color = cv::Scalar( 0, 255, 0 );
    }
-   sprintf( strFrame, "BR:%3d, VR: %3.1f, KF:%5d", (int32_t)status._BrightnessMean, status._BrightnessVar, status._KeyframeNum );
-   putText( rview, std::string( strFrame ), cv::Point2f( 350, 450 ), cv::FONT_HERSHEY_COMPLEX, 0.6, color );
-   sprintf( strFrame, "Mismatched: %3d, Matched: %3d", status._MisMatchedMapPointNum, status._MatchedMapPointNum );
-   putText( rview, std::string( strFrame ), cv::Point2f( 250, 30 ), cv::FONT_HERSHEY_COMPLEX, 0.6, color );
 
+   static int frameIndex = 0;
+   frameIndex++;
+
+   sprintf( strFrame, "BR:%3d, VR: %3.1f, KF:%5d", (int32_t)status._BrightnessMean, status._BrightnessVar, status._KeyframeNum );
+   //putText( rview, std::string( strFrame ), cv::Point2f( widthFrame - 290.0f, heightFrame - 30.0f ), cv::FONT_HERSHEY_COMPLEX, 0.6, color );
+   putText( rview, std::string( strFrame ), cv::Point2f( widthFrame - 290.0f, heightFrame - 30.0f ), cv::FONT_HERSHEY_COMPLEX, 0.6, color );
+   sprintf( strFrame, "FrameIndex = %4d, Mismatched: %3d, Matched: %3d", frameIndex, status._MisMatchedMapPointNum, status._MatchedMapPointNum );
+   putText( rview, std::string( strFrame ), cv::Point2f( widthFrame - 600.0f, 30.0f ), cv::FONT_HERSHEY_COMPLEX, 0.6, color );
+
+   return status;
 }
 
-void Visualiser::GetVSLAMStatus( const uint8_t * image, int widthFrame, int heightFrame )
+vslamStatus Visualiser::GetVSLAMStatus( const uint8_t * image, int widthFrame, int heightFrame, mvVSLAM* pObj )
 {
+   vslamStatus status;
+
    cv::Mat mean;
    cv::Mat stdDev;
    cv::Mat rview = cv::Mat( heightFrame, widthFrame, CV_8UC1 );
@@ -159,17 +199,16 @@ void Visualiser::GetVSLAMStatus( const uint8_t * image, int widthFrame, int heig
    status._BrightnessMean = (float32_t)mean.at<double>( 0, 0 );
    status._BrightnessVar = (float32_t)stdDev.at<double>( 0, 0 );
 
-   mvVSLAM* pVSlamObj = parameter.pVSlamObj;
-   status._KeyframeNum = mvVSLAM_GetMapSize( pVSlamObj );
+   status._KeyframeNum = mvVSLAM_GetMapSize( pObj );
 
-   int newObservNum = mvVSLAM_HasTrackedObservation( pVSlamObj );
+   int newObservNum = mvVSLAM_HasTrackedObservation( pObj );
 
    status._MatchedMapPointNum = 0;
    status._MisMatchedMapPointNum = 0;
    if( newObservNum > 0 )
    {
       MV_TrackedObservation* observBuf = new MV_TrackedObservation[newObservNum];
-      newObservNum = mvVSLAM_GetObservation( pVSlamObj, observBuf, newObservNum );
+      newObservNum = mvVSLAM_GetObservation( pObj, observBuf, newObservNum );
     
       for( int i = 0; i < newObservNum; i++ )
       {
@@ -184,6 +223,8 @@ void Visualiser::GetVSLAMStatus( const uint8_t * image, int widthFrame, int heig
       }
       delete[] observBuf;
    }
+
+   return status;
 }
 
 void Visualiser::GetOriginalImage( const uint8_t * image, cv::Mat & view, uint32_t widthFrame, uint32_t heightFrame )
@@ -199,6 +240,7 @@ void Visualiser::GetOriginalImage( const uint8_t * image, cv::Mat & view, uint32
       memcpy( dst + i, image + iRaw, 4 );
    }
 }
+
 #endif
 
 
@@ -239,4 +281,21 @@ void RtoQuaternion( const float32_t matrix[3][4], double quaternion[4] )
       quaternion[3] = 0.25 * S;
    }
 }
+
+
+void EtoQuaternion( double roll, double pitch, double yaw, double quaternion[4] )
+{
+   double t0 = cos( yaw * 0.5 );
+   double t1 = sin( yaw * 0.5 );
+   double t2 = cos( roll * 0.5 );
+   double t3 = sin( roll * 0.5 );
+   double t4 = cos( pitch * 0.5 );
+   double t5 = sin( pitch * 0.5 );
+
+   quaternion[0] = t0 * t2 * t4 + t1 * t3 * t5;  //w
+   quaternion[1] = t0 * t3 * t4 - t1 * t2 * t5;  //x
+   quaternion[2] = t0 * t2 * t5 + t1 * t3 * t4;  //y
+   quaternion[3] = t1 * t2 * t4 - t0 * t3 * t5;  //z
+}
+
 
