@@ -9,7 +9,7 @@ SRC_URI += "file://ankiinit.sh"
 do_install_append() {
   install -d ${D}${sysconfdir}/initscripts/
   install -m 0755 ${WORKDIR}/ankiinit.sh ${D}${sysconfdir}/initscripts/ankiinit
-  install -d ${D}${sysconfdir}/systemd/system/  
+  install -d ${D}${sysconfdir}/systemd/system/
   install -m 0644 ${WORKDIR}/ankiinit.service \
     -D ${D}${sysconfdir}/systemd/system/ankiinit.service
   install -d ${D}${sysconfdir}/systemd/system/multi-user.target.wants/

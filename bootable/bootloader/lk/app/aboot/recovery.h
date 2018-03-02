@@ -90,5 +90,6 @@ int recovery_init (void);
 int get_ffbm(char *ffbm, unsigned size);
 
 extern unsigned boot_into_recovery;
+extern unsigned boot_unbrick;
 
 #endif

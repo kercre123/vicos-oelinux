@@ -66,6 +66,8 @@
 #define TLMM_VOL_UP_BTN_GPIO    90
 #define TLMM_VOL_DOWN_BTN_GPIO  91
 
+#define ANKI_SPINE_RX_GPIO 21
+
 #if PON_VIB_SUPPORT
 #define VIBRATE_TIME    250
 #endif
@@ -231,6 +233,18 @@ int target_volume_up()
 	return !status;
 }
 
+uint32_t target_esc_down()
+{
+	uint32_t status = 0;
+	gpio_tlmm_config(ANKI_SPINE_RX_GPIO, 0, GPIO_INPUT, GPIO_PULL_UP, GPIO_2MA, GPIO_ENABLE);
+	thread_sleep(10); // Wait for the gpio config to take effect
+	for (unsigned i=0; i<1000; ++i)
+	{
+		if (gpio_status(ANKI_SPINE_RX_GPIO)) return 0;
+	}
+	return 1;
+}
+
 /* Return 1 if vol_down pressed */
 uint32_t target_volume_down()
 {
@@ -258,12 +272,8 @@ static void target_keystatus()
 {
 	keys_init();
 
-	if(target_volume_down())
-		keys_post_event(KEY_VOLUMEDOWN, 1);
-
-	if(target_volume_up())
-		keys_post_event(KEY_VOLUMEUP, 1);
-
+	if (target_esc_down())
+		keys_post_event(KEY_ESC, 1);
 }
 
 static void set_sdc_power_ctrl()
@@ -530,7 +540,6 @@ int get_target_boot_params(const char *cmdline, const char *part, char **buf)
 {
 	struct ptable *ptable;
 	int system_ptn_index = -1;
-	int le_based = -1;
 	uint32_t buflen = 0;
 
 	if (!cmdline || !part ) {
@@ -538,14 +547,7 @@ int get_target_boot_params(const char *cmdline, const char *part, char **buf)
 		return -1;
 	}
 
-	/*LE partition.xml will have recoveryfs partition*/
-	if (target_is_emmc_boot())
-		le_based = partition_get_index("recoveryfs");
-	else
-		/*Nand targets by default have this*/
-		le_based = 1;
-
-	if (le_based != -1)
+	if (1) // We know we're LE based, we're not trying to build a purpose bootloader
 	{
 		if (!target_is_emmc_boot())
 		{
@@ -622,7 +624,7 @@ unsigned target_baseband()
 
 int emmc_recovery_init(void)
 {
-	return _emmc_recovery_init();
+	return 0; // Recovery is just another boot mode for victor, no need to support all this fancyness
 }
 
 void target_usb_init(void)

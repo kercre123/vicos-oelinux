@@ -281,22 +281,6 @@ int partition_find_active_slot()
 				}
 			}
 		}
-
-		/* All slots are zeroed, this is first bootup */
-		/* Marking and trying SLOT 0 as default */
-		if (count == AB_SUPPORTED_SLOTS)
-		{
-			/* Update the priority of the boot slot */
-			partition_entries[boot_slot_index[SLOT_A]].attribute_flag |=
-							((PART_ATT_PRIORITY_VAL |
-							PART_ATT_ACTIVE_VAL |
-							PART_ATT_MAX_RETRY_COUNT_VAL) &
-							(~PART_ATT_SUCCESSFUL_VAL &
-							~PART_ATT_UNBOOTABLE_VAL));
-			if (!attributes_updated)
-				attributes_updated = true;
-			return SLOT_A;
-		}
 	}
 	/* If no valid slot */
 	return INVALID;
@@ -314,13 +298,13 @@ next_active_bootable_slot(struct partition_entry *ptn_entry)
 	}
 
 	/* NO Bootable slot */
-	panic("ERROR: Unable to find any bootable slot");
-	return 0;
+	return INVALID;
 }
 
 int partition_find_boot_slot()
 {
 	int boot_slot;
+	int next_slot;
 	int slt_index;
 	uint64_t boot_retry_count;
 	struct partition_entry *partition_entries = partition_get_partition_entries();
@@ -351,7 +335,12 @@ int partition_find_boot_slot()
 					~PART_ATT_ACTIVE_VAL &
 					~PART_ATT_PRIORITY_VAL);
 
-		partition_switch_slots(boot_slot, next_active_bootable_slot(partition_entries));
+		next_slot = next_active_bootable_slot(partition_entries);
+		if (next_slot == INVALID) {
+			boot_slot = INVALID;
+			goto out;
+		}
+		partition_switch_slots(boot_slot, next_slot);
 
 		reboot_device(0);
 	}

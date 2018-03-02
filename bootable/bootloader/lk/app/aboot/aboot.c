@@ -188,6 +188,8 @@ static const char *skip_ramfs = " skip_initramfs";
 static const char *sys_path_cmdline = " rootwait ro init=/init";
 static const char *sys_path = "  root=/dev/mmcblk0p";
 
+static const char *unbrick_cmdline = "anki.unbrick=1";
+
 #if VERIFIED_BOOT
 static const char *verity_mode = " androidboot.veritymode=";
 static const char *verified_state= " androidboot.verifiedbootstate=";
@@ -342,7 +344,6 @@ unsigned char *update_cmdline(const char * cmdline)
 	char *boot_dev_buf = NULL;
     	bool is_mdtp_activated = 0;
 	int current_active_slot = INVALID;
-	int system_ptn_index = -1;
 	unsigned int lun = 0;
 	char lun_char_base = 'a';
 	int syspath_buflen = strlen(sys_path) + sizeof(int) + 1; /*allocate buflen for largest possible string*/
@@ -478,6 +479,10 @@ unsigned char *update_cmdline(const char * cmdline)
 			break;
 	}
 
+	if (boot_unbrick) {
+		cmdline_len += strlen(unbrick_cmdline);
+	}
+
 #if ENABLE_DISPLAY
 	if (cmdline) {
 		if ((strstr(cmdline, DISPLAY_DEFAULT_PREFIX) == NULL) &&
@@ -499,20 +504,6 @@ unsigned char *update_cmdline(const char * cmdline)
 		current_active_slot = partition_find_active_slot();
 		cmdline_len += (strlen(androidboot_slot_suffix)+
 					strlen(SUFFIX_SLOT(current_active_slot)));
-
-		system_ptn_index = partition_get_index("system");
-		if (platform_boot_dev_isemmc())
-		{
-			snprintf(syspath_buf, syspath_buflen, " root=/dev/mmcblk0p%d",
-				system_ptn_index + 1);
-		}
-		else
-		{
-			lun = partition_get_lun(system_ptn_index);
-			snprintf(syspath_buf, syspath_buflen, " root=/dev/sd%c%d",
-					lun_char_base + lun,
-					partition_get_index_in_lun("system", lun));
-		}
 
 		cmdline_len += strlen(sys_path_cmdline);
 		cmdline_len += strlen(syspath_buf);
@@ -592,6 +583,12 @@ unsigned char *update_cmdline(const char * cmdline)
 		if (warm_boot) {
 			if (have_cmdline) --dst;
 			src = warmboot_cmdline;
+			while ((*dst++ = *src++));
+		}
+
+		if (boot_unbrick) {
+			if(have_cmdline) --dst;
+			src = unbrick_cmdline;
 			while ((*dst++ = *src++));
 		}
 
@@ -1203,9 +1200,6 @@ int boot_linux_from_mmc(void)
 	struct kernel64_hdr *kptr = NULL;
 	int current_active_slot = INVALID;
 
-	if (check_format_bit())
-		boot_into_recovery = 1;
-
 	if (!boot_into_recovery) {
 		memset(ffbm_mode_string, '\0', sizeof(ffbm_mode_string));
 		rcode = get_ffbm(ffbm_mode_string, sizeof(ffbm_mode_string));
@@ -1309,7 +1303,7 @@ int boot_linux_from_mmc(void)
 	 *    platform accordingly.
 	 * 4. Sanity Check on kernel_addr and ramdisk_addr and copy data.
 	 */
-	if (partition_multislot_is_supported())
+	if (partition_multislot_is_supported() && !boot_into_recovery)
 	{
 		current_active_slot = partition_find_active_slot();
 		dprintf(INFO, "Loading boot image (%d) active_slot(%s): start\n",
@@ -1335,7 +1329,7 @@ int boot_linux_from_mmc(void)
 		return -1;
 	}
 
-	if (partition_multislot_is_supported())
+	if (partition_multislot_is_supported() && !boot_into_recovery)
 	{
 		dprintf(INFO, "Loading boot image (%d) active_slot(%s): done\n",
 				imagesize_actual, SUFFIX_SLOT(current_active_slot));
@@ -3004,7 +2998,7 @@ void cmd_flash_meta_img(const char *arg, void *data, unsigned sz)
 		}
 
 		if (VB_V2 == target_get_vb_version() &&
-			!device.is_unlock_critical) 
+			!device.is_unlock_critical)
 		{
 			fastboot_fail("Device is critical locked, Meta image flashing is not allowed");
 			return;
@@ -4293,7 +4287,7 @@ void aboot_init(const struct app_descriptor *app)
 		boot_slot = partition_find_active_slot();
 		if (boot_slot == INVALID)
 		{
-			boot_into_fastboot = true;
+			boot_into_recovery = true;
 			dprintf(INFO, "Active Slot: (INVALID)\n");
 		}
 		else
@@ -4343,27 +4337,11 @@ void aboot_init(const struct app_descriptor *app)
 	if (is_user_force_reset())
 		goto normal_boot;
 
-	/* Check if we should do something other than booting up */
-	if (keys_get_state(KEY_VOLUMEUP) && keys_get_state(KEY_VOLUMEDOWN))
+	if (keys_get_state(KEY_ESC))
 	{
-		dprintf(ALWAYS,"dload mode key sequence detected\n");
-		reboot_device(EMERGENCY_DLOAD);
-		dprintf(CRITICAL,"Failed to reboot into dload mode\n");
-
-		boot_into_fastboot = true;
+		boot_into_recovery = true;
+		boot_unbrick = true;
 	}
-	if (!boot_into_fastboot)
-	{
-		if (keys_get_state(KEY_HOME) || keys_get_state(KEY_VOLUMEUP))
-			boot_into_recovery = 1;
-		if (!boot_into_recovery &&
-			(keys_get_state(KEY_BACK) || keys_get_state(KEY_VOLUMEDOWN)))
-			boot_into_fastboot = true;
-	}
-	#if NO_KEYPAD_DRIVER
-	if (fastboot_trigger())
-		boot_into_fastboot = true;
-	#endif
 
 #if USE_PON_REBOOT_REG
 	reboot_mode = check_hard_reboot_mode();
@@ -4429,12 +4407,12 @@ normal_boot:
 
 retry_boot:
 			/* Trying to boot active partition */
-			if (partition_multislot_is_supported())
+			if (partition_multislot_is_supported() && !boot_into_recovery)
 			{
 				boot_slot = partition_find_boot_slot();
 				partition_mark_active_slot(boot_slot);
 				if (boot_slot == INVALID)
-					goto fastboot;
+					boot_into_recovery = true;
 			}
 
 			boot_err_type = boot_linux_from_mmc();
@@ -4462,8 +4440,9 @@ retry_boot:
 	#endif
 			boot_linux_from_flash();
 		}
-		dprintf(CRITICAL, "ERROR: Could not do normal boot. Reverting "
-			"to fastboot mode.\n");
+		dprintf(CRITICAL, "ERROR: Could not do normal boot. Booting recovery\n");
+		boot_into_recovery = true;
+		goto retry_boot;
 	}
 
 fastboot:

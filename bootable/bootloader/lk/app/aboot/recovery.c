@@ -57,6 +57,7 @@ static const int MISC_COMMAND_PAGE = 1;		// bootloader command is this page
 static char buf[4096];
 
 unsigned boot_into_recovery = 0;
+unsigned boot_unbrick = 0;
 
 extern uint32_t get_page_size();
 extern void reset_device_info();
@@ -626,5 +627,3 @@ cleanup:
 		free(ffbm_page_buffer);
 	return retval;
 }
-
-
