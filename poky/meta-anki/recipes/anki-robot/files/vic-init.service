@@ -14,7 +14,7 @@ ConditionFileIsExecutable=/anki/bin/vic-init.sh
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/anki/bin/vic-init.sh
+ExecStart=/bin/sh /anki/bin/vic-init.sh
 
 [Install]
 WantedBy=anki-robot.target
