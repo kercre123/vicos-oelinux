@@ -109,7 +109,6 @@ enum class BluetoothGattConnectionStatus {
     DiscoveringServices,
     GettingGattDb,
     RegisteringForNotifications,
-    WritingCCCDescriptors,
     Connected,
 };
 
@@ -135,6 +134,22 @@ FindOutboundConnectionById(const int conn_id)
                      return (p.second.connection.conn_id == conn_id);
                    });
   return search;
+}
+
+static BluetoothGattDescriptor*
+FindBluetoothGattDescriptorByConnectionAndHandle(BluetoothGattConnection& connection,
+                                                 const int handle)
+{
+  for (auto & service : connection.services) {
+    for (auto & characteristic : service.characteristics) {
+      for (auto & descriptor : characteristic.descriptors) {
+        if (descriptor.desc_handle == handle) {
+          return &descriptor;
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 static bt_status_t DisconnectOutboundConnectionById(const int conn_id)
@@ -190,6 +205,34 @@ static int GetCharacteristicHandleFromConnIDAndUUID(const int conn_id, const std
   }
 
   return -1;
+}
+
+static bool IsOutboundConnectionFullyEstablished(const int conn_id)
+{
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    return false;
+  }
+
+  BluetoothGattConnection& connection = search->second.connection;
+  for (auto & service : connection.services) {
+    for (auto & characteristic : service.characteristics) {
+      if (characteristic.properties & kGattCharacteristicPropNotify) {
+        if (!characteristic.registered_for_notifications) {
+          return false;
+        }
+        for (auto & descriptor : characteristic.descriptors) {
+          if (bt_uuid_string_equals(Anki::kCCCDescriptorUUID, descriptor.uuid)) {
+            if (!descriptor.descriptor_written) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
+  search->second.status = BluetoothGattConnectionStatus::Connected;
+  return true;
 }
 
 static void TransmitNextWriteItem() {
@@ -625,26 +668,20 @@ void btgattc_register_for_notification_cb(int conn_id, int registered,
     (void) DisconnectOutboundConnectionById(conn_id);
     return;
   }
+
   for (auto& service : connection.services) {
     if (service.start_handle <= handle && handle <= service.end_handle) {
       for (auto& characteristic : service.characteristics) {
         if (characteristic.char_handle == handle) {
           characteristic.registered_for_notifications = true;
-          // Now write the CCC descriptor
-          for (auto& descriptor : characteristic.descriptors) {
-            if (bt_uuid_string_equals(Anki::kCCCDescriptorUUID, descriptor.uuid)) {
-              search->second.status = BluetoothGattConnectionStatus::WritingCCCDescriptors;
-
-              std::vector<uint8_t> value({0x01, 0x00});
-              QueueWriteItem(true,
-                             conn_id,
-                             descriptor.desc_handle,
-                             kGattWriteTypeWithResponse,
-                             value);
-            }
-          }
         }
       }
+    }
+  }
+
+  if (IsOutboundConnectionFullyEstablished(conn_id)) {
+    if (sCallbacks.outbound_connection_cb) {
+      sCallbacks.outbound_connection_cb(connection.address, 1, connection);
     }
   }
 }
@@ -715,37 +752,26 @@ void btgattc_write_descriptor_cb(int conn_id, int status, uint16_t handle)
   bt_status_t bt_status = (bt_status_t) status;
   logv("%s(conn_id = %d, status = %s, handle = %d)",
        __FUNCTION__, conn_id, bt_status_t_to_string(bt_status).c_str(), handle);
+
   auto search = FindOutboundConnectionById(conn_id);
   if (search == sOutboundConnections.end()) {
-    DisconnectOutboundConnectionById(conn_id);
+    loge("%s(conn_id = %d). connection not found", __FUNCTION__, conn_id);
     return;
   }
 
-  if (bt_status != BT_STATUS_SUCCESS) {
-    DisconnectOutboundConnectionById(conn_id);
-    return;
-  }
-
-  bool outbound_connection_complete = true;
   BluetoothGattConnection& connection = search->second.connection;
-  for (auto & service : connection.services) {
-    for (auto & characteristic : service.characteristics) {
-      if (characteristic.properties & kGattCharacteristicPropNotify) {
-        for (auto & descriptor : characteristic.descriptors) {
-          if (bt_uuid_string_equals(Anki::kCCCDescriptorUUID, descriptor.uuid)) {
-            if (descriptor.desc_handle == handle) {
-              descriptor.descriptor_written = true;
-            } else if (!descriptor.descriptor_written) {
-              outbound_connection_complete = false;
-            }
-          }
-        }
-      }
-    }
+
+  BluetoothGattDescriptor* descriptor =
+      FindBluetoothGattDescriptorByConnectionAndHandle(connection, handle);
+
+  if (!descriptor || (bt_status != BT_STATUS_SUCCESS)) {
+    DisconnectOutboundConnectionById(conn_id);
+    return;
   }
 
-  if (outbound_connection_complete) {
-    search->second.status = BluetoothGattConnectionStatus::Connected;
+  descriptor->descriptor_written = true;
+
+  if (IsOutboundConnectionFullyEstablished(conn_id)) {
     if (sCallbacks.outbound_connection_cb) {
       sCallbacks.outbound_connection_cb(connection.address, 1, connection);
     }
@@ -891,10 +917,22 @@ void btgattc_get_gatt_db_cb(int conn_id, btgatt_db_element_t *db, int count)
           DisconnectOutboundConnectionById(conn_id);
           return;
         }
+        search->second.status = BluetoothGattConnectionStatus::RegisteringForNotifications;
       }
     } else if (db[i].type == BTGATT_DB_DESCRIPTOR) {
+      BluetoothGattCharacteristic& lastCharacteristic = services.back().characteristics.back();
       BluetoothGattDescriptor descriptor(uuidStr, 0, db[i].attribute_handle);
-      services.back().characteristics.back().descriptors.push_back(descriptor);
+      lastCharacteristic.descriptors.push_back(descriptor);
+      if (lastCharacteristic.properties & kGattCharacteristicPropNotify) {
+        if (bt_uuid_string_equals(Anki::kCCCDescriptorUUID, descriptor.uuid)) {
+          std::vector<uint8_t> value({0x01, 0x00});
+          QueueWriteItem(true,
+                         conn_id,
+                         descriptor.desc_handle,
+                         kGattWriteTypeWithResponse,
+                         value);
+        }
+      }
     }
   }
   connection.services = services;
