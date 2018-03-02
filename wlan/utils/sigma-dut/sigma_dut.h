@@ -368,7 +368,6 @@ struct sigma_dut {
 	enum ap_chwidth default_11na_ap_chwidth;
 	enum ap_chwidth default_11ng_ap_chwidth;
 	int ap_tx_stbc;
-	int ap_rx_stbc;
 	enum value_not_set_enabled_disabled ap_dyn_bw_sig;
 	int ap_sgi80;
 	int ap_p2p_mgmt;
@@ -379,7 +378,11 @@ struct sigma_dut {
 		AP_WPA2_EAP,
 		AP_WPA_EAP,
 		AP_WPA2_EAP_MIXED,
-		AP_WPA2_PSK_MIXED
+		AP_WPA2_PSK_MIXED,
+		AP_WPA2_SAE,
+		AP_WPA2_PSK_SAE,
+		AP_SUITEB,
+		AP_WPA2_OWE,
 	} ap_key_mgmt;
 	enum ap_tag_key_mgmt {
 		AP2_OPEN,
@@ -398,9 +401,22 @@ struct sigma_dut {
 		AP_TKIP,
 		AP_WEP,
 		AP_PLAIN,
-		AP_CCMP_TKIP
+		AP_CCMP_TKIP,
+		AP_GCMP_256,
+		AP_GCMP_128,
+		AP_CCMP_256,
 	} ap_cipher;
-	char ap_passphrase[65];
+	enum ap_group_mgmt_cipher {
+		AP_NO_GROUP_MGMT_CIPHER_SET,
+		AP_BIP_GMAC_256,
+		AP_BIP_CMAC_256,
+		AP_BIP_GMAC_128,
+		AP_BIP_CMAC_128,
+	} ap_group_mgmt_cipher;
+	char *ap_sae_groups;
+	int sae_anti_clogging_threshold;
+	int sae_reflection;
+	char ap_passphrase[101];
 	char ap_wepkey[27];
 	char ap_radius_ipaddr[20];
 	int ap_radius_port;
@@ -467,7 +483,6 @@ struct sigma_dut {
 		AP_DFS_MODE_ENABLED,
 	} ap_dfs_mode;
 	int ap_ndpa_frame;
-	int ap_opmode_notify;
 
 	int ap_lci;
 	char ap_val_lci[33];
@@ -579,7 +594,8 @@ struct sigma_dut {
 		PROGRAM_NAN,
 		PROGRAM_LOC,
 		PROGRAM_MBO,
-		PROGRAM_IOTLP
+		PROGRAM_IOTLP,
+		PROGRAM_DPP,
 	} program;
 
 	enum device_type {
@@ -631,10 +647,16 @@ struct sigma_dut {
 	char *non_pref_ch_list; /* MBO: non-preferred channel report */
 	char *btm_query_cand_list; /* Candidate list for BTM Query */
 
+	char *sae_commit_override;
 	char *rsne_override;
 	const char *hostapd_bin;
 	int use_hostapd_pid_file;
 	const char *hostapd_ifname;
+	int hostapd_running;
+
+	int dpp_peer_bootstrap;
+	int dpp_local_bootstrap;
+	int dpp_conf_id;
 };
 
 
@@ -721,6 +743,9 @@ void ath_disable_txbf(struct sigma_dut *dut, const char *intf);
 void ath_config_dyn_bw_sig(struct sigma_dut *dut, const char *ifname,
 			   const char *val);
 void novap_reset(struct sigma_dut *dut, const char *ifname);
+int get_hwaddr(const char *ifname, unsigned char *hwaddr);
+int cmd_ap_config_commit(struct sigma_dut *dut, struct sigma_conn *conn,
+			 struct sigma_cmd *cmd);
 
 /* sta.c */
 int set_ps(const char *intf, struct sigma_dut *dut, int enabled);
@@ -744,6 +769,7 @@ int p2p_discover_peer(struct sigma_dut *dut, const char *ifname,
 
 /* utils.c */
 enum sigma_program sigma_program_to_enum(const char *prog);
+int parse_hexstr(const char *hex, unsigned char *buf, size_t buflen);
 int parse_mac_address(struct sigma_dut *dut, const char *arg,
 		      unsigned char *addr);
 unsigned int channel_to_freq(unsigned int channel);
@@ -787,5 +813,10 @@ int loc_cmd_sta_send_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 int loc_cmd_sta_preset_testparameters(struct sigma_dut *dut,
 				      struct sigma_conn *conn,
 				      struct sigma_cmd *cmd);
+
+/* dpp.c */
+int dpp_dev_exec_action(struct sigma_dut *dut, struct sigma_conn *conn,
+			struct sigma_cmd *cmd);
+
 
 #endif /* SIGMA_DUT_H */

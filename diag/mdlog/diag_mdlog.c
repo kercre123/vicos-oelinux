@@ -52,10 +52,14 @@ when       who    what, where, why
 #include <cutils/log.h>
 #include "errno.h"
 #ifndef FEATURE_LE_DIAG
-	#ifdef TARGET_FS_CONFIG_GEN
-	#include "generated_oem_aid.h"
-	#endif
 #include <private/android_filesystem_config.h>
+#endif
+
+#ifdef TARGET_FS_CONFIG_GEN
+/* TODO: Temporarily hardcode custom AID's - must match with fs.config */
+#ifndef AID_QTI_DIAG
+#define AID_QTI_DIAG 2901
+#endif
 #endif
 
 /*

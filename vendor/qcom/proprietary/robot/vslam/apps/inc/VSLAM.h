@@ -6,10 +6,21 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 *******************************************************************************/
 
 #pragma once
-
+#include "VSLAMScheduler.h"
 #include <string>
 #include <Queue.h>
 #include "WEF.h"
+#include "MapFocuser.h"
+
+struct VSLAMPoseWithFeedback
+{
+   mvWEFPoseStateTime pose;
+   VSLAMScheduler::Feedback feedback;
+
+   VSLAMPoseWithFeedback( const mvWEFPoseStateTime & pose, VSLAMScheduler::Feedback feedback = VSLAMScheduler::kFB_NONE ) :pose( pose ), feedback( feedback )
+   {
+   }
+};
 
 enum VSLAMInitMode
 {
@@ -20,7 +31,9 @@ enum VSLAMInitMode
 
 extern queue_mt<bool> gScaleQueue;
 
-extern queue_mt<mvWEFPoseStateTime> gVSLAMPoseRawQueue;
+extern queue_mt<VSLAMPoseWithFeedback> gVSLAMPoseRawQueue;
+extern queue_mt<VSLAMPoseWithFeedback> gVSLAMPoseRawSecondaryQueue;
+
 
 typedef struct _VSLAMParameter
 {
@@ -36,6 +49,12 @@ public:
    float32_t targetHeight;
    bool wheelEnabled;
    bool loopClosureEnabled;
+   bool alwaysOnRelocation;
+   bool useExternalConstraint;
+   float heightConstraint; //Unit: meter
+   float rollConstraint; //Unit: rad
+   float pitchConstraint; //Unit: rad
+   float32_t baselinkInVSLAM[3][4]; //also the cross-calibration matrix
    float32_t targetHomography[9];
 
 public:
@@ -49,6 +68,11 @@ public:
       initMode = VSLAMInitMode::TARGETLESS_INIT;
       wheelEnabled = false;
       loopClosureEnabled = false;
+      alwaysOnRelocation = false;
+	  useExternalConstraint = false;
+	  heightConstraint = 10000.0f;
+	  rollConstraint = 10.0f;
+	  pitchConstraint = 10.0f;
       // Rotate to world coordinates:  X-Y on ground plane and Z coming out of ground
       targetPose.matrix[0][0] = 1.0f; targetPose.matrix[0][1] = 0.0f; targetPose.matrix[0][2] = 0.0f; targetPose.matrix[0][3] = 0.0f;
       targetPose.matrix[1][0] = 0.0f; targetPose.matrix[1][1] = 1.0f; targetPose.matrix[1][2] = 0.0f; targetPose.matrix[1][3] = 0.0f;
@@ -69,6 +93,12 @@ void SetInitMode( VSLAMParameter& currentPara, const char * map = NULL );
 
 /**--------------------------------------------------------------------------
 @brief
+Set the initial mode of secondary vslam
+--------------------------------------------------------------------------**/
+void SetInitModeSecondary();
+
+/**--------------------------------------------------------------------------
+@brief
 Start vslam
 --------------------------------------------------------------------------**/
 void InitializeVSLAM( const VSLAMParameter & para );
@@ -78,12 +108,6 @@ void InitializeVSLAM( const VSLAMParameter & para );
 Save current map
 --------------------------------------------------------------------------**/
 bool GetPointCloud( const char* mapName );
-
-/**--------------------------------------------------------------------------
-@brief
-Get vslam pose
---------------------------------------------------------------------------**/
-mvWEFPoseStateTime GetPose();
 
 /**--------------------------------------------------------------------------
 @brief
@@ -108,5 +132,9 @@ void StartVSLAM();
 Stop the vslam algorithms
 --------------------------------------------------------------------------**/
 void StopVSLAM();
+
+#define IsPoseHighQuality( poseWithState )    ( MV_VSLAM_TRACKING_STATE_GREAT == poseWithState.poseQuality \
+                                             || MV_VSLAM_TRACKING_STATE_GOOD == poseWithState.poseQuality \
+                                             || MV_VSLAM_TRACKING_STATE_OK == poseWithState.poseQuality )
 
 

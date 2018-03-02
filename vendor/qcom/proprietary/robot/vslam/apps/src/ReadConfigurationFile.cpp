@@ -15,16 +15,26 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 
 #include "string.h"
 #include "mainThread.h"
+#include "ScaleEstimation.h"
 
-extern std::string Program_Root;
-extern int32_t failPoseNum;
+extern std::string Program_Root; 
 extern int initModePara;
 
-void ReadMatrix( std::ifstream & file, float * matrix, int number )
+void eulerToSO3(const float* euler, float * rotation);
+
+void ReadMatrix( std::ifstream & file, float * matrix )
 {
-   std::string line;
+   std::string line, valName;
+   int rows=0, cols=0;
+
    std::getline( file, line );
+   std::istringstream issRow ( line );
+   issRow >> valName >> rows;
+
    std::getline( file, line );
+   std::istringstream issCol( line );
+   issCol >> valName >> cols;
+
    std::getline( file, line );
    size_t index = line.find_first_of( '[' );
    size_t length = line.length();
@@ -46,10 +56,9 @@ void ReadMatrix( std::ifstream & file, float * matrix, int number )
    std::istringstream iss( matrixStr );
 
    std::string numberStr;
-   for( int i = 0; i < number; i++ )
+   for( int i = 0; i < rows * cols; i++ )
    {
-      std::getline( iss, numberStr, ',' );
-      matrix[i] = std::stof( numberStr );
+      iss >> matrix[i] >> valName;
    }
 }
 
@@ -89,15 +98,15 @@ bool GetCameraParameter( VSLAMCameraParams & cameraParameter, const char *camera
       }
       else if( itemName.compare( "camera_matrix:" ) == 0 )
       {
-         ReadMatrix( cfg, cameraParameter.inputCameraMatrix, 9 );
+         ReadMatrix( cfg, cameraParameter.inputCameraMatrix );
       }
       else if( itemName.compare( "distortion_coefficients:" ) == 0 )
       {
-         ReadMatrix( cfg, cameraParameter.distortionCoefficient, 8 );
+         ReadMatrix( cfg, cameraParameter.distortionCoefficient );
       }
       else if( itemName.compare( "projection_matrix:" ) == 0 )
       {
-         ReadMatrix( cfg, p, 12 );
+         ReadMatrix( cfg, p );
          cameraParameter.outputCameraMatrix[0] = p[0];
          cameraParameter.outputCameraMatrix[1] = p[1];
          cameraParameter.outputCameraMatrix[2] = p[2];
@@ -107,6 +116,28 @@ bool GetCameraParameter( VSLAMCameraParams & cameraParameter, const char *camera
          cameraParameter.outputCameraMatrix[6] = p[8];
          cameraParameter.outputCameraMatrix[7] = p[9];
          cameraParameter.outputCameraMatrix[8] = p[10];
+      }
+      else if( itemName.compare( "project_image_width:" ) == 0 )
+      {
+         iss >> cameraParameter.outputPixelWidth;
+      }
+      else if( itemName.compare( "project_image_height:" ) == 0 )
+      {
+         iss >> cameraParameter.outputPixelHeight;
+      }
+      else if( itemName.compare( "distortion_model:" ) == 0 )
+      {
+         std::string distortionModelName;
+         iss >> distortionModelName;
+         if( distortionModelName.compare( "fisheye" ) == 0 )
+         {
+            cameraParameter.distortionModel = FisheyeModel_4;
+         }
+         else
+         {
+            cameraParameter.distortionModel = RationalModel_12;
+         }
+         
       }
    }
    return true;
@@ -139,13 +170,8 @@ int ParseVWSLAMConf( const char * parameterFile, VSLAMParameter & vslamPara, WEF
       }
       std::istringstream iss( line );
       itemName.clear();
-      iss >> itemName;
-      if( itemName.compare( "FailVSLAMPoseNum" ) == 0 )
-      {
-         iss >> failPoseNum;
-         printf( "FailVSLAMPoseNum is:       %d\n", failPoseNum );
-      }
-      else if( itemName.compare( "MapPath" ) == 0 )
+      iss >> itemName; 
+      if( itemName.compare( "MapPath" ) == 0 )
       {
          iss >> vslamPara.mapPath;
          int tmp = strlen( vslamPara.mapPath );
@@ -214,10 +240,20 @@ int ParseVWSLAMConf( const char * parameterFile, VSLAMParameter & vslamPara, WEF
       else if( itemName.compare( "WEF.Tvb" ) == 0 )
       {
          iss >> wefPara.poseVB.translation[0] >> wefPara.poseVB.translation[1] >> wefPara.poseVB.translation[2];
+         printf( "WEF.Tvb = %f, %f, %f\n", wefPara.poseVB.translation[0], wefPara.poseVB.translation[1], wefPara.poseVB.translation[2] );
+		 vslamPara.baselinkInVSLAM[0][3] = wefPara.poseVB.translation[0];
+		 vslamPara.baselinkInVSLAM[1][3] = wefPara.poseVB.translation[1];
+		 vslamPara.baselinkInVSLAM[2][3] = wefPara.poseVB.translation[2];
       }
       else if( itemName.compare( "WEF.Rvb" ) == 0 )
       {
          iss >> wefPara.poseVB.euler[0] >> wefPara.poseVB.euler[1] >> wefPara.poseVB.euler[2];
+         printf( "WEF.Rvb = %f, %f, %f\n", wefPara.poseVB.euler[0], wefPara.poseVB.euler[1], wefPara.poseVB.euler[2] );
+		 float rotation[9];
+		 eulerToSO3(wefPara.poseVB.euler, rotation);
+		 memcpy(vslamPara.baselinkInVSLAM[0], rotation + 0, sizeof(float) * 3);
+		 memcpy(vslamPara.baselinkInVSLAM[1], rotation + 3, sizeof(float) * 3);
+		 memcpy(vslamPara.baselinkInVSLAM[2], rotation + 6, sizeof(float) * 3);
       }
       else if( itemName.compare( "wheelEnabled" ) == 0 )
       {
@@ -229,14 +265,48 @@ int ParseVWSLAMConf( const char * parameterFile, VSLAMParameter & vslamPara, WEF
          iss >> vslamPara.loopClosureEnabled;
          printf( "loopClosureEnabled:       %d\n", vslamPara.loopClosureEnabled );
       }
+      else if( itemName.compare( "alwaysOnRelocation" ) == 0 )
+      {
+         iss >> vslamPara.alwaysOnRelocation;
+         printf( "alwaysOnRelocation:       %d\n", vslamPara.alwaysOnRelocation );
+      }
       else if( itemName.compare( "targetHomography" ) == 0 )
       {
          for( size_t i = 0; i < sizeof( vslamPara.targetHomography ) / sizeof( vslamPara.targetHomography[0] ); i++ )
             iss >> vslamPara.targetHomography[i];
+         printf( "targetHomography:" );
+         for( size_t i = 0; i < sizeof( vslamPara.targetHomography ) / sizeof( vslamPara.targetHomography[0] ); i++ )
+            printf( "%f, ", vslamPara.targetHomography[i] );
+         printf( "\n" );
       }
+	  else if (itemName.compare("useExternalConstraint") == 0)
+	  {
+		  iss >> vslamPara.useExternalConstraint;
+		  printf("useExternalConstraint:       %d\n", vslamPara.useExternalConstraint);
+	  }
+	  else if (itemName.compare("heightConstraint") == 0)
+	  {
+		  iss >> vslamPara.heightConstraint;
+		  printf("heightConstraint:       %f\n", vslamPara.heightConstraint);
+	  }
+	  else if (itemName.compare("rollConstraint") == 0)
+	  {
+		  iss >> vslamPara.rollConstraint;
+		  printf("rollConstraint:       %f\n", vslamPara.rollConstraint);
+	  }
+	  else if (itemName.compare("pitchConstraint") == 0)
+	  {
+		  iss >> vslamPara.pitchConstraint;
+		  printf("pitchConstraint:       %f\n", vslamPara.pitchConstraint);
+	  }
    }
 
    //Sanity check
+   if( vslamPara.wheelEnabled == 0 )
+   {
+      vslamPara.initMode = VSLAMInitMode::TARGET_INIT;
+   }
+
    if( vslamPara.initMode == VSLAMInitMode::TARGET_INIT )
    {
       if( vslamPara.targetImagePath[0] == 0 )
@@ -369,6 +439,12 @@ int ParseCameraParameters( const char * parameterFile, VSLAMCameraParams & eagle
             printf( "CPA enabled\n" );
          }
       }
+      else if( itemName.compare( "CPAFrameSkip" ) == 0 )
+      {
+         iss >> eagleCameraParams.cpaFrameSkip;
+         assert( eagleCameraParams.cpaFrameSkip > 0 );
+         printf( "Call CPA every %d frames (has to be > 0)\n", eagleCameraParams.cpaFrameSkip );
+      }
       else if( itemName.compare( "CPAExposureMin" ) == 0 )
       {
          iss >> eagleCameraParams.cpaConfiguration.histogram.exposureMin;
@@ -453,16 +529,6 @@ int ParseCameraParameters( const char * parameterFile, VSLAMCameraParams & eagle
          eagleCameraParams.cpaConfiguration.legacyCost.thresholdUnderflowed = temp;
          printf( "CPA thresholdUnderflowed = %d\n", eagleCameraParams.cpaConfiguration.legacyCost.thresholdUnderflowed );
       }
-      else if( itemName.compare( "VSLAMFrameWidth" ) == 0 )
-      {
-         iss >> eagleCameraParams.outputPixelWidth;
-         printf( "undistorted image  Width = %d\n", eagleCameraParams.outputPixelWidth );
-      }
-      else if( itemName.compare( "VSLAMFrameHeight" ) == 0 )
-      {
-         iss >> eagleCameraParams.outputPixelHeight;
-         printf( "undistorted image  height = %d\n", eagleCameraParams.outputPixelHeight );
-      }
       else if( itemName.compare( "Camera" ) == 0 )
       {
          std::string cameraID;
@@ -488,4 +554,120 @@ int ParseCameraParameters( const char * parameterFile, VSLAMCameraParams & eagle
    return 0;
 }
 
+ 
+void ParseScaleEstimationParameters( const char * parameterFile, 
+                                     ScaleEstimator & scaleEstimationParams, 
+                                     const VSLAMParameter currentPara )
+{
+   std::string fullName = Program_Root + parameterFile;
+   std::ifstream cfg( fullName.c_str(), std::ifstream::in );
+   if( !cfg.is_open() )
+   {
+      printf( "Fail to open configuration file: %s\n", fullName.c_str() );
+      return;
+   }
 
+   std::string line;
+   std::string itemName;
+   while( std::getline( cfg, line ) )
+   {
+      if( line.length() == 0 )
+      {
+         continue;
+      }
+      if( line[0] == '#' )
+      {
+         continue;
+      }
+      std::istringstream iss( line );
+      itemName.clear();
+      iss >> itemName;
+       
+      if( itemName.compare( "FailVSLAMPoseNumToStartTargetless" ) == 0 )
+      {
+         iss >> scaleEstimationParams.failPoseNum2startTargetless;
+         printf( "scaleEstimationParams.failPoseNum2startTargetless = %d\n", 
+                 scaleEstimationParams.failPoseNum2startTargetless );
+
+      }
+      else if( itemName.compare( "FailVSLAMPoseNumToRestartTargetless" ) == 0 )
+      {
+         iss >> scaleEstimationParams.failPoseNum2RestartTargetless;
+         printf( "scaleEstimationParams.failPoseNum2RestartTargetless = %d\n", 
+                 scaleEstimationParams.failPoseNum2RestartTargetless );
+      }
+      else if( itemName.compare( "CountFailNnmAfterSuccessTrack" ) == 0 )
+      {
+         iss >> scaleEstimationParams.countFailNnmAfterSuccessTrack;
+         printf( "scaleEstimationParams.countFailNnmAfterSuccessTrack = %d\n",
+                 scaleEstimationParams.countFailNnmAfterSuccessTrack );
+      }
+      else if( itemName.compare( "SuccessVSLAMPoseNumToStopTargetless" ) == 0 )
+      {
+         iss >> scaleEstimationParams.successPoseNum2StopTargetless;
+         printf( "scaleEstimationParams.successPoseNum2StopTargetless = %d\n",
+                 scaleEstimationParams.successPoseNum2StopTargetless );
+      } 
+      else if( itemName.compare( "TrajectoryDistanceToStopTargetless" ) == 0 )
+      {
+         iss >> scaleEstimationParams.successTrajectory2StopTargetless;
+         printf( "scaleEstimationParams.successTrajectory2StopTargetless = %f\n", 
+                 scaleEstimationParams.successTrajectory2StopTargetless );
+      }
+      else if( itemName.compare( "WEF.Tvb" ) == 0 )
+      {
+         iss >> scaleEstimationParams.mPoseVBt[0] >> scaleEstimationParams.mPoseVBt[1] >> scaleEstimationParams.mPoseVBt[2];
+      }
+      else if( itemName.compare( "WEF.Rvb" ) == 0 )
+      {
+         iss >> scaleEstimationParams.mPoseVBr[0] >> scaleEstimationParams.mPoseVBr[1] >> scaleEstimationParams.mPoseVBr[2];
+      }
+      else if( itemName.compare( "ScaleVerificationFailFrameNum" ) == 0 )
+      {
+         iss >> scaleEstimationParams.scaleVerificationV.failFrameNum4Verfi;
+      }
+      else if( itemName.compare( "ScaleVerificationTimes" ) == 0 )
+      {
+         iss >> scaleEstimationParams.scaleVerificationV.verfiNum;
+      }
+      else if( itemName.compare( "ScaleVerificationScaleRatioThreshold" ) == 0 )
+      {
+         iss >> scaleEstimationParams.scaleVerificationV.scaleRatioThreshold;
+      }
+      else if( itemName.compare( "ScaleVerificationDistThresholdSAMLL" ) == 0 )
+      {
+         iss >> scaleEstimationParams.scaleVerificationV.smallDistThreshold;
+      }
+      else if( itemName.compare( "ScaleVerificationDistThresholdLARGE" ) == 0 )
+      {
+         iss >> scaleEstimationParams.scaleVerificationV.largeDistThreshold;
+      }
+      else if( itemName.compare( "ActiveScaleVerification" ) == 0 )
+      {
+         iss >> scaleEstimationParams.scaleVerificationV.scaleEnable;
+      }
+   }
+
+   switch( currentPara.initMode )
+   {
+      case VSLAMInitMode::RELOCALIZATION: 
+         gScaleEstimator.setScaleEstimationStatus( ScaleEstimationStatus::IDLE );  
+         break;
+      case VSLAMInitMode::TARGETLESS_INIT: 
+         gScaleEstimator.setScaleEstimationStatus( ScaleEstimationStatus::FAIL_SCALE_ESTIMAION );  
+         break;
+      case VSLAMInitMode::TARGET_INIT: 
+         gScaleEstimator.setScaleEstimationStatus( ScaleEstimationStatus::TARGET_INITIALIZATION ); 
+         break;
+      default:
+         printf( "Please set init mode explicitly!\n" );
+         break;
+   }
+
+   //sanity check
+   //disbale targetless mode if wheel disabled
+   if( currentPara.wheelEnabled == 0 )
+       gScaleEstimator.failPoseNum2startTargetless = 1000000;
+     
+   return;
+} 

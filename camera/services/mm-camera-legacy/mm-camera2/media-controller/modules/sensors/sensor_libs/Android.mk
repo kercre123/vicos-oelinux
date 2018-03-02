@@ -1,3 +1,7 @@
 ifeq ($(TARGET_ARCH),$(filter $(TARGET_ARCH),arm arm64))
-include $(call all-subdir-makefiles)
+  ifeq ($(call is-board-platform-in-list, msm8909),true)
+    include $(call all-named-subdir-makefiles, ov8856_f8v05a)
+  else
+    include $(call all-subdir-makefiles)
+  endif
 endif
