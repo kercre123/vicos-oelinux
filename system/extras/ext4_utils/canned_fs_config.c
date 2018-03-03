@@ -35,6 +35,7 @@ typedef struct {
 static Path* canned_data = NULL;
 static int canned_alloc = 0;
 static int canned_used = 0;
+static Path default_config_data = {NULL, UINT_MAX, UINT_MAX, 0, 0};
 
 static int path_compare(const void* a, const void* b) {
 	return strcmp(((Path*)a)->path, ((Path*)b)->path);
@@ -48,28 +49,37 @@ int load_canned_fs_config(const char* fn) {
 	}
 
 	char line[PATH_MAX + 200];
+	memset(line, 0, PATH_MAX + 200);
 	while (fgets(line, sizeof(line), f)) {
-		while (canned_used >= canned_alloc) {
-			canned_alloc = (canned_alloc+1) * 2;
-			canned_data = (Path*) realloc(canned_data, canned_alloc * sizeof(Path));
-		}
-		Path* p = canned_data + canned_used;
-		p->path = strdup(strtok(line, " "));
-		p->uid = atoi(strtok(NULL, " "));
-		p->gid = atoi(strtok(NULL, " "));
-		p->mode = strtol(strtok(NULL, " "), NULL, 8);   // mode is in octal
-		p->capabilities = 0;
+                if (line[0]  != '\r' && line[0] != '\n' && line[0] != '#') {
+                  printf("processing line: %s\n", line);
+		  while (canned_used >= canned_alloc) {
+		  	canned_alloc = (canned_alloc+1) * 2;
+		  	canned_data = (Path*) realloc(canned_data, canned_alloc * sizeof(Path));
+		  }
+		  Path* p = canned_data + canned_used;
+		  p->path = strdup(strtok(line, " "));
+		  p->uid = atoi(strtok(NULL, " "));
+		  p->gid = atoi(strtok(NULL, " "));
+		  p->mode = strtol(strtok(NULL, " "), NULL, 8);   // mode is in octal
+		  printf("p->path = %s\n", p->path);	
+		  printf("p->uid = %d\n", p->uid);
+		  printf("p->gid = %d\n", p->gid);
+		  printf("p->mode = %d\n", p->mode);
+		  p->capabilities = 0;
 
-		char* token = NULL;
-		do {
-			token = strtok(NULL, " ");
-			if (token && strncmp(token, "capabilities=", 13) == 0) {
-				p->capabilities = strtoll(token+13, NULL, 0);
-				break;
-			}
-		} while (token);
+		  char* token = NULL;
+		  do {
+			  token = strtok(NULL, " ");
+			  if (token && strncmp(token, "capabilities=", 13) == 0) {
+				  p->capabilities = strtoll(token+13, NULL, 0);
+				  break;
+			  }
+		  } while (token);
 
-		canned_used++;
+		  canned_used++;
+                }
+	        memset(line, 0, PATH_MAX + 200);
 	}
 
 	fclose(f);
@@ -87,13 +97,16 @@ void canned_fs_config(const char* path, int dir, const char* target_out_path,
 	Path* p = (Path*) bsearch(&key, canned_data, canned_used, sizeof(Path), path_compare);
 	if (p == NULL) {
 		fprintf(stderr, "failed to find [%s] in canned fs_config\n", path);
-		exit(1);
+		*uid = default_config_data.uid;
+		*gid = default_config_data.gid;
+		return;
 	}
 	*uid = p->uid;
 	*gid = p->gid;
 	*mode = p->mode;
 	*capabilities = p->capabilities;
-
+	printf("[%s] found in canned fs_config, applied uid=%d, gid=%d, mode=%o, capabilities=%x\n",
+		p->path, *uid, *gid, *mode, *capabilities);
 #if 0
 	// for debugging, run the built-in fs_config and compare the results.
 
