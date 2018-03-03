@@ -12580,6 +12580,7 @@ int hdd_wlan_startup(struct device *dev )
              }
          }
 
+#if 0 /* Anki: we don't use P2P, let's not confuse userspace by this */
          pP2pAdapter = hdd_open_adapter( pHddCtx, WLAN_HDD_P2P_DEVICE, "p2p%d",
                            &pHddCtx->p2pDeviceAddress.bytes[0], FALSE );
          if ( NULL == pP2pAdapter )
@@ -12589,6 +12590,7 @@ int hdd_wlan_startup(struct device *dev )
                 __func__);
              goto err_close_adapter;
          }
+#endif
      }
    }
 
