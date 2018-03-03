@@ -57,8 +57,6 @@ void VicDevSetup::OnReceiveMessage(const int connection_id,
   if (connection_id == connection_id_) {
     if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kAppWriteCharacteristicUUID)) {
       HandleIncomingMessageFromCentral(value);
-    } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kAppWriteEncryptedCharacteristicUUID)) {
-      HandleIncomingMessageFromCentralEncrypted(value);
     }
   }
 }
@@ -187,27 +185,7 @@ void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& m
   }
 
 }
-void VicDevSetup::HandleIncomingMessageFromCentralEncrypted(const std::vector<uint8_t>& message)
-{
-  if (message.size() < 2) {
-    return;
-  }
 
-  uint8_t size = message[0];
-  uint8_t msgID = message[1];
-
-  switch (msgID) {
-    // Only handle a ping request.  This is just for testing.
-  case Anki::VictorMsg_Command::MSG_B2V_CORE_PING_REQUEST:
-    logi("Received ping request");
-    SendMessageToConnectedCentral({0x01, Anki::VictorMsg_Command::MSG_V2B_CORE_PING_RESPONSE},
-                                  Anki::kAppReadEncryptedCharacteristicUUID);
-    break;
-  default:
-    break;
-  }
-
-}
 void VicDevSetup::SendMessageToConnectedCentral(const std::vector<uint8_t>& value,
                                                 const std::string& char_uuid)
 {

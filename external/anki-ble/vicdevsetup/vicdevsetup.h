@@ -36,7 +36,6 @@ class VicDevSetup : public Anki::BluetoothDaemon::IPCClient {
 
  private:
   void HandleIncomingMessageFromCentral(const std::vector<uint8_t>& message);
-  void HandleIncomingMessageFromCentralEncrypted(const std::vector<uint8_t>& message);
   void SendMessageToConnectedCentral(const std::vector<uint8_t>& value,
                                      const std::string& char_uuid = Anki::kAppReadCharacteristicUUID);
   void SendMessageToConnectedCentral(uint8_t msgID, const std::vector<uint8_t>& value,

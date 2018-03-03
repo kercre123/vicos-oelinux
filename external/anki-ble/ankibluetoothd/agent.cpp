@@ -55,8 +55,6 @@ void Agent::TransmitNextNotification()
     uint16_t cccValue = kCCCDefaultValue;
     if (notification.characteristic_handle == app_read_characteristic_handle_) {
       cccValue = app_read_ccc_value_;
-    } else if (notification.characteristic_handle == app_read_encrypted_characteristic_handle_) {
-      cccValue = app_read_encrypted_ccc_value_;
     }
     int confirm = (cccValue == kCCCIndicationValue) ? notification.confirm : 0;
     if (connected_ && inbound_connection_id_ > 0 && (cccValue != kCCCDefaultValue)
@@ -67,8 +65,6 @@ void Agent::TransmitNextNotification()
       transmitted = true;
       if (notification.characteristic_handle == app_read_characteristic_handle_) {
         app_read_value_ = notification.value;
-      } else if (notification.characteristic_handle == app_read_encrypted_characteristic_handle_) {
-        app_read_encrypted_value_ = notification.value;
       }
     } else {
       logi("Failed to send notification");
@@ -106,8 +102,6 @@ void Agent::PeripheralInboundConnectionCallback(int conn_id, int connected) {
   connected_ = (bool) connected;
   app_read_ccc_value_ = kCCCDefaultValue;
   app_read_value_.clear();
-  app_read_encrypted_ccc_value_ = kCCCDefaultValue;
-  app_read_encrypted_value_.clear();
   notification_queue_.clear();
   congested_ = false;
   if (connected) {
@@ -133,13 +127,6 @@ void Agent::PeripheralReadCallback(int conn_id, int trans_id, int attr_handle, i
       value = app_read_value_;
       error = kGattErrorNone;
     }
-  } else if (attr_handle == app_read_encrypted_characteristic_handle_) {
-    if (offset != 0) {
-      error = kGattErrorInvalidOffset;
-    } else {
-      value = app_read_encrypted_value_;
-      error = kGattErrorNone;
-    }
   }
 
   (void) BluetoothStack::SendResponse(conn_id, trans_id, attr_handle, error, offset, value);
@@ -151,13 +138,10 @@ void Agent::PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, 
   std::vector<uint8_t> response;
   int error = kGattErrorNone;
 
-  if (attr_handle == app_read_characteristic_handle_
-      || attr_handle == app_read_encrypted_characteristic_handle_) {
+  if (attr_handle == app_read_characteristic_handle_) {
     error = kGattErrorWriteNotPermitted;
   } else if (attr_handle == app_write_characteristic_handle_) {
     OnReceiveMessage(conn_id, Anki::kAppWriteCharacteristicUUID, value);
-  } else if (attr_handle == app_write_encrypted_characteristic_handle_) {
-    OnReceiveMessage(conn_id, Anki::kAppWriteEncryptedCharacteristicUUID, value);
   } else if (attr_handle == app_read_ccc_descriptor_handle_) {
     error = kGattErrorCCCDImproperlyConfigured;
     if (value.size() == 2) {
@@ -165,22 +149,7 @@ void Agent::PeripheralWriteCallback(int conn_id, int trans_id, int attr_handle, 
       if (ccc == kCCCDefaultValue || ccc == kCCCNotificationValue || ccc == kCCCIndicationValue) {
         uint16_t old_ccc = app_read_ccc_value_;
         app_read_ccc_value_ = ccc;
-        if ((old_ccc == kCCCDefaultValue) && (app_read_ccc_value_ != kCCCDefaultValue)
-            && (app_read_encrypted_ccc_value_ != kCCCDefaultValue)) {
-          OnInboundConnectionChange(conn_id, 1);
-        }
-        error = kGattErrorNone;
-      }
-    }
-  } else if (attr_handle == app_read_encrypted_ccc_descriptor_handle_) {
-    error = kGattErrorCCCDImproperlyConfigured;
-    if (value.size() == 2) {
-      uint16_t ccc = ((value[1] << 8) | value[0]);
-      if (ccc == kCCCDefaultValue || ccc == kCCCNotificationValue || ccc == kCCCIndicationValue) {
-        uint16_t old_ccc = app_read_encrypted_ccc_value_;
-        app_read_encrypted_ccc_value_ = ccc;
-        if ((old_ccc == kCCCDefaultValue) && (app_read_ccc_value_ != kCCCDefaultValue)
-            && (app_read_encrypted_ccc_value_ != kCCCDefaultValue)) {
+        if ((old_ccc == kCCCDefaultValue) && (app_read_ccc_value_ != kCCCDefaultValue)) {
           OnInboundConnectionChange(conn_id, 1);
         }
         error = kGattErrorNone;
@@ -315,8 +284,6 @@ void Agent::SendMessage(const int connection_id,
     int characteristic_handle;
     if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadCharacteristicUUID)) {
       characteristic_handle = app_read_characteristic_handle_;
-    } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadEncryptedCharacteristicUUID)) {
-      characteristic_handle = app_read_encrypted_characteristic_handle_;
     } else {
       return;
     }
@@ -398,24 +365,6 @@ bool Agent::StartPeripheral()
 
   bluetooth_gatt_service_.characteristics.push_back(appWriteCharacteristic);
 
-  BluetoothGattCharacteristic
-      appReadEncryptedCharacteristic(Anki::kAppReadEncryptedCharacteristicUUID,
-                                     (kGattCharacteristicPropNotify | kGattCharacteristicPropRead),
-                                     kGattPermRead);
-
-  BluetoothGattDescriptor
-      appReadEncryptedCCCDescriptor(Anki::kCCCDescriptorUUID, (kGattPermRead | kGattPermWrite));
-  appReadEncryptedCharacteristic.descriptors.push_back(appReadEncryptedCCCDescriptor);
-
-  bluetooth_gatt_service_.characteristics.push_back(appReadEncryptedCharacteristic);
-
-  BluetoothGattCharacteristic
-      appWriteEncryptedCharacteristic(Anki::kAppWriteEncryptedCharacteristicUUID,
-                                      (kGattCharacteristicPropWrite | kGattCharacteristicPropWriteNoResponse),
-                                      kGattPermWrite);
-  bluetooth_gatt_service_.characteristics.push_back(appWriteEncryptedCharacteristic);
-
-
   if (!BluetoothStack::AddGattService(&bluetooth_gatt_service_)) {
     loge("Failed to add Anki BLE peripheral service");
     return false;
@@ -431,15 +380,6 @@ bool Agent::StartPeripheral()
       for (auto const& dit: cit.descriptors) {
         if (AreCaseInsensitiveStringsEqual(dit.uuid,Anki::kCCCDescriptorUUID)) {
           app_read_ccc_descriptor_handle_ = dit.desc_handle;
-        }
-      }
-    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppWriteEncryptedCharacteristicUUID)) {
-      app_write_encrypted_characteristic_handle_ = cit.char_handle;
-    } else if (AreCaseInsensitiveStringsEqual(cit.uuid, Anki::kAppReadEncryptedCharacteristicUUID)) {
-      app_read_encrypted_characteristic_handle_ = cit.char_handle;
-      for (auto const& dit: cit.descriptors) {
-        if (AreCaseInsensitiveStringsEqual(dit.uuid, Anki::kCCCDescriptorUUID)) {
-          app_read_encrypted_ccc_descriptor_handle_ = dit.desc_handle;
         }
       }
     }
