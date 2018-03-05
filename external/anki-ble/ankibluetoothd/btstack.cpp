@@ -442,6 +442,7 @@ static std::string bt_property_t_to_string(const bt_property_t *property) {
 
 static void adapter_properties_cb(bt_status_t status, int num_properties,
                                   bt_property_t *properties) {
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   logv("%s(status = %s, num_properties = %d)",
        __FUNCTION__, bt_status_t_to_string(status).c_str(), num_properties);
   for (int i = 0 ; i < num_properties; i++) {
@@ -1392,22 +1393,26 @@ bool EnableAdapter() {
 }
 
 std::string GetAdapterName() {
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   return sBtAdapterName;
 }
 
 bool SetAdapterName(const std::string& name) {
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   if (!sBtInterface || !sBtAdapterEnabled) {
     return false;
   }
   if (name == sBtAdapterName) {
     return true;
   }
-  bt_property_t property;
-  property.type = BT_PROPERTY_BDNAME;
   bt_bdname_t bd_name = {0};
+  if (name.size() >= sizeof(bd_name.name)) {
+    loge("Failed to set adapter name to %s.  Too long (%zu bytes).  Max is %zu bytes.",
+         name.c_str(), name.size(), sizeof(bd_name.name) - 1);
+    return false;
+  }
   strncpy((char *) &bd_name.name[0], name.c_str(), sizeof(bd_name) - 1);
-  property.val = &bd_name;
-  property.len = strlen((char *)bd_name.name);
+  bt_property_t property = {BT_PROPERTY_BDNAME, strlen((char *) bd_name.name), &bd_name};
   int status = sBtInterface->set_adapter_property(&property);
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to set adapter name to %s. status = %s",

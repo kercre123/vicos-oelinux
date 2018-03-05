@@ -21,7 +21,7 @@ AM_CFLAGS = 	-Wall \
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_LDFLAGS := $(LDFLAGS) -lpthread -lhardware
+AM_LDFLAGS := $(LDFLAGS) -lpthread -lhardware -lcutils
 
 bin_PROGRAMS = ankibluetoothd
 ankibluetoothd_CC = @CC@
