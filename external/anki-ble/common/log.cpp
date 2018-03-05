@@ -12,6 +12,7 @@
 
 #include "log.h"
 #include <iostream>
+#include <cutils/memory.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -41,7 +42,7 @@ void enableAndroidLogging(const bool enable) {
 }
 
 void setAndroidLoggingTag(const char* tag) {
-  strncpy(sAndroidLoggingTag, tag, sizeof(sAndroidLoggingTag));
+  (void) strlcpy(sAndroidLoggingTag, tag, sizeof(sAndroidLoggingTag));
 }
 
 int getMinLogLevel() {

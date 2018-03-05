@@ -17,6 +17,7 @@
 
 #include <algorithm>
 
+#include <cutils/memory.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -162,9 +163,9 @@ void IPCClient::SendMessage(const int connection_id,
   uint32_t args_length = sizeof(*args) + value.size();
   args = (SendMessageArgs *) malloc_zero(args_length);
   args->connection_id = connection_id;
-  strncpy(args->characteristic_uuid,
-          characteristic_uuid.c_str(),
-          sizeof(args->characteristic_uuid) - 1);
+  (void) strlcpy(args->characteristic_uuid,
+                 characteristic_uuid.c_str(),
+                 sizeof(args->characteristic_uuid));
   args->reliable = reliable;
   args->length = (uint32_t) value.size();
   memcpy(args->value, value.data(), value.size());
@@ -196,7 +197,7 @@ void IPCClient::StopAdvertising()
 void IPCClient::StartScan(const std::string& serviceUUID)
 {
   StartScanArgs args = {0};
-  strncpy(args.service_uuid, serviceUUID.c_str(), sizeof(args.service_uuid) - 1);
+  (void) strlcpy(args.service_uuid, serviceUUID.c_str(), sizeof(args.service_uuid));
   SendIPCMessageToServer(IPCMessageType::StartScan,
                          sizeof(args),
                          (uint8_t *) &args);
@@ -205,7 +206,7 @@ void IPCClient::StartScan(const std::string& serviceUUID)
 void IPCClient::ConnectToPeripheral(const std::string& address)
 {
   ConnectToPeripheralArgs args = {0};
-  strncpy(args.address, address.c_str(), sizeof(args.address) - 1);
+  (void) strlcpy(args.address, address.c_str(), sizeof(args.address));
   SendIPCMessageToServer(IPCMessageType::ConnectToPeripheral,
                          sizeof(args),
                          (uint8_t *) &args);

@@ -17,6 +17,7 @@
 #include "btutils.h"
 #include "gatt_constants.h"
 #include "taskExecutor.h"
+#include <cutils/memory.h>
 #include <hardware/bluetooth.h>
 #include <hardware/bt_gatt.h>
 #include <hardware/bt_gatt_client.h>
@@ -1411,7 +1412,7 @@ bool SetAdapterName(const std::string& name) {
          name.c_str(), name.size(), sizeof(bd_name.name) - 1);
     return false;
   }
-  strncpy((char *) &bd_name.name[0], name.c_str(), sizeof(bd_name) - 1);
+  (void) strlcpy((char *) &bd_name.name[0], name.c_str(), sizeof(bd_name));
   bt_property_t property = {BT_PROPERTY_BDNAME, strlen((char *) bd_name.name), &bd_name};
   int status = sBtInterface->set_adapter_property(&property);
   if (status != BT_STATUS_SUCCESS) {
