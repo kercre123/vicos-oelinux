@@ -16,6 +16,7 @@
 #include "log.h"
 #include "agent.h"
 
+#include <cutils/properties.h>
 #include <unistd.h>
 
 static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
@@ -35,6 +36,14 @@ static void SignalCallback(struct ev_loop* loop, struct ev_signal* w, int revent
 static struct ev_signal sIntSig;
 static struct ev_signal sTermSig;
 
+std::string GetDesiredAdapterName() {
+  std::string defaultName = std::string("VICTOR_") + GetDeviceSerialNumber();
+
+  char value[PROPERTY_VALUE_MAX] = {0};
+  (void) property_get("bluetooth.adapter.name", value, defaultName.c_str());
+  return std::string(value);
+}
+
 int main(int argc, char *argv[]) {
   ev_signal_init(&sIntSig, SignalCallback, SIGINT);
   ev_signal_start(sDefaultLoop, &sIntSig);
@@ -49,7 +58,7 @@ int main(int argc, char *argv[]) {
   if (!Anki::BluetoothStack::EnableAdapter()) {
     ExitHandler(1);
   }
-  std::string adapterName = std::string("VICTOR_") + GetDeviceSerialNumber();
+  std::string adapterName = GetDesiredAdapterName();
   if (!Anki::BluetoothStack::SetAdapterName(adapterName)) {
     ExitHandler(1);
   }
