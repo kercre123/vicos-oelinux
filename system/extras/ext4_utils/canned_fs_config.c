@@ -79,7 +79,7 @@ int load_canned_fs_config(const char* fn) {
 
 		  canned_used++;
                 }
-	        memset(line, 0, PATH_MAX + 200);
+                memset(line, 0, PATH_MAX + 200);
 	}
 
 	fclose(f);
