@@ -110,7 +110,7 @@
 	pinctrl-0 = <&uart_console_sleep>;
 };
 &blsp1_uart2 { // NDM
-  status = "okay";
+  status = "disabled";
 	pinctrl-names = "default";
   pinctrl-states = "default";
   pinctrl-0 = <&blsp1_uart2_sleep>;
