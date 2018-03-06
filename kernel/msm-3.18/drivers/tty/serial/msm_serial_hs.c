@@ -30,6 +30,9 @@
  * of operation. See msm_serial_hs_platform_data.rx_wakeup_irq.
  */
 
+// temp define for enabling dev_dbg
+#define DEBUG
+
 #include <linux/module.h>
 
 #include <linux/serial.h>
@@ -418,6 +421,8 @@ static void msm_hs_resource_vote(struct msm_hs_port *msm_uport)
 	}
 	atomic_inc(&msm_uport->resource_count);
 }
+
+
 
 /* Check if the uport line number matches with user id stored in pdata.
  * User id information is stored during initialization. This function
@@ -2816,6 +2821,8 @@ struct msm_serial_hs_platform_data
 	u32 rx_to_inject;
 	int ret;
 
+	dev_dbg(&pdev->dev, "msm_hs_dt_to_pdata \n");
+
 	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata) {
 		pr_err("unable to allocate memory for platform data\n");
@@ -3363,6 +3370,8 @@ static int msm_hs_probe(struct platform_device *pdev)
 	struct msm_serial_hs_platform_data *pdata = pdev->dev.platform_data;
 	unsigned long data;
 	char name[30];
+ 
+	dev_dbg(&pdev->dev, " of_node = %x \n", pdev->dev.of_node);
 
 	if (pdev->dev.of_node) {
 		dev_dbg(&pdev->dev, "device tree enabled\n");
