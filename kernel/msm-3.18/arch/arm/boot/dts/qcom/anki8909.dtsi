@@ -417,6 +417,8 @@
 				1 &intc 0 238 0
 				2 &msm_gpio 21 0>;
 		qcom,inject-rx-on-wakeup;
+		qcom,tx-gpio = <&msm_gpio 20 0>;
+		qcom,rx-gpio = <&msm_gpio 21 0>;
 		qcom,rx-char-to-inject = <0xfd>;
 		qcom,master-id = <86>;
 		clock-names = "core_clk", "iface_clk";
@@ -434,7 +436,7 @@
 		qcom,msm-bus,vectors-KBps =
 				<86 512 0 0>,
 				<86 512 500 800>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	qcom,sps {
