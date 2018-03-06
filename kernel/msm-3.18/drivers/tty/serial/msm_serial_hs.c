@@ -714,6 +714,8 @@ static int msm_hs_remove(struct platform_device *pdev)
 	struct msm_hs_port *msm_uport;
 	struct device *dev;
 
+	pr_info("msm_hs_remove\n");
+
 	if (pdev->id < 0 || pdev->id >= UARTDM_NR) {
 		pr_err("Invalid plaform device ID = %d\n", pdev->id);
 		return -EINVAL;
@@ -723,11 +725,13 @@ static int msm_hs_remove(struct platform_device *pdev)
 	if (!msm_uport)
 		return -EINVAL;
 
+	pr_info("Removing files\n");
 	dev = msm_uport->uport.dev;
 	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_clock.attr);
 	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_debug_mask.attr);
 	debugfs_remove(msm_uport->loopback_dir);
 
+	pr_info("Removing dma related items\n");
 	dma_free_coherent(msm_uport->uport.dev,
 			UART_DMA_DESC_NR * UARTDM_RX_BUF_SIZE,
 			msm_uport->rx.buffer, msm_uport->rx.rbuffer);
@@ -735,18 +739,27 @@ static int msm_hs_remove(struct platform_device *pdev)
 	msm_uport->rx.buffer = NULL;
 	msm_uport->rx.rbuffer = 0;
 
+	pr_info("removing workqueue \n");
 	destroy_workqueue(msm_uport->hsuart_wq);
+	pr_info("removing  mutex\n");
 	mutex_destroy(&msm_uport->mtx);
-
-	uart_remove_one_port(&msm_hs_driver, &msm_uport->uport);
+	
+	pr_info("remove one uart port \n");
+	if ( &msm_uport->uport != NULL) {
+		uart_remove_one_port(&msm_hs_driver, &msm_uport->uport);
+	}
 	clk_put(msm_uport->clk);
 	if (msm_uport->pclk)
 		clk_put(msm_uport->pclk);
 
+	pr_info("do iounmap\n");
 	iounmap(msm_uport->uport.membase);
+
+	pr_info("msm_hs_remove done\n");
 
 	return 0;
 }
+
 
 
 /* Connect a UART peripheral's SPS endpoint(consumer endpoint)
@@ -3662,6 +3675,7 @@ static int __init msm_serial_hs_init(void)
 {
 	int ret;
 
+	pr_info("loading msm_serial-hs module\n");
 	ret = uart_register_driver(&msm_hs_driver);
 	if (unlikely(ret)) {
 		pr_err("%s failed to load\n", __func__);
@@ -3794,10 +3808,13 @@ static void msm_hs_shutdown(struct uart_port *uport)
 
 static void __exit msm_serial_hs_exit(void)
 {
-	pr_info("msm_serial_hs module removed\n");
-	debugfs_remove_recursive(debug_base);
+	pr_info("removing msm_serial_hs module \n");
+	if ( debug_base) {
+		debugfs_remove_recursive(debug_base);
+	}
 	platform_driver_unregister(&msm_serial_hs_platform_driver);
 	uart_unregister_driver(&msm_hs_driver);
+	pr_info("msm_serial_hs module removed\n");
 }
 
 static const struct dev_pm_ops msm_hs_dev_pm_ops = {
