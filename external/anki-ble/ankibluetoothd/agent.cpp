@@ -299,11 +299,9 @@ void Agent::Disconnect(const int connection_id)
   (void) BluetoothStack::DisconnectGattPeer(connection_id);
 }
 
-void Agent::StartAdvertising()
+void Agent::StartAdvertising(const BLEAdvertiseSettings& settings)
 {
-  ble_advertise_settings_.GetAdvertisement().SetIncludeDeviceName(true);
-  ble_advertise_settings_.GetAdvertisement().SetIncludeTxPowerLevel(true);
-  ble_advertise_settings_.GetScanResponse().SetServiceUUID(Anki::kAnkiBLEService_128_BIT_UUID);
+  ble_advertise_settings_ = settings;
   advertising_ = BluetoothStack::StartAdvertisement(ble_advertise_settings_);
   if (advertising_) {
     logv("Started advertising Anki BLE peripheral service");

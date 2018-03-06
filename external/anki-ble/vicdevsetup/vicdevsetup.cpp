@@ -12,6 +12,7 @@
 
 #include "vicdevsetup.h"
 #include "anki_ble_uuids.h"
+#include "ble_advertise_settings.h"
 #include "constants.h"
 #include "exec_command.h"
 #include "log.h"
@@ -69,7 +70,11 @@ void VicDevSetup::OnPeripheralStateUpdate(const bool advertising,
   (void) congested; // currently unused
   OnInboundConnectionChange(connection_id, connected);
   if (!connected && !advertising) {
-    StartAdvertising();
+    Anki::BLEAdvertiseSettings settings;
+    settings.GetAdvertisement().SetServiceUUID(Anki::kAnkiBLEService_128_BIT_UUID);
+    settings.GetScanResponse().SetIncludeDeviceName(true);
+    settings.GetScanResponse().SetIncludeTxPowerLevel(true);
+    StartAdvertising(settings);
   } else if (connected && advertising) {
     StopAdvertising();
   }

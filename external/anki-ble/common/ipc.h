@@ -41,6 +41,7 @@ const size_t k16BitUUIDSize = 5;
 const size_t kAddressSize = 18;
 const size_t kLocalNameSize = 32;
 const size_t kManufacturerDataMaxSize = 32;
+const size_t kServiceDataMaxSize = 32;
 const size_t kMaxAdvertisingLength = 62;
 const size_t kIPCMessageMaxSize = 4096;
 const size_t kIPCMessageMaxLength = kIPCMessageMaxSize - 12;
@@ -93,6 +94,25 @@ typedef struct __attribute__ ((__packed__)) OnReceiveMessageArgs {
 typedef struct __attribute__ ((__packed__)) DisconnectArgs {
   int connection_id;
 } DisconnectArgs;
+
+typedef struct __attribute__ ((__packed__)) AdvertisingData {
+  bool include_device_name;
+  bool include_tx_power_level;
+  int manufacturer_data_len;
+  uint8_t manufacturer_data[kManufacturerDataMaxSize];
+  int service_data_len;
+  uint8_t service_data[kServiceDataMaxSize];
+  bool have_service_uuid;
+  char service_uuid[k128BitUUIDSize];
+} AdvertisingData;
+
+typedef struct __attribute__ ((__packed__)) StartAdvertisingArgs {
+  int appearance;
+  int min_interval;
+  int max_interval;
+  AdvertisingData advertisement;
+  AdvertisingData scan_response;
+} StartAdvertisingArgs;
 
 typedef struct __attribute__ ((__packed__)) OnPeripheralStateUpdateArgs {
   bool advertising;
