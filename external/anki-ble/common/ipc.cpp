@@ -17,6 +17,7 @@
 #include "log.h"
 #include "stringutils.h"
 
+#include <cutils/memory.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -29,7 +30,7 @@ IPCEndpoint::IPCEndpoint(struct ev_loop* loop)
 {
   sockfd_ = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
   addr_ = (const struct sockaddr_un) { .sun_family = AF_UNIX };
-  strncpy(addr_.sun_path, kSocketName.c_str(), sizeof(addr_.sun_path) - 1);
+  (void) strlcpy(addr_.sun_path, kSocketName.c_str(), sizeof(addr_.sun_path));
   task_executor_ = new TaskExecutor(loop);
 }
 
@@ -288,7 +289,7 @@ ScanResultRecord::ScanResultRecord(const std::string& address,
                                    const int rssi,
                                    const std::vector<uint8_t>& adv_data)
 {
-  strncpy(this->address, address.c_str(), sizeof(this->address) - 1);
+  (void) strlcpy(this->address, address.c_str(), sizeof(this->address));
   this->rssi = rssi;
 
   auto it = adv_data.begin();
@@ -318,9 +319,9 @@ ScanResultRecord::ScanResultRecord(const std::string& address,
               std::string short_uuid = byteVectorToHexString(v);
               std::string full_uuid = kBluetoothBase_128_BIT_UUID;
               full_uuid.replace(4, 4, short_uuid);
-              strncpy(service_uuids[num_service_uuids],
-                      full_uuid.c_str(),
-                      sizeof(service_uuids[num_service_uuids]));
+              (void) strlcpy(service_uuids[num_service_uuids],
+                             full_uuid.c_str(),
+                             sizeof(service_uuids[num_service_uuids]));
               num_service_uuids++;
               offset += 2;
             }
@@ -344,9 +345,9 @@ ScanResultRecord::ScanResultRecord(const std::string& address,
                 uuidString += byteVectorToHexString(part);
                 it += l;
               }
-              strncpy(service_uuids[num_service_uuids],
-                      uuidString.c_str(),
-                      sizeof(service_uuids[num_service_uuids]));
+              (void) strlcpy(service_uuids[num_service_uuids],
+                             uuidString.c_str(),
+                             sizeof(service_uuids[num_service_uuids]));
               num_service_uuids++;
               offset += 16;
             }
@@ -354,9 +355,8 @@ ScanResultRecord::ScanResultRecord(const std::string& address,
           break;
         case kADTypeCompleteLocalName:
           {
-            strncpy(local_name,
-                    (char *) data.data(),
-                    std::min(sizeof(local_name) - 1, (size_t) length - 1));
+            std::string complete_local_name(data.begin(), data.end());
+            (void) strlcpy(local_name, complete_local_name.c_str(), sizeof(local_name));
           }
           break;
         case kADTypeManufacturerSpecificData:

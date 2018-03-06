@@ -25,6 +25,7 @@
 #include <deque>
 #include <mutex>
 
+#include <cutils/memory.h>
 #include <string.h>
 
 static Anki::BluetoothDaemon::Agent* sAgent = nullptr;
@@ -214,7 +215,7 @@ void Agent::CentralOutboundConnectionCallback(const std::string& address,
   std::vector<GattDbRecord> records;
   for (auto & service : connection.services) {
     GattDbRecord service_record = {0};
-    strncpy(service_record.uuid, service.uuid.c_str(), sizeof(service_record.uuid) - 1);
+    (void) strlcpy(service_record.uuid, service.uuid.c_str(), sizeof(service_record.uuid));
     service_record.type = GattDbRecordType::Service;
     service_record.handle = service.service_handle;
     service_record.start_handle = service.start_handle;
@@ -222,14 +223,14 @@ void Agent::CentralOutboundConnectionCallback(const std::string& address,
     records.push_back(service_record);
     for (auto & characteristic : service.characteristics) {
       GattDbRecord char_record = {0};
-      strncpy(char_record.uuid, characteristic.uuid.c_str(), sizeof(char_record.uuid) - 1);
+      (void) strlcpy(char_record.uuid, characteristic.uuid.c_str(), sizeof(char_record.uuid));
       char_record.type = GattDbRecordType::Characteristic;
       char_record.handle = characteristic.char_handle;
       char_record.properties = characteristic.properties;
       records.push_back(char_record);
       for (auto & descriptor : characteristic.descriptors) {
         GattDbRecord desc_record = {0};
-        strncpy(desc_record.uuid, descriptor.uuid.c_str(), sizeof(desc_record.uuid) - 1);
+        (void) strlcpy(desc_record.uuid, descriptor.uuid.c_str(), sizeof(desc_record.uuid));
         desc_record.type = GattDbRecordType::Descriptor;
         desc_record.handle = descriptor.desc_handle;
         records.push_back(desc_record);

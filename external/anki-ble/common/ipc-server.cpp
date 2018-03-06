@@ -17,6 +17,7 @@
 
 #include <algorithm>
 
+#include <cutils/memory.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -183,9 +184,9 @@ void IPCServer::OnReceiveMessage(const int connection_id,
   uint32_t args_length = sizeof(*args) + data.size();
   args = (OnReceiveMessageArgs *) malloc_zero(args_length);
   args->connection_id = connection_id;
-  strncpy(args->characteristic_uuid,
-          characteristic_uuid.c_str(),
-          sizeof(args->characteristic_uuid) - 1);
+  (void) strlcpy(args->characteristic_uuid,
+                 characteristic_uuid.c_str(),
+                 sizeof(args->characteristic_uuid));
   args->length = (uint32_t) data.size();
   memcpy(args->value, data.data(), data.size());
   SendMessageToAllPeers(IPCMessageType::OnReceiveMessage,
@@ -220,7 +221,7 @@ void IPCServer::OnOutboundConnectionChange(const std::string& address,
   OnOutboundConnectionChangeArgs* args;
   uint32_t args_length = sizeof(*args) + (sizeof(GattDbRecord) * records.size());
   args = (OnOutboundConnectionChangeArgs *) malloc_zero(args_length);
-  strncpy(args->address, address.c_str(), sizeof(args->address) - 1);
+  (void) strlcpy(args->address, address.c_str(), sizeof(args->address));
   args->connected = connected;
   args->connection_id = connection_id;
   args->num_gatt_db_records = records.size();

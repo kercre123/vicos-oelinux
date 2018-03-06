@@ -15,7 +15,7 @@ AM_CFLAGS = 	-Wall \
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_LDFLAGS := $(LDFLAGS) -lpthread
+AM_LDFLAGS := $(LDFLAGS) -lpthread -lcutils
 
 bin_PROGRAMS = viccubetool
 viccubetool_CC = @CC@

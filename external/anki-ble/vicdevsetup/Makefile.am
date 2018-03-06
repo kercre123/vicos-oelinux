@@ -19,7 +19,7 @@ AM_CFLAGS = 	-Wall \
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_LDFLAGS := $(LDFLAGS) -lpthread @GLIB_LIBS@
+AM_LDFLAGS := $(LDFLAGS) -lpthread -lcutils @GLIB_LIBS@
 
 bin_PROGRAMS = vicdevsetup
 
