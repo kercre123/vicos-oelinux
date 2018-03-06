@@ -1412,7 +1412,7 @@ bool SetAdapterName(const std::string& name) {
          name.c_str(), name.size(), sizeof(bd_name.name) - 1);
     return false;
   }
-  bt_property_t property = {BT_PROPERTY_BDNAME, strlen((char *) bd_name.name), &bd_name};
+  bt_property_t property = {BT_PROPERTY_BDNAME, (int) strlen((char *) bd_name.name), &bd_name};
   int status = sBtInterface->set_adapter_property(&property);
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to set adapter name to %s. status = %s",
