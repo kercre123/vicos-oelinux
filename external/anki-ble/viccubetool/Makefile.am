@@ -15,7 +15,7 @@ AM_CFLAGS = 	-Wall \
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_LDFLAGS := $(LDFLAGS) -lpthread -lcutils
+AM_LDFLAGS := $(LDFLAGS) -lpthread
 
 bin_PROGRAMS = viccubetool
 viccubetool_CC = @CC@
@@ -29,6 +29,7 @@ viccubetool_SOURCES = 	main.cpp \
 			$(COMMON_DIR)/static_ev.c \
 			$(COMMON_DIR)/ipc-client.cpp \
 			$(COMMON_DIR)/ipc.cpp \
-			$(COMMON_DIR)/memutils.cpp
+			$(COMMON_DIR)/memutils.cpp \
+			$(COMMON_DIR)/strlcpy.c
 
 pkgconfigdir = $(libdir)/pkgconfig

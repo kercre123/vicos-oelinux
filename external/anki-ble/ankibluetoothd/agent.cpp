@@ -20,12 +20,12 @@
 #include "include_ev.h"
 #include "log.h"
 #include "stringutils.h"
+#include "strlcpy.h"
 
 #include <algorithm>
 #include <deque>
 #include <mutex>
 
-#include <cutils/memory.h>
 #include <string.h>
 
 static Anki::BluetoothDaemon::Agent* sAgent = nullptr;

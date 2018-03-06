@@ -11,8 +11,8 @@
  **/
 
 #include "log.h"
+#include "strlcpy.h"
 #include <iostream>
-#include <cutils/memory.h>
 #include <stdio.h>
 #include <string.h>
 
