@@ -14,10 +14,10 @@
 #include "include_ev.h"
 #include "log.h"
 #include "memutils.h"
+#include "strlcpy.h"
 
 #include <algorithm>
 
-#include <cutils/memory.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/stat.h>

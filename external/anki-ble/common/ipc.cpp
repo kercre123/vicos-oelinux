@@ -16,8 +16,8 @@
 #include "include_ev.h"
 #include "log.h"
 #include "stringutils.h"
+#include "strlcpy.h"
 
-#include <cutils/memory.h>
 #include <unistd.h>
 
 #include <algorithm>

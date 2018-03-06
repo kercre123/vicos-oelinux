@@ -16,8 +16,8 @@
 #include "log.h"
 #include "btutils.h"
 #include "gatt_constants.h"
+#include "strlcpy.h"
 #include "taskExecutor.h"
-#include <cutils/memory.h>
 #include <hardware/bluetooth.h>
 #include <hardware/bt_gatt.h>
 #include <hardware/bt_gatt_client.h>

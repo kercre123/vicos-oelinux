@@ -19,7 +19,7 @@ AM_CFLAGS = 	-Wall \
 
 ACLOCAL_AMFLAGS = -I m4
 
-AM_LDFLAGS := $(LDFLAGS) -lpthread -lcutils @GLIB_LIBS@
+AM_LDFLAGS := $(LDFLAGS) -lpthread @GLIB_LIBS@
 
 bin_PROGRAMS = vicdevsetup
 
@@ -37,7 +37,8 @@ vicdevsetup_SOURCES =	vicdevsetup.cpp \
 			$(COMMON_DIR)/memutils.cpp \
 			$(COMMON_DIR)/taskExecutor.cpp \
 			$(COMMON_DIR)/fileutils.cpp \
-			$(COMMON_DIR)/stringutils.cpp
+			$(COMMON_DIR)/stringutils.cpp \
+			$(COMMON_DIR)/strlcpy.c
 
 EXTRA_vicdevsetup_DEPENDENCIES = connmanbus.c connmanbus.h
 
