@@ -56,6 +56,8 @@ int camera_cleanup();
 
 int camera_set_exposure(uint16_t exposure_ms, float gain);
 
+int camera_set_awb(float r_gain, float g_gain, float b_gain);
+
 #ifdef __cplusplus
 }
 #endif

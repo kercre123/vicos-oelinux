@@ -575,6 +575,8 @@ typedef union {
     INCLUDE(CAM_INTF_PARM_FOCUS_BRACKETING,         cam_af_bracketing_t,         1);
     INCLUDE(CAM_INTF_PARM_MULTI_TOUCH_FOCUS_BRACKETING, cam_af_bracketing_t,     1);
     INCLUDE(CAM_INTF_PARM_FLASH_BRACKETING,         cam_flash_bracketing_t,      1);
+
+    INCLUDE(CAM_INTF_PARM_RAW_AWB_GAIN,             cam_awb_gain_t,              1);
 } parm_type_t;
 
 typedef union {

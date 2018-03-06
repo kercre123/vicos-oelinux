@@ -1369,6 +1369,8 @@ typedef enum {
     CAM_INTF_PARM_FLASH_BRACKETING,
     CAM_INTF_PARM_GET_IMG_PROP,
 
+    CAM_INTF_PARM_RAW_AWB_GAIN,
+
     CAM_INTF_PARM_MAX
 } cam_intf_parm_type_t;
 

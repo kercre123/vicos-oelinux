@@ -277,9 +277,9 @@ static struct msm_camera_i2c_reg_array init_reg_array1[] = {
   {0xb0, 0x48, 0x00}, //global gain      
   {0xb1, 0x01, 0x00},
   {0xb2, 0x00, 0x00},
-  {0xb3, 0x40, 0x00},
-  {0xb4, 0x40, 0x00},
-  {0xb5, 0x40, 0x00},    
+  {0xb3, 0x80, 0x00}, // AWB_R_gain
+  {0xb4, 0x40, 0x00}, // AWB_G_gain
+  {0xb5, 0x80, 0x00}, // AWB_B_gain
   {0xb6, 0x00, 0x00},
 /////////////////////////////////
 /////// dd //////////////////////
@@ -596,9 +596,7 @@ static int32_t ov8856_f8v05a_fill_exposure_array(uint16_t gain,
                                                  uint32_t fgain,
                                                  struct msm_camera_i2c_reg_setting* reg_setting)
 {
-  int32_t rc = 0;
   uint16_t reg_count = 0;
-  uint16_t i = 0;
 
   if (!reg_setting) {
     return -1;
@@ -625,12 +623,50 @@ static int32_t ov8856_f8v05a_fill_exposure_array(uint16_t gain,
   reg_setting->data_type = MSM_CAMERA_I2C_BYTE_DATA;
   reg_setting->delay = 0;
 
-  return rc;
+  return 0;
+}
+
+static int sensor_fill_awb_array(unsigned short awb_gain_r, 
+                                 unsigned short awb_gain_b,
+                                 struct msm_camera_i2c_seq_reg_setting* reg_setting)
+{
+  uint16_t reg_count = 0;
+
+  if (!reg_setting) {
+    return -1;
+  }
+
+  reg_setting->reg_setting[reg_count].reg_addr = 0xfe;
+  reg_setting->reg_setting[reg_count].reg_data[0] = 0x00;
+  reg_setting->reg_setting[reg_count].reg_data_size = 1;
+  reg_count++;
+
+  reg_setting->reg_setting[reg_count].reg_addr = 0xb3;
+  reg_setting->reg_setting[reg_count].reg_data[0] = awb_gain_r & 0xFF;
+  reg_setting->reg_setting[reg_count].reg_data_size = 1;
+  reg_count++;
+
+  reg_setting->reg_setting[reg_count].reg_addr = 0xb5;
+  reg_setting->reg_setting[reg_count].reg_data[0] = awb_gain_b & 0xFF;
+  reg_setting->reg_setting[reg_count].reg_data_size = 1;
+  reg_count++;
+
+  reg_setting->size = reg_count;
+  reg_setting->addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
+  reg_setting->delay = 0;
+
+  return 0;
 }
 
 static sensor_exposure_table_t ov8856_f8v05a_expsoure_tbl = {
   .sensor_calculate_exposure = ov8856_f8v05a_calculate_exposure,
   .sensor_fill_exposure_array = ov8856_f8v05a_fill_exposure_array,
+};
+
+static sensor_video_hdr_table_t video_hdr_tbl = {
+  .sensor_fill_awb_array = sensor_fill_awb_array,
+  .awb_table_size = 2, // Maybe should be 1?
+  .video_hdr_capability = 0, // (1<<8) | (1<<20),  maybe 0x100?
 };
 
 static sensor_lib_t sensor_lib_ptr = {
@@ -697,6 +733,9 @@ static sensor_lib_t sensor_lib_ptr = {
   /* sensor pipeline immediate delay */
   .sensor_max_immediate_frame_delay = 2,
   .sync_exp_gain = 1,
+
+  /* video hdr func table */
+  .video_hdr_awb_lsc_func_table = &video_hdr_tbl,
 };
 
 /*===========================================================================

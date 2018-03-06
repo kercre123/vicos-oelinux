@@ -53,6 +53,12 @@ typedef struct {
   float gain;
 } anki_camera_exposure_t;
 
+typedef struct {
+  float r_gain;
+  float g_gain;
+  float b_gain;
+} anki_camera_awb_t;
+
 typedef enum {
   ANKI_CAMERA_NOT_READY,
   ANKI_CAMERA_IDLE,
@@ -74,5 +80,6 @@ int is_camera_capture_running(struct anki_camera_capture* capture);
 int is_camera_capture_ready(struct anki_camera_capture* capture);
 int is_camera_capture_initialized(struct anki_camera_capture* capture);
 int camera_capture_set_exposure(anki_camera_exposure_t exposure);
+int camera_capture_set_awb(anki_camera_awb_t awb);
 
 #endif // __mm_anki_camera_process_h__

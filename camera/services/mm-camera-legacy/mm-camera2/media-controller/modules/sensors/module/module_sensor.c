@@ -3332,6 +3332,24 @@ static boolean module_sensor_event_control_set_parm(
   }
   break;
 
+  case CAM_INTF_PARM_RAW_AWB_GAIN: {
+    if (!event_control->parm_data) {
+      SERR("failed parm_data NULL");
+      ret = FALSE;
+      break;
+    }
+
+    rc = module_sensor_params->func_tbl.process(
+           module_sensor_params->sub_module_private,
+           SENSOR_SET_AWB_UPDATE, event_control->parm_data);
+    if (rc < 0) {
+      SERR("failed");
+      ret = FALSE;
+      break;
+    }
+  }
+  break;
+
   default:{
     sensor_output_format_t output_format;
     rc = module_sensor_params->func_tbl.process(

@@ -352,3 +352,8 @@ int camera_capture_set_exposure(anki_camera_exposure_t exposure)
 {
   return camera_set_exposure(exposure.exposure_ms, exposure.gain);
 }
+
+int camera_capture_set_awb(anki_camera_awb_t awb)
+{
+  return camera_set_awb(awb.r_gain, awb.g_gain, awb.b_gain);
+}

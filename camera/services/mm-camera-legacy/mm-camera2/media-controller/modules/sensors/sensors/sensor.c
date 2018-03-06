@@ -938,9 +938,11 @@ static int8_t sensor_set_awb_video_hdr_update(void *sctrl, void *data)
     return SENSOR_SUCCESS;
   }
 
-  /*convert AWB gains to sensor register format (u5.8 fixed point)*/
-  uint16_t awb_gain_r_reg = (uint16_t)(awb_hdr_update->gain.r_gain * 256.0);
-  uint16_t awb_gain_b_reg = (uint16_t)(awb_hdr_update->gain.b_gain * 256.0);
+  // Convert gains to 2.6 fixed point
+  #define GAIN_TO_FIXED_POINT(gain) ((uint8_t)((gain) * (64)))
+  uint16_t awb_gain_r_reg = GAIN_TO_FIXED_POINT(awb_hdr_update->gain.r_gain);
+  uint16_t awb_gain_b_reg = GAIN_TO_FIXED_POINT(awb_hdr_update->gain.b_gain);
+
   SLOW("HDR--awb_gain_r_reg: %d, awb_gain_b_reg: %d",
     awb_gain_r_reg, awb_gain_b_reg);
   awb_hdr.reg_setting = malloc(lib->sensor_lib_ptr->
@@ -953,7 +955,8 @@ static int8_t sensor_set_awb_video_hdr_update(void *sctrl, void *data)
 
   rc = lib->sensor_lib_ptr->video_hdr_awb_lsc_func_table->
     sensor_fill_awb_array(awb_gain_r_reg,
-    awb_gain_b_reg, &awb_hdr);
+                          awb_gain_b_reg, 
+                          &awb_hdr);
 
   if (rc < 0) {
     SERR("failed");

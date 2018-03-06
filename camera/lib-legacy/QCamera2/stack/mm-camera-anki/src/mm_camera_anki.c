@@ -21,6 +21,22 @@
 /*************************************/
 #include "mm_camera_anki.h"
 
+typedef struct {
+  float r_gain;
+  float g_gain;
+  float b_gain;
+} awb_gain_t;
+
+typedef struct {
+  awb_gain_t gain;
+  // This is only a partial definition of the awb_update_t struct in
+  // mct_event_stats.h which I did not want to include here because I
+  // think it contains things relating to the ISP which do not belong here
+  // This works because only the gain member of that struct is used by
+  // sensor_set_awb_video_hdr_update in sensor.c, the gain member is also the
+  // first member of that struct
+} awb_update_t;
+
 #define DEFAULT_RAW_RDI_FORMAT        CAM_FORMAT_BAYER_MIPI_RAW_10BPP_BGGR
 
 typedef struct cameraobj_t {
@@ -480,6 +496,41 @@ ERROR:
     return rc;
 }
 
+int setAWBGain(mm_camera_test_obj_t *test_obj, float r_gain, float g_gain, float b_gain)
+{
+  int rc = MM_CAMERA_OK;
+
+  rc = initBatchUpdate(test_obj);
+  if (rc != MM_CAMERA_OK) {
+      CDBG_ERROR("%s: Batch camera parameter update failed\n", __func__);
+      goto ERROR;
+  }
+
+  awb_update_t awb_update;
+  awb_update.gain.r_gain = r_gain;
+  awb_update.gain.g_gain = g_gain;
+  awb_update.gain.b_gain = b_gain;
+
+  rc = AddSetParmEntryToBatch(test_obj,
+                              CAM_INTF_PARM_RAW_AWB_GAIN,
+                              sizeof(awb_update),
+                              &awb_update);
+
+  if (rc != MM_CAMERA_OK) {
+      CDBG_ERROR("%s: Exposure parameter not added to batch\n", __func__);
+      goto ERROR;
+  }
+
+  rc = commitSetBatch(test_obj);
+  if (rc != MM_CAMERA_OK) {
+      CDBG_ERROR("%s: Batch parameters commit failed\n", __func__);
+      goto ERROR;
+  }
+
+ERROR:
+    return rc;
+}
+
 /**************************************************************/
 int camera_set_exposure(uint16_t exposure_ms, float gain)
 {
@@ -487,6 +538,16 @@ int camera_set_exposure(uint16_t exposure_ms, float gain)
   CameraObj* camera = &gTheCamera;
 
   rc = setExposure(&(camera->lib_handle.test_obj), exposure_ms, gain);
+
+  return rc;
+}
+
+int camera_set_awb(float r_gain, float g_gain, float b_gain)
+{
+  int rc;
+  CameraObj* camera = &gTheCamera;
+
+  rc = setAWBGain(&(camera->lib_handle.test_obj), r_gain, g_gain, b_gain);
 
   return rc;
 }

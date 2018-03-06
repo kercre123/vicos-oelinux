@@ -236,9 +236,21 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
   }
   break;
   case ANKI_CAMERA_MSG_C2S_PARAMS: {
-    anki_camera_exposure_t exposure;
-    memcpy(&exposure, msg->payload, sizeof(exposure));
-    camera_capture_set_exposure(exposure);
+    anki_camera_msg_params_payload_t* payload = (anki_camera_msg_params_payload_t*)msg->payload;
+    switch(payload->id) {
+      case ANKI_CAMERA_MSG_C2S_PARAMS_ID_EXP: {
+        anki_camera_exposure_t exposure;
+        memcpy(&exposure, payload->data, sizeof(exposure));
+        camera_capture_set_exposure(exposure);
+      }
+      break;
+      case ANKI_CAMERA_MSG_C2S_PARAMS_ID_AWB: {
+        anki_camera_awb_t awb;
+        memcpy(&awb, payload->data, sizeof(awb));
+        camera_capture_set_awb(awb);
+      }
+      break;
+    }
   }
   break;
   default:

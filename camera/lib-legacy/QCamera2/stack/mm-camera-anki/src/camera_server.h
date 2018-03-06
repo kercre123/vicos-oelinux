@@ -40,6 +40,16 @@ struct anki_camera_msg {
   uint8_t payload[ANKI_CAMERA_MSG_PAYLOAD_LEN];
 };
 
+typedef enum {
+  ANKI_CAMERA_MSG_C2S_PARAMS_ID_EXP,
+  ANKI_CAMERA_MSG_C2S_PARAMS_ID_AWB,
+} anki_camera_params_id_t;
+
+typedef struct {
+  anki_camera_params_id_t id;
+  uint8_t data[sizeof(((struct anki_camera_msg*)0)->payload) - sizeof(anki_camera_params_id_t)];
+} anki_camera_msg_params_payload_t;
+
 struct server_params {
   char output_path[256];
   uint8_t exit_on_disconnect;
