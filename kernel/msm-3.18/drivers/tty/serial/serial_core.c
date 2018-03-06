@@ -2667,7 +2667,11 @@ int uart_remove_one_port(struct uart_driver *drv, struct uart_port *uport)
 	struct tty_struct *tty;
 	int ret = 0;
 
+	pr_info("uart_remove_one_port\n");
+
 	BUG_ON(in_interrupt());
+
+	pr_info("Ok we are not in an interrupt context\n");
 
 	if (state->uart_port != uport)
 		dev_alert(uport->dev, "Removing wrong port: %p != %p\n",
@@ -2675,6 +2679,7 @@ int uart_remove_one_port(struct uart_driver *drv, struct uart_port *uport)
 
 	mutex_lock(&port_mutex);
 
+	pr_info("make the port dead\n");
 	/*
 	 * Mark the port "dead" - this prevents any opens from
 	 * succeeding while we shut down the port.
@@ -2691,6 +2696,8 @@ int uart_remove_one_port(struct uart_driver *drv, struct uart_port *uport)
 	/*
 	 * Remove the devices from the tty layer
 	 */
+	
+	pr_info("remove the device from the tty layer\n");
 	tty_unregister_device(drv->tty_driver, uport->line);
 
 	tty = tty_port_tty_get(port);
@@ -2702,14 +2709,19 @@ int uart_remove_one_port(struct uart_driver *drv, struct uart_port *uport)
 	/*
 	 * If the port is used as a console, unregister it
 	 */
+	pr_info("If the port is used as a console, unregister it\n");
 	if (uart_console(uport))
 		unregister_console(uport->cons);
 
 	/*
 	 * Free the port IO and memory resources, if any.
 	 */
-	if (uport->type != PORT_UNKNOWN)
-		uport->ops->release_port(uport);
+	pr_info("Free the port IO and memory resources, if any\n");
+	if (uport->type != PORT_UNKNOWN) {
+		if ( uport->ops->release_port != NULL) {
+			uport->ops->release_port(uport);
+		}
+	}
 	kfree(uport->tty_groups);
 
 	/*
@@ -2721,6 +2733,7 @@ int uart_remove_one_port(struct uart_driver *drv, struct uart_port *uport)
 out:
 	mutex_unlock(&port_mutex);
 
+	pr_info("uart_remove_one_port done\n");
 	return ret;
 }
 
