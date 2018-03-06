@@ -955,9 +955,9 @@
 		// NDM: Force OTG control to "manual", default to device mode
 		qcom,hsusb-otg-mode = <3>;
 		qcom,hsusb-otg-otg-control = <3>;
-		qcom,hsusb-otg-default-mode = <1>; 
-		vbus_otg-supply = <&pm8916_l4>;
-		
+		qcom,hsusb-otg-default-mode = <1>;
+		vbus_otg-supply = <&pm8916_l18>;
+
 		qcom,dp-manual-pullup;
 		qcom,phy-dvdd-always-on;
 		qcom,hsusb-otg-mpm-dpsehv-int = <49>;
