@@ -956,7 +956,7 @@
 		qcom,hsusb-otg-mode = <3>;
 		qcom,hsusb-otg-otg-control = <3>;
 		qcom,hsusb-otg-default-mode = <1>; 
-		vbus_otg-supply = <&pm8916_l4>;
+		vbus_otg-supply = <&pm8916_l10>;
 		
 		qcom,dp-manual-pullup;
 		qcom,phy-dvdd-always-on;
