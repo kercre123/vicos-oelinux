@@ -114,7 +114,36 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
     case IPCMessageType::StartAdvertising:
       logv("ipc-server: StartAdvertising received");
       {
-        StartAdvertising();
+        StartAdvertisingArgs* args = (StartAdvertisingArgs *) data.data();
+        BLEAdvertiseSettings settings;
+        settings.SetAppearance(args->appearance);
+        settings.SetMinInterval(args->min_interval);
+        settings.SetMaxInterval(args->max_interval);
+        const std::vector<const AdvertisingData *>
+            ad_data = {&(args->advertisement), &(args->scan_response)};
+        std::vector<BLEAdvertiseData*>
+            ble_ad_data = {&(settings.GetAdvertisement()), &(settings.GetScanResponse())};
+        for (int i = 0 ; i < ble_ad_data.size(); i++) {
+          const AdvertisingData* src = ad_data[i];
+          BLEAdvertiseData* dst = ble_ad_data[i];
+          dst->SetIncludeDeviceName(src->include_device_name);
+          dst->SetIncludeTxPowerLevel(src->include_tx_power_level);
+          if (src->manufacturer_data_len > 0) {
+            std::vector<uint8_t> mdata(src->manufacturer_data,
+                                       src->manufacturer_data + src->manufacturer_data_len);
+            dst->SetManufacturerData(mdata);
+          }
+          if (src->service_data_len > 0) {
+            std::vector<uint8_t> sdata(src->service_data,
+                                       src->service_data + src->service_data_len);
+            dst->SetServiceData(sdata);
+          }
+          if (src->have_service_uuid) {
+            dst->SetServiceUUID(std::string(src->service_uuid));
+          }
+        }
+
+        StartAdvertising(settings);
       }
       break;
     case IPCMessageType::StopAdvertising:

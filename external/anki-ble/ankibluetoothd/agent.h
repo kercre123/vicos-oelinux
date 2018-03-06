@@ -34,7 +34,7 @@ class Agent : public IPCServer {
                            const bool reliable,
                            const std::vector<uint8_t>& value);
   virtual void Disconnect(const int connection_id);
-  virtual void StartAdvertising();
+  virtual void StartAdvertising(const BLEAdvertiseSettings& settings);
   virtual void StopAdvertising();
   virtual void StartScan(const std::string& serviceUUID);
   virtual void StopScan();

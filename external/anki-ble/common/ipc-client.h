@@ -13,6 +13,7 @@
 #pragma once
 
 #include "ipc.h"
+#include "ble_advertise_settings.h"
 
 #include <deque>
 #include <mutex>
@@ -38,7 +39,7 @@ class IPCClient : public IPCEndpoint {
                    const bool reliable,
                    const std::vector<uint8_t>& value);
   void Disconnect(const int connection_id);
-  void StartAdvertising();
+  void StartAdvertising(const BLEAdvertiseSettings& settings);
   void StopAdvertising();
   void StartScan(const std::string& serviceUUID);
   void StopScan();
