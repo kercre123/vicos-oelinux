@@ -1407,12 +1407,11 @@ bool SetAdapterName(const std::string& name) {
     return true;
   }
   bt_bdname_t bd_name = {0};
-  if (name.size() >= sizeof(bd_name.name)) {
+  if (strlcpy((char *) &bd_name.name[0], name.c_str(), sizeof(bd_name)) >= sizeof(bd_name.name)) {
     loge("Failed to set adapter name to %s.  Too long (%zu bytes).  Max is %zu bytes.",
          name.c_str(), name.size(), sizeof(bd_name.name) - 1);
     return false;
   }
-  (void) strlcpy((char *) &bd_name.name[0], name.c_str(), sizeof(bd_name));
   bt_property_t property = {BT_PROPERTY_BDNAME, strlen((char *) bd_name.name), &bd_name};
   int status = sBtInterface->set_adapter_property(&property);
   if (status != BT_STATUS_SUCCESS) {
