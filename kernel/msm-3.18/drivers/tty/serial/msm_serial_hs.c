@@ -2452,6 +2452,38 @@ static const char *msm_hs_type(struct uart_port *port)
 	return "MSM HS UART";
 }
 
+
+static void msm_hs_release_port(struct uart_port *uport)
+{
+	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+	struct platform_device *pdev = to_platform_device(uport->dev);
+	struct resource *uart_resource;
+	resource_size_t size;
+
+
+	/*
+		this does not look right 
+		JPS  
+	*/
+	uart_resource = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+						     "uartdm_resource");
+
+        if (!uart_resource)
+                uart_resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+        if (unlikely(!uart_resource))
+                return;
+        size = uart_resource->end - uart_resource->start + 1;
+
+        release_mem_region(uport->mapbase, size);
+        iounmap(uport->membase);
+        uport->membase = NULL;
+
+}
+
+static int msm_hs_request_port(struct usart_port *uport)
+{
+}
+
 /**
  * msm_hs_unconfig_uart_gpios: Unconfigures UART GPIOs
  * @uport: uart port
@@ -2481,6 +2513,16 @@ static void msm_hs_unconfig_uart_gpios(struct uart_port *uport)
 			gpio_free(pdata->uart_rfr_gpio);
 	} else
 		MSM_HS_ERR("Error:Pdata is NULL.\n");
+}
+
+
+static int msm_hs_verify_port(struct uart_port *uport, struct serial_struct *ser)
+{
+	if (unlikely(ser->type != PORT_UNKNOWN && ser->type != PORT_MSM))
+                return -EINVAL;
+        if (unlikely(uport->irq != ser->irq))
+                return -EINVAL;
+        return 0;
 }
 
 /**
@@ -3384,6 +3426,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 	unsigned long data;
 	char name[30];
  
+	pr_info("msm_hs_probe");
 	dev_dbg(&pdev->dev, " of_node = %x \n", pdev->dev.of_node);
 
 	if (pdev->dev.of_node) {
@@ -3668,6 +3711,7 @@ unmap_memory:
 	iounmap(uport->membase);
 	iounmap(msm_uport->bam_base);
 
+	pr_info("msm_hs_probe done");
 	return ret;
 }
 
@@ -3856,7 +3900,10 @@ static struct uart_ops msm_hs_ops = {
 	.shutdown = msm_hs_shutdown,
 	.set_termios = msm_hs_set_termios,
 	.type = msm_hs_type,
+	.release_port = msm_hs_release_port,
+	.request_port = msm_hs_request_port,
 	.config_port = msm_hs_config_port,
+	.verify_port = msm_hs_verify_port,
 	.flush_buffer = NULL,
 	.ioctl = msm_hs_ioctl,
 };
