@@ -117,8 +117,6 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
         StartAdvertisingArgs* args = (StartAdvertisingArgs *) data.data();
         BLEAdvertiseSettings settings;
         settings.SetAppearance(args->appearance);
-        settings.SetMinInterval(args->min_interval);
-        settings.SetMaxInterval(args->max_interval);
         const std::vector<const AdvertisingData *>
             ad_data = {&(args->advertisement), &(args->scan_response)};
         std::vector<BLEAdvertiseData*>
@@ -141,6 +139,8 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
           if (src->have_service_uuid) {
             dst->SetServiceUUID(std::string(src->service_uuid));
           }
+          dst->SetMinInterval(src->min_interval);
+          dst->SetMaxInterval(src->max_interval);
         }
 
         StartAdvertising(settings);
