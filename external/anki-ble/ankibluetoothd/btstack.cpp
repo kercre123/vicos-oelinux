@@ -1565,62 +1565,50 @@ bool StartGattService(BluetoothGattService* service) {
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings)
 {
   const Anki::BLEAdvertiseData& advertisement = settings.GetAdvertisement();
-  bt_uuid_t adv_uuid;
-  uint16_t service_uuid_len = 0;
-  char* service_uuid = nullptr;
-  if (!advertisement.GetServiceUUID().empty()) {
-    bt_uuid_t_from_string(advertisement.GetServiceUUID(), &adv_uuid);
-    service_uuid_len = sizeof(adv_uuid.uu);
-    service_uuid = (char *) adv_uuid.uu;
-  }
+  std::vector<uint8_t> service_uuid = byte_vector_from_uuid_string(advertisement.GetServiceUUID());
 
   bt_status_t status =
       sBtGattInterface->client->set_adv_data(sBtGattClientIf,
                                              false /* set_scan_rsp */,
                                              advertisement.GetIncludeDeviceName(),
                                              advertisement.GetIncludeTxPowerLevel(),
-                                             settings.GetMinInterval(),
-                                             settings.GetMaxInterval(),
+                                             advertisement.GetMinInterval(),
+                                             advertisement.GetMaxInterval(),
                                              settings.GetAppearance(),
                                              advertisement.GetManufacturerData().size(),
                                              (char *)(advertisement.GetManufacturerData().data()),
                                              advertisement.GetServiceData().size(),
                                              (char *)(advertisement.GetServiceData().data()),
-                                             service_uuid_len,
-                                             service_uuid);
+                                             service_uuid.size(),
+                                             (char *)(service_uuid.data()));
 
   if (status != BT_STATUS_SUCCESS) {
     loge("failed to set advertisement data");
     return false;
   }
   const Anki::BLEAdvertiseData& scanResponse = settings.GetScanResponse();
-  service_uuid_len = 0;
-  service_uuid = nullptr;
-  bt_uuid_t scn_uuid;
-  if (!scanResponse.GetServiceUUID().empty()) {
-    bt_uuid_t_from_string(scanResponse.GetServiceUUID(), &scn_uuid);
-    service_uuid_len = sizeof(scn_uuid.uu);
-    service_uuid = (char *) scn_uuid.uu;
-  }
+  if (!scanResponse.empty()) {
+    service_uuid = byte_vector_from_uuid_string(scanResponse.GetServiceUUID());
 
-  status =
-      sBtGattInterface->client->set_adv_data(sBtGattClientIf,
-                                             true /* set_scan_rsp */,
-                                             scanResponse.GetIncludeDeviceName(),
-                                             scanResponse.GetIncludeTxPowerLevel(),
-                                             settings.GetMinInterval(),
-                                             settings.GetMaxInterval(),
-                                             settings.GetAppearance(),
-                                             scanResponse.GetManufacturerData().size(),
-                                             (char *)(scanResponse.GetManufacturerData().data()),
-                                             scanResponse.GetServiceData().size(),
-                                             (char *)(scanResponse.GetServiceData().data()),
-                                             service_uuid_len,
-                                             service_uuid);
+    status =
+        sBtGattInterface->client->set_adv_data(sBtGattClientIf,
+                                               true /* set_scan_rsp */,
+                                               scanResponse.GetIncludeDeviceName(),
+                                               scanResponse.GetIncludeTxPowerLevel(),
+                                               scanResponse.GetMinInterval(),
+                                               scanResponse.GetMaxInterval(),
+                                               settings.GetAppearance(),
+                                               scanResponse.GetManufacturerData().size(),
+                                               (char *)(scanResponse.GetManufacturerData().data()),
+                                               scanResponse.GetServiceData().size(),
+                                               (char *)(scanResponse.GetServiceData().data()),
+                                               service_uuid.size(),
+                                               (char *)(service_uuid.data()));
 
-  if (status != BT_STATUS_SUCCESS) {
-    loge("failed to set scan response data");
-    return false;
+    if (status != BT_STATUS_SUCCESS) {
+      loge("failed to set scan response data");
+      return false;
+    }
   }
 
   status = sBtGattInterface->client->listen(sBtGattClientIf, true /* start */);

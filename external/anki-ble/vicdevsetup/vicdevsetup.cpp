@@ -71,9 +71,12 @@ void VicDevSetup::OnPeripheralStateUpdate(const bool advertising,
   OnInboundConnectionChange(connection_id, connected);
   if (!connected && !advertising) {
     Anki::BLEAdvertiseSettings settings;
-    settings.GetAdvertisement().SetServiceUUID(Anki::kAnkiBLEService_128_BIT_UUID);
-    settings.GetScanResponse().SetIncludeDeviceName(true);
-    settings.GetScanResponse().SetIncludeTxPowerLevel(true);
+    settings.GetAdvertisement().SetServiceUUID(Anki::kAnkiSingleMessageService_128_BIT_UUID);
+    settings.GetAdvertisement().SetIncludeDeviceName(true);
+    std::vector<uint8_t> mdata = Anki::kAnkiBluetoothSIGCompanyIdentifier;
+    mdata.push_back(Anki::kVictorProductIdentifier); // distinguish from future Anki products
+    mdata.push_back('p'); // to indicate we are in "pairing" mode
+    settings.GetAdvertisement().SetManufacturerData(mdata);
     StartAdvertising(settings);
   } else if (connected && advertising) {
     StopAdvertising();
