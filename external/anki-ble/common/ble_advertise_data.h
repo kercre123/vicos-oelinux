@@ -56,6 +56,16 @@ class BLEAdvertiseData {
   void SetMaxInterval(int max_interval) { max_interval_ = max_interval; }
   int GetMaxInterval() const { return max_interval_; }
 
+  bool empty() const {
+    return (!include_device_name_
+            && !include_tx_power_level_
+            && manufacturer_data_.empty()
+            && service_data_.empty()
+            && service_uuid_.empty()
+            && !min_interval_
+            && !max_interval_);
+  }
+
  private:
   bool include_device_name_;
   bool include_tx_power_level_;

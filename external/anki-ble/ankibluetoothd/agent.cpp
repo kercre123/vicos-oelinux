@@ -345,7 +345,7 @@ void Agent::StaticCentralScanResultCallback(const std::string& address,
 
 bool Agent::StartPeripheral()
 {
-  bluetooth_gatt_service_ = BluetoothGattService(Anki::kAnkiBLEService_128_BIT_UUID);
+  bluetooth_gatt_service_ = BluetoothGattService(Anki::kAnkiSingleMessageService_128_BIT_UUID);
 
   BluetoothGattCharacteristic
       appReadCharacteristic(Anki::kAppReadCharacteristicUUID,

@@ -99,6 +99,24 @@ void bt_uuid_t_from_string(const std::string& uuidStr, bt_uuid_t* uuid) {
   }
 }
 
+std::vector<uint8_t> byte_vector_from_uuid_string(const std::string& uuidStr) {
+  std::vector<uint8_t> bytes;
+
+  auto it = uuidStr.crbegin();
+  while (it != uuidStr.crend()) {
+    char low = *it;
+    it++;
+    if (std::isxdigit(low)) {
+      uint8_t val = hex_char_to_byte(low);
+      char high = *it;
+      it++;
+      val += (hex_char_to_byte(high) * 16);
+      bytes.push_back(val);
+    }
+  }
+  return bytes;
+}
+
 bool bt_uuid_t_equals(const bt_uuid_t* uuid1, const bt_uuid_t* uuid2) {
   return (0 == memcmp(uuid1->uu, uuid2->uu, sizeof(uuid1->uu)));
 }
