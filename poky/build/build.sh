@@ -21,6 +21,11 @@ popd
 # Disable check for unset variables (it will make the bitbake scripts exit)
 set +u
 source build/conf/set_bb_env.sh
+
+: ${ANKI_BUILD_VERSION:=0}
+export ANKI_BUILD_VERSION
+export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE ANKI_BUILD_VERSION"
+
 build-8009-robot-image
 
 # Re-enable check for unset variables
