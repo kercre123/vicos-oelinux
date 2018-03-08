@@ -37,10 +37,13 @@ static struct ev_signal sIntSig;
 static struct ev_signal sTermSig;
 
 std::string GetDesiredAdapterName() {
-  std::string defaultName = std::string("VICTOR_") + GetDeviceSerialNumber();
-
   char value[PROPERTY_VALUE_MAX] = {0};
-  (void) property_get("bluetooth.adapter.name", value, defaultName.c_str());
+
+  (void) property_get("ro.anki.product.name", value, "Vector");
+  std::string defaultName = std::string(value) + "_" + GetDeviceSerialNumber();
+
+  memset(value, 0, sizeof(value));
+  (void) property_get("persist.anki.robot.name", value, defaultName.c_str());
   return std::string(value);
 }
 

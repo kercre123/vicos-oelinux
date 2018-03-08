@@ -1,8 +1,8 @@
 [Unit]
 Description=Anki Bluetooth Daemon
 SourcePath=/etc/initscripts/start_ankibluetoothd
-Requires=btproperty.service
-After=btproperty.service
+Requires=btproperty.service ankiinit.service leprop.service
+After=btproperty.service ankiinit.service leprop.service
 
 [Service]
 Restart=no

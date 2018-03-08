@@ -43,4 +43,9 @@ do
     if test ! -z `getprop ro.serialno`; then break; fi
     sleep 1;
 done
+
+if [ -x /usr/bin/vic-christen ]; then
+    /usr/bin/vic-christen
+fi
+
 exit 0
