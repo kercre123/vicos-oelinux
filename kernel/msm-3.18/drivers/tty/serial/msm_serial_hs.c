@@ -30,8 +30,6 @@
  * of operation. See msm_serial_hs_platform_data.rx_wakeup_irq.
  */
 
-// temp define for enabling dev_dbg
-#define DEBUG
 
 #include <linux/module.h>
 
@@ -51,10 +49,13 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/dma-mapping.h>
+#include <linux/tty.h>
 #include <linux/tty_flip.h>
 #include <linux/wait.h>
 #include <linux/sysfs.h>
 #include <linux/stat.h>
+// temp define for enabling dev_dbg
+#define DEBUG
 #include <linux/device.h>
 #include <linux/wakelock.h>
 #include <linux/debugfs.h>
@@ -74,7 +75,7 @@
 #define UART_SPS_CONS_PERIPHERAL 0
 #define UART_SPS_PROD_PERIPHERAL 1
 
-#define IPC_MSM_HS_LOG_STATE_PAGES 2
+#define IPC_MSM_HS_LOG_STATE_PAGES 200
 #define IPC_MSM_HS_LOG_USER_PAGES 2
 #define IPC_MSM_HS_LOG_DATA_PAGES 3
 #define UART_DMA_DESC_NR 8
@@ -451,6 +452,8 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr,
 	struct platform_device *pdev = container_of(dev, struct
 						    platform_device, dev);
 	struct msm_hs_port *msm_uport = get_matching_hs_port(pdev);
+
+	dev_dbg(&pdev->dev, "show_clock \n");
 
 	/* This check should not fail */
 	if (msm_uport) {
@@ -893,6 +896,8 @@ static void msm_hs_set_bps_locked(struct uart_port *uport,
 	unsigned long data;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
+	pr_info("msm_hs_set_bps_locked : %d \n", bps);
+
 	switch (bps) {
 	case 300:
 		msm_hs_write(uport, UART_DM_CSR, 0x00);
@@ -1022,6 +1027,8 @@ static void msm_hs_set_std_bps_locked(struct uart_port *uport,
 	unsigned long rxstale;
 	unsigned long data;
 
+	pr_info("msm_hs_set_std_bps_locked : %d \n", bps);
+
 	switch (bps) {
 	case 9600:
 		msm_hs_write(uport, UART_DM_CSR, 0x99);
@@ -1119,6 +1126,8 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	unsigned long data;
 	unsigned int c_cflag = termios->c_cflag;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+
+	pr_info("msm_hs_set_termios\n");
 
 	/**
 	 * set_termios can be invoked from the framework when
@@ -2482,6 +2491,7 @@ static void msm_hs_release_port(struct uart_port *uport)
 
 static int msm_hs_request_port(struct usart_port *uport)
 {
+	// code to be completed 
 }
 
 /**
@@ -3525,6 +3535,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 	memset(name, 0, sizeof(name));
 	scnprintf(name, sizeof(name), "%s%s", dev_name(msm_uport->uport.dev),
 									"_state");
+ 	pr_info("ipc_log_context name = %s" , name);
 	msm_uport->ipc_msm_hs_log_ctxt =
 			ipc_log_context_create(IPC_MSM_HS_LOG_STATE_PAGES,
 								name, 0);
@@ -3532,7 +3543,12 @@ static int msm_hs_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: error creating logging context",
 								__func__);
 	} else {
+
+#ifdef DEBUG
+		msm_uport->ipc_debug_mask = DBG_LEV;
+#else
 		msm_uport->ipc_debug_mask = INFO_LEV;
+#endif
 		ret = sysfs_create_file(&pdev->dev.kobj,
 				&dev_attr_debug_mask.attr);
 		if (unlikely(ret))
