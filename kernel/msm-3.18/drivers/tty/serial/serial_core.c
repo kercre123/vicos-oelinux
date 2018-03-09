@@ -454,7 +454,8 @@ static void uart_change_speed(struct tty_struct *tty, struct uart_state *state,
 		return;
 
 	termios = &tty->termios;
-	uport->ops->set_termios(uport, termios, old_termios);
+	if (uport->ops->set_termios) 
+		uport->ops->set_termios(uport, termios, old_termios);
 
 	/*
 	 * Set modem status enables based on termios cflag
@@ -1003,7 +1004,7 @@ static int uart_break_ctl(struct tty_struct *tty, int break_state)
 
 	mutex_lock(&port->mutex);
 
-	if (uport->type != PORT_UNKNOWN)
+	if (uport->type != PORT_UNKNOWN && uport->ops->break_ctl) 
 		uport->ops->break_ctl(uport, break_state);
 
 	mutex_unlock(&port->mutex);
