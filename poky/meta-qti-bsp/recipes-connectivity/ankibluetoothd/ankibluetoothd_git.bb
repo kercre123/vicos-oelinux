@@ -34,8 +34,6 @@ do_install_append() {
     install -d ${D}${sysconfdir}/systemd/system/multi-user.target.wants/
     ln -sf /etc/systemd/system/ankibluetoothd.service \
       ${D}${sysconfdir}/systemd/system/multi-user.target.wants/ankibluetoothd.service
-    ln -sf /etc/systemd/system/vicdevsetup.service \
-      ${D}${sysconfdir}/systemd/system/multi-user.target.wants/vicdevsetup.service
   else
     install -d ${D}${sysconfdir}
     install -d ${D}${sysconfdir}/init.d
