@@ -12,6 +12,7 @@
 
 #include "viccubetool.h"
 #include "anki_ble_uuids.h"
+#include "byte_vector.h"
 #include "crc32.h"
 #include "fileutils.h"
 #include "include_ev.h"
@@ -192,27 +193,19 @@ void VicCubeTool::FlashCube(const std::string& pathToFirmware) {
     _exit(1);
   }
   std::cout << "Flashing firmware....." << std::endl;
-  int offset = 0;
+  size_t offset = 0;
   while (offset < firmware.size()) {
-    std::vector<uint8_t> target({(uint8_t) (offset & 0xff), (uint8_t) (offset >> 8)});
-    int chunk_length = std::min(MAX_BYTES_PER_PACKET, (int) (firmware.size() - offset));
-    std::vector<uint8_t> chunk(firmware.begin() + offset, firmware.begin() + offset + chunk_length);
-    std::vector<uint8_t> packet;
-    std::copy(target.begin(), target.end(), std::back_inserter(packet));
-    std::copy(chunk.begin(), chunk.end(), std::back_inserter(packet));
-    SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, packet);
+    Anki::ByteVector packet;
+    packet.push_back_le((uint16_t) offset);
+    size_t chunk_length = std::min(MAX_BYTES_PER_PACKET, (int) (firmware.size() - offset));
+    packet.push_back(firmware, offset, chunk_length);
+    SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, packet.GetStdVector());
     offset += chunk_length;
   }
-  std::vector<uint8_t> final_packet({(uint8_t) 0xff, (uint8_t) 0xff});
-  uint16_t firmware_length = (uint16_t) firmware.size();
-  final_packet.push_back((uint8_t) (firmware_length & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_length >> 8) & 0xff));
-  uint32_t firmware_checksum = Anki::Crc32(firmware);
-  final_packet.push_back((uint8_t) (firmware_checksum & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_checksum >> 8) & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_checksum >> 16) & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_checksum >> 24) & 0xff));
-  SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, final_packet);
+  Anki::ByteVector final_packet({(uint8_t) 0xff, (uint8_t) 0xff});
+  final_packet.push_back_le((uint16_t) firmware.size());
+  final_packet.push_back_le(Anki::Crc32(firmware));
+  SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, final_packet.GetStdVector());
 }
 
 void VicCubeTool::DisconnectFromCube() {
