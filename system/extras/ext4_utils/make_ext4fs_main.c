@@ -25,6 +25,10 @@
 #include <sys/disk.h>
 #endif
 
+// For LE builds only canned fs_config is being used.
+// Hence masking the default fs_config feture which acts a falback on Android builds.
+#undef ANDROID
+
 #ifdef ANDROID
 #include <private/android_filesystem_config.h>
 #endif
@@ -177,7 +181,7 @@ int main(int argc, char **argv)
 		}
 	}
 #endif
-
+	printf("fs_config_file: %s\n", (fs_config_file)?fs_config_file:"(none)");
 	if (fs_config_file) {
 		if (load_canned_fs_config(fs_config_file) < 0) {
 			fprintf(stderr, "failed to load %s\n", fs_config_file);
@@ -186,7 +190,10 @@ int main(int argc, char **argv)
 		fs_config_func = canned_fs_config;
 	} else if (mountpoint) {
 #ifdef ANDROID
+#error "Default fs_config is NOT supported for LE builds. Provide fsconfig.cong with -C option is required."
 		fs_config_func = fs_config;
+#else
+		printf("No fs_config applied as no fsconfig.conf file passed using -C option.\n");
 #endif
 	}
 

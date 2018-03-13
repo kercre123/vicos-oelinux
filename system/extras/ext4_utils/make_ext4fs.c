@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
 
 #ifdef USE_MINGW
 
@@ -196,17 +197,17 @@ static u32 build_directory_structure(const char *full_path, const char *dir_path
 		}
 		uint64_t capabilities;
 		if (fs_config_func != NULL) {
-#ifdef ANDROID
 			unsigned int mode = 0;
 			unsigned int uid = 0;
 			unsigned int gid = 0;
 			int dir = S_ISDIR(stat.st_mode);
 			fs_config_func(dentries[i].path, dir, target_out_path, &uid, &gid, &mode, &capabilities);
-			dentries[i].mode = mode;
-			dentries[i].uid = uid;
-			dentries[i].gid = gid;
-			dentries[i].capabilities = capabilities;
-#endif
+			if (uid != UINT_MAX) {
+				dentries[i].mode = mode;
+				dentries[i].uid = uid;
+				dentries[i].gid = gid;
+				dentries[i].capabilities = capabilities;
+			}
 		}
 #ifndef USE_MINGW
 		if (sehnd) {
