@@ -35,6 +35,17 @@ typedef void (*NotificationReceivedCallback)(const std::string& address,
                                              const int conn_id,
                                              const std::string& char_uuid,
                                              const std::vector<uint8_t>& value);
+typedef void (*CharacteristicReadCallback)(const std::string& address,
+                                           const int conn_id,
+                                           const int error,
+                                           const std::string& char_uuid,
+                                           const std::vector<uint8_t>& value);
+typedef void (*DescriptorReadCallback)(const std::string& address,
+                                       const int conn_id,
+                                       const int error,
+                                       const std::string& char_uuid,
+                                       const std::string& desc_uuid,
+                                       const std::vector<uint8_t>& value);
 
 typedef struct Callbacks {
   InboundConnectionCallback inbound_connection_cb;
@@ -45,6 +56,8 @@ typedef struct Callbacks {
   ScanResultCallback scan_result_cb;
   OutboundConnectionCallback outbound_connection_cb;
   NotificationReceivedCallback notification_received_cb;
+  CharacteristicReadCallback characteristic_read_cb;
+  DescriptorReadCallback descriptor_read_cb;
 } Callbacks;
 
 } // namespace BluetoothStack

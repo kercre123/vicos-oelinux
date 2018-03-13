@@ -100,8 +100,22 @@ typedef struct BluetoothGattWriteItem {
       , value(value) {}
 } BluetoothGattWriteItem;
 
+typedef struct BluetoothGattReadItem {
+  bool is_descriptor;
+  int conn_id;
+  int handle;
+  BluetoothGattReadItem(bool is_descriptor,
+                        int conn_id,
+                        int handle)
+      : is_descriptor(is_descriptor)
+      , conn_id(conn_id)
+      , handle(handle) {}
+} BluetoothGattReadItem;
+
 static std::deque<BluetoothGattWriteItem> sGattWriteQueue;
 static bool sGattWriteClearToSend = true;
+static std::deque<BluetoothGattReadItem> sGattReadQueue;
+static bool sGattReadClearToSend = true;
 static bool sCongested = false;
 
 enum class BluetoothGattConnectionStatus {
@@ -208,6 +222,65 @@ static int GetCharacteristicHandleFromConnIDAndUUID(const int conn_id, const std
   return -1;
 }
 
+static std::string GetDescriptorUUIDFromConnIDAndHandle(const int conn_id, const int handle)
+{
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search != sOutboundConnections.end()) {
+    const BluetoothGattConnection& connection = search->second.connection;
+    for (auto const& service : connection.services) {
+      for (auto const& characteristic : service.characteristics) {
+        for (auto const& descriptor : characteristic.descriptors) {
+          if (descriptor.desc_handle == handle) {
+            return descriptor.uuid;
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
+static std::string GetCharacteristicUUIDFromConnIDAndDescriptorHandle(const int conn_id, const int handle)
+{
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search != sOutboundConnections.end()) {
+    const BluetoothGattConnection& connection = search->second.connection;
+    for (auto const& service : connection.services) {
+      for (auto const& characteristic : service.characteristics) {
+        for (auto const& descriptor : characteristic.descriptors) {
+          if (descriptor.desc_handle == handle) {
+            return characteristic.uuid;
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
+static int GetDescriptorHandleFromConnIDAndUUIDs(const int conn_id,
+                                                 const std::string& char_uuid,
+                                                 const std::string& desc_uuid)
+{
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search != sOutboundConnections.end()) {
+    const BluetoothGattConnection& connection = search->second.connection;
+    for (auto const& service : connection.services) {
+      for (auto const& characteristic : service.characteristics) {
+        if (bt_uuid_string_equals(char_uuid, characteristic.uuid)) {
+          for (auto const& descriptor : characteristic.descriptors) {
+            if (bt_uuid_string_equals(desc_uuid, descriptor.uuid)) {
+              return descriptor.desc_handle;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return -1;
+}
+
 static bool IsOutboundConnectionFullyEstablished(const int conn_id)
 {
   auto search = FindOutboundConnectionById(conn_id);
@@ -294,6 +367,58 @@ static void QueueWriteItem(const bool is_descriptor,
   sGattWriteQueue.push_back(writeItem);
   if (sGattWriteQueue.size() == 1) {
     TransmitNextWriteItem();
+  }
+}
+
+static void TransmitNextReadItem() {
+  if (!sGattReadClearToSend || sCongested) {
+    return;
+  }
+  bool transmitted = false;
+  while (!sCongested && sGattReadClearToSend && !sGattReadQueue.empty() && !transmitted) {
+    BluetoothGattReadItem readItem = sGattReadQueue.front();
+    sGattReadQueue.pop_front();
+    auto search = FindOutboundConnectionById(readItem.conn_id);
+    if (search != sOutboundConnections.end()) {
+      sGattReadClearToSend = false;
+      sTaskExecutor.Wake([readItem]() {
+          bt_status_t bt_status;
+          if (readItem.is_descriptor) {
+            logv("Calling read_descriptor(conn_id = %d, handle = %d)",
+                 readItem.conn_id, readItem.handle);
+            bt_status =
+                sBtGattInterface->client->read_descriptor(readItem.conn_id,
+                                                          readItem.handle,
+                                                          0 /* auth_req */);
+          } else {
+            logv("Calling read_characteristic(conn_id = %d, handle = %d)",
+                 readItem.conn_id, readItem.handle);
+            bt_status =
+                sBtGattInterface->client->read_characteristic(readItem.conn_id,
+                                                              readItem.handle,
+                                                              0 /* auth_req */);
+          }
+          if (bt_status != BT_STATUS_SUCCESS) {
+            std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+            (void) DisconnectOutboundConnectionById(readItem.conn_id);
+          }
+        });
+      transmitted = true;
+    }
+  }
+}
+
+static void QueueReadItem(const bool is_descriptor,
+                          const int conn_id,
+                          const int handle) {
+
+  BluetoothGattReadItem readItem(is_descriptor,
+                                 conn_id,
+                                 handle);
+
+  sGattReadQueue.push_back(readItem);
+  if (sGattReadQueue.size() == 1) {
+    TransmitNextReadItem();
   }
 }
 
@@ -722,9 +847,38 @@ void btgattc_notify_cb(int conn_id, btgatt_notify_params_t *p_data)
 void btgattc_read_characteristic_cb(int conn_id, int status,
                                     btgatt_read_params_t *p_data)
 {
-  bt_status_t bt_status = (bt_status_t) status;
-  logv("%s(conn_id = %d, status = %s, p_data = %p)",
-       __FUNCTION__, conn_id, bt_status_t_to_string(bt_status).c_str(), p_data);
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  if (!p_data) {
+    loge("%s(conn_id = %d). p_data is null", __FUNCTION__, conn_id);
+    return;
+  }
+  logv("%s(conn_id = %d, p_data = {value = %s, handle = %d, len = %d, value_type = %d, status = %d})",
+       __FUNCTION__, conn_id, bt_value_to_string(p_data->value.len, p_data->value.value).c_str(),
+       p_data->handle, p_data->value.len, p_data->value_type, p_data->status);
+  if (!sCallbacks.characteristic_read_cb) {
+    return;
+  }
+
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    loge("%s(conn_id = %d). not found in outbound connections",
+         __FUNCTION__, conn_id);
+    return;
+  }
+  std::string char_uuid = GetCharacteristicUUIDFromConnIDAndHandle(conn_id, p_data->handle);
+  if (char_uuid.empty()) {
+    loge("%s(conn_id = %d). could not find uuid for handle (%d)",
+         __FUNCTION__, conn_id, p_data->handle);
+    return;
+  }
+  std::vector<uint8_t> value(p_data->value.value, p_data->value.value + p_data->value.len);
+  sCallbacks.characteristic_read_cb(search->second.connection.address,
+                                    conn_id,
+                                    p_data->status,
+                                    char_uuid,
+                                    value);
+  sGattReadClearToSend = true;
+  TransmitNextReadItem();
 }
 
 void btgattc_write_characteristic_cb(int conn_id, int status,
@@ -745,7 +899,40 @@ void btgattc_execute_write_cb(int conn_id, int status)
 
 void btgattc_read_descriptor_cb(int conn_id, int status, btgatt_read_params_t *p_data)
 {
-  logv("%s", __FUNCTION__);
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  if (!p_data) {
+    loge("%s(conn_id = %d). p_data is null", __FUNCTION__, conn_id);
+    return;
+  }
+  logv("%s(conn_id = %d, p_data = {value = %s, handle = %d, len = %d, value_type = %d, status = %d})",
+       __FUNCTION__, conn_id, bt_value_to_string(p_data->value.len, p_data->value.value).c_str(),
+       p_data->handle, p_data->value.len, p_data->value_type, p_data->status);
+  if (!sCallbacks.descriptor_read_cb) {
+    return;
+  }
+
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    loge("%s(conn_id = %d). not found in outbound connections",
+         __FUNCTION__, conn_id);
+    return;
+  }
+  std::string desc_uuid = GetDescriptorUUIDFromConnIDAndHandle(conn_id, p_data->handle);
+  if (desc_uuid.empty()) {
+    loge("%s(conn_id = %D). could not find descriptor uuid for handle (%d)",
+         __FUNCTION__, conn_id, p_data->handle);
+    return;
+  }
+  std::string char_uuid = GetCharacteristicUUIDFromConnIDAndDescriptorHandle(conn_id, p_data->handle);
+  std::vector<uint8_t> value(p_data->value.value, p_data->value.value + p_data->value.len);
+  sCallbacks.descriptor_read_cb(search->second.connection.address,
+                                conn_id,
+                                p_data->status,
+                                char_uuid,
+                                desc_uuid,
+                                value);
+  sGattReadClearToSend = true;
+  TransmitNextReadItem();
 }
 
 void btgattc_write_descriptor_cb(int conn_id, int status, uint16_t handle)
@@ -1699,6 +1886,51 @@ bool WriteGattCharacteristic(const int conn_id,
   return true;
 }
 
+bool ReadGattCharacteristic(const int conn_id,
+                            const std::string& uuid)
+{
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  logv("ReadGattCharacteristic(conn_id = %d, uuid = %s)",
+       conn_id, uuid.c_str());
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    loge("ReadGattCharacteristic. conn_id (%d) not found", conn_id);
+    return false;
+  }
+  int handle = GetCharacteristicHandleFromConnIDAndUUID(conn_id, uuid);
+  if (handle == -1) {
+    loge("ReadGattCharacteristic. char uuid(%s) not found", uuid.c_str());
+    return false;
+  }
+  QueueReadItem(false /* is_descriptor */,
+                conn_id,
+                handle);
+  return true;
+}
+
+bool ReadGattDescriptor(const int conn_id,
+                        const std::string& char_uuid,
+                        const std::string& desc_uuid)
+{
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  logv("ReadGattDescriptor(conn_id = %d, char_uuid = %s, desc_uuid = %s)",
+       conn_id, char_uuid.c_str(), desc_uuid.c_str());
+  auto search = FindOutboundConnectionById(conn_id);
+  if (search == sOutboundConnections.end()) {
+    loge("ReadGattDescriptor. conn_id (%d) not found", conn_id);
+    return false;
+  }
+  int handle = GetDescriptorHandleFromConnIDAndUUIDs(conn_id, char_uuid, desc_uuid);
+  if (handle == -1) {
+    loge("ReadGattDescriptor. desc uuid (%s) for char uuid(%s) not found",
+         desc_uuid.c_str(), char_uuid.c_str());
+    return false;
+  }
+  QueueReadItem(true /* is_descriptor */,
+                conn_id,
+                handle);
+  return true;
+}
 
 bool DisconnectGattPeer(int conn_id)
 {

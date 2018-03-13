@@ -12,6 +12,7 @@
 
 #include "viccubetool.h"
 #include "anki_ble_uuids.h"
+#include "byte_vector.h"
 #include "crc32.h"
 #include "fileutils.h"
 #include "include_ev.h"
@@ -57,9 +58,6 @@ void VicCubeTool::ConnectRetryTimerCallback(ev::timer& w, int revents) {
 void VicCubeTool::OnConnectedToDaemon() {
   if (args_.empty()) {
     std::cerr << "No commands provided" << std::endl;
-    if (interactive_) {
-      std::cerr << "Interactive mode not yet supported" << std::endl;
-    }
     _exit(1);
   }
 
@@ -76,11 +74,13 @@ void VicCubeTool::OnConnectedToDaemon() {
     } else {
       ConnectToCube();
     }
-  } else if (AreCaseInsensitiveStringsEqual(command, "flash")) {
+  } else if (AreCaseInsensitiveStringsEqual(command, "flash")
+             || AreCaseInsensitiveStringsEqual(command, "flashdvt1")) {
     if (args_.size() < 2) {
       std::cerr << "Path to firmware required" << std::endl;
       _exit(1);
     }
+    use_dvt1_flasher_ = AreCaseInsensitiveStringsEqual(command, "flashdvt1");
     path_to_firmware_ = args_[1];
     flash_cube_after_connect_ = true;
     if (address_.empty()) {
@@ -89,8 +89,6 @@ void VicCubeTool::OnConnectedToDaemon() {
     } else {
       ConnectToCube();
     }
-  } else if (AreCaseInsensitiveStringsEqual(command, "disconnect")) {
-    DisconnectFromCube();
   } else {
     std::cerr << command << " is not a supported command" << std::endl;
   }
@@ -158,9 +156,7 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
     _exit(0);
   }
   connection_id_ = connection_id;
-  if (flash_cube_after_connect_) {
-    FlashCube(path_to_firmware_);
-  }
+  ReadCharacteristic(connection_id_, Anki::kModelNumberString_128_BIT_UUID);
 }
 
 void VicCubeTool::OnReceiveMessage(const int connection_id,
@@ -174,47 +170,97 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
   }
   if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kCubeAppVersion_128_BIT_UUID)) {
     if (!value.empty()) {
-      std::cout << "APP VERSION: " << std::string(value.begin(), value.end()) << std::endl;
-      std::cout << "Done flashing firmware" << std::endl;
+      std::string firmware_version(value.begin(), value.end());
+      if (!new_firmware_version_.empty() && new_firmware_version_ != firmware_version) {
+        std::cerr << "Expected firmware version : '" << new_firmware_version_ << "' "
+                  << ", but received version '" << firmware_version << "'" << std::endl;
+      } else {
+        std::cout << "APP VERSION: " << std::string(value.begin(), value.end()) << std::endl;
+        std::cout << "Firmware upload complete" << std::endl;
+      }
       task_executor_->WakeAfter(std::bind(&IPCClient::Disconnect, this, connection_id_),
                                 std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 5));
     }
   } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kCubeAppRead_128_BIT_UUID)) {
-    std::cout << "APP DATA: " << std::string(value.begin(), value.end()) << std::endl;
+    std::cout << "APP DATA: " << byteVectorToHexString(value, 1) << std::endl;
   }
 }
 
-#define MAX_BYTES_PER_PACKET 18
-void VicCubeTool::FlashCube(const std::string& pathToFirmware) {
+void VicCubeTool::OnCharacteristicReadResult(const int connection_id,
+                                             const int error,
+                                             const std::string& characteristic_uuid,
+                                             const std::vector<uint8_t>& data)
+{
+  logv("OnCharacteristicReadResult(connection_id = %d, error = %d, characteristic_uuid = %s, data.size = %d)",
+       connection_id, error, characteristic_uuid.c_str(), data.size());
+  if (connection_id == -1 || connection_id != connection_id_) {
+    return;
+  }
+
+  if (error) {
+    return;
+  }
+
+  if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kModelNumberString_128_BIT_UUID)) {
+    cube_model_number_ = std::string(data.begin(), data.end());
+    std::cout << "Cube Model Number : " << cube_model_number_ << std::endl;
+    if (flash_cube_after_connect_) {
+      if (use_dvt1_flasher_) {
+        FlashCubeDVT1(path_to_firmware_);
+      } else {
+        FlashCube(path_to_firmware_);
+      }
+    }
+  }
+}
+
+void VicCubeTool::OnDescriptorReadResult(const int connection_id,
+                                         const int error,
+                                         const std::string& characteristic_uuid,
+                                         const std::string& descriptor_uuid,
+                                         const std::vector<uint8_t>& data)
+{
+  /* do nothing */
+}
+
+#define DVT1_MAX_BYTES_PER_PACKET 18
+void VicCubeTool::FlashCubeDVT1(const std::string& pathToFirmware) {
   std::vector<uint8_t> firmware;
   if (!Anki::ReadFileIntoVector(pathToFirmware, firmware)) {
     std::cerr << "Error reading firmware.  Exiting..." << std::endl;
     _exit(1);
   }
   std::cout << "Flashing firmware....." << std::endl;
-  int offset = 0;
+  size_t offset = 0;
   while (offset < firmware.size()) {
-    std::vector<uint8_t> target({(uint8_t) (offset & 0xff), (uint8_t) (offset >> 8)});
-    int chunk_length = std::min(MAX_BYTES_PER_PACKET, (int) (firmware.size() - offset));
-    std::vector<uint8_t> chunk(firmware.begin() + offset, firmware.begin() + offset + chunk_length);
-    std::vector<uint8_t> packet;
-    std::copy(target.begin(), target.end(), std::back_inserter(packet));
-    std::copy(chunk.begin(), chunk.end(), std::back_inserter(packet));
-    SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, packet);
+    Anki::ByteVector packet;
+    packet.push_back_le((uint16_t) offset);
+    size_t chunk_length = std::min(DVT1_MAX_BYTES_PER_PACKET, (int) (firmware.size() - offset));
+    packet.push_back(firmware, offset, chunk_length);
+    SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, packet.GetStdVector());
     offset += chunk_length;
   }
-  std::vector<uint8_t> final_packet({(uint8_t) 0xff, (uint8_t) 0xff});
-  uint16_t firmware_length = (uint16_t) firmware.size();
-  final_packet.push_back((uint8_t) (firmware_length & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_length >> 8) & 0xff));
-  uint32_t firmware_checksum = Anki::Crc32(firmware);
-  final_packet.push_back((uint8_t) (firmware_checksum & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_checksum >> 8) & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_checksum >> 16) & 0xff));
-  final_packet.push_back((uint8_t) ((firmware_checksum >> 24) & 0xff));
-  SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, final_packet);
+  Anki::ByteVector final_packet({(uint8_t) 0xff, (uint8_t) 0xff});
+  final_packet.push_back_le((uint16_t) firmware.size());
+  final_packet.push_back_le(Anki::Crc32(firmware));
+  SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, final_packet.GetStdVector());
 }
 
-void VicCubeTool::DisconnectFromCube() {
-  std::cerr << "Sorry, disconnect is not yet implemented" << std::endl;
+#define MAX_BYTES_PER_PACKET 20
+void VicCubeTool::FlashCube(const std::string& pathToFirmware) {
+  std::vector<uint8_t> firmware;
+  if (!Anki::ReadFileIntoVector(pathToFirmware, firmware)) {
+    std::cerr << "Error reading firmware.  Exiting..." << std::endl;
+    _exit(1);
+  }
+  size_t offset = 0x10; // The first 16 bytes of the firmware data are the version string
+  new_firmware_version_ = std::string(firmware.begin(), firmware.begin() + offset);
+  std::cout << "Flashing firmware version : " << new_firmware_version_ << std::endl;
+  while (offset < firmware.size()) {
+    Anki::ByteVector packet;
+    size_t chunk_length = std::min(MAX_BYTES_PER_PACKET, (int) (firmware.size() - offset));
+    packet.push_back(firmware, offset, chunk_length);
+    SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, packet.GetStdVector());
+    offset += chunk_length;
+  }
 }

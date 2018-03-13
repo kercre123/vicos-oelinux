@@ -33,6 +33,11 @@ class Agent : public IPCServer {
                            const std::string& characteristic_uuid,
                            const bool reliable,
                            const std::vector<uint8_t>& value);
+  virtual void ReadCharacteristic(const int connection_id,
+                                  const std::string& characteristic_uuid);
+  virtual void ReadDescriptor(const int connection_id,
+                              const std::string& characteristic_uuid,
+                              const std::string& descriptor_uuid);
   virtual void Disconnect(const int connection_id);
   virtual void StartAdvertising(const BLEAdvertiseSettings& settings);
   virtual void StopAdvertising();
@@ -60,6 +65,17 @@ class Agent : public IPCServer {
                                            const int conn_id,
                                            const std::string& char_uuid,
                                            const std::vector<uint8_t>& value);
+  void CentralCharacteristicReadCallback(const std::string& address,
+                                         const int conn_id,
+                                         const int error,
+                                         const std::string& char_uuid,
+                                         const std::vector<uint8_t>& value);
+  void CentralDescriptorReadCallback(const std::string& address,
+                                     const int conn_id,
+                                     const int error,
+                                     const std::string& char_uuid,
+                                     const std::string& desc_uuid,
+                                     const std::vector<uint8_t>& value);
 
 
   static void StaticPeripheralInboundConnectionCallback(int conn_id, int connected);
@@ -78,6 +94,17 @@ class Agent : public IPCServer {
                                                         const int conn_id,
                                                         const std::string& char_uuid,
                                                         const std::vector<uint8_t>& value);
+  static void StaticCentralCharacteristicReadCallback(const std::string& address,
+                                                      const int conn_id,
+                                                      const int error,
+                                                      const std::string& char_uuid,
+                                                      const std::vector<uint8_t>& value);
+  static void StaticCentralDescriptorReadCallback(const std::string& address,
+                                                  const int conn_id,
+                                                  const int error,
+                                                  const std::string& char_uuid,
+                                                  const std::string& desc_uuid,
+                                                  const std::vector<uint8_t>& value);
 
   std::mutex mutex_;
   BLEAdvertiseSettings ble_advertise_settings_;

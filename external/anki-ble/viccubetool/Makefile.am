@@ -30,6 +30,7 @@ viccubetool_SOURCES = 	main.cpp \
 			$(COMMON_DIR)/ipc-client.cpp \
 			$(COMMON_DIR)/ipc.cpp \
 			$(COMMON_DIR)/memutils.cpp \
-			$(COMMON_DIR)/strlcpy.c
+			$(COMMON_DIR)/strlcpy.c \
+			$(COMMON_DIR)/byte_vector.cpp
 
 pkgconfigdir = $(libdir)/pkgconfig

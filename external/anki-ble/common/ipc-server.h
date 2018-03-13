@@ -34,6 +34,15 @@ class IPCServer : public IPCEndpoint {
   void OnReceiveMessage(const int connection_id,
                         const std::string& characteristic_uuid,
                         const std::vector<uint8_t>& data);
+  void OnCharacteristicReadResult(const int connection_id,
+                                  const int error,
+                                  const std::string& characteristic_uuid,
+                                  const std::vector<uint8_t>& data);
+  void OnDescriptorReadResult(const int connection_id,
+                              const int error,
+                              const std::string& characteristic_uuid,
+                              const std::string& descriptor_uuid,
+                              const std::vector<uint8_t>& data);
   void OnScanResults(int error, const std::vector<ScanResultRecord>& records);
   void OnOutboundConnectionChange(const std::string& address,
                                   const int connected,
@@ -48,6 +57,11 @@ class IPCServer : public IPCEndpoint {
                            const std::string& characteristic_uuid,
                            const bool reliable,
                            const std::vector<uint8_t>& value) {}
+  virtual void ReadCharacteristic(const int connection_id,
+                                  const std::string& characteristic_uuid) {}
+  virtual void ReadDescriptor(const int connection_id,
+                              const std::string& characteristic_uuid,
+                              const std::string& descriptor_uuid) {}
   virtual void Disconnect(const int connection_id) {}
   virtual void StartAdvertising(const BLEAdvertiseSettings& settings) {}
   virtual void StopAdvertising() {}

@@ -41,43 +41,44 @@ static struct ev_signal sTermSig;
 void usage() {
   std::cout << "viccubetool [ -a address ] command args" << std::endl
             << "-a address Bluetooth MAC address of cube. default is first found" << std::endl
-            << "-i         Interactive mode" << std::endl
+            << "-h         Help (this message)" << std::endl
             << std::endl
             << "commands" << std::endl
             << "--------" << std::endl
-            << "scan                     - Search for advertising cubes" << std::endl
-            << "connect [address]        - Connect to a cube over BLE" << std::endl
-            << "flash path/to/firmware   - Flash the cube with new firmware" << std::endl
-            << "disconnect               - Disconnect from a cube" << std::endl;
+            << "scan                       - Search for advertising cubes" << std::endl
+            << "connect [address]          - Connect to a cube over BLE" << std::endl
+            << "flash path/to/firmware     - Flash the cube with new firmware" << std::endl
+            << "flashdvt1 path/to/firmware - Flash the DVT1/2 cube with new firmware" << std::endl;
 }
 
 int main(int argc, char *argv[]) {
   std::string address;
-  bool interactive = false;
   std::vector<std::string> args;
 
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "a:i")) != -1) {
+  while ((c = getopt(argc, argv, "a:h")) != -1) {
     switch(c) {
       case 'a':
         address = std::string(optarg);
         break;
-      case 'i':
-        interactive = true;
+      case 'h':
+        usage();
+        return 0;
         break;
       case '?':
-        if (optopt = 'a') {
+        if (optopt == 'a') {
           std::cerr << "Option -a requires an argument" << std::endl;
         } else if (std::isprint(optopt)) {
-          std::cerr << "Unknown option: " << optopt << std::endl;
+          std::cerr << "Unknown option: " << (char) optopt << std::endl;
         } else {
           std::cerr << "Unknown option character\n" << optopt << std::endl;
         }
-        return 1;
+        /* fall through */
       default:
-        abort();
+        usage();
+        return 1;
     }
   }
 
@@ -93,7 +94,7 @@ int main(int argc, char *argv[]) {
 
   setAndroidLoggingTag("vctool");
   setMinLogLevel(kLogLevelVerbose);
-  sVicCubeTool = new VicCubeTool(sDefaultLoop, address, interactive, args);
+  sVicCubeTool = new VicCubeTool(sDefaultLoop, address, args);
   sVicCubeTool->Execute();
 
   ev_loop(sDefaultLoop, 0);
