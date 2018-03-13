@@ -52,6 +52,7 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   void OnConnectedToDaemon();
   void ScanForCubes();
   void ConnectToCube();
+  void FlashCube(const std::string& pathToFirmware);
   void FlashCubeDVT1(const std::string& pathToFirmware);
   void DisconnectFromCube();
   void ConnectRetryTimerCallback(ev::timer& w, int revents);
@@ -66,9 +67,11 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   bool scanning_;
   bool connect_to_first_cube_found_;
   bool flash_cube_after_connect_;
+  bool use_dvt1_flasher_;
   int connection_id_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
+  std::string new_firmware_version_;
   Anki::TaskExecutor* task_executor_;
 };
 
