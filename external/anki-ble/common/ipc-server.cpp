@@ -104,6 +104,23 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
                     std::vector<uint8_t>(args->value, args->value + args->length));
       }
       break;
+    case IPCMessageType::CharacteristicReadRequest:
+      logv("ipc-server: CharacteristicReadRequest received");
+      {
+        CharacteristicReadRequestArgs* args = (CharacteristicReadRequestArgs *) data.data();
+        ReadCharacteristic(args->connection_id,
+                           std::string(args->characteristic_uuid));
+      }
+      break;
+    case IPCMessageType::DescriptorReadRequest:
+      logv("ipc-server: DescriptorReadRequest received");
+      {
+        DescriptorReadRequestArgs* args = (DescriptorReadRequestArgs *) data.data();
+        ReadDescriptor(args->connection_id,
+                       std::string(args->characteristic_uuid),
+                       std::string(args->descriptor_uuid));
+      }
+      break;
     case IPCMessageType::Disconnect:
       logv("ipc-server: Disconnect received");
       {
@@ -219,6 +236,52 @@ void IPCServer::OnReceiveMessage(const int connection_id,
   args->length = (uint32_t) data.size();
   memcpy(args->value, data.data(), data.size());
   SendMessageToAllPeers(IPCMessageType::OnReceiveMessage,
+                        args_length,
+                        (uint8_t *) args);
+  free(args);
+}
+
+void IPCServer::OnCharacteristicReadResult(const int connection_id,
+                                           const int error,
+                                           const std::string& characteristic_uuid,
+                                           const std::vector<uint8_t>& data)
+{
+  OnCharacteristicReadResultArgs* args;
+  uint32_t args_length = sizeof(*args) + data.size();
+  args = (OnCharacteristicReadResultArgs *) malloc_zero(args_length);
+  args->connection_id = connection_id;
+  args->error = error;
+  (void) strlcpy(args->characteristic_uuid,
+                 characteristic_uuid.c_str(),
+                 sizeof(args->characteristic_uuid));
+  args->length = (uint32_t) data.size();
+  memcpy(args->value, data.data(), data.size());
+  SendMessageToAllPeers(IPCMessageType::OnCharacteristicReadResult,
+                        args_length,
+                        (uint8_t *) args);
+  free(args);
+}
+
+void IPCServer::OnDescriptorReadResult(const int connection_id,
+                                       const int error,
+                                       const std::string& characteristic_uuid,
+                                       const std::string& descriptor_uuid,
+                                       const std::vector<uint8_t>& data)
+{
+  OnDescriptorReadResultArgs* args;
+  uint32_t args_length = sizeof(*args) + data.size();
+  args = (OnDescriptorReadResultArgs *) malloc_zero(args_length);
+  args->connection_id = connection_id;
+  args->error = error;
+  (void) strlcpy(args->characteristic_uuid,
+                 characteristic_uuid.c_str(),
+                 sizeof(args->characteristic_uuid));
+  (void) strlcpy(args->descriptor_uuid,
+                 descriptor_uuid.c_str(),
+                 sizeof(args->descriptor_uuid));
+  args->length = (uint32_t) data.size();
+  memcpy(args->value, data.data(), data.size());
+  SendMessageToAllPeers(IPCMessageType::OnCharacteristicReadResult,
                         args_length,
                         (uint8_t *) args);
   free(args);

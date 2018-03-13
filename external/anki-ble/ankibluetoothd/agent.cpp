@@ -45,6 +45,8 @@ Agent::Agent(struct ev_loop* loop)
   cbs.scan_result_cb = &Agent::StaticCentralScanResultCallback;
   cbs.outbound_connection_cb = &Agent::StaticCentralOutboundConnectionCallback;
   cbs.notification_received_cb = &Agent::StaticCentralNotificationReceivedCallback;
+  cbs.characteristic_read_cb = &Agent::StaticCentralCharacteristicReadCallback;
+  cbs.descriptor_read_cb = &Agent::StaticCentralDescriptorReadCallback;
   Anki::BluetoothStack::SetCallbacks(&cbs);
 }
 
@@ -270,6 +272,48 @@ void Agent::StaticCentralNotificationReceivedCallback(const std::string& address
   }
 }
 
+void Agent::CentralCharacteristicReadCallback(const std::string& address,
+                                              const int conn_id,
+                                              const int error,
+                                              const std::string& char_uuid,
+                                              const std::vector<uint8_t>& value)
+{
+  OnCharacteristicReadResult(conn_id, error, char_uuid, value);
+}
+
+void Agent::StaticCentralCharacteristicReadCallback(const std::string& address,
+                                                    const int conn_id,
+                                                    const int error,
+                                                    const std::string& char_uuid,
+                                                    const std::vector<uint8_t>& value)
+{
+  if (sAgent) {
+    sAgent->CentralCharacteristicReadCallback(address, conn_id, error, char_uuid, value);
+  }
+}
+
+void Agent::CentralDescriptorReadCallback(const std::string& address,
+                                          const int conn_id,
+                                          const int error,
+                                          const std::string& char_uuid,
+                                          const std::string& desc_uuid,
+                                          const std::vector<uint8_t>& value)
+{
+  OnDescriptorReadResult(conn_id, error, char_uuid, desc_uuid, value);
+}
+
+void Agent::StaticCentralDescriptorReadCallback(const std::string& address,
+                                                const int conn_id,
+                                                const int error,
+                                                const std::string& char_uuid,
+                                                const std::string& desc_uuid,
+                                                const std::vector<uint8_t>& value)
+{
+  if (sAgent) {
+    sAgent->CentralDescriptorReadCallback(address, conn_id, error, char_uuid, desc_uuid, value);
+  }
+}
+
 void Agent::OnNewIPCClient(const int sockfd)
 {
   (void) sockfd; // not used for now
@@ -291,6 +335,34 @@ void Agent::SendMessage(const int connection_id,
     SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
   } else {
     (void) BluetoothStack::WriteGattCharacteristic(connection_id, characteristic_uuid, reliable, value);
+  }
+}
+
+void Agent::ReadCharacteristic(const int connection_id,
+                               const std::string& characteristic_uuid)
+{
+  bool result = BluetoothStack::ReadGattCharacteristic(connection_id, characteristic_uuid);
+  if (!result) {
+    CentralCharacteristicReadCallback(std::string(""),
+                                      connection_id,
+                                      -1,
+                                      characteristic_uuid,
+                                      std::vector<uint8_t>());
+  }
+}
+
+void Agent::ReadDescriptor(const int connection_id,
+                           const std::string& characteristic_uuid,
+                           const std::string& descriptor_uuid)
+{
+  bool result = BluetoothStack::ReadGattDescriptor(connection_id, characteristic_uuid, descriptor_uuid);
+  if (!result) {
+    CentralDescriptorReadCallback(std::string(""),
+                                  connection_id,
+                                  -1,
+                                  characteristic_uuid,
+                                  descriptor_uuid,
+                                  std::vector<uint8_t>());
   }
 }
 

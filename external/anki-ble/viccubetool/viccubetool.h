@@ -38,12 +38,21 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   virtual void OnReceiveMessage(const int connection_id,
                                 const std::string& characteristic_uuid,
                                 const std::vector<uint8_t>& value);
+  virtual void OnCharacteristicReadResult(const int connection_id,
+                                          const int error,
+                                          const std::string& characteristic_uuid,
+                                          const std::vector<uint8_t>& data);
+  virtual void OnDescriptorReadResult(const int connection_id,
+                                      const int error,
+                                      const std::string& characteristic_uuid,
+                                      const std::string& descriptor_uuid,
+                                      const std::vector<uint8_t>& data);
 
  private:
   void OnConnectedToDaemon();
   void ScanForCubes();
   void ConnectToCube();
-  void FlashCube(const std::string& pathToFirmware);
+  void FlashCubeDVT1(const std::string& pathToFirmware);
   void DisconnectFromCube();
   void ConnectRetryTimerCallback(ev::timer& w, int revents);
   void ScanTimerCallback(ev::timer& w, int revents);
@@ -59,6 +68,7 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   bool flash_cube_after_connect_;
   int connection_id_;
   std::string path_to_firmware_;
+  std::string cube_model_number_;
   Anki::TaskExecutor* task_executor_;
 };
 

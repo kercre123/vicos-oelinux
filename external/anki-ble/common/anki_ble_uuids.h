@@ -37,6 +37,24 @@ const std::string kCubeAppRead_128_BIT_UUID("43EF14AF-5FB1-7B81-3647-2A9477824CA
 const std::string kBluetoothBase_128_BIT_UUID("00000000-0000-1000-8000-00805F9B34FB");
 const std::string kDeviceInfoService_128_BIT_UUID("0000180A-0000-1000-8000-00805F9B34FB");
 const std::string kDeviceInformationService_16_BIT_UUID("180A");
+const std::string kManufacturerNameString_128_BIT_UUID("00002A29-0000-1000-8000-00805F9B34FB");
+const std::string kManufacturerNameString_16_BIT_UUID("2A29");
+const std::string kModelNumberString_128_BIT_UUID("00002A24-0000-1000-8000-00805F9B34FB");
+const std::string kModelNumberString_16_BIT_UUID("2A24");
+const std::string kSerialNumberString_128_BIT_UUID("00002A25-0000-1000-8000-00805F9B34FB");
+const std::string kSerialNumberString_16_BIT_UUID("2A25");
+const std::string kHardwareRevisionString_128_BIT_UUID("00002A27-0000-1000-8000-00805F9B34FB");
+const std::string kHardwareRevisionString_16_BIT_UUID("2A27");
+const std::string kFirmwareRevisionString_128_BIT_UUID("00002A26-0000-1000-8000-00805F9B34FB");
+const std::string kFirmwareRevisionString_16_BIT_UUID("2A26");
+const std::string kSoftwareRevisionString_128_BIT_UUID("00002A28-0000-1000-8000-00805F9B34FB");
+const std::string kSoftwareRevisionString_16_BIT_UUID("2A28");
+const std::string kSystemID_128_BIT_UUID("00002A23-0000-1000-8000-00805F9B34FB");
+const std::string kSystemID_16_BIT_UUID("2A23");
+const std::string kIEEE1107320601Info_128_BIT_UUID("00002A2A-0000-1000-8000-00805F9B34FB");
+const std::string kIEEE1107320601Info_16_BIT_UUID("2A2A");
+const std::string kPnPID_128_BIT_UUID("00002A50-0000-1000-8000-00805F9B34FB");
+const std::string kPnPID_16_BIT_UUID("2A50");
 const std::string kCUDDescriptorUUID("00002901-0000-1000-8000-00805F9B34FB");
 const std::string kCCCDescriptorUUID("00002902-0000-1000-8000-00805F9B34FB");
 

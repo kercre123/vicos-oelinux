@@ -42,6 +42,11 @@ bool WriteGattCharacteristic(const int conn_id,
                              const std::string& uuid,
                              const bool reliable,
                              const std::vector<uint8_t>& value);
+bool ReadGattCharacteristic(const int conn_id,
+                            const std::string& uuid);
+bool ReadGattDescriptor(const int conn_id,
+                        const std::string& char_uuid,
+                        const std::string& desc_uuid);
 bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
                   const std::vector<uint8_t>& value);
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings);

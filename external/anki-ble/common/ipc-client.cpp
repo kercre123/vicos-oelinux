@@ -119,6 +119,32 @@ void IPCClient::OnReceiveIPCMessage(const int sockfd,
                          value);
       }
       break;
+    case IPCMessageType::OnCharacteristicReadResult:
+      {
+        logv("ipc-case: OnCharacteristicReadResult");
+        OnCharacteristicReadResultArgs* args = (OnCharacteristicReadResultArgs *) data.data();
+        std::string characteristic_uuid(args->characteristic_uuid);
+        std::vector<uint8_t> value(args->value, args->value + args->length);
+        OnCharacteristicReadResult(args->connection_id,
+                                   args->error,
+                                   characteristic_uuid,
+                                   value);
+      }
+      break;
+    case IPCMessageType::OnDescriptorReadResult:
+      {
+        logv("ipc-case: OnDescriptorReadResult");
+        OnDescriptorReadResultArgs* args = (OnDescriptorReadResultArgs *) data.data();
+        std::string characteristic_uuid(args->characteristic_uuid);
+        std::string descriptor_uuid(args->descriptor_uuid);
+        std::vector<uint8_t> value(args->value, args->value + args->length);
+        OnDescriptorReadResult(args->connection_id,
+                               args->error,
+                               characteristic_uuid,
+                               descriptor_uuid,
+                               value);
+      }
+      break;
     case IPCMessageType::OnScanResults:
       {
         logv("ipc-client: OnScanResults");
@@ -173,6 +199,36 @@ void IPCClient::SendMessage(const int connection_id,
                          args_length,
                          (uint8_t *) args);
   free(args);
+}
+
+void IPCClient::ReadCharacteristic(const int connection_id,
+                                   const std::string& characteristic_uuid)
+{
+  CharacteristicReadRequestArgs args;
+  args.connection_id = connection_id;
+  (void) strlcpy(args.characteristic_uuid,
+                 characteristic_uuid.c_str(),
+                 sizeof(args.characteristic_uuid));
+  SendIPCMessageToServer(IPCMessageType::CharacteristicReadRequest,
+                         sizeof(args),
+                         (uint8_t *) &args);
+}
+
+void IPCClient::ReadDescriptor(const int connection_id,
+                               const std::string& characteristic_uuid,
+                               const std::string& descriptor_uuid)
+{
+  DescriptorReadRequestArgs args;
+  args.connection_id = connection_id;
+  (void) strlcpy(args.characteristic_uuid,
+                 characteristic_uuid.c_str(),
+                 sizeof(args.characteristic_uuid));
+  (void) strlcpy(args.descriptor_uuid,
+                 descriptor_uuid.c_str(),
+                 sizeof(args.descriptor_uuid));
+  SendIPCMessageToServer(IPCMessageType::DescriptorReadRequest,
+                         sizeof(args),
+                         (uint8_t *) &args);
 }
 
 void IPCClient::Disconnect(const int connection_id)

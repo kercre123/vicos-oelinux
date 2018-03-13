@@ -38,6 +38,11 @@ class IPCClient : public IPCEndpoint {
                    const std::string& characteristic_uuid,
                    const bool reliable,
                    const std::vector<uint8_t>& value);
+  void ReadCharacteristic(const int connection_id,
+                          const std::string& characteristic_uuid);
+  void ReadDescriptor(const int connection_id,
+                      const std::string& characteristic_uuid,
+                      const std::string& descriptor_uuid);
   void Disconnect(const int connection_id);
   void StartAdvertising(const BLEAdvertiseSettings& settings);
   void StopAdvertising();
@@ -62,6 +67,15 @@ class IPCClient : public IPCEndpoint {
                                           const int connected,
                                           const int connection_id,
                                           const std::vector<GattDbRecord>& records) {}
+  virtual void OnCharacteristicReadResult(const int connection_id,
+                                          const int error,
+                                          const std::string& characteristic_uuid,
+                                          const std::vector<uint8_t>& data) {}
+  virtual void OnDescriptorReadResult(const int connection_id,
+                                      const int error,
+                                      const std::string& characteristic_uuid,
+                                      const std::string& descriptor_uuid,
+                                      const std::vector<uint8_t>& data) {}
 
  private:
   void ConnectWatcherCallback(ev::io& w, int revents);

@@ -159,9 +159,7 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
     _exit(0);
   }
   connection_id_ = connection_id;
-  if (flash_cube_after_connect_) {
-    FlashCube(path_to_firmware_);
-  }
+  ReadCharacteristic(connection_id_, Anki::kModelNumberString_128_BIT_UUID);
 }
 
 void VicCubeTool::OnReceiveMessage(const int connection_id,
@@ -185,8 +183,44 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
   }
 }
 
+void VicCubeTool::OnCharacteristicReadResult(const int connection_id,
+                                             const int error,
+                                             const std::string& characteristic_uuid,
+                                             const std::vector<uint8_t>& data)
+{
+  logv("OnCharacteristicReadResult(connection_id = %d, error = %d, characteristic_uuid = %s, data.size = %d)",
+       connection_id, error, characteristic_uuid.c_str(), data.size());
+  if (connection_id == -1 || connection_id != connection_id_) {
+    return;
+  }
+
+  if (error) {
+    return;
+  }
+
+  if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kModelNumberString_128_BIT_UUID)) {
+    cube_model_number_ = std::string(data.begin(), data.end());
+    std::cout << "Cube Model Number : " << cube_model_number_ << std::endl;
+    if (flash_cube_after_connect_) {
+      if (AreCaseInsensitiveStringsEqual(cube_model_number_, "DVT1")
+          || AreCaseInsensitiveStringsEqual(cube_model_number_, "DVT2")) {
+        FlashCubeDVT1(path_to_firmware_);
+      }
+    }
+  }
+}
+
+void VicCubeTool::OnDescriptorReadResult(const int connection_id,
+                                         const int error,
+                                         const std::string& characteristic_uuid,
+                                         const std::string& descriptor_uuid,
+                                         const std::vector<uint8_t>& data)
+{
+  /* do nothing */
+}
+
 #define MAX_BYTES_PER_PACKET 18
-void VicCubeTool::FlashCube(const std::string& pathToFirmware) {
+void VicCubeTool::FlashCubeDVT1(const std::string& pathToFirmware) {
   std::vector<uint8_t> firmware;
   if (!Anki::ReadFileIntoVector(pathToFirmware, firmware)) {
     std::cerr << "Error reading firmware.  Exiting..." << std::endl;

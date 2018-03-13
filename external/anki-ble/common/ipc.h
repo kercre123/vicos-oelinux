@@ -61,7 +61,11 @@ enum class IPCMessageType {
     StopScan,
     OnScanResults,
     ConnectToPeripheral,
-    OnOutboundConnectionChange
+    OnOutboundConnectionChange,
+    CharacteristicReadRequest,
+    OnCharacteristicReadResult,
+    DescriptorReadRequest,
+    OnDescriptorReadResult
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -79,6 +83,17 @@ typedef struct __attribute__ ((__packed__)) SendMessageArgs {
   uint8_t value[];
 } SendMessageArgs;
 
+typedef struct __attribute__ ((__packed__)) CharacteristicReadRequestArgs {
+  int connection_id;
+  char characteristic_uuid[k128BitUUIDSize];
+} CharacteristicReadRequestArgs;
+
+typedef struct __attribute__ ((__packed__)) DescriptorReadRequestArgs {
+  int connection_id;
+  char characteristic_uuid[k128BitUUIDSize];
+  char descriptor_uuid[k128BitUUIDSize];
+} DescriptorReadRequestArgs;
+
 typedef struct __attribute__ ((__packed__)) OnInboundConnectionChangeArgs {
   int connection_id;
   int connected;
@@ -90,6 +105,23 @@ typedef struct __attribute__ ((__packed__)) OnReceiveMessageArgs {
   uint32_t length;
   uint8_t value[];
 } OnReceiveMessageArgs;
+
+typedef struct __attribute__ ((__packed__)) OnCharacteristicReadResultArgs {
+  int connection_id;
+  char characteristic_uuid[k128BitUUIDSize];
+  int error;
+  uint32_t length;
+  uint8_t value[];
+} OnCharacteristicReadResultArgs;
+
+typedef struct __attribute__ ((__packed__)) OnDescriptorReadResultArgs {
+  int connection_id;
+  char characteristic_uuid[k128BitUUIDSize];
+  char descriptor_uuid[k128BitUUIDSize];
+  int error;
+  uint32_t length;
+  uint8_t value[];
+} OnDescriptorReadResultArgs;
 
 typedef struct __attribute__ ((__packed__)) DisconnectArgs {
   int connection_id;
