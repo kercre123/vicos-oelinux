@@ -41,14 +41,16 @@ static struct ev_signal sTermSig;
 void usage() {
   std::cout << "viccubetool [ -a address ] command args" << std::endl
             << "-a address Bluetooth MAC address of cube. default is first found" << std::endl
+            << "-h         Help (this message)" << std::endl
             << "-i         Interactive mode" << std::endl
             << std::endl
             << "commands" << std::endl
             << "--------" << std::endl
-            << "scan                     - Search for advertising cubes" << std::endl
-            << "connect [address]        - Connect to a cube over BLE" << std::endl
-            << "flash path/to/firmware   - Flash the cube with new firmware" << std::endl
-            << "disconnect               - Disconnect from a cube" << std::endl;
+            << "scan                       - Search for advertising cubes" << std::endl
+            << "connect [address]          - Connect to a cube over BLE" << std::endl
+            << "flash path/to/firmware     - Flash the cube with new firmware" << std::endl
+            << "flashdvt1 path/to/firmware - Flash the DVT1/2 cube with new firmware" << std::endl
+            << "disconnect                 - Disconnect from a cube" << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -59,10 +61,14 @@ int main(int argc, char *argv[]) {
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "a:i")) != -1) {
+  while ((c = getopt(argc, argv, "a:hi")) != -1) {
     switch(c) {
       case 'a':
         address = std::string(optarg);
+        break;
+      case 'h':
+        usage();
+        abort();
         break;
       case 'i':
         interactive = true;
