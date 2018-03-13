@@ -58,9 +58,6 @@ void VicCubeTool::ConnectRetryTimerCallback(ev::timer& w, int revents) {
 void VicCubeTool::OnConnectedToDaemon() {
   if (args_.empty()) {
     std::cerr << "No commands provided" << std::endl;
-    if (interactive_) {
-      std::cerr << "Interactive mode not yet supported" << std::endl;
-    }
     _exit(1);
   }
 
@@ -92,8 +89,6 @@ void VicCubeTool::OnConnectedToDaemon() {
     } else {
       ConnectToCube();
     }
-  } else if (AreCaseInsensitiveStringsEqual(command, "disconnect")) {
-    DisconnectFromCube();
   } else {
     std::cerr << command << " is not a supported command" << std::endl;
   }
@@ -268,8 +263,4 @@ void VicCubeTool::FlashCube(const std::string& pathToFirmware) {
     SendMessage(connection_id_, Anki::kCubeOTATarget_128_BIT_UUID, true, packet.GetStdVector());
     offset += chunk_length;
   }
-}
-
-void VicCubeTool::DisconnectFromCube() {
-  std::cerr << "Sorry, disconnect is not yet implemented" << std::endl;
 }

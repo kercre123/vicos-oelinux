@@ -16,11 +16,9 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
  public:
   VicCubeTool(struct ev_loop* loop,
               const std::string& address,
-              const bool interactive,
               const std::vector<std::string>& args)
       : IPCClient(loop)
       , address_(address)
-      , interactive_(interactive)
       , args_(args)
       , connection_id_(-1)
       , task_executor_(new Anki::TaskExecutor(loop))
@@ -54,12 +52,10 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   void ConnectToCube();
   void FlashCube(const std::string& pathToFirmware);
   void FlashCubeDVT1(const std::string& pathToFirmware);
-  void DisconnectFromCube();
   void ConnectRetryTimerCallback(ev::timer& w, int revents);
   void ScanTimerCallback(ev::timer& w, int revents);
 
   std::string address_;
-  bool interactive_;
   std::vector<std::string> args_;
   ev::timer* connect_retry_timer_ = nullptr;
   ev::timer* stop_scan_timer_ = nullptr;
