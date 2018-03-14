@@ -9,5 +9,5 @@ tmpfs                /media/ram      tmpfs     defaults,noauto       0  0
 
 PARTLABEL=userdata   /data           auto      defaults,nofail       0  2
 PARTLABEL=modem      /firmware       vfat      defaults              0  0
-PARTLABEL=persist    /persist        auto      defaults              0  0
+PARTLABEL=persist    /persist        auto      defaults,nofail       0  0
 PARTLABEL=oem        /factory        auto      defaults,ro,nofail    0  2

@@ -174,10 +174,4 @@ esac
 
 cd /
 
-
-# Create a Symbolic Links for WCNSS_qcom_wlan_nv.bin and WCNSS_wlan_dictionary.dat firmware files
-# which are stored at /persist partition.
-ln -s /persist/WCNSS_qcom_wlan_nv.bin /lib/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin
-ln -s /persist/WCNSS_wlan_dictionary.dat /lib/firmware/wlan/prima/WCNSS_wlan_dictionary.dat
-
 exit 0

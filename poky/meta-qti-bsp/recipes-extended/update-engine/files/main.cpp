@@ -26,7 +26,9 @@ static const char* USAGE_FMT = \
 " * set_unbootable <SLOT>\n" \
 "      Sets <SLOT> as unbootable\n" \
 " * set_active <SLOT>\n" \
-"      Sets <SLOT> as the active boot slot for next reboot\n";
+"      Sets <SLOT> as the active boot slot for next reboot\n" \
+" * status <SLOT>\n" \
+"      Prints the status of the specified slot\n";
 
 /// Validates a slot argument and sets the corresponding index
 // @return true if slot is valid, false if invalid
@@ -90,6 +92,14 @@ int main(int argc, char *argv[]) {
 
   if (!strcmp(argv[2], "set_active")) {
     return set_active_boot_slot(arg_slot);
+  }
+
+  if (!strcmp(argv[2], "status")) {
+    printf("bootable: %d\nsuccessful: %d\nactive: %d\n",
+           is_slot_bootable(arg_slot),
+           is_slot_marked_successful(arg_slot),
+           is_slot_active(arg_slot));
+    return 0;
   }
 
   printf("Invalid command: \"%s\"\n", argv[2]);

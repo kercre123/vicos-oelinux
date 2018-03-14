@@ -21,8 +21,6 @@ SERIAL_CONSOLE ?= "115200 ttyHSL0"
 
 DISTRO ?="msm"
 
-DISTRO_FEATURES += "persist-image"
-
 MACHINE_FEATURES += "kernel26 keyboard"
 
 PAGE_SIZE ?= '4096'

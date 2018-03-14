@@ -57,9 +57,10 @@ int set_active_boot_slot(unsigned slot);
 
 int set_slot_as_unbootable(unsigned slot);
 
+int is_slot_active(unsigned slot);
+
 int is_slot_bootable(unsigned slot);
 
 int is_slot_marked_successful(unsigned slot);
-
 
 #endif

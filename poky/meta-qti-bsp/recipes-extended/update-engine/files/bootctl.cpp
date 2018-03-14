@@ -55,8 +55,7 @@
 #define LUN_NAME_END_LOC 14
 #define SLOT_ACTIVE 1
 #define SLOT_INACTIVE 2
-#define UPDATE_SLOT(pentry, guid, slot_state) ({ \
-    memcpy(pentry, guid, TYPE_GUID_SIZE); \
+#define UPDATE_SLOT(pentry, slot_state) ({ \
     if (slot_state == SLOT_ACTIVE)\
       *(pentry + AB_FLAG_OFFSET) = AB_SLOT_ACTIVE_VAL; \
     else if (slot_state == SLOT_INACTIVE) \
@@ -310,8 +309,6 @@ static int boot_ctl_set_active_slot_for_partitions(vector<string> part_list,
   struct gpt_disk *disk = NULL;
   char slotA[MAX_GPT_NAME_SIZE + 1] = {0};
   char slotB[MAX_GPT_NAME_SIZE + 1] = {0};
-  char active_guid[TYPE_GUID_SIZE + 1] = {0};
-  char inactive_guid[TYPE_GUID_SIZE + 1] = {0};
   //Pointer to the partition entry of current 'A' partition
   uint8_t *pentryA = NULL;
   uint8_t *pentryA_bak = NULL;
@@ -369,45 +366,26 @@ static int boot_ctl_set_active_slot_for_partitions(vector<string> part_list,
           prefix.c_str());
       goto error;
     }
-    memset(active_guid, '\0', sizeof(active_guid));
-    memset(inactive_guid, '\0', sizeof(inactive_guid));
-    if (get_partition_attribute(slotA, ATTR_SLOT_ACTIVE) == 1) {
-      //A is the current active slot
-      memcpy((void*)active_guid, (const void*)pentryA,
-          TYPE_GUID_SIZE);
-      memcpy((void*)inactive_guid,(const void*)pentryB,
-          TYPE_GUID_SIZE);
-    } else if (get_partition_attribute(slotB,
-          ATTR_SLOT_ACTIVE) == 1) {
-      //B is the current active slot
-      memcpy((void*)active_guid, (const void*)pentryB,
-          TYPE_GUID_SIZE);
-      memcpy((void*)inactive_guid, (const void*)pentryA,
-          TYPE_GUID_SIZE);
-    } else {
-      ALOGE("Both A & B are inactive..Aborting");
-      goto error;
-    }
     if (!strncmp(slot_suffix_arr[slot], AB_SLOT_A_SUFFIX,
           strlen(AB_SLOT_A_SUFFIX))){
       //Mark A as active in primary table
-      UPDATE_SLOT(pentryA, active_guid, SLOT_ACTIVE);
+      UPDATE_SLOT(pentryA, SLOT_ACTIVE);
       //Mark A as active in backup table
-      UPDATE_SLOT(pentryA_bak, active_guid, SLOT_ACTIVE);
+      UPDATE_SLOT(pentryA_bak, SLOT_ACTIVE);
       //Mark B as inactive in primary table
-      UPDATE_SLOT(pentryB, inactive_guid, SLOT_INACTIVE);
+      UPDATE_SLOT(pentryB, SLOT_INACTIVE);
       //Mark B as inactive in backup table
-      UPDATE_SLOT(pentryB_bak, inactive_guid, SLOT_INACTIVE);
+      UPDATE_SLOT(pentryB_bak, SLOT_INACTIVE);
     } else if (!strncmp(slot_suffix_arr[slot], AB_SLOT_B_SUFFIX,
           strlen(AB_SLOT_B_SUFFIX))){
       //Mark B as active in primary table
-      UPDATE_SLOT(pentryB, active_guid, SLOT_ACTIVE);
+      UPDATE_SLOT(pentryB, SLOT_ACTIVE);
       //Mark B as active in backup table
-      UPDATE_SLOT(pentryB_bak, active_guid, SLOT_ACTIVE);
+      UPDATE_SLOT(pentryB_bak, SLOT_ACTIVE);
       //Mark A as inavtive in primary table
-      UPDATE_SLOT(pentryA, inactive_guid, SLOT_INACTIVE);
+      UPDATE_SLOT(pentryA, SLOT_INACTIVE);
       //Mark A as inactive in backup table
-      UPDATE_SLOT(pentryA_bak, inactive_guid, SLOT_INACTIVE);
+      UPDATE_SLOT(pentryA_bak, SLOT_INACTIVE);
     } else {
       //Something has gone terribly terribly wrong
       ALOGE("%s: Unknown slot suffix!", __func__);
@@ -499,40 +477,37 @@ error:
   return -1;
 }
 
-
-int is_slot_bootable(unsigned slot)
+static int get_raw_slot_attribute(unsigned slot, const enum part_attr_type attribute)
 {
-  int attr = 0;
   char bootPartition[MAX_GPT_NAME_SIZE + 1] = {0};
   if (boot_control_check_slot_sanity(slot) != 0) {
     ALOGE("%s: Argument check failed", __func__);
     goto error;
   }
-  snprintf(bootPartition,
-      sizeof(bootPartition) - 1, "boot%s",
-      slot_suffix_arr[slot]);
-  attr = get_partition_attribute(bootPartition, ATTR_UNBOOTABLE);
-  if (attr >= 0)
-    return !attr;
+  snprintf(bootPartition, sizeof(bootPartition) - 1, "boot%s", slot_suffix_arr[slot]);
+  return get_partition_attribute(bootPartition, attribute);
 error:
+  return -1;
+}
+
+int is_slot_active(unsigned slot)
+{
+  const int attr = get_raw_slot_attribute(slot, ATTR_SLOT_ACTIVE);
+  if (attr >= 0) return attr;
+  return -1;
+}
+
+int is_slot_bootable(unsigned slot)
+{
+  const int attr = get_raw_slot_attribute(slot, ATTR_UNBOOTABLE);
+  if (attr >= 0) return !attr;
   return -1;
 }
 
 
 int is_slot_marked_successful(unsigned slot)
 {
-  int attr = 0;
-  char bootPartition[MAX_GPT_NAME_SIZE + 1] = {0};
-  if (boot_control_check_slot_sanity(slot) != 0) {
-    ALOGE("%s: Argument check failed", __func__);
-    goto error;
-  }
-  snprintf(bootPartition,
-      sizeof(bootPartition) - 1,
-      "boot%s", slot_suffix_arr[slot]);
-  attr = get_partition_attribute(bootPartition, ATTR_BOOT_SUCCESSFUL);
-  if (attr >= 0)
-    return attr;
-error:
+  const int attr = get_raw_slot_attribute(slot, ATTR_BOOT_SUCCESSFUL);
+  if (attr >= 0) return attr;
   return -1;
 }

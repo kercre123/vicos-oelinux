@@ -40,8 +40,15 @@ do_install() {
 }
 do_install_append() {
    install -d ${D}/lib/firmware/wlan/prima
-   ln -s /persist/WCNSS_qcom_wlan_nv.bin ${D}/lib/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin
-   ln -s /persist/WCNSS_wlan_dictionary.dat ${D}/lib/firmware/wlan/prima/WCNSS_wlan_dictionary.dat
+   if [ -e "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_qcom_wlan_nv.bin" ];then
+       cp -rf "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_qcom_wlan_nv.bin" ${D}/lib/firmware/wlan/prima
+   fi
+
+   if [ -e "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_wlan_dictionary.dat" ]; then
+       cp -rf "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_wlan_dictionary.dat" ${D}/lib/firmware/wlan/prima
+   elif [ -e "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}_32/WCNSS_wlan_dictionary.dat" ]; then
+       cp -rf "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}_32/WCNSS_wlan_dictionary.dat" ${D}/lib/firmware/wlan/prima
+   fi
 }
 INITSCRIPT_NAME = "set_wcnss_mode"
 INITSCRIPT_PARAMS = "start 60 2 3 4 5 . stop 20 0 1 6 ."
@@ -49,4 +56,3 @@ INITSCRIPT_PARAMS = "start 60 2 3 4 5 . stop 20 0 1 6 ."
 FILES_${PN} = "/lib/firmware/*"
 FILES_${PN} += "/etc/*"
 FILES_${PN} += "/lib/firmware/wlan/prima/*"
-

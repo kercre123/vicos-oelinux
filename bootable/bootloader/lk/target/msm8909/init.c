@@ -273,7 +273,14 @@ static void target_keystatus()
 	keys_init();
 
 	if (target_esc_down())
+	{
+		dprintf(INFO, "INFO: target_esc_down=1\n");
 		keys_post_event(KEY_ESC, 1);
+	}
+	else
+	{
+		dprintf(INFO, "INFO: target_esc_down=0\n");
+	}
 }
 
 static void set_sdc_power_ctrl()

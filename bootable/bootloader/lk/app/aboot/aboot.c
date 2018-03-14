@@ -188,7 +188,7 @@ static const char *skip_ramfs = " skip_initramfs";
 static const char *sys_path_cmdline = " rootwait ro init=/init";
 static const char *sys_path = "  root=/dev/mmcblk0p";
 
-static const char *unbrick_cmdline = "anki.unbrick=1";
+static const char *unbrick_cmdline = " anki.unbrick";
 
 #if VERIFIED_BOOT
 static const char *verity_mode = " androidboot.veritymode=";
