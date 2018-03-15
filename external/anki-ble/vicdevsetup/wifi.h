@@ -42,10 +42,18 @@ class WiFiScanResult {
   std::string ssid;
 };
 
+class WiFiConfig {
+ public:
+  WiFiAuth auth;
+  bool     hidden;
+  std::string ssid; /* hexadecimal representation of ssid name */
+  std::string passphrase;
+};
+
 std::vector<WiFiScanResult> ScanForWiFiAccessPoints();
 std::vector<uint8_t> PackWiFiScanResults(const std::vector<WiFiScanResult>& results);
 void EnableWiFiInterface(const bool enable, ExecCommandCallback callback);
-std::map<std::string, std::string> UnPackWiFiConfig(const std::vector<uint8_t>& packed);
-void SetWiFiConfig(const std::map<std::string, std::string> networks, ExecCommandCallback);
+std::vector<WiFiConfig> UnPackWiFiConfig(const std::vector<uint8_t>& packed);
+void SetWiFiConfig(const std::vector<WiFiConfig>& networks, ExecCommandCallback);
 
 } // namespace Anki
