@@ -33,8 +33,7 @@ echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # End camera force hack
 
 # Print the ID on the face
-SERIALNO=`tr ' ' '\n' < /proc/cmdline | awk -F= /androidboot.serialno/'{print $2}'`
-echo 2 1 $SERIALNO | /system/bin/display
+SERIALNO=`/bin/emr-cat e`
 
 # And put the serial number in properties
 for i in `seq 1 5`;
@@ -47,5 +46,9 @@ done
 if [ -x /usr/bin/vic-christen ]; then
     /usr/bin/vic-christen
 fi
+
+echo $SERIALNO > /sys/class/android_usb/android0/iSerial
+echo 2 1 g $SERIALNO | /system/bin/display
+echo 2 2 b `getprop persist.anki.robot.name` | /system/bin/display
 
 exit 0

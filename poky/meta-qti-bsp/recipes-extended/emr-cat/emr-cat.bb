@@ -12,7 +12,7 @@ do_compile () {
 
 do_install() {
   install -d ${D}/bin
-  install -m 0700 ${WORKDIR}/emr-cat ${D}/bin/
+  install -m 0755 ${WORKDIR}/emr-cat ${D}/bin/
 }
 
 FILES_${PN} += "/bin/emr-cat"

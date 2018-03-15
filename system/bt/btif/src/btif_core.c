@@ -73,7 +73,7 @@
 #elif ANDROID
 #define BTE_DID_CONF_FILE "/etc/bluetooth/bt_did.conf"
 #else  // !defined(OS_GENERIC)
-#define BTE_DID_CONF_FILE "/data/misc/bluetooth/bt_did.conf"
+#define BTE_DID_CONF_FILE "/misc/bluetooth/bt_did.conf"
 #endif  // defined(OS_GENERIC)
 #endif  // BTE_DID_CONF_FILE
 

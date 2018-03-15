@@ -47,7 +47,7 @@ static future_t *init() {
 #if defined(OS_GENERIC)
   const char *path = "bt_stack.conf";
 #else  // !defined(OS_GENERIC)
-  const char *path = "/data/misc/bluetooth/bt_stack.conf";
+  const char *path = "/misc/bluetooth/bt_stack.conf";
 #endif  // defined(OS_GENERIC)
   assert(path != NULL);
 

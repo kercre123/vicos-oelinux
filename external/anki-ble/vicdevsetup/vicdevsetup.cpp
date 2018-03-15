@@ -75,7 +75,6 @@ void VicDevSetup::OnPeripheralStateUpdate(const bool advertising,
     settings.GetAdvertisement().SetIncludeDeviceName(true);
     std::vector<uint8_t> mdata = Anki::kAnkiBluetoothSIGCompanyIdentifier;
     mdata.push_back(Anki::kVictorProductIdentifier); // distinguish from future Anki products
-    mdata.push_back('p'); // to indicate we are in "pairing" mode
     settings.GetAdvertisement().SetManufacturerData(mdata);
     StartAdvertising(settings);
   } else if (connected && advertising) {
@@ -122,11 +121,11 @@ void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& m
                                     packed_results);
     }
     break;
-  case Anki::VictorMsg_Command::MSG_B2V_WIFI_SET_CONFIG:
+  case Anki::VictorMsg_Command::MSG_B2V_WIFI_SET_CONFIG_EXT:
     {
-      logi("Receive WiFi Set Config");
+      logi("Receive WiFi Set Config Ext");
       std::vector<uint8_t> packedWiFiConfig(message.begin() + 2, message.end());
-      std::map<std::string, std::string> networks = Anki::UnPackWiFiConfig(packedWiFiConfig);
+      std::vector<Anki::WiFiConfig> networks = Anki::UnPackWiFiConfig(packedWiFiConfig);
       Anki::SetWiFiConfig(networks, send_output_callback_);
     }
     break;

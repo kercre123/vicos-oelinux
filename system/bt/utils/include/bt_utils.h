@@ -71,9 +71,9 @@ typedef enum {
 #define IOT_DEV_CONF_FILE             "/data/misc/bluedroid/iot_devlist.conf"
 #define IOT_DEV_CONF_BKP_FILE         "/data/misc/bluedroid/iot_devlist_bkp.conf"
 #else
-#define IOT_DEV_BASE_CONF_FILE        "/data/misc/bluetooth/iot_devlist.conf"
-#define IOT_DEV_CONF_FILE             "/data/misc/bluetooth/iot_devlist.conf"
-#define IOT_DEV_CONF_BKP_FILE         "/data/misc/bluetooth/iot_devlist_bkp.conf"
+#define IOT_DEV_BASE_CONF_FILE        "/misc/bluetooth/iot_devlist.conf"
+#define IOT_DEV_CONF_FILE             "/misc/bluetooth/iot_devlist.conf"
+#define IOT_DEV_CONF_BKP_FILE         "/misc/bluetooth/iot_devlist_bkp.conf"
 #endif
 #define IOT_ROLE_CHANGE_BLACKLIST     "RoleChangeBlacklistAddr"
 #define IOT_HFP_1_7_BLACKLIST          "Hfp1_7BlacklistAddr"

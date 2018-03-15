@@ -16,7 +16,7 @@ S = "${WORKDIR}/system/bt/"
 
 FILES_SOLIBSDEV = ""
 FILES_${PN} += "${libdir}"
-FILES_${PN} += "${userfsdatadir}/misc/bluetooth/*"
+FILES_${PN} += "/misc/bluetooth/*"
 INSANE_SKIP_${PN} = "dev-so"
 
 CFLAGS_append = " -DUSE_ANDROID_LOGGING -DUSE_LIBHW_AOSP"
@@ -34,24 +34,24 @@ EXTRA_OECONF = " \
 
 do_install_append() {
 
-	install -d ${D}${userfsdatadir}/misc/bluetooth/
+	install -d ${D}/misc/bluetooth/
 
 	cd  ${D}/${libdir}/ && ln -s libbluetoothdefault.so.0 bluetooth.default.so
 	cd  ${D}/${libdir}/ && ln -s libaudioa2dpdefault.so.0 audio.a2dp.default.so
 
 	if [ -f ${S}conf/auto_pair_devlist.conf ]; then
-	   install -m 0660 ${S}conf/auto_pair_devlist.conf ${D}${userfsdatadir}/misc/bluetooth/
+	   install -m 0660 ${S}conf/auto_pair_devlist.conf ${D}/misc/bluetooth/
 	fi
 
 	if [ -f ${S}conf/bt_did.conf ]; then
-	   install -m 0660 ${S}conf/bt_did.conf ${D}${userfsdatadir}/misc/bluetooth/
+	   install -m 0660 ${S}conf/bt_did.conf ${D}/misc/bluetooth/
 	fi
 
 	if [ -f ${S}conf/bt_stack.conf ]; then
-	   install -m 0660 ${S}conf/bt_stack.conf ${D}${userfsdatadir}/misc/bluetooth/
+	   install -m 0660 ${S}conf/bt_stack.conf ${D}/misc/bluetooth/
 	fi
 
 	if [ -f ${S}conf/iot_devlist.conf ]; then
-	   install -m 0660 ${S}conf/iot_devlist.conf ${D}${userfsdatadir}/misc/bluetooth/
+	   install -m 0660 ${S}conf/iot_devlist.conf ${D}/misc/bluetooth/
 	fi
 }
