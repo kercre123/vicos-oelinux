@@ -186,13 +186,18 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
       logv("ipc-server: ConnectToPeripheral received");
       {
         ConnectToPeripheralArgs* args = (ConnectToPeripheralArgs *) data.data();
-        ConnectToPeripheral(std::string(args->address));
+        ConnectToPeripheral(sockfd, std::string(args->address));
       }
       break;
     default:
       loge("ipc-server: Unknown IPC message (%d)", (int) type);
       break;
   }
+}
+
+void IPCServer::OnPeerClose(const int sockfd)
+{
+  IPCEndpoint::OnPeerClose(sockfd);
 }
 
 void IPCServer::OnPeripheralStateUpdate(const bool advertising,

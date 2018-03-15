@@ -1961,6 +1961,31 @@ bool DisconnectGattPeer(int conn_id)
   return true;
 }
 
+void DisconnectGattPeerByAddress(const std::string& address)
+{
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  if (sBtGattClientIf <= 0) {
+    return;
+  }
+  int conn_id = 0;
+  auto search = sOutboundConnections.find(address);
+  if (search != sOutboundConnections.end()) {
+    BluetoothGattConnection& connection = search->second.connection;
+    conn_id = connection.conn_id;
+  }
+
+  bt_bdaddr_t bda = {0};
+  bt_bdaddr_t_from_string(address, &bda);
+  bt_status_t status = sBtGattInterface->client->disconnect(sBtGattClientIf,
+                                                            &bda,
+                                                            conn_id);
+  if (status != BT_STATUS_SUCCESS) {
+    loge("Failed to disconnect from %s", address.c_str());
+  }
+
+  return;
+}
+
 static bool sScanning = false;
 void TimeoutScanning() {
   if (sScanning) {

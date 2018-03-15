@@ -35,6 +35,7 @@ bool AddGattService(BluetoothGattService* service);
 bool StartGattService(BluetoothGattService* service);
 bool StopGattService(BluetoothGattService* service);
 bool DisconnectGattPeer(int conn_id);
+void DisconnectGattPeerByAddress(const std::string& address);
 bool RemoveGattService(BluetoothGattService* service);
 bool SendGattIndication(int attribute_handle, int conn_id, int confirm,
                         const std::vector<uint8_t>& value);
