@@ -465,17 +465,22 @@ bool Agent::StartPeripheral()
   return true;
 }
 
-void Agent::StartScan(const std::string& serviceUUID) {
+void Agent::StartScan(const int sockfd, const std::string& serviceUUID) {
+  logv("Agent::StartScan(sockfd = %d, serviceUUID = '%s')",
+       sockfd, serviceUUID.c_str());
   scan_filter_service_uuid_ = serviceUUID;
-  scanning_ = true;
-  logv("Agent::StartScan(serviceUUID = '%s')", serviceUUID.c_str());
-  (void) BluetoothStack::SetScanning(true);
+  scanning_ = BluetoothStack::SetScanning(true);
+  if (scanning_) {
+    scanning_ipc_clients_.insert(sockfd);
+  }
 }
 
-void Agent::StopScan() {
-  scanning_ = false;
-  (void) BluetoothStack::SetScanning(false);
-  scan_filter_service_uuid_.clear();
+void Agent::StopScan(const int sockfd) {
+  scanning_ipc_clients_.erase(sockfd);
+  if (scanning_ipc_clients_.empty()) {
+    scanning_ = !BluetoothStack::SetScanning(false);
+    scan_filter_service_uuid_.clear();
+  }
 }
 
 void Agent::ConnectToPeripheral(const int sockfd, const std::string& address) {
@@ -504,6 +509,7 @@ void Agent::OnPeerClose(const int sockfd) {
     search->second.clear();
     outbound_connection_addresses_.erase(sockfd);
   }
+  StopScan(sockfd);
 }
 
 void Agent::OnOutboundConnectionChange(const std::string& address,
