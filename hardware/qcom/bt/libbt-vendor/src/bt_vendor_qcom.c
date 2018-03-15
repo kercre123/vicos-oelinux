@@ -833,14 +833,14 @@ static int bt_onoff_script(int n_state)
         ALOGI("bluetooth.hciattach value is %s", hciattach_value);
 
         if (!strncasecmp(hciattach_value, "true", sizeof("true"))) {
-            ret = system("/bin/sh /data/misc/bluetooth/init.msm.bt.sh");
+            ret = system("/bin/sh /misc/bluetooth/init.msm.bt.sh");
 
             if (ret != 0) {
-               ALOGI("/data/misc/bluetooth/init.msm.bt.sh returned with error value: %d", ret);
+               ALOGI("/misc/bluetooth/init.msm.bt.sh returned with error value: %d", ret);
                property_set_bt("bluetooth.status", "off");
                return -1;
             }
-            ALOGI("/data/misc/bluetooth/init.msm.bt.sh executed successfully");
+            ALOGI("/misc/bluetooth/init.msm.bt.sh executed successfully");
             property_set_bt("bluetooth.status", "on");
         }
         else if (!strncasecmp(hciattach_value, "false", sizeof("false"))) {
