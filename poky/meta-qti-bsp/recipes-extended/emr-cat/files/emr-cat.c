@@ -26,6 +26,7 @@ static const char* USAGE_FMT = \
 "%s <KEY TO READ>\n" \
 "\n" \
 "Where <KEY TO READ> is one of:\n" \
+"h: Print this help text instead of reading EMR\n" \
 "e: ESN\n" \
 "v: HW_FER\n" \
 "m: MODEL\n" \
@@ -34,6 +35,8 @@ static const char* USAGE_FMT = \
 "p: PLAYPEN_PASSED_FLAG\n" \
 "o: PACKED_OUT_FLAG\n" \
 "d: PACKED_OUT_DATE\n";
+
+static const char* RSLT_FORMAT = "%08x";
 
 typedef struct {
   uint32_t ESN;
@@ -56,25 +59,27 @@ int main(int argc, char *argv[]) {
   unsigned long result = 0;
 
   if (argc != 2) {
-    printf("USAGE_FMT", argv[0]);
+    fprintf(stderr, USAGE_FMT, argv[0]);
     return 1;
   }
 
   fd = open(kEMRFile, O_RDONLY);
   if (fd < 0) {
-    printf("Error opening EMR \"%s\": %d\n", kEMRFile, errno);
-    return fd;
+    fprintf(stderr, "Error opening EMR \"%s\": %d\n", kEMRFile, errno);
+    fprintf(stdout, RSLT_FORMAT, 0); // Need to echo something so we don't break things down the line
+    return fd; // Consumers should check return code if default return isn't good enough
   }
 
   rdrslt = read(fd, &record, sizeof(EMR));
   if (rdrslt != sizeof(EMR)) {
-    printf("Error reading EMR, expected %d bytes, got %d\n", sizeof(EMR), rdrslt);
-    return -1;
+    fprintf(stderr, "Error reading EMR, expected %d bytes, got %d\n", sizeof(EMR), rdrslt);
+    fprintf(stdout, RSLT_FORMAT, 0); // Need to echo something so we don't break things down the line
+    return -1; // Consumers should check return code if default return isn't good enough
   }
 
   switch(argv[1][0]) {
     case 'h':
-      printf("USAGE_FMT", argv[0]);
+      printf(USAGE_FMT, argv[0]);
       return 0;
     case 'e':
       result = record.ESN;
@@ -101,10 +106,10 @@ int main(int argc, char *argv[]) {
       result = record.PACKED_OUT_DATE;
       break;
     default:
-      printf("Unknown EMR key '%c'\n", argv[1][0]);
+      fprintf(stderr, "Unknown EMR key '%c'\n", argv[1][0]);
       return -1;
   }
 
-  printf("%x\n", result);
+  fprintf(stdout, RSLT_FORMAT, result);
   return 0;
 }

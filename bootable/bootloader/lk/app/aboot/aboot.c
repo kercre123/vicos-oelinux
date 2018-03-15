@@ -160,7 +160,6 @@ static const char *emmc_cmdline = " androidboot.bootdevice=";
 #else
 static const char *emmc_cmdline = " androidboot.emmc=true";
 #endif
-static const char *usb_sn_cmdline = " androidboot.serialno=";
 static const char *androidboot_mode = " androidboot.mode=";
 
 static const char *systemd_ffbm_mode = " systemd.unit=ffbm.target";
@@ -381,9 +380,6 @@ unsigned char *update_cmdline(const char * cmdline)
 #endif
 	}
 
-	cmdline_len += strlen(usb_sn_cmdline);
-	cmdline_len += strlen(sn_buf);
-
 #if VERIFIED_BOOT
 	if (VB_V2 == target_get_vb_version())
 	{
@@ -572,14 +568,6 @@ unsigned char *update_cmdline(const char * cmdline)
 			while ((*dst++ = *src++));
 		}
 #endif
-		src = usb_sn_cmdline;
-		if (have_cmdline) --dst;
-		have_cmdline = 1;
-		while ((*dst++ = *src++));
-		src = sn_buf;
-		if (have_cmdline) --dst;
-		have_cmdline = 1;
-		while ((*dst++ = *src++));
 		if (warm_boot) {
 			if (have_cmdline) --dst;
 			src = warmboot_cmdline;

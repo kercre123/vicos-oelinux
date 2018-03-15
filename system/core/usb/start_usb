@@ -51,18 +51,7 @@ case "$1" in
 	fi
 	echo "soc:" $socplatform
 
-	# find serialno from cmdline
-	cmdline=`cat /proc/cmdline` 2> /dev/null
-	strsearch="androidboot.serialno="
-	if echo "$cmdline" | grep -q "$strsearch"; then
-		startsearch=${cmdline#*$strsearch}
-		pos=$(( ${#cmdline} - ${#startsearch}))
-		serialno=${cmdline:$pos:8}
-	else
-		echo "serialno not found with cmdline, use default"
-		serialno="12345678"
-	fi
-	echo "serialno:" $serialno
+  serialno=`/bin/emr-cat e`
 
 	msm_serial=`cat /sys/devices/soc0/serial_number`
 	msm_serial_hex=`printf %08X $msm_serial`
@@ -194,4 +183,3 @@ case "$1" in
         exit 1
         ;;
 esac
-
