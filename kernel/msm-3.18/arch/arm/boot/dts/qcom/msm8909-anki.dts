@@ -46,17 +46,6 @@
 	vdd-io-supply = <&pm8916_l5>;
 };
 
-&pm8916_chg {
-	status = "ok";
-	qcom,charging-disabled;
-};
-
-&pm8916_bms {
-	status = "disabled"; // NDM ok";
-	qcom,battery-data = <&mtp_batterydata>;
-	qcom,batt-aging-comp;
-};
-
 &spmi_bus {
 	qcom,pm8916@0 {
 		qcom,leds@a100 {
