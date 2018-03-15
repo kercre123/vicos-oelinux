@@ -18,6 +18,8 @@
 #include "gatt_constants.h"
 
 #include <deque>
+#include <map>
+#include <set>
 
 namespace Anki {
 namespace BluetoothDaemon {
@@ -28,6 +30,10 @@ class Agent : public IPCServer {
   bool StartPeripheral();
 
  protected:
+  virtual void OnOutboundConnectionChange(const std::string& address,
+                                          const int connected,
+                                          const int connection_id,
+                                          const std::vector<GattDbRecord>& records);
   virtual void OnNewIPCClient(const int sockfd);
   virtual void SendMessage(const int connection_id,
                            const std::string& characteristic_uuid,
@@ -43,7 +49,9 @@ class Agent : public IPCServer {
   virtual void StopAdvertising();
   virtual void StartScan(const std::string& serviceUUID);
   virtual void StopScan();
-  virtual void ConnectToPeripheral(const std::string& address);
+  virtual void ConnectToPeripheral(const int sockfd, const std::string& address);
+  virtual void OnPeerClose(const int sockfd);
+
 
  private:
   void TransmitNextNotification();
@@ -128,6 +136,7 @@ class Agent : public IPCServer {
   std::deque<Notification> notification_queue_;
   bool scanning_;
   std::string scan_filter_service_uuid_;
+  std::map<int, std::set<std::string>> outbound_connection_addresses_;
 };
 
 } // namespace BluetoothDaemon

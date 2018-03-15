@@ -478,12 +478,46 @@ void Agent::StopScan() {
   scan_filter_service_uuid_.clear();
 }
 
-void Agent::ConnectToPeripheral(const std::string& address) {
+void Agent::ConnectToPeripheral(const int sockfd, const std::string& address) {
   bool result = BluetoothStack::ConnectToBLEPeripheral(address, true);
-  if (!result) {
+  if (result) {
+    auto search = outbound_connection_addresses_.find(sockfd);
+    if (search == outbound_connection_addresses_.end()) {
+      std::set<std::string> addresses;
+      outbound_connection_addresses_[sockfd] = addresses;
+      search = outbound_connection_addresses_.find(sockfd);
+    }
+    search->second.insert(address);
+  } else {
     std::vector<GattDbRecord> records;
     OnOutboundConnectionChange(address, 0, 0, records);
   }
+}
+
+void Agent::OnPeerClose(const int sockfd) {
+  IPCServer::OnPeerClose(sockfd);
+  auto search = outbound_connection_addresses_.find(sockfd);
+  if (search != outbound_connection_addresses_.end()) {
+    for (auto const& address : search->second) {
+      BluetoothStack::DisconnectGattPeerByAddress(address);
+    }
+    search->second.clear();
+    outbound_connection_addresses_.erase(sockfd);
+  }
+}
+
+void Agent::OnOutboundConnectionChange(const std::string& address,
+                                       const int connected,
+                                       const int connection_id,
+                                       const std::vector<GattDbRecord>& records) {
+  if (!connected) {
+    for (auto it = outbound_connection_addresses_.begin();
+         it != outbound_connection_addresses_.end();
+         it++) {
+      it->second.erase(address);
+    }
+  }
+  IPCServer::OnOutboundConnectionChange(address, connected, connection_id, records);
 }
 
 } // namespace BluetoothDaemon
