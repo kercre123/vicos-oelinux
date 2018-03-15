@@ -75,7 +75,6 @@ void VicDevSetup::OnPeripheralStateUpdate(const bool advertising,
     settings.GetAdvertisement().SetIncludeDeviceName(true);
     std::vector<uint8_t> mdata = Anki::kAnkiBluetoothSIGCompanyIdentifier;
     mdata.push_back(Anki::kVictorProductIdentifier); // distinguish from future Anki products
-    mdata.push_back('p'); // to indicate we are in "pairing" mode
     settings.GetAdvertisement().SetManufacturerData(mdata);
     StartAdvertising(settings);
   } else if (connected && advertising) {
