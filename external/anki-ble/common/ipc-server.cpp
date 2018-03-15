@@ -173,13 +173,13 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
       logv("ipc-server: StartScan received");
       {
         StartScanArgs* args = (StartScanArgs *) data.data();
-        StartScan(std::string(args->service_uuid));
+        StartScan(sockfd, std::string(args->service_uuid));
       }
       break;
     case IPCMessageType::StopScan:
       logv("ipc-server: StopScan received");
       {
-        StopScan();
+        StopScan(sockfd);
       }
       break;
     case IPCMessageType::ConnectToPeripheral:

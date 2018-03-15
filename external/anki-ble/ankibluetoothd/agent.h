@@ -47,8 +47,8 @@ class Agent : public IPCServer {
   virtual void Disconnect(const int connection_id);
   virtual void StartAdvertising(const BLEAdvertiseSettings& settings);
   virtual void StopAdvertising();
-  virtual void StartScan(const std::string& serviceUUID);
-  virtual void StopScan();
+  virtual void StartScan(const int sockfd, const std::string& serviceUUID);
+  virtual void StopScan(const int sockfd);
   virtual void ConnectToPeripheral(const int sockfd, const std::string& address);
   virtual void OnPeerClose(const int sockfd);
 
@@ -137,6 +137,7 @@ class Agent : public IPCServer {
   bool scanning_;
   std::string scan_filter_service_uuid_;
   std::map<int, std::set<std::string>> outbound_connection_addresses_;
+  std::set<int> scanning_ipc_clients_;
 };
 
 } // namespace BluetoothDaemon
