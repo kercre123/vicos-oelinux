@@ -427,10 +427,10 @@ static int parent(const char *tag, int parent_read, pid_t pid,
 
     if (chld_sts != NULL) {
         *chld_sts = status;
-    } else {
-      if (WIFEXITED(status))
+    } 
+    if (WIFEXITED(status)) {
         rc = WEXITSTATUS(status);
-      else
+    }  else {
         rc = -ECHILD;
     }
 
@@ -562,6 +562,9 @@ int android_fork_execvp_ext(int argc, char* argv[], int *status, bool ignore_int
         /* <anki> VIC-1543: Forward SIGTERM to child </anki> */
         child_pid = pid;
         signal(SIGTERM, sigforward);
+
+        /* <anki> VIC-1609: Ignore SIGHUP caused by child exit </anki> */
+        signal(SIGHUP, SIG_IGN);
 
         close(child_ptty);
         if (ignore_int_quit) {
