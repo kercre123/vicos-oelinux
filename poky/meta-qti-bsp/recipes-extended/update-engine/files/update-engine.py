@@ -187,6 +187,7 @@ def update_from_url(url):
 if __name__ == '__main__':
     if len(sys.argv) == 1:  # Clear the output directory
         clear_status()
+        exit(0)
     elif len(sys.argv) == 3 and sys.argv[2] == '-v':
         DEBUG = True
 
