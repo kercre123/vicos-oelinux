@@ -93,28 +93,28 @@ void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& m
 
   switch (msgID) {
   case Anki::VictorMsg_Command::MSG_B2V_BTLE_DISCONNECT:
-    logi("Received request to disconnect");
+    logv("Received request to disconnect");
     Disconnect(connection_id_);
     break;
   case Anki::VictorMsg_Command::MSG_B2V_CORE_PING_REQUEST:
-    logi("Received ping request");
+    logv("Received ping request");
     SendMessageToConnectedCentral({0x01, Anki::VictorMsg_Command::MSG_V2B_CORE_PING_RESPONSE});
     break;
   case Anki::VictorMsg_Command::MSG_B2V_HEARTBEAT:
-    logi("Received heartbeat");
+    logv("Received heartbeat");
     // Nothing to do here, we already send a periodic heartbeat of our own back to the central
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_START:
-    logi("Received WiFi start");
+    logv("Received WiFi start");
     Anki::EnableWiFiInterface(true, send_output_callback_);
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_STOP:
-    logi("Received WiFi stop");
+    logv("Received WiFi stop");
     Anki::EnableWiFiInterface(false, send_output_callback_);
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_SCAN:
     {
-      logi("Received WiFi scan");
+      logv("Received WiFi scan");
       std::vector<Anki::WiFiScanResult> results = Anki::ScanForWiFiAccessPoints();
       std::vector<uint8_t> packed_results = Anki::PackWiFiScanResults(results);
       SendMessageToConnectedCentral(Anki::VictorMsg_Command::MSG_V2B_WIFI_SCAN_RESULTS,
@@ -123,7 +123,7 @@ void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& m
     break;
   case Anki::VictorMsg_Command::MSG_B2V_WIFI_SET_CONFIG_EXT:
     {
-      logi("Receive WiFi Set Config Ext");
+      logv("Receive WiFi Set Config Ext");
       std::vector<uint8_t> packedWiFiConfig(message.begin() + 2, message.end());
       std::vector<Anki::WiFiConfig> networks = Anki::UnPackWiFiConfig(packedWiFiConfig);
       Anki::SetWiFiConfig(networks, send_output_callback_);
@@ -131,7 +131,7 @@ void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& m
     break;
   case Anki::VictorMsg_Command::MSG_B2V_SSH_SET_AUTHORIZED_KEYS:
     {
-      logi("Receive SSH authorized keys");
+      logv("Receive SSH authorized keys");
       // Payload is text for the .ssh/authorized_keys file
       std::string keys(message.begin() + 2, message.end());
       int rc = Anki::SetSSHAuthorizedKeys(keys);
@@ -146,20 +146,20 @@ void VicDevSetup::HandleIncomingMessageFromCentral(const std::vector<uint8_t>& m
     break;
   case Anki::VictorMsg_Command::MSG_B2V_DEV_PING_WITH_DATA_REQUEST:
     {
-      logi("Received ping with data request");
+      logv("Received ping with data request");
       std::vector<uint8_t> data = message;
       data[1] = Anki::VictorMsg_Command::MSG_V2B_DEV_PING_WITH_DATA_RESPONSE;
       SendMessageToConnectedCentral(data);
     }
     break;
   case Anki::VictorMsg_Command::MSG_B2V_DEV_RESTART_ADBD:
-    logi("Received restart adbd request");
+    logv("Received restart adbd request");
     ExecCommandInBackgroundAndSendOutputToCentral({"/etc/initscripts/adbd", "stop"});
     ExecCommandInBackgroundAndSendOutputToCentral({"/etc/initscripts/adbd", "start"});
     break;
   case Anki::VictorMsg_Command::MSG_B2V_DEV_EXEC_CMD_LINE:
     {
-      logi("Received command line to execute");
+      logv("Received command line to execute");
       std::vector<std::string> args;
       for (auto it = message.begin() + 2; it != message.end(); ) {
         auto terminator = std::find(it, message.end(), 0);
@@ -310,7 +310,7 @@ static void ExitHandler(int status = 0) {
 
 static void SignalCallback(struct ev_loop* loop, struct ev_signal* w, int revents)
 {
-  logi("Exiting for signal %d", w->signum);
+  logv("Exiting for signal %d", w->signum);
   ev_unloop(loop, EVUNLOOP_ALL);
   ExitHandler();
 }
@@ -349,8 +349,8 @@ int main(int argc, char *argv[]) {
   ev_signal_start(sDefaultLoop, &sTermSig);
 
   setAndroidLoggingTag("vdsob");
-  setMinLogLevel(kLogLevelVerbose);
-  logi("%s", "Victor Developer Setup over BLE launched");
+  setMinLogLevel(kLogLevelInfo);
+  logv("%s", "Victor Developer Setup over BLE launched");
   sVicDevSetup = new VicDevSetup(sDefaultLoop);
   ev_timer_init(&sTimer, TimerWatcherCallback, 2., 0.);
   ev_timer_start(sDefaultLoop, &sTimer);
