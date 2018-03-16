@@ -160,11 +160,19 @@
 #endif
 
 #ifndef BT_USE_TRACES
-#define BT_USE_TRACES  TRUE
+#ifdef REDUCED_LOGGING
+#define BT_USE_TRACES  FALSE
+#else
+#define BT_USE_TRACES TRUE
+#endif
 #endif
 
 #ifndef BT_TRACE_BTIF
-#define BT_TRACE_BTIF  TRUE
+#ifdef REDUCED_LOGGING
+#define BT_TRACE_BTIF  FALSE
+#else
+#define BT_TRACE_BTIF TRUE
+#endif
 #endif
 
 
