@@ -325,14 +325,16 @@ void Agent::SendMessage(const int connection_id,
                         const bool reliable,
                         const std::vector<uint8_t>& value)
 {
-  if (connected_ && inbound_connection_id_ == connection_id) {
-    int characteristic_handle;
-    if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadCharacteristicUUID)) {
-      characteristic_handle = app_read_characteristic_handle_;
-    } else {
-      return;
+  if (inbound_connection_id_ == connection_id) {
+    if (connected_) {
+      int characteristic_handle;
+      if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadCharacteristicUUID)) {
+        characteristic_handle = app_read_characteristic_handle_;
+      } else {
+        return;
+      }
+      SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
     }
-    SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
   } else {
     (void) BluetoothStack::WriteGattCharacteristic(connection_id, characteristic_uuid, reliable, value);
   }
