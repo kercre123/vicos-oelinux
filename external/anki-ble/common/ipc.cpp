@@ -204,7 +204,7 @@ void IPCEndpoint::SendQueuedMessagesToPeer(const int sockfd)
     ssize_t bytesSent = send(sockfd, packed_message.data(), packed_message.size(), 0);
     if (-1 == bytesSent) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        logw("ipc-endpoint: send would block");
+        logv("ipc-endpoint: send would block");
         break;
       }
       OnSendError(sockfd, errno);
