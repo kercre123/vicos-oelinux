@@ -44,15 +44,16 @@ class IPCServer : public IPCEndpoint {
                               const std::string& descriptor_uuid,
                               const std::vector<uint8_t>& data);
   void OnScanResults(int error, const std::vector<ScanResultRecord>& records);
-  void OnOutboundConnectionChange(const std::string& address,
-                                  const int connected,
-                                  const int connection_id,
-                                  const std::vector<GattDbRecord>& records);
+  virtual void OnOutboundConnectionChange(const std::string& address,
+                                          const int connected,
+                                          const int connection_id,
+                                          const std::vector<GattDbRecord>& records);
 
   virtual void OnNewIPCClient(const int sockfd) {}
   virtual void OnReceiveIPCMessage(const int sockfd,
                                    const IPCMessageType type,
                                    const std::vector<uint8_t>& data);
+  virtual void OnPeerClose(const int sockfd);
   virtual void SendMessage(const int connection_id,
                            const std::string& characteristic_uuid,
                            const bool reliable,
@@ -65,9 +66,9 @@ class IPCServer : public IPCEndpoint {
   virtual void Disconnect(const int connection_id) {}
   virtual void StartAdvertising(const BLEAdvertiseSettings& settings) {}
   virtual void StopAdvertising() {}
-  virtual void StartScan(const std::string& serviceUUID) {}
-  virtual void StopScan() {}
-  virtual void ConnectToPeripheral(const std::string& address) {}
+  virtual void StartScan(const int sockfd, const std::string& serviceUUID) {}
+  virtual void StopScan(const int sockfd) {}
+  virtual void ConnectToPeripheral(const int sockfd, const std::string& address) {}
 
  private:
   void AcceptWatcherCallback(ev::io& w, int revents);
