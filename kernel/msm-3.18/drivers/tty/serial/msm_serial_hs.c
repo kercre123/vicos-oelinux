@@ -3835,7 +3835,19 @@ static struct uart_ops msm_hs_ops = {
 	.ioctl = msm_hs_ioctl,
 };
 
-module_init(msm_serial_hs_init);
+/*
+ * VIC-632: 
+ * the change of module_init 
+ * to late_initcall was required
+ * to fix a crash occuring 
+ * in the sps driver during
+ * BAM pipe initialisation
+ * this fix may not be the optimum 
+ * solution. 
+ * We call it a work around :-)  
+*/
+//module_init(msm_serial_hs_init);
+late_initcall(msm_serial_hs_init);
 module_exit(msm_serial_hs_exit);
 MODULE_DESCRIPTION("High Speed UART Driver for the MSM chipset");
 MODULE_VERSION("1.2");
