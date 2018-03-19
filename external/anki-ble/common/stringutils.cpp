@@ -85,9 +85,9 @@ std::string hexStringToAsciiString(const std::string& hexString)
 {
   std::string asciiString;
   for (auto it = hexString.cbegin() ; it != hexString.cend(); it++) {
-    char c = (*it) << 4;
+    char c = (hex_char_to_byte(*it)) << 4;
     it++;
-    c |= (*it);
+    c |= hex_char_to_byte(*it);
     asciiString.push_back(c);
   }
   return asciiString;
