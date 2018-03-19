@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include <cutils/properties.h>
 #include <unistd.h>
 
 void VicDevSetup::OnInboundConnectionChange(int connection_id, int connected)
@@ -349,7 +350,7 @@ int main(int argc, char *argv[]) {
   ev_signal_start(sDefaultLoop, &sTermSig);
 
   setAndroidLoggingTag("vdsob");
-  setMinLogLevel(kLogLevelInfo);
+  setMinLogLevel(property_get_int32("persist.anki.vdsob.log_level", kLogLevelInfo));
   logv("%s", "Victor Developer Setup over BLE launched");
   sVicDevSetup = new VicDevSetup(sDefaultLoop);
   ev_timer_init(&sTimer, TimerWatcherCallback, 2., 0.);
