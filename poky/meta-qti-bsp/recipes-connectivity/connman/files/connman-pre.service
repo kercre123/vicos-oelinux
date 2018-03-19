@@ -1,8 +1,8 @@
 [Unit]
 Description=Connection service preparation
-After=init_post_boot.service
+After=init_post_boot.service mount-data.service
 Before=connman.service
-Wants=connman.service
+Wants=mount-data.service connman.service
 
 [Service]
 Type=oneshot
@@ -11,4 +11,3 @@ RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
-
