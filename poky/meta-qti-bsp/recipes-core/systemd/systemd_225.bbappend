@@ -8,6 +8,8 @@ SRC_URI += "file://mount-data"
 SRC_URI += "file://mount-data.service"
 SRC_URI += "file://mtpserver.rules"
 
+DEPENDS += "emr-cat"
+
 EXTRA_OECONF += " --disable-efi"
 
 # In aarch64 targets systemd is not booting with -finline-functions -finline-limit=64 optimizations

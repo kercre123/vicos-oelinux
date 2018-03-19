@@ -29,10 +29,10 @@
 [Unit]
 Description=mount-data
 SourcePath=/etc/initscripts/mount-data
-After=var-volatile.mount
 
 [Service]
 Restart=no
 RemainAfterExit=yes
+Type=oneshot
 ExecStart=/etc/initscripts/mount-data start
 ExecStop=/etc/initscripts/mount-data stop

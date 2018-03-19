@@ -6,7 +6,8 @@
 [Unit]
 Description=GPS Location process launcher
 SourcePath=/etc/initscripts/start_loc_launcher
-After=data.mount mount-data.service
+After=mount-data.service
+Wants=mount-data.service
 
 [Service]
 User=root
