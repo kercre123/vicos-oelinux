@@ -19,6 +19,7 @@ STATUS_DIR = "/data/update-engine"
 EXPECTED_DOWNLOAD_SIZE_FILE = os.path.join(STATUS_DIR, "expected-download-size")
 EXPECTED_WRITE_SIZE_FILE = os.path.join(STATUS_DIR, "expected-size")
 PROGRESS_FILE = os.path.join(STATUS_DIR, "progress")
+ERROR_FILE = os.path.join(STATUS_DIR, "error")
 DD_BLOCK_SIZE = 1024*256
 WBITS = zlib.MAX_WBITS | 16
 SUPPORTED_MANIFEST_VERSIONS = ["0.9.1"]
@@ -38,6 +39,14 @@ def write_status(file_name, status):
     with open(file_name, "w") as output:
         output.write(str(status))
         output.truncate()
+
+
+def die(code, text):
+    write_status(ERROR_FILE, text)
+    if DEBUG:
+        sys.stderr.write(str(text))
+        sys.stderr.write(os.linesep)
+    exit(code)
 
 
 def call(*args):
@@ -81,9 +90,20 @@ def get_manifest(fileobj):
 
 def open_url_stream(url):
     "Open a URL as a filelike stream"
-    request = urllib2.Request(url)
-    opener = urllib2.build_opener()
-    return opener.open(request)
+    try:
+        request = urllib2.Request(url)
+        opener = urllib2.build_opener()
+        return opener.open(request)
+    except Exception as e:
+        die(203, "Failed to open URL: " + str(e))
+
+
+def make_tar_stream(fileobj):
+    "Converts a file like object into a streaming tar object"
+    try:
+        return tarfile.open(mode='r|', fileobj=fileobj)
+    except Exception as e:
+        die(204, "Couldn't open contents as tar file " + str(e))
 
 
 def GZStreamGenerator(fileobj, block_size, wbits):
@@ -105,8 +125,6 @@ def update_from_url(url):
     # Figure out slots
     cmdline = get_cmdline()
     current_slot, target_slot = get_slot(cmdline)
-    boot_dest = BOOT_STEM + '_' + target_slot
-    system_dest = SYSTEM_STEM + '_' + target_slot
     if DEBUG:
         print("Target slot is", target_slot)
     # Make status directory
@@ -116,22 +134,19 @@ def update_from_url(url):
     stream = open_url_stream(url)
     content_length = stream.info().getheaders("Content-Length")[0]
     write_status(EXPECTED_DOWNLOAD_SIZE_FILE, content_length)
-    with tarfile.open(mode='r|', fileobj=stream) as tar_stream:
+    with make_tar_stream(stream) as tar_stream:
         # Get the manifest
         if DEBUG:
             print("Manifest")
         manifest_ti = tar_stream.next()
         if not manifest_ti.name.endswith('manifest.ini'):
-            print("Expected manifest.ini at beginning of download, found \"{0.name}\"".format(manifest_ti))
-            exit(-1)
+            die(200, "Expected manifest.ini at beginning of download, found \"{0.name}\"".format(manifest_ti))
         manifest = get_manifest(tar_stream.extractfile(manifest_ti))
         # Inspect the manifest
         if manifest.get("META", "manifest_version") not in SUPPORTED_MANIFEST_VERSIONS:
-            print("Unexpected manifest version")
-            exit(-1)
+            die(201, "Unexpected manifest version")
         if manifest.getint("META", "num_images") != 2:
-            print("Unexpected number of images in OTA")
-            exit(-1)
+            die(201, "Unexpected number of images in OTA")
         try:
             total_size = manifest.getint("BOOT", "bytes") + manifest.getint("SYSTEM", "bytes")
         except Exception as e:
@@ -144,15 +159,13 @@ def update_from_url(url):
             print("Updating to version {}".format(manifest.get("META", "update_version")))
         # Mark target unbootable
         if not call(['/bin/bootctl', current_slot, 'set_unbootable', target_slot]):
-            print("Could not mark target slot unbootable")
-            exit(-1)
+            die(202, "Could not mark target slot unbootable")
         # Extract boot image
         if DEBUG:
             print("Boot")
         boot_ti = tar_stream.next()
         if not boot_ti.name.endswith("boot.img.gz"):
-            print("Expected boot.img.gz to be next in tar but found \"{}\"".format(boot_ti.name))
-            exit(1)
+            die(200, "Expected boot.img.gz to be next in tar but found \"{}\"".format(boot_ti.name))
         wbits = manifest.getint("BOOT", "wbits")
         with open(BOOT_STEM + "_" + target_slot, "wb") as boot_slot:
             for boot_block in GZStreamGenerator(tar_stream.extractfile(boot_ti), DD_BLOCK_SIZE, wbits):
@@ -167,8 +180,7 @@ def update_from_url(url):
             print("System")
         system_ti = tar_stream.next()
         if not system_ti.name.endswith("sysfs.img.gz"):
-            print("Expected sysfs.img.gz to be next in tar but found \"{}\"".format(system_ti.name))
-            exit(-1)
+            die(200, "Expected sysfs.img.gz to be next in tar but found \"{}\"".format(system_ti.name))
         wbits = manifest.getint("SYSTEM", "wbits")
         with open(SYSTEM_STEM + "_" + target_slot, "wb") as system_slot:
             for system_block in GZStreamGenerator(tar_stream.extractfile(system_ti), DD_BLOCK_SIZE, wbits):
@@ -180,8 +192,7 @@ def update_from_url(url):
                     sys.stdout.flush()
     stream.close()
     if not call(["/bin/bootctl", current_slot, "set_active", target_slot]):
-        print("Could not set target slot as active")
-        exit(-1)
+        die(202, "Could not set target slot as active")
 
 
 if __name__ == '__main__':
@@ -196,7 +207,10 @@ if __name__ == '__main__':
     else:
         try:
             update_from_url(sys.argv[1])
+        except zlib.error as decompressor_error:
+            die(205, "Decompression error: " + str(decompressor_error))
+        except IOError as io_error:
+            die(208, "IO Error: " + str(io_error))
         except Exception as e:
-            print(str(e))
-            exit(-2)
+            die(219, e)
         exit(0)
