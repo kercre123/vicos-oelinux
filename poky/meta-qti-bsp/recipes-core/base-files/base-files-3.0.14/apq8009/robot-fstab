@@ -9,5 +9,7 @@ tmpfs                /media/ram      tmpfs     defaults,noauto                  
 
 PARTLABEL=modem      /firmware       vfat      defaults,noexec,nosuid,nodev,noatime,ro        0  0
 PARTLABEL=persist    /persist        ext4      defaults,noexec,nosuid,nodev,noatime,noauto    0  0
-PARTLABEL=userdata   /data           ext4      defaults,noexec,nosuid,nodev,noatime           0  2
-PARTLABEL=oem        /factory        ext4      defaults,noexec,nosuid,nodev,noatime,rw,nofail 0  2
+PARTLABEL=userdata   /data           ext4      defaults,noexec,nosuid,nodev,noatime,noauto    0  2
+PARTLABEL=oem        /factory        ext4      defaults,noexec,nosuid,nodev,noatime,ro,nofail 0  2
+
+# /persist /data and /factory are also managed by mount-data.serivce on boot up

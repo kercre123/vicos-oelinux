@@ -48,7 +48,7 @@ if [ -x /usr/bin/vic-christen ]; then
 fi
 
 echo $SERIALNO > /sys/class/android_usb/android0/iSerial
-echo 2 1 g $SERIALNO | /system/bin/display
-echo 2 2 b `getprop persist.anki.robot.name` | /system/bin/display
+echo 2 1 w $SERIALNO | /system/bin/display
+echo 2 2 w `getprop persist.anki.robot.name` | /system/bin/display
 
 exit 0
