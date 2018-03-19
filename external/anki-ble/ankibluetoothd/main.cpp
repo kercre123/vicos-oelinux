@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
   ev_signal_start(sDefaultLoop, &sTermSig);
 
   setAndroidLoggingTag("ankibtd");
-  setMinLogLevel(kLogLevelInfo);
+  setMinLogLevel(property_get_int32("persist.anki.btd.log_level", kLogLevelInfo));
   if (!Anki::BluetoothStack::LoadBtStack()) {
     ExitHandler(1);
   }
