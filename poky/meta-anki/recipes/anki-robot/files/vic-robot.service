@@ -11,11 +11,17 @@ ConditionFileIsExecutable=/anki/bin/vic-robot
 
 [Service]
 EnvironmentFile=/anki/etc/vic-robot.env
-Restart=no
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-robot $VIC_ROBOT_OPTS
+Restart=no
+
+# Robot process runs at top priority
 Nice=-20
-# Uncomment next line to set CPUAffinity (required isolcpus kernel arg)
+
+# Set CPUAffinity (required isolcpus kernel arg)
 CPUAffinity=3
+
+# VIC-1884: Hard kill at 5 seconds if process doesn't respond to SIGTERM
+TimeoutStopSec=5
 
 [Install]
 WantedBy=anki-robot.target
