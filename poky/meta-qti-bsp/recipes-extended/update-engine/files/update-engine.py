@@ -13,6 +13,7 @@ import tarfile
 import zlib
 import ConfigParser
 
+EMR_FILE = "/factory/birthcertificate"
 BOOT_STEM = "/dev/block/bootdevice/by-name/boot"
 SYSTEM_STEM = "/dev/block/bootdevice/by-name/system"
 STATUS_DIR = "/data/update-engine"
@@ -20,8 +21,8 @@ EXPECTED_DOWNLOAD_SIZE_FILE = os.path.join(STATUS_DIR, "expected-download-size")
 EXPECTED_WRITE_SIZE_FILE = os.path.join(STATUS_DIR, "expected-size")
 PROGRESS_FILE = os.path.join(STATUS_DIR, "progress")
 ERROR_FILE = os.path.join(STATUS_DIR, "error")
+DONE_FILE = os.path.join(STATUS_DIR, "done")
 DD_BLOCK_SIZE = 1024*256
-WBITS = zlib.MAX_WBITS | 16
 SUPPORTED_MANIFEST_VERSIONS = ["0.9.1"]
 
 DEBUG = False
@@ -52,6 +53,14 @@ def die(code, text):
 def call(*args):
     "Simple wrapper arround subprocess.call to make ret=0 -> True"
     return subprocess.call(*args) == 0
+
+
+def get_prop(property_name):
+    "Gets a value from the property server via subprocess"
+    getprop = subprocess.Popen(["/usr/bin/getprop", property_name], shell=False, stdout=subprocess.PIPE)
+    if getprop.wait() == 0:
+        return getprop.communicate()[0].strip()
+    return None
 
 
 def get_cmdline():
@@ -91,6 +100,12 @@ def get_manifest(fileobj):
 def open_url_stream(url):
     "Open a URL as a filelike stream"
     try:
+        if '?' in url:  # Already has a querry string
+            if not url.endswith('?'):
+                url += '&'
+        else:
+            url += '?'
+        url += "emresn={0:s}&ankiversion={1:s}".format(get_prop("ro.serialno"), get_prop("ro.anki.version"))
         request = urllib2.Request(url)
         opener = urllib2.build_opener()
         return opener.open(request)
@@ -193,6 +208,7 @@ def update_from_url(url):
     stream.close()
     if not call(["/bin/bootctl", current_slot, "set_active", target_slot]):
         die(202, "Could not set target slot as active")
+    write_status(DONE_FILE, 1)
 
 
 if __name__ == '__main__':
