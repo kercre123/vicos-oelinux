@@ -9,6 +9,8 @@
 #include <linux/sched.h>
 #include <linux/poll.h>
 
+#define DEBUG 
+
 struct iio_kfifo {
 	struct iio_buffer buffer;
 	struct kfifo kf;
@@ -32,6 +34,7 @@ static int iio_request_update_kfifo(struct iio_buffer *r)
 {
 	int ret = 0;
 	struct iio_kfifo *buf = iio_to_kfifo(r);
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	mutex_lock(&buf->user_lock);
 	if (buf->update_needed) {
