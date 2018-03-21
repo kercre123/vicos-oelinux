@@ -7,6 +7,8 @@
  * the GNU General Public License.  See the file COPYING in the main
  * directory of this archive for more details.
  */
+#include <linux/types.h>
+#include <linux/kernel.h>
 #include <linux/acpi.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -14,12 +16,14 @@
 #include <linux/spi/spi.h>
 
 #include "bmi160.h"
+#define DEBUG
 
 static int bmi160_spi_probe(struct spi_device *spi)
 {
 	struct regmap *regmap;
 	const struct spi_device_id *id = spi_get_device_id(spi);
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	regmap = devm_regmap_init_spi(spi, &bmi160_regmap_config);
 	if (IS_ERR(regmap)) {
 		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
@@ -31,6 +35,7 @@ static int bmi160_spi_probe(struct spi_device *spi)
 
 static int bmi160_spi_remove(struct spi_device *spi)
 {
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	bmi160_core_remove(&spi->dev);
 
 	return 0;
@@ -50,7 +55,7 @@ MODULE_DEVICE_TABLE(acpi, bmi160_acpi_match);
 
 #ifdef CONFIG_OF
 static const struct of_device_id bmi160_of_match[] = {
-	{ .compatible = "bosch,bmi160" },
+	{ .compatible = "bosch,bmi160_spi" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, bmi160_of_match);
@@ -66,7 +71,27 @@ static struct spi_driver bmi160_spi_driver = {
 		.name			= "bmi160_spi",
 	},
 };
+
+#if 0
 module_spi_driver(bmi160_spi_driver);
+#endif
+
+static int __init bmi160_spi_init(void)
+{
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	return spi_register_driver(&bmi160_spi_driver);
+}
+module_init(bmi160_spi_init);
+
+
+
+static void __exit bmi160_spi_exit(void)
+{
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	spi_unregister_driver(&bmi160_spi_driver);
+}
+module_exit(bmi160_spi_exit);
+
 
 MODULE_AUTHOR("Daniel Baluta <daniel.baluta@intel.com");
 MODULE_DESCRIPTION("Bosch BMI160 SPI driver");
