@@ -16,6 +16,8 @@
 #include <linux/iio/triggered_buffer.h>
 #include <linux/iio/trigger_consumer.h>
 
+#define DEBUG
+
 static const struct iio_buffer_setup_ops iio_triggered_buffer_setup_ops = {
 	.postenable = &iio_triggered_buffer_postenable,
 	.predisable = &iio_triggered_buffer_predisable,
@@ -49,6 +51,7 @@ int iio_triggered_buffer_setup(struct iio_dev *indio_dev,
 	struct iio_buffer *buffer;
 	int ret;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	buffer = iio_kfifo_allocate(indio_dev);
 	if (!buffer) {
 		ret = -ENOMEM;
@@ -101,6 +104,7 @@ EXPORT_SYMBOL(iio_triggered_buffer_setup);
  */
 void iio_triggered_buffer_cleanup(struct iio_dev *indio_dev)
 {
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	iio_buffer_unregister(indio_dev);
 	iio_dealloc_pollfunc(indio_dev->pollfunc);
 	iio_kfifo_free(indio_dev->buffer);
