@@ -26,17 +26,16 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 [Unit]
-SourcePath=/etc/launch_adbd
+SourcePath=/sbin/adbd
 Description=adbd Service
 After=usb.service
 
 [Service]
-Type=forking
-Restart=no
+Type=simple
+Restart=yes
 TimeoutSec=5min
 IgnoreSIGPIPE=no
 KillMode=process
 GuessMainPID=no
-RemainAfterExit=yes
-ExecStart=/etc/launch_adbd start
-ExecStop=/etc/launch_adbd stop
+RemainAfterExit=no
+ExecStart=/sbin/adbd
