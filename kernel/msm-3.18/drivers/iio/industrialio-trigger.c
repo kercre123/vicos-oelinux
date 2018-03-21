@@ -21,6 +21,7 @@
 #include "iio_core_trigger.h"
 #include <linux/iio/trigger_consumer.h>
 
+#define DEBUG
 /* RFC - Question of approach
  * Make the common case (single sensor single trigger)
  * simple by starting trigger capture from when first sensors
@@ -46,6 +47,8 @@ static ssize_t iio_trigger_read_name(struct device *dev,
 				     char *buf)
 {
 	struct iio_trigger *trig = to_iio_trigger(dev);
+
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	return sprintf(buf, "%s\n", trig->name);
 }
 
@@ -61,6 +64,7 @@ int iio_trigger_register(struct iio_trigger *trig_info)
 {
 	int ret;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	trig_info->id = ida_simple_get(&iio_trigger_ida, 0, 0, GFP_KERNEL);
 	if (trig_info->id < 0)
 		return trig_info->id;
@@ -88,6 +92,7 @@ EXPORT_SYMBOL(iio_trigger_register);
 
 void iio_trigger_unregister(struct iio_trigger *trig_info)
 {
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	mutex_lock(&iio_trigger_list_lock);
 	list_del(&trig_info->list);
 	mutex_unlock(&iio_trigger_list_lock);
@@ -103,6 +108,7 @@ static struct iio_trigger *iio_trigger_find_by_name(const char *name,
 {
 	struct iio_trigger *trig = NULL, *iter;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	mutex_lock(&iio_trigger_list_lock);
 	list_for_each_entry(iter, &iio_trigger_list, list)
 		if (sysfs_streq(iter->name, name)) {
@@ -118,6 +124,7 @@ void iio_trigger_poll(struct iio_trigger *trig)
 {
 	int i;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (!atomic_read(&trig->use_count)) {
 		atomic_set(&trig->use_count, CONFIG_IIO_CONSUMERS_PER_TRIGGER);
 
@@ -133,6 +140,7 @@ EXPORT_SYMBOL(iio_trigger_poll);
 
 irqreturn_t iio_trigger_generic_data_rdy_poll(int irq, void *private)
 {
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	iio_trigger_poll(private);
 	return IRQ_HANDLED;
 }
@@ -142,6 +150,7 @@ void iio_trigger_poll_chained(struct iio_trigger *trig)
 {
 	int i;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (!atomic_read(&trig->use_count)) {
 		atomic_set(&trig->use_count, CONFIG_IIO_CONSUMERS_PER_TRIGGER);
 
@@ -157,6 +166,7 @@ EXPORT_SYMBOL(iio_trigger_poll_chained);
 
 void iio_trigger_notify_done(struct iio_trigger *trig)
 {
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (atomic_dec_and_test(&trig->use_count) && trig->ops &&
 		trig->ops->try_reenable)
 		if (trig->ops->try_reenable(trig))
@@ -169,6 +179,7 @@ EXPORT_SYMBOL(iio_trigger_notify_done);
 static int iio_trigger_get_irq(struct iio_trigger *trig)
 {
 	int ret;
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	mutex_lock(&trig->pool_lock);
 	ret = bitmap_find_free_region(trig->pool,
 				      CONFIG_IIO_CONSUMERS_PER_TRIGGER,
@@ -201,6 +212,7 @@ static int iio_trigger_attach_poll_func(struct iio_trigger *trig,
 	bool notinuse
 		= bitmap_empty(trig->pool, CONFIG_IIO_CONSUMERS_PER_TRIGGER);
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	/* Prevent the module from being removed whilst attached to a trigger */
 	__module_get(pf->indio_dev->info->driver_module);
 	pf->irq = iio_trigger_get_irq(trig);
@@ -229,6 +241,7 @@ static int iio_trigger_detach_poll_func(struct iio_trigger *trig,
 		= (bitmap_weight(trig->pool,
 				 CONFIG_IIO_CONSUMERS_PER_TRIGGER)
 		   == 1);
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (trig->ops && trig->ops->set_trigger_state && no_other_users) {
 		ret = trig->ops->set_trigger_state(trig, false);
 		if (ret)
@@ -244,6 +257,7 @@ static int iio_trigger_detach_poll_func(struct iio_trigger *trig,
 irqreturn_t iio_pollfunc_store_time(int irq, void *p)
 {
 	struct iio_poll_func *pf = p;
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	pf->timestamp = iio_get_time_ns();
 	return IRQ_WAKE_THREAD;
 }
@@ -260,6 +274,7 @@ struct iio_poll_func
 	va_list vargs;
 	struct iio_poll_func *pf;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	pf = kmalloc(sizeof *pf, GFP_KERNEL);
 	if (pf == NULL)
 		return NULL;
@@ -298,6 +313,7 @@ static ssize_t iio_trigger_read_current(struct device *dev,
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (indio_dev->trig)
 		return sprintf(buf, "%s\n", indio_dev->trig->name);
 	return 0;
@@ -320,6 +336,7 @@ static ssize_t iio_trigger_write_current(struct device *dev,
 	struct iio_trigger *trig;
 	int ret;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	mutex_lock(&indio_dev->mlock);
 	if (indio_dev->currentmode == INDIO_BUFFER_TRIGGERED) {
 		mutex_unlock(&indio_dev->mlock);
@@ -372,6 +389,7 @@ static void iio_trig_release(struct device *device)
 	struct iio_trigger *trig = to_iio_trigger(device);
 	int i;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (trig->subirq_base) {
 		for (i = 0; i < CONFIG_IIO_CONSUMERS_PER_TRIGGER; i++) {
 			irq_modify_status(trig->subirq_base + i,
@@ -416,6 +434,7 @@ static void iio_trig_subirqunmask(struct irq_data *d)
 static struct iio_trigger *viio_trigger_alloc(const char *fmt, va_list vargs)
 {
 	struct iio_trigger *trig;
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	trig = kzalloc(sizeof *trig, GFP_KERNEL);
 	if (trig) {
 		int i;
@@ -518,6 +537,7 @@ struct iio_trigger *devm_iio_trigger_alloc(struct device *dev,
 	struct iio_trigger **ptr, *trig;
 	va_list vargs;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ptr = devres_alloc(devm_iio_trigger_release, sizeof(*ptr),
 			   GFP_KERNEL);
 	if (!ptr)
@@ -549,6 +569,7 @@ void devm_iio_trigger_free(struct device *dev, struct iio_trigger *iio_trig)
 {
 	int rc;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	rc = devres_release(dev, devm_iio_trigger_release,
 			    devm_iio_trigger_match, iio_trig);
 	WARN_ON(rc);
