@@ -3,9 +3,6 @@
 ##  bad. Anything that we can limp along without should be put somewhere else so that this script exits
 ##  with status 0 and the system init process can continue.
 
-set -e
-
-
 # Enable power rails required for GPIO, LCD, IMU and Camera but not yet controlled by device tree
 # TODO Configure device tree to properly control these regulators.
 echo 1 > /sys/kernel/debug/regulator/8916_l8/enable
@@ -33,7 +30,9 @@ echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # End camera force hack
 
 # Print the ID on the face
+# emr-cat prints a placeholder value even on error
 SERIALNO=`/bin/emr-cat e`
+HAVE_EMR=$?
 
 # And put the serial number in properties
 for i in `seq 1 5`;
@@ -47,8 +46,10 @@ if [ -x /usr/bin/vic-christen ]; then
     /usr/bin/vic-christen
 fi
 
-echo $SERIALNO > /sys/class/android_usb/android0/iSerial
-echo 2 1 w $SERIALNO | /system/bin/display
+if $HAVE_EMR; then
+  echo $SERIALNO > /sys/class/android_usb/android0/iSerial
+  echo 2 1 w $SERIALNO | /system/bin/display
+fi
 echo 2 2 w `getprop persist.anki.robot.name` | /system/bin/display
 
 exit 0
