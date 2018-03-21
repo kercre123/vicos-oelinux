@@ -11,6 +11,8 @@
  *
  * TODO: magnetometer, interrupts, hardware FIFO
  */
+#include <linux/types.h>
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/regmap.h>
 #include <linux/acpi.h>
@@ -23,6 +25,8 @@
 #include <linux/iio/sysfs.h>
 
 #include "bmi160.h"
+
+#define DEBUG
 
 #define BMI160_REG_CHIP_ID	0x00
 #define BMI160_CHIP_ID_VAL	0xD1
@@ -250,6 +254,7 @@ static const struct iio_chan_spec bmi160_channels[] = {
 
 static enum bmi160_sensor_type bmi160_to_sensor(enum iio_chan_type iio_type)
 {
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	switch (iio_type) {
 	case IIO_ACCEL:
 		return BMI160_ACCEL;
@@ -267,6 +272,7 @@ int bmi160_set_mode(struct bmi160_data *data, enum bmi160_sensor_type t,
 	int ret;
 	u8 cmd;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (mode)
 		cmd = bmi160_regs[t].pmu_cmd_normal;
 	else
@@ -287,6 +293,7 @@ int bmi160_set_scale(struct bmi160_data *data, enum bmi160_sensor_type t,
 {
 	int i;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	for (i = 0; i < bmi160_scale_table[t].num; i++)
 		if (bmi160_scale_table[t].tbl[i].uscale == uscale)
 			break;
@@ -304,6 +311,7 @@ int bmi160_get_scale(struct bmi160_data *data, enum bmi160_sensor_type t,
 {
 	int i, ret, val;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = regmap_read(data->regmap, bmi160_regs[t].range, &val);
 	if (ret < 0)
 		return ret;
@@ -325,6 +333,7 @@ static int bmi160_get_data(struct bmi160_data *data, int chan_type,
 	__le16 sample;
 	enum bmi160_sensor_type t = bmi160_to_sensor(chan_type);
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	reg = bmi160_regs[t].data + (axis - IIO_MOD_X) * sizeof(sample);
 
 	ret = regmap_bulk_read(data->regmap, reg, &sample, sizeof(sample));
@@ -342,6 +351,7 @@ int bmi160_set_odr(struct bmi160_data *data, enum bmi160_sensor_type t,
 {
 	int i;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	for (i = 0; i < bmi160_odr_table[t].num; i++)
 		if (bmi160_odr_table[t].tbl[i].odr == odr &&
 		    bmi160_odr_table[t].tbl[i].uodr == uodr)
@@ -361,6 +371,7 @@ static int bmi160_get_odr(struct bmi160_data *data, enum bmi160_sensor_type t,
 {
 	int i, val, ret;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = regmap_read(data->regmap, bmi160_regs[t].config, &val);
 	if (ret < 0)
 		return ret;
@@ -390,6 +401,7 @@ static irqreturn_t bmi160_trigger_handler(int irq, void *p)
 	int i, ret, j = 0, base = BMI160_REG_DATA_MAGN_XOUT_L;
 	__le16 sample;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	for_each_set_bit(i, indio_dev->active_scan_mask,
 			 indio_dev->masklength) {
 		ret = regmap_bulk_read(data->regmap, base + i * sizeof(sample),
@@ -412,6 +424,7 @@ static int bmi160_read_raw(struct iio_dev *indio_dev,
 {
 	int ret;
 	struct bmi160_data *data = iio_priv(indio_dev);
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
@@ -441,6 +454,7 @@ static int bmi160_write_raw(struct iio_dev *indio_dev,
 {
 	struct bmi160_data *data = iio_priv(indio_dev);
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		return bmi160_set_scale(data,
@@ -491,6 +505,7 @@ static const char *bmi160_match_acpi_device(struct device *dev)
 {
 	const struct acpi_device_id *id;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	id = acpi_match_device(dev->driver->acpi_match_table, dev);
 	if (!id)
 		return NULL;
@@ -504,6 +519,7 @@ static int bmi160_chip_init(struct bmi160_data *data, bool use_spi)
 	unsigned int val;
 	struct device *dev = regmap_get_device(data->regmap);
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = regmap_write(data->regmap, BMI160_REG_CMD, BMI160_CMD_SOFTRESET);
 	if (ret < 0)
 		return ret;
@@ -544,6 +560,7 @@ static int bmi160_chip_init(struct bmi160_data *data, bool use_spi)
 
 static void bmi160_chip_uninit(struct bmi160_data *data)
 {
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	bmi160_set_mode(data, BMI160_GYRO, false);
 	bmi160_set_mode(data, BMI160_ACCEL, false);
 }
@@ -555,6 +572,7 @@ int bmi160_core_probe(struct device *dev, struct regmap *regmap,
 	struct bmi160_data *data;
 	int ret;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*data));
 	if (!indio_dev)
 		return -ENOMEM;
@@ -600,6 +618,7 @@ void bmi160_core_remove(struct device *dev)
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct bmi160_data *data = iio_priv(indio_dev);
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	iio_device_unregister(indio_dev);
 	iio_triggered_buffer_cleanup(indio_dev);
 	bmi160_chip_uninit(data);
