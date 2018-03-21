@@ -173,26 +173,32 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
       logv("ipc-server: StartScan received");
       {
         StartScanArgs* args = (StartScanArgs *) data.data();
-        StartScan(std::string(args->service_uuid));
+        StartScan(sockfd, std::string(args->service_uuid));
       }
       break;
     case IPCMessageType::StopScan:
       logv("ipc-server: StopScan received");
       {
-        StopScan();
+        StopScan(sockfd);
       }
       break;
     case IPCMessageType::ConnectToPeripheral:
       logv("ipc-server: ConnectToPeripheral received");
       {
         ConnectToPeripheralArgs* args = (ConnectToPeripheralArgs *) data.data();
-        ConnectToPeripheral(std::string(args->address));
+        ConnectToPeripheral(sockfd, std::string(args->address));
       }
       break;
     default:
       loge("ipc-server: Unknown IPC message (%d)", (int) type);
       break;
   }
+}
+
+void IPCServer::OnPeerClose(const int sockfd)
+{
+  IPCEndpoint::OnPeerClose(sockfd);
+  close(sockfd);
 }
 
 void IPCServer::OnPeripheralStateUpdate(const bool advertising,

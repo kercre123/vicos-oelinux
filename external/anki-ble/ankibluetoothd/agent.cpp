@@ -325,14 +325,16 @@ void Agent::SendMessage(const int connection_id,
                         const bool reliable,
                         const std::vector<uint8_t>& value)
 {
-  if (connected_ && inbound_connection_id_ == connection_id) {
-    int characteristic_handle;
-    if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadCharacteristicUUID)) {
-      characteristic_handle = app_read_characteristic_handle_;
-    } else {
-      return;
+  if (inbound_connection_id_ == connection_id) {
+    if (connected_) {
+      int characteristic_handle;
+      if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kAppReadCharacteristicUUID)) {
+        characteristic_handle = app_read_characteristic_handle_;
+      } else {
+        return;
+      }
+      SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
     }
-    SendMessageToConnectedCentral(characteristic_handle, reliable ? 1 : 0, value);
   } else {
     (void) BluetoothStack::WriteGattCharacteristic(connection_id, characteristic_uuid, reliable, value);
   }
@@ -465,25 +467,65 @@ bool Agent::StartPeripheral()
   return true;
 }
 
-void Agent::StartScan(const std::string& serviceUUID) {
+void Agent::StartScan(const int sockfd, const std::string& serviceUUID) {
+  logv("Agent::StartScan(sockfd = %d, serviceUUID = '%s')",
+       sockfd, serviceUUID.c_str());
   scan_filter_service_uuid_ = serviceUUID;
-  scanning_ = true;
-  logv("Agent::StartScan(serviceUUID = '%s')", serviceUUID.c_str());
-  (void) BluetoothStack::SetScanning(true);
+  scanning_ = BluetoothStack::SetScanning(true);
+  if (scanning_) {
+    scanning_ipc_clients_.insert(sockfd);
+  }
 }
 
-void Agent::StopScan() {
-  scanning_ = false;
-  (void) BluetoothStack::SetScanning(false);
-  scan_filter_service_uuid_.clear();
+void Agent::StopScan(const int sockfd) {
+  scanning_ipc_clients_.erase(sockfd);
+  if (scanning_ipc_clients_.empty()) {
+    scanning_ = !BluetoothStack::SetScanning(false);
+    scan_filter_service_uuid_.clear();
+  }
 }
 
-void Agent::ConnectToPeripheral(const std::string& address) {
+void Agent::ConnectToPeripheral(const int sockfd, const std::string& address) {
   bool result = BluetoothStack::ConnectToBLEPeripheral(address, true);
-  if (!result) {
+  if (result) {
+    auto search = outbound_connection_addresses_.find(sockfd);
+    if (search == outbound_connection_addresses_.end()) {
+      std::set<std::string> addresses;
+      outbound_connection_addresses_[sockfd] = addresses;
+      search = outbound_connection_addresses_.find(sockfd);
+    }
+    search->second.insert(address);
+  } else {
     std::vector<GattDbRecord> records;
     OnOutboundConnectionChange(address, 0, 0, records);
   }
+}
+
+void Agent::OnPeerClose(const int sockfd) {
+  IPCServer::OnPeerClose(sockfd);
+  auto search = outbound_connection_addresses_.find(sockfd);
+  if (search != outbound_connection_addresses_.end()) {
+    for (auto const& address : search->second) {
+      BluetoothStack::DisconnectGattPeerByAddress(address);
+    }
+    search->second.clear();
+    outbound_connection_addresses_.erase(sockfd);
+  }
+  StopScan(sockfd);
+}
+
+void Agent::OnOutboundConnectionChange(const std::string& address,
+                                       const int connected,
+                                       const int connection_id,
+                                       const std::vector<GattDbRecord>& records) {
+  if (!connected) {
+    for (auto it = outbound_connection_addresses_.begin();
+         it != outbound_connection_addresses_.end();
+         it++) {
+      it->second.erase(address);
+    }
+  }
+  IPCServer::OnOutboundConnectionChange(address, connected, connection_id, records);
 }
 
 } // namespace BluetoothDaemon

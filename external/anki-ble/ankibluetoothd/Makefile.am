@@ -38,6 +38,7 @@ ankibluetoothd_SOURCES = 	main.cpp \
 				$(COMMON_DIR)/ipc.cpp \
 				$(COMMON_DIR)/memutils.cpp \
 				$(COMMON_DIR)/stringutils.cpp \
-				$(COMMON_DIR)/strlcpy.c
+				$(COMMON_DIR)/strlcpy.c \
+				$(COMMON_DIR)/properties_compat.c
 
 pkgconfigdir = $(libdir)/pkgconfig

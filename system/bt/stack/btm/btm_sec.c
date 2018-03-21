@@ -77,9 +77,7 @@ static void     btm_sec_pairing_timeout(void *data);
 static tBTM_STATUS btm_sec_dd_create_conn (tBTM_SEC_DEV_REC *p_dev_rec);
 static void     btm_sec_change_pairing_state (tBTM_PAIRING_STATE new_state);
 
-#if (BT_USE_TRACES == TRUE)
 static char     *btm_pair_state_descr (tBTM_PAIRING_STATE state);
-#endif
 
 static void     btm_sec_check_pending_reqs(void);
 static BOOLEAN  btm_sec_queue_mx_request (BD_ADDR bd_addr,  UINT16 psm,  BOOLEAN is_orig,
@@ -6025,9 +6023,9 @@ static void btm_sec_change_pairing_state (tBTM_PAIRING_STATE new_state)
 ** Description      Return state description for tracing
 **
 *******************************************************************************/
-#if (BT_USE_TRACES == TRUE)
 static char *btm_pair_state_descr (tBTM_PAIRING_STATE state)
 {
+#if (BT_USE_TRACES == TRUE)
 #if (BT_TRACE_VERBOSE == TRUE)
     switch (state)
     {
@@ -6050,8 +6048,10 @@ static char *btm_pair_state_descr (tBTM_PAIRING_STATE state)
 
     return(btm_cb.state_temp_buffer);
 #endif
-}
+#else
+    return("???");
 #endif
+}
 
 /*******************************************************************************
 **
