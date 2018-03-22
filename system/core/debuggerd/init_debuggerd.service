@@ -34,8 +34,8 @@ DefaultDependencies=no
 #
 # <anki> VIC-1504: Don't start until /data has been remounted </anki>
 #
-Wants=systemd-remount-fs.service
-After=systemd-remount-fs.service
+Wants=mount-data.service
+After=mount-data.service
 
 [Service]
 Type=forking
