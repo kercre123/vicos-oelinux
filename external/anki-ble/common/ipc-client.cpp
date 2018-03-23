@@ -39,7 +39,9 @@ bool IPCClient::Connect()
     connect_watcher_ = new ev::io(loop_);
     connect_watcher_->set <IPCClient, &IPCClient::ConnectWatcherCallback> (this);
   }
-
+  if (sockfd_ == -1) {
+    CreateSocket();
+  }
   int rc = connect(sockfd_, (struct sockaddr *)&addr_, sizeof(addr_));
   if (rc == -1) {
     if (errno == EALREADY || errno == EINPROGRESS) {

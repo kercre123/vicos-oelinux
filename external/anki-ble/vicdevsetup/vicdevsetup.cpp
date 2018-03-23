@@ -334,7 +334,7 @@ static void TimerWatcherCallback(struct ev_loop* loop, struct ev_timer* w, int r
         loge("Failed to send IPC message to server");
         ExitHandler();
       }
-      ev_timer_set(&sTimer, 120., 0.);
+      ev_timer_set(&sTimer, 20., 0.);
     } else {
       ev_timer_set(&sTimer, 2., 0.);
     }
