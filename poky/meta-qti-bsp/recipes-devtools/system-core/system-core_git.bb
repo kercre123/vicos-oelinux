@@ -37,7 +37,6 @@ COMPOSITION_apq8096 = "901D"
 COMPOSITION_apq8098 = "901D"
 
 do_install_append() {
-   install -m 0755 ${S}/adb/launch_adbd -D ${D}${sysconfdir}/launch_adbd
    install -m 0755 ${S}/usb/usb_composition -D ${D}${base_sbindir}/
    install -d ${D}${base_sbindir}/usb/compositions/
    install -m 0755 ${S}/usb/compositions/* -D ${D}${base_sbindir}/usb/compositions/
@@ -54,16 +53,12 @@ do_install_append() {
    ln -s  /sbin/usb/compositions/${COMPOSITION} ${D}${userfsdatadir}/usb/boot_hsusb_composition
    ln -s  /sbin/usb/compositions/empty ${D}${userfsdatadir}/usb/boot_hsic_composition
    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
-      install -m 0755 ${S}/adb/start_adbd -D ${D}${sysconfdir}/initscripts/adbd
       install -m 0755 ${S}/logd/start_logd -D ${D}${sysconfdir}/initscripts/logd
       install -m 0755 ${S}/usb/start_usb -D ${D}${sysconfdir}/initscripts/usb
       install -m 0755 ${S}/rootdir/etc/init.qcom.post_boot.sh -D ${D}${sysconfdir}/initscripts/init_post_boot
       install -d ${D}${systemd_unitdir}/system/
       install -d ${D}${systemd_unitdir}/system/multi-user.target.wants/
       install -d ${D}${systemd_unitdir}/system/ffbm.target.wants/
-      install -m 0644 ${S}/adb/adbd.service -D ${D}${systemd_unitdir}/system/adbd.service
-      ln -sf ${systemd_unitdir}/system/adbd.service ${D}${systemd_unitdir}/system/multi-user.target.wants/adbd.service
-      ln -sf ${systemd_unitdir}/system/adbd.service ${D}${systemd_unitdir}/system/ffbm.target.wants/adbd.service
       install -m 0644 ${S}/logd/logd.service -D ${D}${systemd_unitdir}/system/logd.service
       ln -sf ${systemd_unitdir}/system/logd.service ${D}${systemd_unitdir}/system/multi-user.target.wants/logd.service
       ln -sf ${systemd_unitdir}/system/logd.service ${D}${systemd_unitdir}/system/ffbm.target.wants/logd.service
@@ -96,7 +91,6 @@ esac
 EOT
       fi
    else
-      install -m 0755 ${S}/adb/start_adbd -D ${D}${sysconfdir}/init.d/adbd
       install -m 0755 ${S}/logd/start_logd -D ${D}${sysconfdir}/init.d/logd
       install -m 0755 ${S}/usb/start_usb -D ${D}${sysconfdir}/init.d/usb
       install -m 0755 ${S}/rootdir/etc/init.qcom.post_boot.sh -D ${D}${sysconfdir}/init.d/init_post_boot
@@ -150,12 +144,6 @@ INITSCRIPT_PARAMS_${PN}-logd += "stop 39  6 ."
 INITSCRIPT_PACKAGES =+ "${PN}-post-boot"
 INITSCRIPT_NAME_${PN}-post-boot = "init_post_boot"
 INITSCRIPT_PARAMS_${PN}-post-boot = "start 90 2 3 4 5 ."
-
-PACKAGES =+ "${PN}-adbd-dbg ${PN}-adbd ${PN}-adbd-dev"
-FILES_${PN}-adbd-dbg = "${base_sbindir}/.debug/adbd ${libdir}/.debug/libadbd.*"
-FILES_${PN}-adbd     = "${base_sbindir}/adbd ${sysconfdir}/init.d/adbd ${libdir}/libadbd.so.*"
-FILES_${PN}-adbd    += "${systemd_unitdir}/system/adbd.service ${systemd_unitdir}/system/multi-user.target.wants/adbd.service ${systemd_unitdir}/system/ffbm.target.wants/adbd.service ${sysconfdir}/launch_adbd ${sysconfdir}/initscripts/adbd"
-FILES_${PN}-adbd-dev = "${libdir}/libadbd.so ${libdir}/libadbd.la"
 
 PACKAGES =+ "${PN}-usb-dbg ${PN}-usb"
 FILES_${PN}-usb-dbg  = "${bindir}/.debug/usb_composition_switch"
