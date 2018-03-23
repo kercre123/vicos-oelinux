@@ -45,7 +45,7 @@ class Agent : public IPCServer {
                               const std::string& characteristic_uuid,
                               const std::string& descriptor_uuid);
   virtual void Disconnect(const int connection_id);
-  virtual void StartAdvertising(const BLEAdvertiseSettings& settings);
+  virtual void StartAdvertising(const int sockfd, const BLEAdvertiseSettings& settings);
   virtual void StopAdvertising();
   virtual void StartScan(const int sockfd, const std::string& serviceUUID);
   virtual void StopScan(const int sockfd);
@@ -123,6 +123,7 @@ class Agent : public IPCServer {
   bool advertising_ = false;
   bool connected_ = false;
   int inbound_connection_id_ = -1;
+  int inbound_handler_sock_fd_ = -1;
   bool congested_ = false;
   uint16_t app_read_ccc_value_ = kCCCDefaultValue;
   std::vector<uint8_t> app_read_value_;

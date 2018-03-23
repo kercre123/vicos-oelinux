@@ -1350,7 +1350,7 @@ void btgatts_service_stopped_cb(int status, int server_if, int srvc_handle)
   std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
   sBtGattOpError = !(bt_status == BT_STATUS_SUCCESS);
   sBtGattServiceStarted =
-      ((bt_status == BT_STATUS_SUCCESS) && (srvc_handle == sBluetoothGattService->service_handle));
+      !((bt_status == BT_STATUS_SUCCESS) && (srvc_handle == sBluetoothGattService->service_handle));
   sBtStackCallbackReceived = true;
   sBtStackCallbackCV.notify_one();
 }
@@ -1719,8 +1719,11 @@ bool StartGattService(BluetoothGattService* service) {
   }
   {
     std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
+    if (sBtGattServiceStarted) {
+      logv("service is already started");
+      return true;
+    }
     sBtStackCallbackReceived = false;
-    sBtGattServiceStarted = false;
     sBtGattOpError = false;
   }
   bt_status_t status = sBtGattInterface->server->start_service(sBtGattServerIf,
@@ -1739,11 +1742,50 @@ bool StartGattService(BluetoothGattService* service) {
     if (sBtGattServiceStarted) {
       return true;
     } else if (sBtGattOpError) {
-      loge("Failed to add GATT service");
+      loge("Failed to start GATT service");
       return false;
     }
   } else {
     loge("gatt service not started after 1000 milliseconds");
+    return false;
+  }
+
+}
+
+bool StopGattService(BluetoothGattService* service) {
+  if (service != sBluetoothGattService) {
+    loge("service doesn't match");
+    return false;
+  }
+  {
+    std::lock_guard<std::mutex> lk(sBtStackCallbackMutex);
+    if (!sBtGattServiceStarted) {
+      logv("service is not started. exiting");
+      return true;
+    }
+    sBtStackCallbackReceived = false;
+    sBtGattOpError = false;
+  }
+  bt_status_t status = sBtGattInterface->server->stop_service(sBtGattServerIf,
+                                                              sBluetoothGattService->service_handle);
+  if (status != BT_STATUS_SUCCESS) {
+    loge("Failed to stop service");
+    return false;
+  }
+
+  auto now = std::chrono::steady_clock::now();
+  std::unique_lock<std::mutex> lk(sBtStackCallbackMutex);
+  if (sBtStackCallbackCV.wait_until(lk, now + 1000ms,
+                                    [](){return (sBtStackCallbackReceived &&
+                                                 (!sBtGattServiceStarted || sBtGattOpError));})) {
+    if (!sBtGattServiceStarted) {
+      return true;
+    } else if (sBtGattOpError) {
+      loge("Failed to stop GATT service");
+      return false;
+    }
+  } else {
+    loge("gatt service not stopped after 1000 milliseconds");
     return false;
   }
 

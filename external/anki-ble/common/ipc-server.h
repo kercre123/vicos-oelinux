@@ -64,7 +64,7 @@ class IPCServer : public IPCEndpoint {
                               const std::string& characteristic_uuid,
                               const std::string& descriptor_uuid) {}
   virtual void Disconnect(const int connection_id) {}
-  virtual void StartAdvertising(const BLEAdvertiseSettings& settings) {}
+  virtual void StartAdvertising(const int sockfd, const BLEAdvertiseSettings& settings) {}
   virtual void StopAdvertising() {}
   virtual void StartScan(const int sockfd, const std::string& serviceUUID) {}
   virtual void StopScan(const int sockfd) {}
