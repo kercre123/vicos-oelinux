@@ -1277,12 +1277,20 @@
 		qcom,master-id = <86>;
 		status = "okay";
 
-		spidev@0x00 {
-				cell-index = <0>; // spidev0
-				compatible = "spidev";
+
+		qcom,spi_test@0x00 {
+				cell-index = <0>; // spi_test
+				compatible = "qcom_spi_test";
+				pintctrl-names = "spi_default", "spi_sleep";
+				pinctrl-states = "spi_default";
+				pinctrl-0 = <&spi0_default &spi0_cs0_active>;
+				pintctrl-1 = <&spi0_sleep &spi0_cs0_sleep>;
+				irq-gpio = <0 99 0>;
 				spi-max-frequency = <19200000>;
 				reg = <0>;
+				type = "test_type";
 		};
+
 	};
 
 	spi_1: spi@78b8000 { /* BLSP1 QUP4 */
