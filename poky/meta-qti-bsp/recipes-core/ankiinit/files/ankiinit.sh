@@ -52,4 +52,6 @@ if $HAVE_EMR; then
 fi
 echo 2 2 w `getprop persist.anki.robot.name` | /system/bin/display
 
+/bin/hostname `getprop persist.anki.robot.name | tr ' ' '-'`
+
 exit 0

@@ -8,5 +8,5 @@ read_only_robot_rootfs_hook () {
 	if [ -e ${IMAGE_ROOTFS}/etc/default/ssh ]; then
 		echo 'SYSCONFDIR=/data/ssh' > ${IMAGE_ROOTFS}/etc/default/ssh
 	fi
-	echo "ro.anki.product.name=Vector" >> ${IMAGE_ROOTFS}/build.prop
+	echo "ro.anki.product.name=${ANKI_PRODUCT_NAME}" >> ${IMAGE_ROOTFS}/build.prop
 }
