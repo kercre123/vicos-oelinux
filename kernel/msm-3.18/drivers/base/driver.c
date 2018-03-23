@@ -9,7 +9,7 @@
  * This file is released under the GPLv2
  *
  */
-
+#define DEBUG
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/errno.h>
@@ -149,31 +149,41 @@ int driver_register(struct device_driver *drv)
 	int ret;
 	struct device_driver *other;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	BUG_ON(!drv->bus->p);
 
 	if ((drv->bus->probe && drv->probe) ||
 	    (drv->bus->remove && drv->remove) ||
-	    (drv->bus->shutdown && drv->shutdown))
+	    (drv->bus->shutdown && drv->shutdown)) {
 		printk(KERN_WARNING "Driver '%s' needs updating - please use "
 			"bus_type methods\n", drv->name);
+	}
 
+	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	other = driver_find(drv->name, drv->bus);
 	if (other) {
 		printk(KERN_ERR "Error: Driver '%s' is already registered, "
 			"aborting...\n", drv->name);
 		return -EBUSY;
 	}
+	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	ret = bus_add_driver(drv);
-	if (ret)
+	if (ret) {
+		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 		return ret;
+	}
+	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = driver_add_groups(drv, drv->groups);
 	if (ret) {
+		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 		bus_remove_driver(drv);
 		return ret;
 	}
+	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	kobject_uevent(&drv->p->kobj, KOBJ_ADD);
 
+	printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d ret : %x\n",__FUNCTION__,__LINE__, ret);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(driver_register);
