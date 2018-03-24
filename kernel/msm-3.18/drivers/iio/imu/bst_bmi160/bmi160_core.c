@@ -28,44 +28,170 @@
 
 #define DEBUG
 
+/* 
+ * The register contains the chip identification code.
+*/
 #define BMI160_REG_CHIP_ID	0x00
-#define BMI160_CHIP_ID_VAL	0xD1
+
+#define BMI160_CHIP_ID_VAL	0xD1 /* chip id reset value */
+
+
+/* 
+ * Shows the current power mode of the sensor.
+     
+       (bit 6-7) reserved
+
+       acc_pmu_status Accel Mode (bit 4-5)
+            0b00	Suspend
+            0b01	Normal
+            0b10	Low Power
+
+       gyr_pmu_status Gyro Mode (bit 2-3)
+            0b00	Suspend
+            0b01	Normal
+            0b10	Reserved
+            0b11	Fast Start-Up
+
+       mag_pmu_status	Magnet Mode (bit 0-1)
+            0b00	Suspend
+            0b01	Normal
+            0b10        Low Power
+*/
 
 #define BMI160_REG_PMU_STATUS	0x03
 
-/* X axis data low byte address, the rest can be obtained using axis offset */
-#define BMI160_REG_DATA_MAGN_XOUT_L	0x04
-#define BMI160_REG_DATA_GYRO_XOUT_L	0x0C
-#define BMI160_REG_DATA_ACCEL_XOUT_L	0x12
+/*
+ * Register for accelerometer, gyroscope and magnetometer data. 
+ * DATA[0-19] are treated as atomic update unit with respect to an I2C/SPI operation. 
+ * A read operation on the Register (0x04-0x17) DATA resets the appropriate *_drdy bits in
+ * Register (0x1B) STATUS. E.g. when only [0] is read, only drdy_gyr is reset.
+ *
+ * DATA[0-19] contains the latest data for the x, y, and z axis 
+ * of magnetometer MAG_[X-Z], gyroscope GYR_[X-Z], and accelerometer ACC_[X-Z]. 
+ * The rationale for the ordering is the probability for these configurations is decreasing
+ *	Readout of accel and sensortime
+ * 	Readout of gyro, accel, and sensortime
+ * 	Readout of magnetometer, gyro, accel, and sensortime
+ *	Readout of magnetometer, accel, and sensortime
+ * If the secondary interface is in OIS mode, from the OIS interface 
+ * the OIS data are accessible through Register (0x04-0x17) DATA [8-13].
+ *  
+ * X axis data low byte address, the rest can be obtained using axis offset 
+*/
+#define BMI160_REG_DATA_MAGN_XOUT_L	0x04 /* 0x04 - 0x0B  */
+#define BMI160_REG_DATA_GYRO_XOUT_L	0x0C /* 0x0c - 0x11  */
+#define BMI160_REG_DATA_ACCEL_XOUT_L	0x12 /* 0x12 - 0x17  */
 
+
+/* 
+ * Contains the temperature of the sensor
+ * 
+ * The temperature is disabled when all sensors are in suspend mode. 
+ * The output word of the 16- bit temperature sensor 
+ * is valid if the gyroscope is in normal mode, i.e. gyr_pmu_status=0b01. 
+ * The resolution is typically 1/29 K/LSB. 
+ * The absolute accuracy of the temperature is in the order of
+ * 
+ *        Value			Temperature
+ * 	  0x7FFF 		87 – 1/29 °C
+ *        ...			...
+ *        0x0000		23 °C
+ *        ...			...
+ *	  -41 + 1/29 °C		0x8001
+ *	  0x8000		Invalid
+ * 
+ * If the gyroscope is in normal mode (see Register (0x03) PMU_STATUS), 
+ * the temperature is updated every 10 ms (+-12%). 
+ * If the gyroscope is in suspend mode or fast-power up mode, 
+ * the temperature is updated every 1.28 s aligned with bit 15 
+ * of the Register (0x20-0x21) TEMPERATURE.
+*/
+#define BMI160_REG_TEMPERATURE_LSB		0x20
+#define BMI160_REG_TEMPERATURE_MSB		0x21
+
+/*
+ *  Sets the output data rate, 
+ * the bandwidth, and 
+ * the read mode of the acceleration sensor
+*/
 #define BMI160_REG_ACCEL_CONFIG		0x40
+
 #define BMI160_ACCEL_CONFIG_ODR_MASK	GENMASK(3, 0)
 #define BMI160_ACCEL_CONFIG_BWP_MASK	GENMASK(6, 4)
 
+
+/*
+ *  The register allows 
+ * the selection of the accelerometer g-range. 
+*/
 #define BMI160_REG_ACCEL_RANGE		0x41
+
+/* 
+ * acc_range<3:0>:
+ * Selection of accelerometer g-range: 
+ * '0b0011 ́ ±2g range; 
+ * '0b0101  ́±4g range; 
+ *  ́0b1000  ́±8g range;
+ *  ́0b1100  ́±16g range;
+ * all other settings ±2g range 
+ * reserved: write ‘0’
+*/
 #define BMI160_ACCEL_RANGE_2G		0x03
 #define BMI160_ACCEL_RANGE_4G		0x05
 #define BMI160_ACCEL_RANGE_8G		0x08
 #define BMI160_ACCEL_RANGE_16G		0x0C
 
+
+/* 
+ * Sets the output data rate, 
+ * the bandwidth, and 
+ * the read mode of the gyroscope in the sensor 
+*/
 #define BMI160_REG_GYRO_CONFIG		0x42
 #define BMI160_GYRO_CONFIG_ODR_MASK	GENMASK(3, 0)
 #define BMI160_GYRO_CONFIG_BWP_MASK	GENMASK(5, 4)
 
+
+/*
+ * Defines the BMI160 angular rate measurement range
+ * A measurement range is selected by setting the range bits as follows: 
+ * range[2:0] Full Scale   Resolution
+ * '000’      		±2000°/s     16.4 LSB/°/s61.0 m°/s / LSB
+ * ‘001’      		±1000°/s     32.8 LSB/°/s30.5 m°/s / LSB
+ * '010’      		±500°/s      65.6 LSB/°/s15.3 m°/s / LSB
+ * ‘011’      		±250°/s      131.2 LSB/°/7.6 m°/s / LSB
+ * ‘100'      		±125°/s      262.4 LSB/°/s3.8m°/s / LSB
+ * ‘101’,  ́110 ́,  ́111 ́  reserved
+*/
 #define BMI160_REG_GYRO_RANGE		0x43
+
 #define BMI160_GYRO_RANGE_2000DPS	0x00
 #define BMI160_GYRO_RANGE_1000DPS	0x01
 #define BMI160_GYRO_RANGE_500DPS	0x02
 #define BMI160_GYRO_RANGE_250DPS	0x03
 #define BMI160_GYRO_RANGE_125DPS	0x04
 
+/* 
+ * Command register triggers operations like softreset, NVM programming, etc.
+*/
 #define BMI160_REG_CMD			0x7E
+
 #define BMI160_CMD_ACCEL_PM_SUSPEND	0x10
 #define BMI160_CMD_ACCEL_PM_NORMAL	0x11
 #define BMI160_CMD_ACCEL_PM_LOW_POWER	0x12
+
 #define BMI160_CMD_GYRO_PM_SUSPEND	0x14
 #define BMI160_CMD_GYRO_PM_NORMAL	0x15
 #define BMI160_CMD_GYRO_PM_FAST_STARTUP	0x17
+
+
+/*
+ * triggers a reset including a reboot. 
+ * Other values are ignored. 
+ * Following a delay, all user configuration settings are 
+ * overwritten with their default state or the setting stored in the NVM, 
+ * wherever applicable. This register is functional in all operation modes.
+*/
 #define BMI160_CMD_SOFTRESET		0xB6
 
 #define BMI160_REG_DUMMY		0x7F
@@ -200,6 +326,7 @@ static const struct  bmi160_scale_item bmi160_scale_table[] = {
 	},
 };
 
+/* Output Data Rate for accel*/
 static const struct bmi160_odr bmi160_accel_odr[] = {
 	{0x01, 0, 781250},
 	{0x02, 1, 562500},
@@ -215,6 +342,7 @@ static const struct bmi160_odr bmi160_accel_odr[] = {
 	{0x0C, 1600, 0},
 };
 
+/* Output Data Rate for gyro*/
 static const struct bmi160_odr bmi160_gyro_odr[] = {
 	{0x06, 25, 0},
 	{0x07, 50, 0},
@@ -254,13 +382,16 @@ static const struct iio_chan_spec bmi160_channels[] = {
 
 static enum bmi160_sensor_type bmi160_to_sensor(enum iio_chan_type iio_type)
 {
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 	switch (iio_type) {
 	case IIO_ACCEL:
+		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 		return BMI160_ACCEL;
 	case IIO_ANGL_VEL:
+		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 		return BMI160_GYRO;
 	default:
+		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 		return -EINVAL;
 	}
 }
@@ -284,6 +415,7 @@ int bmi160_set_mode(struct bmi160_data *data, enum bmi160_sensor_type t,
 
 	usleep_range(bmi160_pmu_time[t], bmi160_pmu_time[t] + 1000);
 
+	printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d \n",__FUNCTION__,__LINE__);
 	return 0;
 }
 
@@ -333,14 +465,17 @@ static int bmi160_get_data(struct bmi160_data *data, int chan_type,
 	__le16 sample;
 	enum bmi160_sensor_type t = bmi160_to_sensor(chan_type);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d bmi160_data: %p chan_type: %x axis: %x \n",__FUNCTION__,__LINE__, data, chan_type, axis);
 	reg = bmi160_regs[t].data + (axis - IIO_MOD_X) * sizeof(sample);
 
 	ret = regmap_bulk_read(data->regmap, reg, &sample, sizeof(sample));
-	if (ret < 0)
+	if (ret < 0) {
+		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d ret: %d \n",__FUNCTION__,__LINE__, ret);
 		return ret;
+	}
 
 	*val = sign_extend32(le16_to_cpu(sample), 15);
+	printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d val: %d \n",__FUNCTION__,__LINE__, *val);
 
 	return 0;
 }
