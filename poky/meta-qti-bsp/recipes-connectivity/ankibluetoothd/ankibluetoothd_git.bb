@@ -1,4 +1,4 @@
-inherit autotools pkgconfig systemd update-rc.d
+inherit autotools pkgconfig systemd
 
 DESCRIPTION = "Anki Bluetooth Daemon"
 LICENSE = "Anki-Inc.-Proprietary"
@@ -18,14 +18,8 @@ S = "${WORKDIR}/external/anki-ble/"
 
 DEPENDS += "btvendorhal libhardware bt-property"
 
-INITSCRIPT_NAME = "start_ankibluetoothd"
-INITSCRIPT_PARAMS = "start 98 5 . stop 2 0 1 6 ."
-
 do_install_append() {
   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
-    install -d ${D}${sysconfdir}/initscripts/
-    install "${S}ankibluetoothd/start_ankibluetoothd" ${D}${sysconfdir}/initscripts/start_ankibluetoothd
-    install "${S}vicdevsetup/start_vicdevsetup" ${D}${sysconfdir}/initscripts/start_vicdevsetup
     install -d ${D}${sysconfdir}/systemd/system/
     install -m 0644 ${WORKDIR}/ankibluetoothd.service \
       -D ${D}${sysconfdir}/systemd/system/ankibluetoothd.service
@@ -36,11 +30,6 @@ do_install_append() {
       ${D}${sysconfdir}/systemd/system/multi-user.target.wants/ankibluetoothd.service
     ln -sf /etc/systemd/system/vicdevsetup.service \
       ${D}${sysconfdir}/systemd/system/multi-user.target.wants/vicdevsetup.service
-  else
-    install -d ${D}${sysconfdir}
-    install -d ${D}${sysconfdir}/init.d
-    install "${S}ankibluetoothd/start_ankibluetoothd" ${D}${sysconfdir}/init.d
-    install "${S}vicdevsetup/start_vicdevsetup" ${D}${sysconfdir}/init.d
   fi
 }
 

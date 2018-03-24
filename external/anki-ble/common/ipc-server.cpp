@@ -160,7 +160,7 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
           dst->SetMaxInterval(src->max_interval);
         }
 
-        StartAdvertising(settings);
+        StartAdvertising(sockfd, settings);
       }
       break;
     case IPCMessageType::StopAdvertising:

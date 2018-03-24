@@ -113,7 +113,9 @@ void Agent::PeripheralInboundConnectionCallback(int conn_id, int connected) {
   } else {
     inbound_connection_id_ = -1;
     OnInboundConnectionChange(conn_id, connected);
-    advertising_ = BluetoothStack::StartAdvertisement(ble_advertise_settings_);
+    if (inbound_handler_sock_fd_ != -1) {
+      advertising_ = BluetoothStack::StartAdvertisement(ble_advertise_settings_);
+    }
   }
 }
 
@@ -370,12 +372,21 @@ void Agent::ReadDescriptor(const int connection_id,
 
 void Agent::Disconnect(const int connection_id)
 {
-  (void) BluetoothStack::DisconnectGattPeer(connection_id);
+  if (connection_id != -1) {
+    (void) BluetoothStack::DisconnectGattPeer(connection_id);
+  }
 }
 
-void Agent::StartAdvertising(const BLEAdvertiseSettings& settings)
+void Agent::StartAdvertising(const int sockfd, const BLEAdvertiseSettings& settings)
 {
+  inbound_handler_sock_fd_ = sockfd;
   ble_advertise_settings_ = settings;
+  if (BluetoothStack::StartGattService(&bluetooth_gatt_service_)) {
+    logv("Anki BLE Peripheral Service is started.");
+  } else {
+    loge("Failed to start GATT service.  Cannot start advertising.");
+    return;
+  }
   advertising_ = BluetoothStack::StartAdvertisement(ble_advertise_settings_);
   if (advertising_) {
     logv("Started advertising Anki BLE peripheral service");
@@ -458,12 +469,6 @@ bool Agent::StartPeripheral()
     }
   }
 
-  if (!BluetoothStack::StartGattService(&bluetooth_gatt_service_)) {
-    loge("Failed to start Anki BLE peripheral service");
-    return false;
-  }
-
-  logv("Anki BLE peripheral service started.");
   return true;
 }
 
@@ -512,6 +517,12 @@ void Agent::OnPeerClose(const int sockfd) {
     outbound_connection_addresses_.erase(sockfd);
   }
   StopScan(sockfd);
+  if (sockfd == inbound_handler_sock_fd_) {
+    inbound_handler_sock_fd_ = -1;
+    Disconnect(inbound_connection_id_);
+    StopAdvertising();
+    (void) BluetoothStack::StopGattService(&bluetooth_gatt_service_);
+  }
 }
 
 void Agent::OnOutboundConnectionChange(const std::string& address,

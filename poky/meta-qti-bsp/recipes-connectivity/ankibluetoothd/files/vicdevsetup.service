@@ -1,14 +1,12 @@
 [Unit]
 Description=Victor Developer Setup Over BLE
-SourcePath=/etc/initscripts/start_vicdevsetup
 Requires=ankibluetoothd.service
 After=ankibluetoothd.service
 
 [Service]
 Restart=no
 RemainAfterExit=yes
-ExecStart=/etc/initscripts/start_vicdevsetup start
-ExecStop=/etc/initscripts/start_vicdevsetup stop
+ExecStart=/sbin/start-stop-daemon -S -b -a /usr/bin/vicdevsetup
 
 [Install]
 WantedBy=multi-user.target

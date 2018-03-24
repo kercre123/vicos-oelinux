@@ -28,7 +28,7 @@ namespace BluetoothDaemon {
 IPCEndpoint::IPCEndpoint(struct ev_loop* loop)
   : loop_(loop)
 {
-  sockfd_ = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+  CreateSocket();
   addr_ = (const struct sockaddr_un) { .sun_family = AF_UNIX };
   (void) strlcpy(addr_.sun_path, kSocketName.c_str(), sizeof(addr_.sun_path));
   task_executor_ = new TaskExecutor(loop);
@@ -41,6 +41,11 @@ IPCEndpoint::~IPCEndpoint()
     delete pair.second;
   }
   CloseSocket();
+}
+
+void IPCEndpoint::CreateSocket()
+{
+  sockfd_ = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 }
 
 void IPCEndpoint::CloseSocket()
