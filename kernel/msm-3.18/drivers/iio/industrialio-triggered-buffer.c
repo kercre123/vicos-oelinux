@@ -49,6 +49,7 @@ int iio_triggered_buffer_setup(struct iio_dev *indio_dev,
 	struct iio_buffer *buffer;
 	int ret;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	buffer = iio_kfifo_allocate(indio_dev);
 	if (!buffer) {
 		ret = -ENOMEM;

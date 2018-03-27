@@ -476,6 +476,8 @@ static int iio_compute_scan_bytes(struct iio_dev *indio_dev,
 	const struct iio_chan_spec *ch;
 	unsigned bytes = 0;
 	int length, i;
+	
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	/* How much space will the demuxed element take? */
 	for_each_set_bit(i, mask,
@@ -500,6 +502,7 @@ static int iio_compute_scan_bytes(struct iio_dev *indio_dev,
 		bytes = ALIGN(bytes, length);
 		bytes += length;
 	}
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  bytes: %x \n",__FUNCTION__,__LINE__, bytes);
 	return bytes;
 }
 
@@ -765,6 +768,8 @@ ssize_t iio_buffer_store_enable(struct device *dev,
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	bool inlist;
 
+	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+
 	ret = strtobool(buf, &requested_state);
 	if (ret < 0)
 		return ret;
@@ -786,7 +791,9 @@ ssize_t iio_buffer_store_enable(struct device *dev,
 
 	if (ret < 0)
 		goto done;
+	
 done:
+	printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d \n",__FUNCTION__,__LINE__);
 	mutex_unlock(&indio_dev->mlock);
 	return (ret < 0) ? ret : len;
 }
