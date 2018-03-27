@@ -76,10 +76,24 @@
  * If the secondary interface is in OIS mode, from the OIS interface 
  * the OIS data are accessible through Register (0x04-0x17) DATA [8-13].
  *  
- * X axis data low byte address, the rest can be obtained using axis offset 
+*/
+
+
+/*
+ * X axis  magnetometer data low byte address, the rest can be obtained using axis offset 
 */
 #define BMI160_REG_DATA_MAGN_XOUT_L	0x04 /* 0x04 - 0x0B  */
+
+
+/*
+ * X axis  gyro data low byte address, the rest can be obtained using axis offset 
+*/
 #define BMI160_REG_DATA_GYRO_XOUT_L	0x0C /* 0x0c - 0x11  */
+
+
+/*
+ * X axis  accel data low byte address, the rest can be obtained using axis offset 
+*/
 #define BMI160_REG_DATA_ACCEL_XOUT_L	0x12 /* 0x12 - 0x17  */
 
 
@@ -116,7 +130,16 @@
 */
 #define BMI160_REG_ACCEL_CONFIG		0x40
 
+/*
+ * acc_odr: define the output data rate in Hz is given by 100/2^8-val(acc_odr). 
+ * The output data rate is independent of the power mode setting for the sensor
+*/
 #define BMI160_ACCEL_CONFIG_ODR_MASK	GENMASK(3, 0)
+
+/* 
+ * acc_bwp: bandwidth parameter determines filter configuration
+ * (acc_us=0) and averaging for undersampling mode (acc_us=1)
+*/
 #define BMI160_ACCEL_CONFIG_BWP_MASK	GENMASK(6, 4)
 
 
@@ -148,7 +171,18 @@
  * the read mode of the gyroscope in the sensor 
 */
 #define BMI160_REG_GYRO_CONFIG		0x42
+
+/* 
+ * gyr_odr: defines the output data rate of the gyro in the sensor. 
+ * This is independent of the power mode setting for the sensor. 
+ * The output data rate in Hz is given by 100/2^8-val(gyr_odr)
+*/
 #define BMI160_GYRO_CONFIG_ODR_MASK	GENMASK(3, 0)
+
+/* 
+ * gyr_bwp: the gyroscope bandwidth coefficient defines 
+ * the 3 dB cutoff frequency of the low pass filter for the sensor data
+*/
 #define BMI160_GYRO_CONFIG_BWP_MASK	GENMASK(5, 4)
 
 
@@ -380,6 +414,21 @@ static const struct iio_chan_spec bmi160_channels[] = {
 	IIO_CHAN_SOFT_TIMESTAMP(BMI160_SCAN_TIMESTAMP),
 };
 
+
+/* 
+ * Get the Output Data Rate 
+*/
+static int bmi160_get_odr(struct bmi160_data *data, 
+			  enum bmi160_sensor_type t,
+                          int *odr, 
+			  int *uodr);
+
+
+
+
+
+
+
 static enum bmi160_sensor_type bmi160_to_sensor(enum iio_chan_type iio_type)
 {
 	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
@@ -605,6 +654,11 @@ static int bmi160_write_raw(struct iio_dev *indio_dev,
 	return 0;
 }
 
+static int bmi160_read_temp_raw(struct bmi160_data *data, int *temperature)
+{
+	return 0;
+}
+
 static
 IIO_CONST_ATTR(in_accel_sampling_frequency_available,
 	       "0.78125 1.5625 3.125 6.25 12.5 25 50 100 200 400 800 1600");
@@ -618,11 +672,16 @@ static
 IIO_CONST_ATTR(in_anglvel_scale_available,
 	       "0.001065 0.000532 0.000266 0.000133 0.000066");
 
+static
+IIO_DEV_ATTR_TEMP_RAW(bmi160_read_temp_raw);
+
+
 static struct attribute *bmi160_attrs[] = {
 	&iio_const_attr_in_accel_sampling_frequency_available.dev_attr.attr,
 	&iio_const_attr_in_anglvel_sampling_frequency_available.dev_attr.attr,
 	&iio_const_attr_in_accel_scale_available.dev_attr.attr,
 	&iio_const_attr_in_anglvel_scale_available.dev_attr.attr,
+	&iio_dev_attr_in_temp_raw.dev_attr.attr,
 	NULL,
 };
 
@@ -717,6 +776,11 @@ static void bmi160_chip_uninit(struct bmi160_data *data)
 	bmi160_set_mode(data, BMI160_ACCEL, false);
 }
 
+
+/* 
+ * Probe the core of BMI160 device
+ *  
+*/
 int bmi160_core_probe(struct device *dev, struct regmap *regmap,
 		      const char *name, bool use_spi)
 {
@@ -724,63 +788,54 @@ int bmi160_core_probe(struct device *dev, struct regmap *regmap,
 	struct bmi160_data *data;
 	int ret;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d device: %p regmap: %p name: %s use_spi: %x\n",__FUNCTION__,__LINE__, dev, regmap, name, use_spi);
+	dev_info(dev, "bmi160 core probe: %s %d regmap: %p device: %s use spi: %x \n", __FUNCTION__,__LINE__, regmap, name, use_spi );
 	indio_dev = devm_iio_device_alloc(dev, sizeof(*data));
 	if (!indio_dev) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+ 		dev_err(dev, "Could not allocated the iio device \n ");
 		return -ENOMEM;
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	data = iio_priv(indio_dev);
 	dev_set_drvdata(dev, indio_dev);
 	data->regmap = regmap;
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	ret = bmi160_chip_init(data, use_spi);
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d ret: %x\n",__FUNCTION__,__LINE__, ret);
+		dev_err(dev, "Initialisation of the bmi160 chip failed:  returned  %x\n", ret);
 		return ret;
 	}
 
 	if (!name && ACPI_HANDLE(dev)) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 		name = bmi160_match_acpi_device(dev);
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	indio_dev->dev.parent = dev;
 	indio_dev->channels = bmi160_channels;
 	indio_dev->num_channels = ARRAY_SIZE(bmi160_channels);
 	indio_dev->name = name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &bmi160_info;
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 
 	ret = iio_triggered_buffer_setup(indio_dev, NULL,
 					 bmi160_trigger_handler, NULL);
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+		dev_err(dev, "Setup of the triggered buffer failed: returned %x\n", ret);	
 		goto uninit;
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = iio_device_register(indio_dev);
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+		dev_err(dev, "registering the iio device failed: returned %x\n", ret);	
 		goto buffer_cleanup;
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+	dev_info(dev, "bmi160 probe completed successfully \n");
 	return 0;
 buffer_cleanup:
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+	dev_info(dev, "cleanup of buffer in case of failure \n");
 	iio_triggered_buffer_cleanup(indio_dev);
 uninit:
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+	dev_info(dev, "uninitialise device in case of failure \n");
 	bmi160_chip_uninit(data);
 	return ret;
 }
