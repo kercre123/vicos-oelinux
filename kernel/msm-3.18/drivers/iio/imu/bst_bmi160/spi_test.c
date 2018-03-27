@@ -28,18 +28,18 @@ static int bmi160_spi_probe(struct spi_device *spi)
 	struct regmap *regmap;
 	const struct spi_device_id *id;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  spi_device: %p \n",__FUNCTION__,__LINE__, spi);
+	dev_info(&spi->dev, "Probing bmi160: %s %d spi_device: %p  \n", __FUNCTION__,__LINE__, spi );
 	id  = spi_get_device_id(spi);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	dev_info(&spi->dev, "mapping bmi160 register to regmap \n");
+
 	regmap = devm_regmap_init_spi(spi, &bmi160_regmap_config);
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (IS_ERR(regmap)) {
 		dev_err(&spi->dev, "Failed to register spi regmap %d\n",
 			(int)PTR_ERR(regmap));
 		return PTR_ERR(regmap);
 	}
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	dev_info(&spi->dev, "Probing bmi160 code: %s %d regmap: %p device: %s use spi: %x \n", __FUNCTION__,__LINE__, regmap, id->name, true );
 	return bmi160_core_probe(&spi->dev, regmap, id->name, true);
 }
 
