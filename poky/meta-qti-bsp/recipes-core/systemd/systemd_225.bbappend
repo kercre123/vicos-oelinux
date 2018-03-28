@@ -8,7 +8,7 @@ SRC_URI += "file://mount-data"
 SRC_URI += "file://mount-data.service"
 SRC_URI += "file://mtpserver.rules"
 
-DEPENDS += "emr-cat"
+DEPENDS += "emr-cat blkdiscard"
 
 EXTRA_OECONF += " --disable-efi"
 

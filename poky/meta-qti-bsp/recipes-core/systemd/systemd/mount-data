@@ -31,26 +31,24 @@ UNBRICK_KEY="anki.unbrick"
 WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
 
-make_part() {
-  mkfs.ext4 /dev/block/bootdevice/by-name/$1
-}
-
 make_userdata() {
   if $1; then
     echo "Remaking /data" > /dev/kmsg
-    make_part userdata
+    mkfs.ext4 /dev/block/bootdevice/by-name/userdata
     mount /data
   fi
   # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
   # determine that /data is mounted and it isn't well integrated into systemd so making it here is the easiest way
   # to make it work.
-  mkdir /data/usb
+  mkdir -p /data/usb
+  mkdir -p /data/misc/camera
 }
 
 make_tomlog() {
   if ! test -f $TOM_LOG; then
     ls -la /factory/cloud >> $TOM_LOG
   fi
+  sync
 }
 
 case "$1" in
@@ -83,9 +81,7 @@ case "$1" in
     sync
     umount /data
     if test -e $WIPE_COOKIE; then
-      make_userdata true
-      sync
-      unmount /data
+      blkdiscard -s /dev/block/bootdevice/by-name/userdata
     fi
     ;;
 
