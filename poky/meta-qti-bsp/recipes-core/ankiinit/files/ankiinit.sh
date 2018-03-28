@@ -50,4 +50,5 @@ if $HAVE_EMR; then
   echo $SERIALNO > /sys/class/android_usb/android0/iSerial
 fi
 
+mkdir -p /data/misc/camera
 exit 0
