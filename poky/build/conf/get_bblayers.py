@@ -21,7 +21,7 @@ def getLayerPaths(target,  fnexpr) :
     retList = []
     for file in os.listdir(target) :
         if (fnmatch.fnmatch(file, fnexpr) and not
-             (fnmatch.fnmatch(file, "meta-skeleton") or
+             (fnmatch.fnmatch(file, "x_meta-skeleton") or
              fnmatch.fnmatch(file, "meta-selftest") or
              fnmatch.fnmatch(file, "meta-yocto") or
              fnmatch.fnmatch(file, "meta-yocto-bsp"))):
