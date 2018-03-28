@@ -1,3 +1,8 @@
+#
+# <anki> 
+# VIC-2065: PasswordAuthentication=no
+# </anki>
+#
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI += "file://sshdgenkeys.service"
@@ -12,9 +17,9 @@ do_install_append () {
         sed -i -e 's:#PasswordAuthentication yes:PasswordAuthentication yes:' ${WORKDIR}/sshd_config ${D}${sysconfdir}/ssh/sshd_config
     elif [ "${BASEPRODUCT}" == "robot" ] || [ "${BASEPRODUCT}" == "robot-rome" ]; then
         sed -i -e 's:#PermitRootLogin yes:PermitRootLogin yes:' ${WORKDIR}/sshd_config ${D}${sysconfdir}/ssh/sshd_config
-        sed -i -e 's:#PasswordAuthentication yes:PasswordAuthentication yes:' ${WORKDIR}/sshd_config ${D}${sysconfdir}/ssh/sshd_config
+        sed -i -e 's:#PasswordAuthentication yes:PasswordAuthentication no:' ${WORKDIR}/sshd_config ${D}${sysconfdir}/ssh/sshd_config
         sed -i -e 's:#PermitRootLogin yes:PermitRootLogin yes:' ${WORKDIR}/sshd_config ${D}${sysconfdir}/ssh/sshd_config_readonly
-        sed -i -e 's:#PasswordAuthentication yes:PasswordAuthentication yes:' ${WORKDIR}/sshd_config ${D}${sysconfdir}/ssh/sshd_config_readonly
+        sed -i -e 's:#PasswordAuthentication yes:PasswordAuthentication no:' ${WORKDIR}/sshd_config ${D}${sysconfdir}/ssh/sshd_config_readonly
         sed -i '$a    StrictHostKeyChecking no' ${WORKDIR}/ssh_config ${D}${sysconfdir}/ssh/ssh_config
         sed -i '$a    UserKnownHostsFile /dev/null' ${WORKDIR}/ssh_config ${D}${sysconfdir}/ssh/ssh_config
     fi
