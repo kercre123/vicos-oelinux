@@ -13,9 +13,9 @@ SRC_URI = "file://imu_bmi160_test.c \
 	   "
 
 do_compile () {
-	${CC} -I. ${WORKDIR}/imu_bmi160_test.c  ${WORKDIR}/iio_utils.c -o ${WORKDIR}/imu_bmi160_test
-	${CC} -I. ${WORKDIR}/lsiio.c  ${WORKDIR}/iio_utils.c -o ${WORKDIR}/lsiio
-	${CC} -I. ${WORKDIR}/iio_event_monitor.c  ${WORKDIR}/iio_utils.c -o ${WORKDIR}/iio_event_monitor
+	${CC} -g -I. ${WORKDIR}/imu_bmi160_test.c  ${WORKDIR}/iio_utils.c -o ${WORKDIR}/imu_bmi160_test
+	${CC} -g -I. ${WORKDIR}/lsiio.c  ${WORKDIR}/iio_utils.c -o ${WORKDIR}/lsiio
+	${CC} -g -I. ${WORKDIR}/iio_event_monitor.c  ${WORKDIR}/iio_utils.c -o ${WORKDIR}/iio_event_monitor
 }
 
 
