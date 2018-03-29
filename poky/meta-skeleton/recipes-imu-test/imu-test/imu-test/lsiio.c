@@ -18,12 +18,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/dir.h>
+#include <stdbool.h>
 #include "iio_utils.h"
 
 static enum verbosity {
 	VERBLEVEL_DEFAULT,	/* 0 gives lspci behaviour */
 	VERBLEVEL_SENSORS,	/* 1 lists sensors */
 } verblevel = VERBLEVEL_DEFAULT;
+
+
+static bool data_dump = false;
 
 const char *type_device = "iio:device";
 const char *type_trigger = "trigger";
@@ -40,6 +44,26 @@ static inline int check_postfix(const char *str, const char *postfix)
 	       strcmp(str + strlen(str) - strlen(postfix), postfix) == 0;
 }
 
+static int dump_entry(const char *dev_dir_name, const char *entry_name)
+{
+	int ret;
+	char val[IIO_MAX_NAME_LENGTH];
+
+
+	printf("Entry Name to read is %s\n", entry_name);
+	memset ( val, 0, IIO_MAX_NAME_LENGTH);
+	ret = read_sysfs_string(entry_name, dev_dir_name, val);
+	if ( ret >= 0) 
+	{
+		printf("value read for entry %s is %s\n", entry_name, val);
+	}
+	else {
+		fprintf(stderr, "some error detected during the read operation\n");
+	}
+	return ret;
+
+}
+
 static int dump_channels(const char *dev_dir_name)
 {
 	DIR *dp;
@@ -52,8 +76,12 @@ static int dump_channels(const char *dev_dir_name)
 	while (ent = readdir(dp), ent)
 		if (check_prefix(ent->d_name, "in_") &&
 		   (check_postfix(ent->d_name, "_raw") ||
-		    check_postfix(ent->d_name, "_input")))
+		    check_postfix(ent->d_name, "_input"))) {
 			printf("   %-10s\n", ent->d_name);
+			if (data_dump) {
+				dump_entry(dev_dir_name, ent->d_name);
+			}
+		}
 
 	return (closedir(dp) == -1) ? -errno : 0;
 }
@@ -168,10 +196,13 @@ int main(int argc, char **argv)
 {
 	int c, err = 0;
 
-	while ((c = getopt(argc, argv, "v")) != EOF) {
+	while ((c = getopt(argc, argv, "vd")) != EOF) {
 		switch (c) {
 		case 'v':
 			verblevel++;
+			break;
+		case 'd':
+			data_dump = true;
 			break;
 
 		case '?':
@@ -183,7 +214,8 @@ int main(int argc, char **argv)
 	if (err || argc > optind) {
 		fprintf(stderr, "Usage: lsiio [options]...\n"
 			"List industrial I/O devices\n"
-			"  -v  Increase verbosity (may be given multiple times)\n");
+			"  -v  Increase verbosity (may be given multiple times)\n"
+			"  -d  Dump values of entries in the device directory\n");
 		exit(1);
 	}
 
