@@ -48,7 +48,9 @@ fi
 
 if $HAVE_EMR; then
   echo $SERIALNO > /sys/class/android_usb/android0/iSerial
+  echo 2 1 w $SERIALNO | /system/bin/display
 fi
+echo 2 2 w `getprop persist.anki.robot.name` | /system/bin/display
 
 mkdir -p /data/misc/camera
 exit 0
