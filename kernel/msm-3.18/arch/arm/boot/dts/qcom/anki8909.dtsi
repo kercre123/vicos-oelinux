@@ -1821,7 +1821,12 @@
 		reg-names = "qdsp6_base", "halt_q6", "halt_modem", "halt_nc",
 				 "rmb_base", "restart_reg";
 
-		interrupts = <0 24 1>;
+		/* Anki:
+		 * These lines have been removed to suppress error interrupts from the modem.
+		 * These errors are unavoidable in our pin configuration and we don't care about
+		 *the modem state anyway as long as everything else's working.
+		*/
+		//interrupts = <0 24 1>;
 		vdd_cx-supply = <&pm8909_s1_corner>;
 		vdd_cx-voltage = <7>;
 		vdd_mx-supply = <&pm8909_l3_corner_ao>;
@@ -1843,8 +1848,13 @@
 		qcom,ssctl-instance-id = <0x12>;
 
 		/* GPIO inputs from mss */
-		qcom,gpio-err-fatal = <&smp2pgpio_ssr_smp2p_1_in 0 0>;
-		qcom,gpio-err-ready = <&smp2pgpio_ssr_smp2p_1_in 1 0>;
+		/* Anki:
+		 * These lines have been removed to suppress error interrupts from the modem.
+		 * These errors are unavoidable in our pin configuration and we don't care about
+		 *the modem state anyway as long as everything else's working.
+		*/
+		//qcom,gpio-err-fatal = <&smp2pgpio_ssr_smp2p_1_in 0 0>;
+		//qcom,gpio-err-ready = <&smp2pgpio_ssr_smp2p_1_in 1 0>;
 		qcom,gpio-proxy-unvote = <&smp2pgpio_ssr_smp2p_1_in 2 0>;
 		qcom,gpio-stop-ack = <&smp2pgpio_ssr_smp2p_1_in 3 0>;
 
