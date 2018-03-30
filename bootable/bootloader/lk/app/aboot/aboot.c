@@ -184,7 +184,7 @@ static const char *warmboot_cmdline = " qpnp-power-on.warm_boot=1";
 static const char *baseband_apq_nowgr   = " androidboot.baseband=baseband_apq_nowgr";
 static const char *androidboot_slot_suffix = " androidboot.slot_suffix=";
 static const char *skip_ramfs = " skip_initramfs";
-static const char *sys_path_cmdline = " rootwait ro init=/init";
+static const char *sys_path_cmdline = " rootwait ro";
 static const char *sys_path = "  root=/dev/mmcblk0p";
 
 static const char *unbrick_cmdline = " anki.unbrick";
