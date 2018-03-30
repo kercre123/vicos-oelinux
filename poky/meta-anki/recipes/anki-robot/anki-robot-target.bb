@@ -16,7 +16,7 @@ DEPENDS += "vic-webserver"
 DEPENDS += "anki-audio-init"
 DEPENDS += "vic-christen"
 
-inherit systemd
+#inherit systemd
 
 do_install_append () {
     if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then

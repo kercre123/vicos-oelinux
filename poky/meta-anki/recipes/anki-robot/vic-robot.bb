@@ -7,14 +7,14 @@ SERVICE_FILE = "vic-robot.service"
 
 SRC_URI = "file://${SERVICE_FILE}"
 
-inherit systemd
+#inherit systemd
 
-do_install_append () {
-   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
-       install -d ${D}${systemd_unitdir}/system/
-       install -m 0644 ${WORKDIR}/${SERVICE_FILE} -D ${D}${systemd_unitdir}/system/${SERVICE_FILE}
-   fi
-}
+#do_install_append () {
+#   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+#       install -d ${D}${systemd_unitdir}/system/
+#       install -m 0644 ${WORKDIR}/${SERVICE_FILE} -D ${D}${systemd_unitdir}/system/${SERVICE_FILE}
+#   fi
+#}
 
 FILES_${PN} += "${systemd_unitdir}/system/"
-SYSTEMD_SERVICE_${PN} = "${SERVICE_FILE}"
+#SYSTEMD_SERVICE_${PN} = "${SERVICE_FILE}"

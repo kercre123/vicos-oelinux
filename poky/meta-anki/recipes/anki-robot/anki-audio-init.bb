@@ -7,7 +7,7 @@ SRC_URI += "file://anki-audio-init.service"
 SRC_URI += "file://anki-audio-init.sh"
 
 
-inherit systemd
+#inherit systemd
 
 do_install_append() {
   install -d ${D}${sysconfdir}/initscripts/
