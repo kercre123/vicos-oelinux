@@ -97,6 +97,22 @@
 #define BMI160_REG_DATA_ACCEL_XOUT_L	0x12 /* 0x12 - 0x17  */
 
 
+
+/*
+ * Sensortime is a 24 bit counter available in suspend, low power, and normal mode. 
+ * The value of the register is shadowed when it is read in a burst read with the 
+ * data register at the beginning of the operation and the shadowed value is returned. 
+ * When the FIFO is read the register is shadowed whenever a new frame is read.
+ *
+ * The sensortime increments with 39 μs. 
+ * The accuracy of the counter is the same as for the output data rate as described in section 2.3. 
+ * The sensortime is unique for approx. 10 min and 54 seconds. 
+ * I.e. the register value starts at 0x000000 and wraps after 0xFFFFFF has been reached.
+*/
+#define BMI160_REG_SENSOR_TIME	0x18 /* 0x18 - 0x1A */
+
+
+
 /* 
  * Contains the temperature of the sensor
  * 
@@ -234,6 +250,77 @@
 #define BMI160_GYRO_PMU_MIN_USLEEP	80000
 #define BMI160_SOFTRESET_USLEEP		1000
 
+
+/* 
+ * Macro defining a channel for the BNI160 
+ * fields defined here are member of the 
+ * struct iio_chan_spec they are defined as follows
+ * 
+ *  type
+ *  What type of measurement is the channel making.
+ * 
+ * channel
+ * What number do we wish to assign the channel.
+ * 
+ * channel2
+ * If there is a second number for a differential channel then this is it. 
+ * If modified is set then the value here specifies the modifier.
+ * 
+ * address
+ * Driver specific identifier.
+ * 
+ * scan_index
+ * Monotonic index to give ordering in scans when read from a buffer.
+ * 
+ * scan_type
+ * Sign:	's' or 'u' to specify signed or unsigned
+ * 
+ * info_mask_separate
+ * What information is to be exported that is specific to this channel.
+ * 
+ * info_mask_shared_by_type
+ * What information is to be exported that is shared by all channels of the same type.
+ * 
+ * info_mask_shared_by_dir
+ * What information is to be exported that is shared by all channels of the same direction.
+ * 
+ * info_mask_shared_by_all
+ * What information is to be exported that is shared by all channels.
+ * 
+ * event_spec
+ * Array of events which should be registered for this channel.
+ * 
+ * num_event_specs
+ * Size of the event_spec array.
+ * 
+ * ext_info
+ * Array of extended info attributes for this channel. 
+ * The array is NULL terminated, the last element should have its name field set to NULL.
+ * 
+ * extend_name
+ * Allows labeling of channel attributes with an informative name. 
+ * Note this has no effect codes etc, unlike modifiers.
+ * 
+ * datasheet_name
+ * A name used in in-kernel mapping of channels. 
+ * It should correspond to the first name 
+ * that the channel is referred to by in the datasheet (e.g. IND), or the nearest possible compound name (e.g. IND-INC).
+ * 
+ * modified
+ * Does a modifier apply to this channel. 
+ * What these are depends on the channel type. Modifier is set in channel2. 
+ * Examples are IIO_MOD_X for axial sensors about the 'x' axis.
+ * 
+ * indexed
+ * Specify the channel has a numerical index. If not, the channel index number will be suppressed for sysfs attributes but not for event codes.
+ * 
+ * output
+ * Channel is output.
+ * 
+ * differential
+ * Channel is differential.
+*/ 
+
 #define BMI160_CHANNEL(_type, _axis, _index) {			\
 	.type = _type,						\
 	.modified = 1,						\
@@ -249,6 +336,43 @@
 		.endianness = IIO_LE,				\
 	},							\
 }
+
+
+#if 0
+/* not yet soup :-) */
+
+#define BMI160_TEMP_CHAN(addr, bits) { \
+        .type = IIO_TEMP, \
+        .indexed = 1, \
+        .channel = 0, \
+        .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | \
+                BIT(IIO_CHAN_INFO_OFFSET) | \
+                BIT(IIO_CHAN_INFO_SCALE), \
+        .info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SAMP_FREQ), \
+        .address = (addr), \
+        .scan_index = ADIS16350_SCAN_TEMP_X, \
+        .scan_type = { \
+                .sign = 's', \
+                .realbits = (bits), \
+                .storagebits = 16, \
+                .shift = 0, \
+                .endianness = IIO_BE, \
+        }, \
+}
+
+to use do 
+BMI160_TEMP_CHAN(BMI160_REG_TEMPERATURE_LSB, 16)
+
+#endif
+
+
+
+
+
+
+
+
+
 
 /* scan indexes follow DATA register order */
 enum bmi160_scan_axis {
@@ -266,9 +390,10 @@ enum bmi160_scan_axis {
 };
 
 enum bmi160_sensor_type {
-	BMI160_ACCEL	= 0,
-	BMI160_GYRO,
-	BMI160_EXT_MAGN,
+	BMI160_ACCEL	= 0, 	/* Accelerometer */
+	BMI160_GYRO,		/* Gyroscope */
+	BMI160_EXT_MAGN,	/* External Magnetometer */
+	BMI160_TEMP,		/* Temperature */
 	BMI160_NUM_SENSORS /* must be last */
 };
 
@@ -424,27 +549,29 @@ static int bmi160_get_odr(struct bmi160_data *data,
 			  int *uodr);
 
 
-
-
-
-
-
+/*
+ * convert iio_type to bmi160 sensor type
+*/
 static enum bmi160_sensor_type bmi160_to_sensor(enum iio_chan_type iio_type)
 {
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
+	pr_info(">>  %s %d  iio_chan_type: %x \n", __FUNCTION__, __LINE__, iio_type);
 	switch (iio_type) {
 	case IIO_ACCEL:
-		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 		return BMI160_ACCEL;
 	case IIO_ANGL_VEL:
-		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 		return BMI160_GYRO;
+	case IIO_TEMP:
+		return BMI160_TEMP;
 	default:
-		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
+		pr_err( " Unknow iio_type %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 		return -EINVAL;
 	}
 }
 
+
+/*
+ * Set the mode for power management
+*/
 static
 int bmi160_set_mode(struct bmi160_data *data, enum bmi160_sensor_type t,
 		    bool mode)
@@ -452,50 +579,64 @@ int bmi160_set_mode(struct bmi160_data *data, enum bmi160_sensor_type t,
 	int ret;
 	u8 cmd;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (mode)
 		cmd = bmi160_regs[t].pmu_cmd_normal;
 	else
 		cmd = bmi160_regs[t].pmu_cmd_suspend;
 
 	ret = regmap_write(data->regmap, BMI160_REG_CMD, cmd);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("Failed to set  mode  command\n");
 		return ret;
+	}
 
+	/*
+	 * Wait for the command to complete
+	*/
 	usleep_range(bmi160_pmu_time[t], bmi160_pmu_time[t] + 1000);
 
-	printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d \n",__FUNCTION__,__LINE__);
 	return 0;
 }
 
+/* 
+ *  Set the scale 
+*/ 
 static
 int bmi160_set_scale(struct bmi160_data *data, enum bmi160_sensor_type t,
 		     int uscale)
 {
 	int i;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	for (i = 0; i < bmi160_scale_table[t].num; i++)
 		if (bmi160_scale_table[t].tbl[i].uscale == uscale)
 			break;
 
-	if (i == bmi160_scale_table[t].num)
+	if (i == bmi160_scale_table[t].num) {
+		pr_err("The specified scale was not found in the available ones\n");
 		return -EINVAL;
+	}
 
 	return regmap_write(data->regmap, bmi160_regs[t].range,
 			    bmi160_scale_table[t].tbl[i].bits);
 }
 
+/*
+ * Get the scale
+*/
 static
 int bmi160_get_scale(struct bmi160_data *data, enum bmi160_sensor_type t,
 		     int *uscale)
 {
 	int i, ret, val;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	ret = regmap_read(data->regmap, bmi160_regs[t].range, &val);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("Could not read the range\n");
 		return ret;
+	}
 
 	for (i = 0; i < bmi160_scale_table[t].num; i++)
 		if (bmi160_scale_table[t].tbl[i].bits == val) {
@@ -503,9 +644,13 @@ int bmi160_get_scale(struct bmi160_data *data, enum bmi160_sensor_type t,
 			return 0;
 		}
 
+	pr_err("Failed to get requested information\n");
 	return -EINVAL;
 }
 
+/* 
+ * Get Data
+*/
 static int bmi160_get_data(struct bmi160_data *data, int chan_type,
 			   int axis, int *val)
 {
@@ -514,67 +659,78 @@ static int bmi160_get_data(struct bmi160_data *data, int chan_type,
 	__le16 sample;
 	enum bmi160_sensor_type t = bmi160_to_sensor(chan_type);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d bmi160_data: %p chan_type: %x axis: %x \n",__FUNCTION__,__LINE__, data, chan_type, axis);
+	pr_info(">> %s %d bmi160_data: %p chan_type: %x axis: %x \n", __FUNCTION__, __LINE__, data, chan_type, axis);
 	reg = bmi160_regs[t].data + (axis - IIO_MOD_X) * sizeof(sample);
 
 	ret = regmap_bulk_read(data->regmap, reg, &sample, sizeof(sample));
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d ret: %d \n",__FUNCTION__,__LINE__, ret);
+		pr_err("Failed to read bulk data - %s %d ret: %d \n", __FUNCTION__, __LINE__, ret);
 		return ret;
 	}
 
 	*val = sign_extend32(le16_to_cpu(sample), 15);
-	printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d val: %d \n",__FUNCTION__,__LINE__, *val);
 
 	return 0;
 }
 
+/* 
+ * Set the Output Data Rate
+*/
 static
 int bmi160_set_odr(struct bmi160_data *data, enum bmi160_sensor_type t,
 		   int odr, int uodr)
 {
 	int i;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	for (i = 0; i < bmi160_odr_table[t].num; i++)
 		if (bmi160_odr_table[t].tbl[i].odr == odr &&
 		    bmi160_odr_table[t].tbl[i].uodr == uodr)
 			break;
 
-	if (i >= bmi160_odr_table[t].num)
+	if (i >= bmi160_odr_table[t].num) {
+ 		pr_err("Failed to set the Output Data Rate - %s %d \n", __FUNCTION__, __LINE__);
 		return -EINVAL;
-
+	}
 	return regmap_update_bits(data->regmap,
 				  bmi160_regs[t].config,
 				  bmi160_regs[t].config_odr_mask,
 				  bmi160_odr_table[t].tbl[i].bits);
 }
 
+/*
+ * Get the Output Data Rate
+*/ 
 static int bmi160_get_odr(struct bmi160_data *data, enum bmi160_sensor_type t,
 			  int *odr, int *uodr)
 {
 	int i, val, ret;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	ret = regmap_read(data->regmap, bmi160_regs[t].config, &val);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("Could not read config info -  %s %d ret: %x \n", __FUNCTION__, __LINE__, ret);
 		return ret;
-
+	}
 	val &= bmi160_regs[t].config_odr_mask;
 
 	for (i = 0; i < bmi160_odr_table[t].num; i++)
 		if (val == bmi160_odr_table[t].tbl[i].bits)
 			break;
 
-	if (i >= bmi160_odr_table[t].num)
+	if (i >= bmi160_odr_table[t].num) {
+		pr_err("Reached end of table without finding the requested value\n");
 		return -EINVAL;
-
+	}
 	*odr = bmi160_odr_table[t].tbl[i].odr;
 	*uodr = bmi160_odr_table[t].tbl[i].uodr;
 
 	return 0;
 }
 
+/* 
+ * Trigger Handler
+*/
 static irqreturn_t bmi160_trigger_handler(int irq, void *p)
 {
 	struct iio_poll_func *pf = p;
@@ -585,7 +741,7 @@ static irqreturn_t bmi160_trigger_handler(int irq, void *p)
 	int i, ret, j = 0, base = BMI160_REG_DATA_MAGN_XOUT_L;
 	__le16 sample;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	for_each_set_bit(i, indio_dev->active_scan_mask,
 			 indio_dev->masklength) {
 		ret = regmap_bulk_read(data->regmap, base + i * sizeof(sample),
@@ -602,19 +758,24 @@ done:
 	return IRQ_HANDLED;
 }
 
+/* 
+ * Read Raw Data from sensors
+*/ 
 static int bmi160_read_raw(struct iio_dev *indio_dev,
 			   struct iio_chan_spec const *chan,
 			   int *val, int *val2, long mask)
 {
 	int ret;
 	struct bmi160_data *data = iio_priv(indio_dev);
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
 		ret = bmi160_get_data(data, chan->type, chan->channel2, val);
-		if (ret < 0)
+		if (ret < 0) {
+			pr_err("Failed to get data\n");
 			return ret;
+		}
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_SCALE:
 		*val = 0;
@@ -626,19 +787,23 @@ static int bmi160_read_raw(struct iio_dev *indio_dev,
 				     val, val2);
 		return ret < 0 ? ret : IIO_VAL_INT_PLUS_MICRO;
 	default:
+		pr_err("Unknow mask\n");
 		return -EINVAL;
 	}
 
 	return 0;
 }
 
+/*
+ * Write Raw Data
+*/
 static int bmi160_write_raw(struct iio_dev *indio_dev,
 			    struct iio_chan_spec const *chan,
 			    int val, int val2, long mask)
 {
 	struct bmi160_data *data = iio_priv(indio_dev);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
 		return bmi160_set_scale(data,
@@ -648,6 +813,7 @@ static int bmi160_write_raw(struct iio_dev *indio_dev,
 		return bmi160_set_odr(data, bmi160_to_sensor(chan->type),
 				      val, val2);
 	default:
+		pr_err("Unknow mask\n");
 		return -EINVAL;
 	}
 
@@ -699,79 +865,92 @@ static const char *bmi160_match_acpi_device(struct device *dev)
 {
 	const struct acpi_device_id *id;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	id = acpi_match_device(dev->driver->acpi_match_table, dev);
-	if (!id)
+	if (!id) {
+		pr_err("Failed to match acpi entry\n");
 		return NULL;
+	}
 
 	return dev_name(dev);
 }
 
+/* 
+ * Initialisation of BMI160 chip
+ */
 static int bmi160_chip_init(struct bmi160_data *data, bool use_spi)
 {
 	int ret;
 	unsigned int val;
+
 	struct device *dev = regmap_get_device(data->regmap);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d bmi160_data: %p use_spi: %x\n",__FUNCTION__,__LINE__, data, use_spi);
+	pr_info(">> %s %d bmi160_data: %p use_spi: %x\n",__FUNCTION__,__LINE__, data, use_spi);
 	ret = regmap_write(data->regmap, BMI160_REG_CMD, BMI160_CMD_SOFTRESET);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+		pr_err( "Failed to reset the bmi160 chip -  %s %d \n", __FUNCTION__, __LINE__);
 		return ret;
 	}
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 
+	/* 
+	 * Wait for the sof reset to complete 
+	*/
 	usleep_range(BMI160_SOFTRESET_USLEEP, BMI160_SOFTRESET_USLEEP + 1);
 
 	/*
 	 * CS rising edge is needed before starting SPI, so do a dummy read
 	 * See Section 3.2.1, page 86 of the datasheet
 	 */
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (use_spi) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 		ret = regmap_read(data->regmap, BMI160_REG_DUMMY, &val);
 		if (ret < 0) {
-			printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+			dev_err(dev, "Failed the dummy read to enter SPI mode -  %s %d \n", __FUNCTION__, __LINE__);
 			return ret;
 		}
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+	/* 	
+	 * read the chip ID and verify it against expected 
+	*/
 	ret = regmap_read(data->regmap, BMI160_REG_CHIP_ID, &val);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
-		dev_err(dev, "Error reading chip id\n");
+		dev_err(dev, "Error reading chip id - %s %d\n", __FUNCTION__, __LINE__);
 		return ret;
 	}
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (val != BMI160_CHIP_ID_VAL) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
-		dev_err(dev, "Wrong chip id, got %x expected %x\n",
-			val, BMI160_CHIP_ID_VAL);
+		dev_err(dev, "Wrong chip id, got %x expected %x - %s %d\n",
+			val, BMI160_CHIP_ID_VAL, __FUNCTION__, __LINE__);
 		return -ENODEV;
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+	/* 
+	 * set mode for accel 
+	*/
 	ret = bmi160_set_mode(data, BMI160_ACCEL, true);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+		dev_err(dev, "Failed to set mode for accel -  %s %d \n", __FUNCTION__, __LINE__);
 		return ret;
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+	/* 
+	 * set mode for  gyro 
+	*/
 	ret = bmi160_set_mode(data, BMI160_GYRO, true);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+		dev_err(dev,  "failed to set mode for gyro  %s %d \n", __FUNCTION__, __LINE__);
 		return ret;
 	}
-	printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
+	pr_info("BMI160 Probe completed successfully\n"); 
 	return 0;
 }
 
+/* 
+ * uninit the bmi160
+*/
 static void bmi160_chip_uninit(struct bmi160_data *data)
 {
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	
+	pr_info(" %s %d \n",__FUNCTION__,__LINE__);
 	bmi160_set_mode(data, BMI160_GYRO, false);
 	bmi160_set_mode(data, BMI160_ACCEL, false);
 }
@@ -816,6 +995,10 @@ int bmi160_core_probe(struct device *dev, struct regmap *regmap,
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->info = &bmi160_info;
 
+	/*
+	 * trigger buffer 
+	*/
+	dev_info(dev, "setup triggered buffer\n");
 	ret = iio_triggered_buffer_setup(indio_dev, NULL,
 					 bmi160_trigger_handler, NULL);
 	if (ret < 0) {
@@ -823,6 +1006,10 @@ int bmi160_core_probe(struct device *dev, struct regmap *regmap,
 		goto uninit;
 	}
 
+	/*
+	 * device registration 
+	*/
+	dev_info(dev, "iio device registration\n");
 	ret = iio_device_register(indio_dev);
 	if (ret < 0) {
 		dev_err(dev, "registering the iio device failed: returned %x\n", ret);	
@@ -846,9 +1033,13 @@ void bmi160_core_remove(struct device *dev)
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct bmi160_data *data = iio_priv(indio_dev);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
+	dev_info(dev, "removing the iio device\n");
 	iio_device_unregister(indio_dev);
+
+	dev_info(dev, "removing the triggered buffer\n");
 	iio_triggered_buffer_cleanup(indio_dev);
+
+	dev_info(dev, "unitialise the bmi160 chip\n");
 	bmi160_chip_uninit(data);
 }
 EXPORT_SYMBOL_GPL(bmi160_core_remove);
