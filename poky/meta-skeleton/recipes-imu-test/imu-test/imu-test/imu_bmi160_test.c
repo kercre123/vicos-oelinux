@@ -330,15 +330,16 @@ static const struct option longopts[] = {
 
 int main(int argc, char **argv)
 {
-	unsigned long num_loops = 2;
+	unsigned long num_loops = 2; /* if -c not specified we default to 2 captures*/ 
 	unsigned long timedelay = 1000000;
-	unsigned long buf_len = 128;
+	unsigned long buf_len = 128; /* if -l not specified we default to 128 sampples in buffer */
 
 	int ret, c, i, j, toread;
 	int fp = -1;
 
 	int num_channels = 0;
-	char *trigger_name = NULL, *device_name = NULL;
+	char *trigger_name = NULL;
+	char *device_name = NULL;
 
 	char *data = NULL;
 	ssize_t read_size;
@@ -424,6 +425,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Find the device requested */
+	printf("Find the device requested\n");
 	if (dev_num < 0 && !device_name) {
 		fprintf(stderr, "Device not set\n");
 		print_usage();
@@ -442,15 +444,18 @@ int main(int argc, char **argv)
 			goto error;
 		}
 	}
-	printf("iio device number being used is %d\n", dev_num);
+	printf("iio device number being used for  %s is %d\n", device_name, dev_num);
 
 	ret = asprintf(&dev_dir_name, "%siio:device%d", iio_dir, dev_num);
-	if (ret < 0)
+	if (ret < 0) {
+		fprintf(stderr, "failed to create a valid device path\n");
 		return -ENOMEM;
+	}
 	/* Fetch device_name if specified by number */
 	if (!device_name) {
 		device_name = malloc(IIO_MAX_NAME_LENGTH);
 		if (!device_name) {
+			fprintf(stderr, "Failed memory allocation\n");
 			ret = -ENOMEM;
 			goto error;
 		}
@@ -464,18 +469,28 @@ int main(int argc, char **argv)
 	if (notrigger) {
 		printf("trigger-less mode selected\n");
 	} else if (trig_num >= 0) {
-		char *trig_dev_name;
+		char *trig_dev_name = NULL;;
 		ret = asprintf(&trig_dev_name, "%strigger%d", iio_dir, trig_num);
 		if (ret < 0) {
+			fprintf(stderr, "Failed to create trigger name\n");
 			return -ENOMEM;
 		}
+		if (trig_dev_name) {
+			printf("trigger device name %s\n", trig_dev_name);
+		}
 		trigger_name = malloc(IIO_MAX_NAME_LENGTH);
+		if (!trigger_name) {
+			fprintf(stderr, "Failed memory allocation\n");
+			ret = -ENOMEM;
+			goto error;
+		}
 		ret = read_sysfs_string("name", trig_dev_name, trigger_name);
 		free(trig_dev_name);
 		if (ret < 0) {
 			fprintf(stderr, "Failed to read trigger%d name from\n", trig_num);
 			return ret;
 		}
+		printf("trigger name %s\n", trigger_name);
 		printf("iio trigger number being used is %d\n", trig_num);
 	} else {
 		if (!trigger_name) {
@@ -487,6 +502,7 @@ int main(int argc, char **argv)
 			ret = asprintf(&trigger_name,
 				       "%s-dev%d", device_name, dev_num);
 			if (ret < 0) {
+				fprintf(stderr, "failed to create the trigger name\n");
 				ret = -ENOMEM;
 				goto error;
 			}
@@ -500,6 +516,7 @@ int main(int argc, char **argv)
 			ret = asprintf(&trigger_name,
 				       "%s-trigger", device_name);
 			if (ret < 0) {
+				fprintf(stderr, "Failed to create the trigger name\n");
 				ret = -ENOMEM;
 				goto error;
 			}
@@ -574,15 +591,15 @@ int main(int argc, char **argv)
 
 	/*
 	 * Construct the directory name for the associated buffer.
-	 * As we know that the lis3l02dq has only one buffer this may
-	 * be built rather than found.
 	 */
 	ret = asprintf(&buf_dir_name,
 		       "%siio:device%d/buffer", iio_dir, dev_num);
 	if (ret < 0) {
+		fprintf(stderr, "failed to create the buffer directory name\n");
 		ret = -ENOMEM;
 		goto error;
 	}
+	printf("buffer directory name is %s \n", buf_dir_name);
 
 	if (!notrigger) {
 		printf("%s %s\n", dev_dir_name, trigger_name);
@@ -601,11 +618,17 @@ int main(int argc, char **argv)
 	}
 
 	/* Setup ring buffer parameters */
+
+	printf("setting up the buffer length - buf_dir_name = %s buf_len = %d\n", buf_dir_name, buf_len);
+
 	ret = write_sysfs_int("length", buf_dir_name, buf_len);
-	if (ret < 0)
+	if (ret < 0) {
+		fprintf(stderr, "failed to update the buffer length\n");
 		goto error;
+	}
 
 	/* Enable the buffer */
+	printf("enabling the buffer for capture\n");
 	ret = write_sysfs_int("enable", buf_dir_name, 1);
 	if (ret < 0) {
 		fprintf(stderr,
@@ -616,10 +639,12 @@ int main(int argc, char **argv)
 	scan_size = size_from_channelarray(channels, num_channels);
 	data = malloc(scan_size * buf_len);
 	if (!data) {
+		fprintf(stderr, "Failed memory allocation\n");
 		ret = -ENOMEM;
 		goto error;
 	}
 
+	printf("Reading from the /dev iio device\n");
 	ret = asprintf(&buffer_access, "/dev/iio:device%d", dev_num);
 	if (ret < 0) {
 		ret = -ENOMEM;
