@@ -26,7 +26,7 @@ source build/conf/set_bb_env.sh
 export ANKI_BUILD_VERSION
 export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE ANKI_BUILD_VERSION"
 
-build-8009-robot-image
+build-victor-robot-image
 
 # Re-enable check for unset variables
 set -u
