@@ -1,0 +1,3 @@
+[submodule "anki/victor"]
+	path = anki/victor
+	url = git@github.com:anki/victor.git
