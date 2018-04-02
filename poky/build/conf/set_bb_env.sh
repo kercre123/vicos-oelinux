@@ -67,99 +67,7 @@ alias goout='croot && cd poky/build/tmp-glibc/deploy/images/$MACHINE'
 # dynamic workspace layer functionality.
 python $scriptdir/get_bblayers.py ${WS}/poky \"meta*\" > $scriptdir/bblayers.conf
 
-# Convienence functions provided for the QuIC provided OE Linux distro.
-
-# 9650 commands
-function build-9650-perf-image() {
-  unset_bb_env
-  export MACHINE=mdm9650
-  export PRODUCT=base
-  export DISTRO=mdm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-9650-image() {
-  unset_bb_env
-  export MACHINE=mdm9650
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-9650-2k-image() {
-  unset_bb_env
-  export MACHINE=mdm9650-2k
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-9650-2k-perf-image() {
-  unset_bb_env
-  export MACHINE=mdm9650-2k
-  export PRODUCT=base
-  export DISTRO=mdm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-build-all-9650-images() {
-  build-9650-image
-  build-9650-2k-image
-  build-9650-perf-image
-  build-9650-2k-perf-image
-}
-
-function build-9650-psm-image() {
-  unset_bb_env
-  export MACHINE=mdm9650
-  export PRODUCT=psm
-  cdbitbake machine-psm-image
-}
-
-function build-9650-psm-perf-image() {
-  unset_bb_env
-  export MACHINE=mdm9650
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  export PRODUCT=psm
-  cdbitbake machine-psm-image
-}
-
-build-all-9650-psm-images() {
-  build-9650-psm-image
-  build-9650-psm-perf-image
-}
-
 # 8009 commands
-function build-8009-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8009
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-8009-user-image() {
-  unset_bb_env
-  export MACHINE=apq8009
-  export DISTRO=msm-user
-  export VARIANT=user
-  cdbitbake machine-image
-}
-
-
-function build-8009-image() {
-  unset_bb_env
-  export MACHINE=apq8009
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-build-all-8009-images() {
-  build-8009-image
-  build-8009-perf-image
-}
-
 function build-8009-robot-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
@@ -176,280 +84,17 @@ function build-8009-robot-perf-image() {
   cdbitbake machine-robot-image
 }
 
-function build-8009-robot-dummy-image() {
-  unset_bb_env
-  export MACHINE=apq8009-robot
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8009-robot-rome-image() {
-  unset_bb_env
-  export MACHINE=apq8009-robot
-  export PRODUCT=robot-rome
-  cdbitbake machine-robot-image
-}
-
-function build-8009-robot-rome-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8009-robot
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  export PRODUCT=robot-rome
-  cdbitbake machine-robot-image
-}
-
 build-all-8009-robot-images() {
   build-8009-robot-image
   build-8009-robot-perf-image
-  build-8009-robot-rome-image
-  build-8009-robot-rome-perf-image
 }
 
-build-all-8009-drone-images() {
-  build-8009-drone-image
-  build-8009-drone-perf-image
+function build-victor-robot-image() {
+  build-8009-robot-image
 }
 
-# 8017 commands
-function build-8017-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8017
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-8017-image() {
-  unset_bb_env
-  export MACHINE=apq8017
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8017-user-image() {
-  unset_bb_env
-  export MACHINE=apq8017
-  export DISTRO=msm-user
-  export VARIANT=user
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8017-qsap-image() {
-  unset_bb_env
-  export MACHINE=apq8017
-  export PRODUCT=qsap
-  cdbitbake machine-qsap-image
-}
-
-function build-8017-qsap-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8017
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  export PRODUCT=qsap
-  cdbitbake machine-qsap-image
-}
-
-function build-8017-qsap-user-image() {
-  unset_bb_env
-  export MACHINE=apq8017
-  export DISTRO=msm-user
-  export VARIANT=user
-  export PRODUCT=qsap
-  cdbitbake machine-qsap-image
-}
-
-build-all-8017-images() {
-  build-8017-image
-  build-8017-perf-image
-  build-8017-user-image
-}
-
-build-all-8017-qsap-images() {
-  build-8017-qsap-image
-  build-8017-qsap-perf-image
-}
-
-# 9607 commands
-function build-9607-perf-image() {
-  unset_bb_env
-  export MACHINE=mdm9607
-  export DISTRO=mdm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-9607-psm-image() {
-  unset_bb_env
-  export MACHINE=mdm9607
-  export PRODUCT=psm
-  cdbitbake machine-psm-image
-}
-
-function build-9607-image() {
-  unset_bb_env
-  export MACHINE=mdm9607
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-build-all-9607-images() {
-  build-9607-image
-  build-9607-perf-image
-#  build-9607-psm-image
-}
-
-# 8909w commands
-function build-8909w-image() {
-  unset_bb_env
-  export MACHINE=msm8909w
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-# 8053 commands
-function build-8053-image() {
-  unset_bb_env
-  export MACHINE=apq8053
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8053-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8053
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-build-all-8053-images() {
-  build-8053-image
-  build-8053-perf-image
-}
-
-# 8053-32 commands
-function build-8053-32-image() {
-  unset_bb_env
-  export MACHINE=apq8053-32
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8053-32-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8053-32
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-8053-32-minimal-image() {
-  unset_bb_env
-  export MACHINE=apq8053-32
-  export PRODUCT=base
-  export VARIANT=minimal
-  cdbitbake machine-minimal-image
-}
-
-function build-8053-32-perf-minimal-image() {
-  unset_bb_env
-  export MACHINE=apq8053-32
-  export DISTRO=msm-perf
-  export VARIANT=perf-minimal
-  cdbitbake machine-minimal-image
-}
-
-build-all-8053-32-images() {
-  build-8053-32-minimal-image
-  build-8053-32-image
-  build-8053-32-perf-minimal-image
-  build-8053-32-perf-image
-}
-
-# 8096 commands
-function build-8096-image() {
-  unset_bb_env
-  export MACHINE=apq8096
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8096-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8096
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-8096-drone-image() {
-  unset_bb_env
-  export MACHINE=apq8096
-  export PRODUCT=drone
-  cdbitbake machine-drone-image
-}
-
-function build-8096-drone-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8096
-  export PRODUCT=drone
-  export DISTRO=msm-perf
-  cdbitbake machine-drone-image
-}
-
-build-all-8096-images() {
-  build-8096-image
-  build-8096-perf-image
-}
-
-build-all-8096-drone-images() {
-  build-8096-drone-image
-  build-8096-drone-perf-image
-}
-
-# sdx20 commands
-function build-sdx20-perf-image() {
-  unset_bb_env
-  export MACHINE=sdx20
-  export DISTRO=mdm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-sdx20-image() {
-  unset_bb_env
-  export MACHINE=sdx20
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-build-all-sdx20-images() {
-  build-sdx20-image
-  build-sdx20-perf-image
-}
-
-# 8098 commands
-function build-8098-image() {
-  unset_bb_env
-  export MACHINE=apq8098
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8098-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8098
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-build-all-8098-images() {
-  build-8098-image
-  build-8098-perf-image
+function build-victor-robot-perf-image() {
+  build-8009-robot-perf-image
 }
 
 # Utility commands
@@ -463,16 +108,16 @@ buildclean() {
 
 # Lists only those build commands that are:
 #   * prefixed with function keyword
-#   * name starts with build-
+#   * name starts with build-victor
 
 list-build-commands()
 {
     echo
-    echo "Convenience commands for building images:"
+    echo "Convenience commands for building Victor images:"
     local script_file="$WS/poky/build/conf/set_bb_env.sh"
 
     while IFS= read line; do
-        if echo $line | grep -q "^function[[:blank:]][[:blank:]]*build-"; then
+        if echo $line | grep -q "^function[[:blank:]][[:blank:]]*build-victor"; then
             local delim_string=$(echo $line | cut -d'(' -f1)
             echo "   $(echo $delim_string|awk -F "[[:blank:]]*" '{print $2}')"
         fi
