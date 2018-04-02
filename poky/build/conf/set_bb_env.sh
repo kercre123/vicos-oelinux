@@ -67,8 +67,8 @@ alias goout='croot && cd poky/build/tmp-glibc/deploy/images/$MACHINE'
 # dynamic workspace layer functionality.
 python $scriptdir/get_bblayers.py ${WS}/poky \"meta*\" > $scriptdir/bblayers.conf
 
-# Victor commands
-function build-victor-perf-image() {
+# 8009 commands
+function build-8009-perf-image() {
   unset_bb_env
   export MACHINE=apq8009
   export DISTRO=msm-perf
@@ -76,7 +76,7 @@ function build-victor-perf-image() {
   cdbitbake machine-image
 }
 
-function build-victor-user-image() {
+function build-8009-user-image() {
   unset_bb_env
   export MACHINE=apq8009
   export DISTRO=msm-user
@@ -85,26 +85,26 @@ function build-victor-user-image() {
 }
 
 
-function build-victor-image() {
+function build-8009-image() {
   unset_bb_env
   export MACHINE=apq8009
   export PRODUCT=base
   cdbitbake machine-image
 }
 
-build-all-victor-images() {
-  build-victor-image
-  build-victor-perf-image
+build-all-8009-images() {
+  build-8009-image
+  build-8009-perf-image
 }
 
-function build-victor-robot-image() {
+function build-8009-robot-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
   export PRODUCT=robot
   cdbitbake machine-robot-image
 }
 
-function build-victor-robot-perf-image() {
+function build-8009-robot-perf-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
   export DISTRO=msm-perf
@@ -113,21 +113,21 @@ function build-victor-robot-perf-image() {
   cdbitbake machine-robot-image
 }
 
-function build-victor-robot-dummy-image() {
+function build-8009-robot-dummy-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
   export PRODUCT=base
   cdbitbake machine-image
 }
 
-function build-victor-robot-rome-image() {
+function build-8009-robot-rome-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
   export PRODUCT=robot-rome
   cdbitbake machine-robot-image
 }
 
-function build-victor-robot-rome-perf-image() {
+function build-8009-robot-rome-perf-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
   export DISTRO=msm-perf
@@ -136,16 +136,16 @@ function build-victor-robot-rome-perf-image() {
   cdbitbake machine-robot-image
 }
 
-build-all-victor-robot-images() {
-  build-victor-robot-image
-  build-victor-robot-perf-image
-  build-victor-robot-rome-image
-  build-victor-robot-rome-perf-image
+build-all-8009-robot-images() {
+  build-8009-robot-image
+  build-8009-robot-perf-image
+  build-8009-robot-rome-image
+  build-8009-robot-rome-perf-image
 }
 
-build-all-victor-drone-images() {
-  build-victor-drone-image
-  build-victor-drone-perf-image
+build-all-8009-drone-images() {
+  build-8009-drone-image
+  build-8009-drone-perf-image
 }
 
 # Utility commands
