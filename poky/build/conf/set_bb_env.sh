@@ -89,6 +89,13 @@ build-all-8009-robot-images() {
   build-8009-robot-perf-image
 }
 
+function build-victor-robot-image() {
+  build-8009-robot-image
+}
+
+function build-victor-robot-perf-image() {
+  build-8009-robot-perf-image
+}
 
 # Utility commands
 buildclean() {
@@ -101,16 +108,16 @@ buildclean() {
 
 # Lists only those build commands that are:
 #   * prefixed with function keyword
-#   * name starts with build-
+#   * name starts with build-victor
 
 list-build-commands()
 {
     echo
-    echo "Convenience commands for building images:"
+    echo "Convenience commands for building Victor images:"
     local script_file="$WS/poky/build/conf/set_bb_env.sh"
 
     while IFS= read line; do
-        if echo $line | grep -q "^function[[:blank:]][[:blank:]]*build-"; then
+        if echo $line | grep -q "^function[[:blank:]][[:blank:]]*build-victor"; then
             local delim_string=$(echo $line | cut -d'(' -f1)
             echo "   $(echo $delim_string|awk -F "[[:blank:]]*" '{print $2}')"
         fi
