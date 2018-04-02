@@ -74,6 +74,7 @@ int size_from_channelarray(struct iio_channel_info *channels, int num_channels)
 
 void print1byte(uint8_t input, struct iio_channel_info *info)
 {
+	printf(">> %s - processing %s \n", __FUNCTION__, info->name);
 	/*
 	 * Shift before conversion to avoid sign extension
 	 * of left aligned data
@@ -87,10 +88,12 @@ void print1byte(uint8_t input, struct iio_channel_info *info)
 	} else {
 		printf("%05f ", ((float)input + info->offset) * info->scale);
 	}
+	printf("\n");
 }
 
 void print2byte(uint16_t input, struct iio_channel_info *info)
 {
+	printf(">> %s - processing %s \n", __FUNCTION__, info->name);
 	/* First swap if incorrect endian */
 	if (info->be)
 		input = be16toh(input);
@@ -110,10 +113,12 @@ void print2byte(uint16_t input, struct iio_channel_info *info)
 	} else {
 		printf("%05f ", ((float)input + info->offset) * info->scale);
 	}
+	printf("\n");
 }
 
 void print4byte(uint32_t input, struct iio_channel_info *info)
 {
+	printf(">> %s - processing %s \n", __FUNCTION__, info->name);
 	/* First swap if incorrect endian */
 	if (info->be)
 		input = be32toh(input);
@@ -133,10 +138,12 @@ void print4byte(uint32_t input, struct iio_channel_info *info)
 	} else {
 		printf("%05f ", ((float)input + info->offset) * info->scale);
 	}
+	printf("\n");
 }
 
 void print8byte(uint64_t input, struct iio_channel_info *info)
 {
+	printf(">> %s - processing %s \n", __FUNCTION__, info->name);
 	/* First swap if incorrect endian */
 	if (info->be)
 		input = be64toh(input);
@@ -161,6 +168,7 @@ void print8byte(uint64_t input, struct iio_channel_info *info)
 	} else {
 		printf("%05f ", ((float)input + info->offset) * info->scale);
 	}
+	printf("\n");
 }
 
 /**
@@ -176,8 +184,11 @@ void process_scan(char *data,
 		  int num_channels)
 {
 	int k;
+	
+	printf(">> %s - processing %d channels\n", __FUNCTION__, num_channels);
 
-	for (k = 0; k < num_channels; k++)
+	for (k = 0; k < num_channels; k++) {
+		printf("Processing channel %s number of bytes %d \n", channels[k].name, channels[k].bytes);
 		switch (channels[k].bytes) {
 			/* only a few cases implemented so far */
 		case 1:
@@ -197,9 +208,10 @@ void process_scan(char *data,
 				   &channels[k]);
 			break;
 		default:
+			printf("Unhandled case\n");
 			break;
 		}
-	printf("\n");
+	}
 }
 
 static int enable_disable_all_channels(char *dev_dir_name, int enable)
@@ -255,6 +267,7 @@ void print_usage(void)
 		"  --device-name -n <name>\n"
 		"  --device-num -N <num>\n"
 		"        Set device by name or number (mandatory)\n"
+		"  -x 	      Create a trigger\n"
 		"  --trigger-name -t <name>\n"
 		"  --trigger-num -T <num>\n"
 		"        Set trigger by name or number\n"
@@ -355,7 +368,7 @@ int main(int argc, char **argv)
 
 	register_cleanup();
 
-	while ((c = getopt_long(argc, argv, "aAc:egl:n:N:t:T:w:?", longopts,
+	while ((c = getopt_long(argc, argv, "aAc:egl:n:N:xt:T:w:?", longopts,
 				NULL)) != -1) {
 		switch (c) {
 		case 'a':
@@ -399,6 +412,14 @@ int main(int argc, char **argv)
 				ret = -errno;
 				goto error;
 			}
+			break;
+		case 'x':
+			printf("Creating trigger\n");
+			add_trigger(1);
+			break;
+		case 'X':
+			printf("removing trigger\n");
+			remove_trigger(1);
 			break;
 		case 't':
 			trigger_name = strdup(optarg);
