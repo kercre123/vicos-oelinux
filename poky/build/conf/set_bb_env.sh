@@ -68,35 +68,6 @@ alias goout='croot && cd poky/build/tmp-glibc/deploy/images/$MACHINE'
 python $scriptdir/get_bblayers.py ${WS}/poky \"meta*\" > $scriptdir/bblayers.conf
 
 # 8009 commands
-function build-8009-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8009
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  cdbitbake machine-image
-}
-
-function build-8009-user-image() {
-  unset_bb_env
-  export MACHINE=apq8009
-  export DISTRO=msm-user
-  export VARIANT=user
-  cdbitbake machine-image
-}
-
-
-function build-8009-image() {
-  unset_bb_env
-  export MACHINE=apq8009
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-build-all-8009-images() {
-  build-8009-image
-  build-8009-perf-image
-}
-
 function build-8009-robot-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
@@ -113,40 +84,11 @@ function build-8009-robot-perf-image() {
   cdbitbake machine-robot-image
 }
 
-function build-8009-robot-dummy-image() {
-  unset_bb_env
-  export MACHINE=apq8009-robot
-  export PRODUCT=base
-  cdbitbake machine-image
-}
-
-function build-8009-robot-rome-image() {
-  unset_bb_env
-  export MACHINE=apq8009-robot
-  export PRODUCT=robot-rome
-  cdbitbake machine-robot-image
-}
-
-function build-8009-robot-rome-perf-image() {
-  unset_bb_env
-  export MACHINE=apq8009-robot
-  export DISTRO=msm-perf
-  export VARIANT=perf
-  export PRODUCT=robot-rome
-  cdbitbake machine-robot-image
-}
-
 build-all-8009-robot-images() {
   build-8009-robot-image
   build-8009-robot-perf-image
-  build-8009-robot-rome-image
-  build-8009-robot-rome-perf-image
 }
 
-build-all-8009-drone-images() {
-  build-8009-drone-image
-  build-8009-drone-perf-image
-}
 
 # Utility commands
 buildclean() {
