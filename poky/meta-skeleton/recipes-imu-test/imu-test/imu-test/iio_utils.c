@@ -16,6 +16,8 @@
 #include "iio_utils.h"
 
 const char *iio_dir = "/sys/bus/iio/devices/";
+const char *iio_sysfs_trigger = "/sys/bus/iio/devices/iio_sysfs_trigger";
+
 
 static char * const iio_direction[] = {
 	"in",
@@ -991,4 +993,14 @@ error_free:
 	free(temp);
 
 	return ret;
+}
+
+int add_trigger(int trig)
+{
+	return _write_sysfs_int("add_trigger", iio_sysfs_trigger, trig, 0);
+}
+
+int remove_trigger(int trig)
+{
+	return _write_sysfs_int("remove_trigger", iio_sysfs_trigger, trig, 0);
 }
