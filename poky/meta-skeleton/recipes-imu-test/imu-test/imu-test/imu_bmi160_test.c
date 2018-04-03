@@ -36,6 +36,10 @@
 #include <signal.h>
 #include "iio_utils.h"
 
+#define RADIANS_PER_DEGREE ((M_PI*2.0)/360.0)
+
+#define MMPS2_PER_GEE    (9810/1.0)
+
 /**
  * enum autochan - state for the automatic channel enabling mechanism
  */
@@ -81,6 +85,7 @@ void print1byte(uint8_t input, struct iio_channel_info *info)
 	 */
 	input >>= info->shift;
 	input &= info->mask;
+	printf("scale %05f\n", info->scale);
 	if (info->is_signed) {
 		int8_t val = (int8_t)(input << (8 - info->bits_used)) >>
 			     (8 - info->bits_used);
@@ -106,6 +111,7 @@ void print2byte(uint16_t input, struct iio_channel_info *info)
 	 */
 	input >>= info->shift;
 	input &= info->mask;
+	printf("scale %05f\n", info->scale);
 	if (info->is_signed) {
 		int16_t val = (int16_t)(input << (16 - info->bits_used)) >>
 			      (16 - info->bits_used);
@@ -131,6 +137,7 @@ void print4byte(uint32_t input, struct iio_channel_info *info)
 	 */
 	input >>= info->shift;
 	input &= info->mask;
+	printf("scale %05f\n", info->scale);
 	if (info->is_signed) {
 		int32_t val = (int32_t)(input << (32 - info->bits_used)) >>
 			      (32 - info->bits_used);
@@ -156,6 +163,7 @@ void print8byte(uint64_t input, struct iio_channel_info *info)
 	 */
 	input >>= info->shift;
 	input &= info->mask;
+	printf("scale %05f\n", info->scale);
 	if (info->is_signed) {
 		int64_t val = (int64_t)(input << (64 - info->bits_used)) >>
 			      (64 - info->bits_used);
@@ -268,6 +276,7 @@ void print_usage(void)
 		"  --device-num -N <num>\n"
 		"        Set device by name or number (mandatory)\n"
 		"  -x 	      Create a trigger\n"
+		"  -X 	      Remove a trigger\n"
 		"  --trigger-name -t <name>\n"
 		"  --trigger-num -T <num>\n"
 		"        Set trigger by name or number\n"
@@ -368,7 +377,7 @@ int main(int argc, char **argv)
 
 	register_cleanup();
 
-	while ((c = getopt_long(argc, argv, "aAc:egl:n:N:xt:T:w:?", longopts,
+	while ((c = getopt_long(argc, argv, "aAc:egl:n:N:xXt:T:w:?", longopts,
 				NULL)) != -1) {
 		switch (c) {
 		case 'a':
@@ -416,11 +425,11 @@ int main(int argc, char **argv)
 		case 'x':
 			printf("Creating trigger\n");
 			add_trigger(1);
-			break;
+			return 0;
 		case 'X':
 			printf("removing trigger\n");
 			remove_trigger(1);
-			break;
+			return 0;
 		case 't':
 			trigger_name = strdup(optarg);
 			break;
