@@ -2005,6 +2005,7 @@ bool DisconnectGattPeer(int conn_id)
 
 void DisconnectGattPeerByAddress(const std::string& address)
 {
+  logv("btstack - DisconnectGattPeerByAddress(%s)", address.c_str());
   std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   if (sBtGattClientIf <= 0) {
     return;

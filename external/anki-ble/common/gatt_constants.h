@@ -68,6 +68,7 @@ const int kGattErrorUnlikely = 0x0e;
 const int kGattErrorInsufficientEncr = 0x0f;
 const int kGattErrorUnsupportedGrpType = 0x10;
 const int kGattErrorInsufficientResources = 0x11;
+const int kGattConnTerminateLocalHost = 0x16;
 const int kGattErrorIllegalParameter = 0x87;
 const int kGattErrorNoResources = 0x80;
 const int kGattErrorInternalError = 0x81;
