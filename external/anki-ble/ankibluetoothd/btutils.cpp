@@ -166,6 +166,8 @@ std::string bt_status_t_to_string(const bt_status_t status) {
       {
         int int_status = (int) status;
         switch(int_status) {
+          case kGattConnTerminateLocalHost:
+            return "GATT_CONN_TERMINATE_LOCAL_HOST";
           case kGattErrorIllegalParameter:
             return "GATT_ERROR_ILLEGAL_PARAMETER";
           case kGattErrorNoResources:

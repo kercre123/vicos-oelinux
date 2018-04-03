@@ -507,6 +507,7 @@ void Agent::ConnectToPeripheral(const int sockfd, const std::string& address) {
 }
 
 void Agent::OnPeerClose(const int sockfd) {
+  logv("agent - OnPeerClose(sockfd = %d)", sockfd);
   IPCServer::OnPeerClose(sockfd);
   auto search = outbound_connection_addresses_.find(sockfd);
   if (search != outbound_connection_addresses_.end()) {
