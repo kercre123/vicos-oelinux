@@ -812,6 +812,17 @@ void bta_gattc_close(tBTA_GATTC_CLCB *p_clcb, tBTA_GATTC_DATA *p_data)
     if (p_data->hdr.event == BTA_GATTC_API_CLOSE_EVT)
     {
         cb_data.close.status = GATT_Disconnect(p_data->hdr.layer_specific);
+        if (cb_data.close.status == GATT_SUCCESS
+            || cb_data.close.status == GATT_CONN_TERMINATE_LOCAL_HOST)
+        {
+          /* VIC-2207 Try extra hard to force the chip to disconnect
+           * from the BLE peripheral that we no longer wish to be
+           * connected to
+           */
+          GATT_SetIdleTimeout(cb_data.close.remote_bda,
+                              GATT_LINK_IDLE_TIMEOUT_WHEN_NO_APP,
+                              p_clcb->transport);
+        }
     }
     else if (p_data->hdr.event == BTA_GATTC_INT_DISCONN_EVT)
     {
