@@ -30,6 +30,7 @@
 UNBRICK_KEY="anki.unbrick"
 WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
+CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 
 make_userdata() {
   if $1; then
@@ -42,6 +43,12 @@ make_userdata() {
   # to make it work.
   mkdir -p /data/usb
   mkdir -p /data/misc/camera
+  mkdir -p /data/misc/bluetooth
+  if [ ! -e $CONNMAN_DONE_TOKEN ]; then
+    mkdir -p /data/lib/connman/
+    cp -rf /var/lib/connman/* /data/lib/connman
+    touch $CONNMAN_DONE_TOKEN
+  fi
 }
 
 make_tomlog() {

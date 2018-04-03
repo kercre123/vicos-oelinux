@@ -2,8 +2,6 @@
 
 set -e
 
-mkdir -p /data/misc/bluetooth
-
 case "$1" in
   start)
     echo -n "Starting btproperty: "

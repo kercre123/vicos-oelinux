@@ -9,6 +9,7 @@ SRC_URI   = "file://anki/victor"
 SRCREV   = "${AUTOREV}"
 S        = "${WORKDIR}/victor"
 BUILDSRC = "${S}/_build/android/Release"
+VICOSSRC = "${S}/_build/vicos/Release"
 
 export SSH_AUTH_SOCK
 
@@ -20,10 +21,12 @@ do_compile () {
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
    ./project/victor/build-victor.sh -p android -c Release -F factoryTest
+   ./project/victor/build-victor.sh -p vicos -c Release
 }
 
 do_install () {
     ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
+    ${S}/project/victor/scripts/install.sh -k ${VICOSSRC} ${D}
 }
 
 FILES_${PN} += "anki/"
