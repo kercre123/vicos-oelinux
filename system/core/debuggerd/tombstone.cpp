@@ -53,7 +53,10 @@
 
 #define STACK_WORDS 16
 
-#define MAX_TOMBSTONES  10
+// <anki> VIC-2127: Allow configurable max tombstones </anki>
+#define MAX_TOMBSTONES_PROPERTY "service.debuggerd.tombstones"
+#define MAX_TOMBSTONES 10
+
 #define TOMBSTONE_DIR   "/data/tombstones"
 #define TOMBSTONE_TEMPLATE (TOMBSTONE_DIR"/tombstone_%02d")
 
@@ -699,6 +702,22 @@ static bool dump_crash(log_t* log, pid_t pid, pid_t tid, int signal, int si_code
   return detach_failed;
 }
 
+//
+// <anki>
+// VIC-2127: Allow configurable property debuggerd.max_tombstones
+// </anki>
+//
+static int get_max_tombstones() {
+  char max_tombstones[PROPERTY_VALUE_MAX] = "";
+
+  property_get(MAX_TOMBSTONES_PROPERTY, max_tombstones, "");
+  if (isdigit(max_tombstones[0])) {
+    return atoi(max_tombstones);
+  }
+  return MAX_TOMBSTONES;
+}
+
+
 // find_and_open_tombstone - find an available tombstone slot, if any, of the
 // form tombstone_XX where XX is 00 to MAX_TOMBSTONES-1, inclusive. If no
 // file is available, we reuse the least-recently-modified file.
@@ -710,7 +729,8 @@ static char* find_and_open_tombstone(int* fd) {
   char path[128];
   int oldest = -1;
   struct stat oldest_sb;
-  for (int i = 0; i < MAX_TOMBSTONES; i++) {
+  const int max_tombstones = get_max_tombstones();
+  for (int i = 0; i < max_tombstones; i++) {
     snprintf(path, sizeof(path), TOMBSTONE_TEMPLATE, i);
 
     struct stat sb;
