@@ -105,3 +105,6 @@ const int kGattConnectionIntervalMinimumDefault = 24; /* 30ms = 24 * 1.25ms */
 const int kGattConnectionIntervalMaximumDefault = 40; /* 50ms = 40 * 1.25ms */
 const int kGattConnectionLatencyDefault = 0;
 const int kGattConnectionTimeoutDefault = 2000;
+
+const int kGattConnectionIntervalHighPriorityMinimum = 9; /* 11.25ms = 9 * 1.25ms */
+const int kGattConnectionIntervalHighPriorityMaximum = 12; /* 15ms = 12 * 1.25ms */

@@ -141,8 +141,8 @@ void VicCubeTool::OnScanResults(int error,
 void VicCubeTool::ConnectToCube() {
   std::cout << "Connecting to " << address_ << "....." << std::endl;
   RequestConnectionParameterUpdate(address_,
-                                   16, /* 20ms = 16 * 1.25ms */
-                                   16, /* 20ms = 16 * 1.25ms */
+                                   kGattConnectionIntervalHighPriorityMinimum,
+                                   kGattConnectionIntervalHighPriorityMaximum,
                                    kGattConnectionLatencyDefault,
                                    kGattConnectionTimeoutDefault);
   ConnectToPeripheral(address_);
@@ -211,8 +211,8 @@ void VicCubeTool::OnCharacteristicReadResult(const int connection_id,
     cube_model_number_ = std::string(data.begin(), data.end());
     std::cout << "Cube Model Number : " << cube_model_number_ << std::endl;
     RequestConnectionParameterUpdate(address_,
-                                     16, /* 20ms = 16 * 1.25ms */
-                                     16, /* 20ms = 16 * 1.25ms */
+                                     kGattConnectionIntervalHighPriorityMinimum,
+                                     kGattConnectionIntervalHighPriorityMaximum,
                                      kGattConnectionLatencyDefault,
                                      kGattConnectionTimeoutDefault);
 
