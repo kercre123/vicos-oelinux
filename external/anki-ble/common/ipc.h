@@ -65,7 +65,9 @@ enum class IPCMessageType {
     CharacteristicReadRequest,
     OnCharacteristicReadResult,
     DescriptorReadRequest,
-    OnDescriptorReadResult
+    OnDescriptorReadResult,
+    RequestConnectionParameterUpdate,
+    OnRequestConnectionParameterUpdateResult
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -207,6 +209,19 @@ typedef struct __attribute__ ((__packed__)) OnOutboundConnectionChangeArgs {
   int num_gatt_db_records;
   GattDbRecord records[];
 } OnOutboundConnectionChangeArgs;
+
+typedef struct __attribute__ ((__packed__)) RequestConnectionParameterUpdateArgs {
+  char address[kAddressSize];
+  int min_interval;
+  int max_interval;
+  int latency;
+  int timeout;
+} RequestConnectionParameterUpdateArgs;
+
+typedef struct __attribute__ ((__packed__)) OnRequestConnectionParameterUpdateResultArgs {
+  char address[kAddressSize];
+  int status;
+} OnRequestConnectionParameterUpdateResultArgs;
 
 class IPCEndpoint {
  public:

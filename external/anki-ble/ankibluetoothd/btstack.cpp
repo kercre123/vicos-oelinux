@@ -2126,6 +2126,34 @@ bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct)
   return true;
 }
 
+int RequestConnectionParameterUpdate(const std::string& address,
+                                     int min_interval,
+                                     int max_interval,
+                                     int latency,
+                                     int timeout)
+{
+  logv("RequestConnectionParameterUpdate(address = %s, min_interval = %d, max_interval = %d, latency = %d, timeout = %d)",
+       address.c_str(), min_interval, max_interval, latency, timeout);
+  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
+  if (!sBtGattInterface || !sBtGattInterface->client) {
+    return kGattStatusFail;
+  }
+
+  bt_bdaddr_t bda;
+  bt_bdaddr_t_from_string(address, &bda);
+  bt_status_t status = sBtGattInterface->client->conn_parameter_update(&bda,
+                                                                       min_interval,
+                                                                       max_interval,
+                                                                       latency,
+                                                                       timeout);
+  if (status != BT_STATUS_SUCCESS) {
+    loge("Failed to change connection parameters for %s. status = %s",
+         address.c_str(), bt_status_t_to_string(status).c_str());
+  }
+
+  return (int) status;
+}
+
 
 } // namespace BluetoothStack
 } // namespace Anki

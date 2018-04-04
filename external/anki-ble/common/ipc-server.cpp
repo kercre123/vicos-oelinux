@@ -189,6 +189,19 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
         ConnectToPeripheral(sockfd, std::string(args->address));
       }
       break;
+    case IPCMessageType::RequestConnectionParameterUpdate:
+      logv("ipc-server: RequestConnectionParameterUpdate received");
+      {
+        RequestConnectionParameterUpdateArgs* args =
+            (RequestConnectionParameterUpdateArgs *) data.data();
+        RequestConnectionParameterUpdate(sockfd,
+                                         std::string(args->address),
+                                         args->min_interval,
+                                         args->max_interval,
+                                         args->latency,
+                                         args->timeout);
+      }
+      break;
     default:
       loge("ipc-server: Unknown IPC message (%d)", (int) type);
       break;
@@ -307,6 +320,19 @@ void IPCServer::OnScanResults(int error, const std::vector<ScanResultRecord>& re
                         args_length,
                         (uint8_t *) args);
   free(args);
+}
+
+void IPCServer::OnRequestConnectionParameterUpdateResult(const int sockfd,
+                                                         const std::string& address,
+                                                         const int status)
+{
+  OnRequestConnectionParameterUpdateResultArgs args = {0};
+  (void) strlcpy(args.address, address.c_str(), sizeof(args.address));
+  args.status = status;
+  SendMessageToPeer(sockfd,
+                    IPCMessageType::OnRequestConnectionParameterUpdateResult,
+                    sizeof(args),
+                    (uint8_t *) &args);
 }
 
 void IPCServer::OnOutboundConnectionChange(const std::string& address,

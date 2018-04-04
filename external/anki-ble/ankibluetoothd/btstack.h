@@ -56,5 +56,12 @@ bool StopAdvertisement();
 bool SetScanning(const bool enable);
 bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct);
 
+int RequestConnectionParameterUpdate(const std::string& address,
+                                     int min_interval,
+                                     int max_interval,
+                                     int latency,
+                                     int timeout);
+
+
 } // namespace BluetoothStack
 } // namespace Anki
