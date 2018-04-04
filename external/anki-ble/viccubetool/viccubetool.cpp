@@ -140,11 +140,6 @@ void VicCubeTool::OnScanResults(int error,
 
 void VicCubeTool::ConnectToCube() {
   std::cout << "Connecting to " << address_ << "....." << std::endl;
-  RequestConnectionParameterUpdate(address_,
-                                   kGattConnectionIntervalHighPriorityMinimum,
-                                   kGattConnectionIntervalHighPriorityMaximum,
-                                   kGattConnectionLatencyDefault,
-                                   kGattConnectionTimeoutDefault);
   ConnectToPeripheral(address_);
 }
 
