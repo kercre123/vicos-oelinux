@@ -506,6 +506,22 @@ void Agent::ConnectToPeripheral(const int sockfd, const std::string& address) {
   }
 }
 
+void Agent::RequestConnectionParameterUpdate(const int sockfd,
+                                             const std::string& address,
+                                             int min_interval,
+                                             int max_interval,
+                                             int latency,
+                                             int timeout)
+{
+  int status = BluetoothStack::RequestConnectionParameterUpdate(address,
+                                                                min_interval,
+                                                                max_interval,
+                                                                latency,
+                                                                timeout);
+  OnRequestConnectionParameterUpdateResult(sockfd, address, status);
+}
+
+
 void Agent::OnPeerClose(const int sockfd) {
   logv("agent - OnPeerClose(sockfd = %d)", sockfd);
   IPCServer::OnPeerClose(sockfd);

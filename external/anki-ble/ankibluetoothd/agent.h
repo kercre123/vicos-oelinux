@@ -51,6 +51,12 @@ class Agent : public IPCServer {
   virtual void StopScan(const int sockfd);
   virtual void ConnectToPeripheral(const int sockfd, const std::string& address);
   virtual void OnPeerClose(const int sockfd);
+  virtual void RequestConnectionParameterUpdate(const int sockfd,
+                                                const std::string& address,
+                                                int min_interval,
+                                                int max_interval,
+                                                int latency,
+                                                int timeout);
 
 
  private:

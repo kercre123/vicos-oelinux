@@ -15,6 +15,7 @@
 #include "byte_vector.h"
 #include "crc32.h"
 #include "fileutils.h"
+#include "gatt_constants.h"
 #include "include_ev.h"
 #include "log.h"
 #include "stringutils.h"
@@ -204,6 +205,12 @@ void VicCubeTool::OnCharacteristicReadResult(const int connection_id,
   if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kModelNumberString_128_BIT_UUID)) {
     cube_model_number_ = std::string(data.begin(), data.end());
     std::cout << "Cube Model Number : " << cube_model_number_ << std::endl;
+    RequestConnectionParameterUpdate(address_,
+                                     kGattConnectionIntervalHighPriorityMinimum,
+                                     kGattConnectionIntervalHighPriorityMaximum,
+                                     kGattConnectionLatencyDefault,
+                                     kGattConnectionTimeoutDefault);
+
     if (flash_cube_after_connect_) {
       if (use_dvt1_flasher_) {
         FlashCubeDVT1(path_to_firmware_);

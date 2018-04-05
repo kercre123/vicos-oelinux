@@ -44,6 +44,9 @@ class IPCServer : public IPCEndpoint {
                               const std::string& descriptor_uuid,
                               const std::vector<uint8_t>& data);
   void OnScanResults(int error, const std::vector<ScanResultRecord>& records);
+  void OnRequestConnectionParameterUpdateResult(const int sockfd,
+                                                const std::string& address,
+                                                const int status);
   virtual void OnOutboundConnectionChange(const std::string& address,
                                           const int connected,
                                           const int connection_id,
@@ -69,7 +72,12 @@ class IPCServer : public IPCEndpoint {
   virtual void StartScan(const int sockfd, const std::string& serviceUUID) {}
   virtual void StopScan(const int sockfd) {}
   virtual void ConnectToPeripheral(const int sockfd, const std::string& address) {}
-
+  virtual void RequestConnectionParameterUpdate(const int sockfd,
+                                                const std::string& address,
+                                                int min_interval,
+                                                int max_interval,
+                                                int latency,
+                                                int timeout) {}
  private:
   void AcceptWatcherCallback(ev::io& w, int revents);
   ev::io* accept_watcher_;
