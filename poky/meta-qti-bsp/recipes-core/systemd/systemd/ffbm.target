@@ -29,7 +29,6 @@
 Description=FFBM System
 Documentation=man:systemd.special(7)
 Requires=basic.target
-Conflicts=rescue.service rescue.target
-After=basic.target rescue.service rescue.target
+After=basic.target
 AllowIsolate=yes
 

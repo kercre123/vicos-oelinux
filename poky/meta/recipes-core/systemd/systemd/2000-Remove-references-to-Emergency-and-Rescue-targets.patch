@@ -1,0 +1,205 @@
+From e72ef2c1ceab687720054a82fb820c29ec5ac5a4 Mon Sep 17 00:00:00 2001
+From: Brian Chapados <chapados@anki.com>
+Date: Tue, 27 Mar 2018 16:38:11 -0700
+Subject: [PATCH] Remove references to Emergency and Rescue targets
+
+---
+ units/graphical.target              | 3 +--
+ units/initrd-cleanup.service.in     | 2 --
+ units/initrd-fs.target              | 2 --
+ units/initrd-parse-etc.service.in   | 2 --
+ units/initrd-root-fs.target         | 2 --
+ units/initrd-switch-root.service.in | 2 --
+ units/initrd-switch-root.target     | 2 +-
+ units/initrd.target                 | 4 +---
+ units/local-fs.target               | 2 --
+ units/machines.target               | 3 +--
+ units/multi-user.target             | 3 +--
+ units/sysinit.target                | 3 +--
+ 12 files changed, 6 insertions(+), 24 deletions(-)
+
+diff --git a/units/graphical.target b/units/graphical.target
+index 87be97e..93b708b 100644
+--- a/units/graphical.target
++++ b/units/graphical.target
+@@ -8,8 +8,7 @@
+ [Unit]
+ Description=Graphical Interface
+ Documentation=man:systemd.special(7)
+ Requires=multi-user.target
+ Wants=display-manager.service
+-Conflicts=rescue.service rescue.target
+-After=multi-user.target rescue.service rescue.target display-manager.service
++After=multi-user.target display-manager.service
+ AllowIsolate=yes
+diff --git a/units/initrd-cleanup.service.in b/units/initrd-cleanup.service.in
+index b1dda16..6ffe5dc 100644
+--- a/units/initrd-cleanup.service.in
++++ b/units/initrd-cleanup.service.in
+@@ -7,12 +7,10 @@
+ 
+ [Unit]
+ Description=Cleaning Up and Shutting Down Daemons
+ DefaultDependencies=no
+ ConditionPathExists=/etc/initrd-release
+-OnFailure=emergency.target
+-OnFailureJobMode=replace-irreversibly
+ After=initrd-root-fs.target initrd-fs.target initrd.target
+ 
+ [Service]
+ Type=oneshot
+ ExecStart=@rootbindir@/systemctl --no-block isolate initrd-switch-root.target
+diff --git a/units/initrd-fs.target b/units/initrd-fs.target
+index 7ec838a..4254b6e 100644
+--- a/units/initrd-fs.target
++++ b/units/initrd-fs.target
+@@ -6,11 +6,9 @@
+ #  (at your option) any later version.
+ 
+ [Unit]
+ Description=Initrd File Systems
+ Documentation=man:systemd.special(7)
+-OnFailure=emergency.target
+-OnFailureJobMode=replace-irreversibly
+ ConditionPathExists=/etc/initrd-release
+ After=initrd-parse-etc.service
+ DefaultDependencies=no
+ Conflicts=shutdown.target
+diff --git a/units/initrd-parse-etc.service.in b/units/initrd-parse-etc.service.in
+index 42c059b..44cbeb3 100644
+--- a/units/initrd-parse-etc.service.in
++++ b/units/initrd-parse-etc.service.in
+@@ -8,12 +8,10 @@
+ [Unit]
+ Description=Reload Configuration from the Real Root
+ DefaultDependencies=no
+ Requires=initrd-root-fs.target
+ After=initrd-root-fs.target
+-OnFailure=emergency.target
+-OnFailureJobMode=replace-irreversibly
+ ConditionPathExists=/etc/initrd-release
+ 
+ [Service]
+ Type=oneshot
+ ExecStartPre=-@rootbindir@/systemctl daemon-reload
+diff --git a/units/initrd-root-fs.target b/units/initrd-root-fs.target
+index 64f0a92..16e0cdc 100644
+--- a/units/initrd-root-fs.target
++++ b/units/initrd-root-fs.target
+@@ -7,9 +7,7 @@
+ 
+ [Unit]
+ Description=Initrd Root File System
+ Documentation=man:systemd.special(7)
+ ConditionPathExists=/etc/initrd-release
+-OnFailure=emergency.target
+-OnFailureJobMode=replace-irreversibly
+ DefaultDependencies=no
+ Conflicts=shutdown.target
+diff --git a/units/initrd-switch-root.service.in b/units/initrd-switch-root.service.in
+index 82893da..382c062 100644
+--- a/units/initrd-switch-root.service.in
++++ b/units/initrd-switch-root.service.in
+@@ -7,12 +7,10 @@
+ 
+ [Unit]
+ Description=Switch Root
+ DefaultDependencies=no
+ ConditionPathExists=/etc/initrd-release
+-OnFailure=emergency.target
+-OnFailureJobMode=replace-irreversibly
+ AllowIsolate=yes
+ 
+ [Service]
+ Type=oneshot
+ # we have to use "--force" here, otherwise systemd would umount /run
+diff --git a/units/initrd-switch-root.target b/units/initrd-switch-root.target
+index f347687..3b0a3e9 100644
+--- a/units/initrd-switch-root.target
++++ b/units/initrd-switch-root.target
+@@ -11,6 +11,6 @@ ConditionPathExists=/etc/initrd-release
+ DefaultDependencies=no
+ Requires=initrd-switch-root.service
+ Before=initrd-switch-root.service
+ AllowIsolate=yes
+ Wants=initrd-udevadm-cleanup-db.service initrd-root-fs.target initrd-fs.target systemd-journald.service
+-After=initrd-udevadm-cleanup-db.service initrd-root-fs.target initrd-fs.target emergency.service emergency.target
++After=initrd-udevadm-cleanup-db.service initrd-root-fs.target initrd-fs.target
+diff --git a/units/initrd.target b/units/initrd.target
+index eae7c70..11c4700 100644
+--- a/units/initrd.target
++++ b/units/initrd.target
+@@ -6,12 +6,10 @@
+ #  (at your option) any later version.
+ 
+ [Unit]
+ Description=Initrd Default Target
+ Documentation=man:systemd.special(7)
+-OnFailure=emergency.target
+-OnFailureJobMode=replace-irreversibly
+ ConditionPathExists=/etc/initrd-release
+ Requires=basic.target
+ Wants=initrd-root-fs.target initrd-fs.target initrd-parse-etc.service
+-After=initrd-root-fs.target initrd-fs.target basic.target rescue.service rescue.target
++After=initrd-root-fs.target initrd-fs.target basic.target
+ AllowIsolate=yes
+diff --git a/units/local-fs.target b/units/local-fs.target
+index d2e5429..f624033 100644
+--- a/units/local-fs.target
++++ b/units/local-fs.target
+@@ -9,7 +9,5 @@
+ Description=Local File Systems
+ Documentation=man:systemd.special(7)
+ DefaultDependencies=no
+ Conflicts=shutdown.target
+ After=local-fs-pre.target
+-OnFailure=emergency.target
+-OnFailureJobMode=replace-irreversibly
+diff --git a/units/machines.target b/units/machines.target
+index 99618a1..0c81d28 100644
+--- a/units/machines.target
++++ b/units/machines.target
+@@ -7,11 +7,10 @@
+ 
+ [Unit]
+ Description=Containers
+ Documentation=man:systemd.special(7)
+ Requires=basic.target
+-Conflicts=rescue.service rescue.target
+-After=basic.target rescue.service rescue.target
++After=basic.target
+ Before=multi-user.target
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/units/multi-user.target b/units/multi-user.target
+index 0f0e5e9..922521d 100644
+--- a/units/multi-user.target
++++ b/units/multi-user.target
+@@ -7,8 +7,7 @@
+ 
+ [Unit]
+ Description=Multi-User System
+ Documentation=man:systemd.special(7)
+ Requires=basic.target
+-Conflicts=rescue.service rescue.target
+-After=basic.target rescue.service rescue.target
++After=basic.target
+ AllowIsolate=yes
+diff --git a/units/sysinit.target b/units/sysinit.target
+index ec33503..1010b7e 100644
+--- a/units/sysinit.target
++++ b/units/sysinit.target
+@@ -6,8 +6,7 @@
+ #  (at your option) any later version.
+ 
+ [Unit]
+ Description=System Initialization
+ Documentation=man:systemd.special(7)
+-Conflicts=emergency.service emergency.target
+ Wants=local-fs.target swap.target
+-After=local-fs.target swap.target emergency.service emergency.target
++After=local-fs.target swap.target
+-- 
+2.1.2
+
