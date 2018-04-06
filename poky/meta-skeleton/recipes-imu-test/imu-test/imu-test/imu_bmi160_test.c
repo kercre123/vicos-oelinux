@@ -34,7 +34,38 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <signal.h>
+#include <string.h>
+#include <math.h>
+
 #include "iio_utils.h"
+
+
+
+
+#define IMU_ACC_RANGE 2.0    // g       [2.11.12: acc_range 2 => +- 2g ]
+#define IMU_GYRO_RANGE 500.0 // deg/sec [2.11.14: gyr_range 2 => +- 500s]
+#define IMU_TEMP_RANGE 64.0 // degC     [2.11.8: 1/pow(2,9) K/LSB.  0x8000/(1<<9)=64]
+#define IMU_TEMP_OFFSET 23.0 //degC     [2.11.8: 0x0000 => 23 C]
+
+
+#define MAX_16BIT_POSITIVE 0x7FFF
+
+/* 
+ *  The input for each axis of acceleration has to be converted to a g value
+ * taken between 0 and <range>  
+ * this is the scaling factor to be applied to the raw data
+*/ 
+#define IMU_ACCEL_SCALE_G ((double)(IMU_ACC_RANGE)/MAX_16BIT_POSITIVE)
+
+/* 
+ *  The input for each axis of gyroscope has to be converted to deg/sec value
+ * taken between 0 and <range>
+ * This is the scaling factor to be applied to the raw data
+*/
+
+#define IMU_GYRO_SCALE_DPS ((double)(IMU_GYRO_RANGE)/MAX_16BIT_POSITIVE)
+
+
 
 #define RADIANS_PER_DEGREE ((M_PI*2.0)/360.0)
 
@@ -79,6 +110,9 @@ int size_from_channelarray(struct iio_channel_info *channels, int num_channels)
 void print1byte(uint8_t input, struct iio_channel_info *info)
 {
 	printf(">> %s - processing %s \n", __FUNCTION__, info->name);
+
+
+
 	/*
 	 * Shift before conversion to avoid sign extension
 	 * of left aligned data
@@ -98,7 +132,34 @@ void print1byte(uint8_t input, struct iio_channel_info *info)
 
 void print2byte(uint16_t input, struct iio_channel_info *info)
 {
+
+	float unit = 1.0L;
+	float scale_factor = 1.0L;
+
+
+	printf("\n\n");
 	printf(">> %s - processing %s \n", __FUNCTION__, info->name);
+	//printf("input = %x ", input);
+	//printf("be = %x ", info->be);
+	//printf("shift = %x ", info->shift);
+	//printf("mask = %x ", info->mask);
+	//printf("scale = %x ", info->scale);
+	//printf("signed = %x ", info->is_signed);
+	//printf("bit_used = %x ", info->bits_used);
+	//printf("offset = %x\n", info->offset);
+
+	if ( strstr(info->name, "anglvel") != NULL)
+	{
+		unit = RADIANS_PER_DEGREE;
+		scale_factor = IMU_GYRO_SCALE_DPS; 
+	}
+
+	if ( strstr(info->name, "accel") != NULL)
+	{
+		unit = MMPS2_PER_GEE;
+		scale_factor = IMU_ACCEL_SCALE_G;
+	}
+
 	/* First swap if incorrect endian */
 	if (info->be)
 		input = be16toh(input);
@@ -111,13 +172,32 @@ void print2byte(uint16_t input, struct iio_channel_info *info)
 	 */
 	input >>= info->shift;
 	input &= info->mask;
-	printf("scale %05f\n", info->scale);
+	//printf("\n");
+	printf("scale_factor %.15f\n ", scale_factor);
+	//printf("iio_scale %05f ", info->scale);
+	//printf("unit %05f ", unit);
 	if (info->is_signed) {
 		int16_t val = (int16_t)(input << (16 - info->bits_used)) >>
 			      (16 - info->bits_used);
-		printf("%05f ", ((float)val + info->offset) * info->scale);
+/*
+ *  We are still investigating how we can deal with the scale returned by the iio driver
+ *  For now and until we figure out the pattern given bu iio driver we use the 
+ * scale factor as defined in our original spidev driver test code
+ * it takes the raw data and applied the scale factor
+*/ 
+#ifdef IIO_SCALE
+		printf("%05f ", ((float)val + info->offset) * info->scale );
+		printf("[%05f] ", (((float)val + info->offset) * info->scale) * unit);
+#else
+		printf("%.15f ", ((float)val + info->offset) * scale_factor );
+#endif
 	} else {
-		printf("%05f ", ((float)input + info->offset) * info->scale);
+#ifdef IIO_SCALE
+		printf("%05f ", ((float)input + info->offset) * info->scale );
+		printf("[%05f] ", ((float)input + info->offset) * info->scale * unit);
+#else
+		printf("%.15f ", ((float)input + info->offset) * scale_factor );
+#endif
 	}
 	printf("\n");
 }
@@ -196,7 +276,7 @@ void process_scan(char *data,
 	printf(">> %s - processing %d channels\n", __FUNCTION__, num_channels);
 
 	for (k = 0; k < num_channels; k++) {
-		printf("Processing channel %s number of bytes %d \n", channels[k].name, channels[k].bytes);
+		//printf("Processing channel %s number of bytes %d \n", channels[k].name, channels[k].bytes);
 		switch (channels[k].bytes) {
 			/* only a few cases implemented so far */
 		case 1:
@@ -483,6 +563,7 @@ int main(int argc, char **argv)
 	}
 	/* Fetch device_name if specified by number */
 	if (!device_name) {
+		printf("Fetch device_name if specified by number\n");
 		device_name = malloc(IIO_MAX_NAME_LENGTH);
 		if (!device_name) {
 			fprintf(stderr, "Failed memory allocation\n");
@@ -667,6 +748,7 @@ int main(int argc, char **argv)
 	}
 
 	scan_size = size_from_channelarray(channels, num_channels);
+	printf("scan_size = %d \n", scan_size);
 	data = malloc(scan_size * buf_len);
 	if (!data) {
 		fprintf(stderr, "Failed memory allocation\n");
@@ -682,6 +764,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Attempt to open non blocking the access dev */
+	printf("Open device in a nonblocking mode\n");
 	fp = open(buffer_access, O_RDONLY | O_NONBLOCK);
 	if (fp == -1) { /* TODO: If it isn't there make the node */
 		ret = -errno;
