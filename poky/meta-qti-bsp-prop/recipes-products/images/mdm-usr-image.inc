@@ -75,10 +75,12 @@ create_usr_yaffs2_img() {
 create_ubi_img() {
    if [ "${BASEPRODUCT}" == "robot" ] || [ "${BASEPRODUCT}" == "robot-rome" ]; then
        create_ubinize_config
-       mkdir ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi
+       mkdir -p ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi
        tar -cvzf ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi.tgz -C ${IMAGE_ROOTFS} .
        tar -xvzf ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi.tgz -C ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi/
-       sed -i -e 's:SELINUX=enforcing:SELINUX=disabled:' ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi/etc/selinux/config
+       if [[ "${DISTRO_FEATURES}" =~ "selinux" ]]; then
+           sed -i -e 's:SELINUX=enforcing:SELINUX=disabled:' ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi/etc/selinux/config
+       fi
        mkfs.ubifs -r ${DEPLOY_DIR_IMAGE}/${MACHINE}.rootfs.ubi/  -o ${OUTPUT_FILE_SYSTEM_UBIFS} ${MKUBIFS_ARGS}
        mkfs.ubifs -r ${USR_IMAGE_ROOTFS} -o ${OUTPUT_FILE_USR_UBIFS} ${MKUBIFS_ARGS}
        ubinize -o ${OUTPUT_FILE_FINAL_UBI} ${UBINIZE_ARGS} ${UBINIZE_CFG}
