@@ -16,6 +16,7 @@
 #include <linux/idr.h>
 #include <linux/kdev_t.h>
 #include <linux/err.h>
+#define DEBUG
 #include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/poll.h>
@@ -145,6 +146,7 @@ static int __init iio_init(void)
 {
 	int ret;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	/* Register sysfs bus */
 	ret  = bus_register(&iio_bus_type);
 	if (ret < 0) {
@@ -170,6 +172,7 @@ error_nothing:
 
 static void __exit iio_exit(void)
 {
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (iio_devt)
 		unregister_chrdev_region(iio_devt, IIO_DEV_MAX);
 	bus_unregister(&iio_bus_type);
@@ -186,6 +189,7 @@ static ssize_t iio_debugfs_read_reg(struct file *file, char __user *userbuf,
 	ssize_t len;
 	int ret;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	ret = indio_dev->info->debugfs_reg_access(indio_dev,
 						  indio_dev->cached_reg_addr,
 						  0, &val);
@@ -204,6 +208,8 @@ static ssize_t iio_debugfs_write_reg(struct file *file,
 	unsigned reg, val;
 	char buf[80];
 	int ret;
+
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 
 	count = min_t(size_t, count, (sizeof(buf)-1));
 	if (copy_from_user(buf, userbuf, count))
@@ -249,6 +255,7 @@ static int iio_device_register_debugfs(struct iio_dev *indio_dev)
 {
 	struct dentry *d;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (indio_dev->info->debugfs_reg_access == NULL)
 		return 0;
 
@@ -293,6 +300,8 @@ static ssize_t iio_read_channel_ext_info(struct device *dev,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	const struct iio_chan_spec_ext_info *ext_info;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
+
 	ext_info = &this_attr->c->ext_info[this_attr->address];
 
 	return ext_info->read(indio_dev, ext_info->private, this_attr->c, buf);
@@ -307,6 +316,8 @@ static ssize_t iio_write_channel_ext_info(struct device *dev,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	const struct iio_chan_spec_ext_info *ext_info;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
+
 	ext_info = &this_attr->c->ext_info[this_attr->address];
 
 	return ext_info->write(indio_dev, ext_info->private,
@@ -319,6 +330,8 @@ ssize_t iio_enum_available_read(struct iio_dev *indio_dev,
 	const struct iio_enum *e = (const struct iio_enum *)priv;
 	unsigned int i;
 	size_t len = 0;
+
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 
 	if (!e->num_items)
 		return 0;
@@ -339,6 +352,7 @@ ssize_t iio_enum_read(struct iio_dev *indio_dev,
 	const struct iio_enum *e = (const struct iio_enum *)priv;
 	int i;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (!e->get)
 		return -EINVAL;
 
@@ -360,6 +374,7 @@ ssize_t iio_enum_write(struct iio_dev *indio_dev,
 	unsigned int i;
 	int ret;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (!e->set)
 		return -EINVAL;
 
@@ -388,6 +403,7 @@ ssize_t iio_format_value(char *buf, unsigned int type, int size, int *vals)
 	unsigned long long tmp;
 	bool scale_db = false;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	switch (type) {
 	case IIO_VAL_INT:
 		return sprintf(buf, "%d\n", vals[0]);
@@ -443,6 +459,7 @@ static ssize_t iio_read_channel_info(struct device *dev,
 	int ret;
 	int val_len = 2;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (indio_dev->info->read_raw_multi)
 		ret = indio_dev->info->read_raw_multi(indio_dev, this_attr->c,
 							INDIO_MAX_RAW_ELEMENTS,
@@ -474,6 +491,7 @@ int iio_str_to_fixpoint(const char *str, int fract_mult,
 	int i = 0, f = 0;
 	bool integer_part = true, negative = false;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (str[0] == '-') {
 		negative = true;
 		str++;
@@ -526,6 +544,7 @@ static ssize_t iio_write_channel_info(struct device *dev,
 	int ret, fract_mult = 100000;
 	int integer, fract;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	/* Assumes decimal - precision based on number of digits */
 	if (!indio_dev->info->write_raw)
 		return -EINVAL;
@@ -573,6 +592,7 @@ int __iio_device_attr_init(struct device_attribute *dev_attr,
 	char *full_postfix;
 	sysfs_attr_init(&dev_attr->attr);
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	/* Build up postfix of <extend_name>_<modifier>_postfix */
 	if (chan->modified && (shared_by == IIO_SEPARATE)) {
 		if (chan->extend_name)
@@ -707,6 +727,7 @@ int __iio_add_chan_devattr(const char *postfix,
 	int ret;
 	struct iio_dev_attr *iio_attr, *t;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	iio_attr = kzalloc(sizeof(*iio_attr), GFP_KERNEL);
 	if (iio_attr == NULL)
 		return -ENOMEM;
@@ -744,6 +765,7 @@ static int iio_device_add_info_mask_type(struct iio_dev *indio_dev,
 {
 	int i, ret, attrcount = 0;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	for_each_set_bit(i, infomask, sizeof(infomask)*8) {
 		if (i >= ARRAY_SIZE(iio_chan_info_postfix))
 			return -EINVAL;
@@ -771,6 +793,7 @@ static int iio_device_add_channel_sysfs(struct iio_dev *indio_dev,
 	int ret, attrcount = 0;
 	const struct iio_chan_spec_ext_info *ext_info;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (chan->channel < 0)
 		return 0;
 	ret = iio_device_add_info_mask_type(indio_dev, chan,
@@ -839,6 +862,7 @@ void iio_free_chan_devattr_list(struct list_head *attr_list)
 {
 	struct iio_dev_attr *p, *n;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	list_for_each_entry_safe(p, n, attr_list, l) {
 		kfree(p->dev_attr.attr.name);
 		list_del(&p->l);
@@ -862,6 +886,7 @@ static int iio_device_register_sysfs(struct iio_dev *indio_dev)
 	struct iio_dev_attr *p;
 	struct attribute **attr;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	/* First count elements in any existing group */
 	if (indio_dev->info->attrs) {
 		attr = indio_dev->info->attrs->attrs;
@@ -953,6 +978,7 @@ struct iio_dev *iio_device_alloc(int sizeof_priv)
 	struct iio_dev *dev;
 	size_t alloc_size;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	alloc_size = sizeof(struct iio_dev);
 	if (sizeof_priv) {
 		alloc_size = ALIGN(alloc_size, IIO_ALIGN);
@@ -1032,6 +1058,7 @@ struct iio_dev *devm_iio_device_alloc(struct device *dev, int sizeof_priv)
 {
 	struct iio_dev **ptr, *iio_dev;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	ptr = devres_alloc(devm_iio_device_release, sizeof(*ptr),
 			   GFP_KERNEL);
 	if (!ptr)
@@ -1075,6 +1102,7 @@ static int iio_chrdev_open(struct inode *inode, struct file *filp)
 	struct iio_dev *indio_dev = container_of(inode->i_cdev,
 						struct iio_dev, chrdev);
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	if (test_and_set_bit(IIO_BUSY_BIT_POS, &indio_dev->flags))
 		return -EBUSY;
 
@@ -1105,6 +1133,7 @@ static long iio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	struct iio_dev *indio_dev = filp->private_data;
 	int __user *ip = (int __user *)arg;
 	int fd;
+
 
 	if (!indio_dev->info)
 		return -ENODEV;
@@ -1139,43 +1168,32 @@ int iio_device_register(struct iio_dev *indio_dev)
 {
 	int ret;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d iio_dev: %p\n",__FUNCTION__,__LINE__, indio_dev);
+	pr_info(">> %s %d iio_dev: %p\n",__FUNCTION__,__LINE__, indio_dev);
 	/* If the calling driver did not initialize of_node, do it here */
 	if (!indio_dev->dev.of_node && indio_dev->dev.parent)
 		indio_dev->dev.of_node = indio_dev->dev.parent->of_node;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	/* configure elements for the chrdev */
 	indio_dev->dev.devt = MKDEV(MAJOR(iio_devt), indio_dev->id);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = iio_device_register_debugfs(indio_dev);
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret) {
-		printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 		dev_err(indio_dev->dev.parent,
 			"Failed to register debugfs interfaces\n");
 		return ret;
 	}
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = iio_device_register_sysfs(indio_dev);
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret) {
-		printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 		dev_err(indio_dev->dev.parent,
 			"Failed to register sysfs interfaces\n");
 		goto error_unreg_debugfs;
 	}
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	ret = iio_device_register_eventset(indio_dev);
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret) {
-		printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 		dev_err(indio_dev->dev.parent,
 			"Failed to register event set\n");
 		goto error_free_sysfs;
 	}
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (indio_dev->modes & INDIO_BUFFER_TRIGGERED)
 		iio_device_register_trigger_consumer(indio_dev);
 
@@ -1183,35 +1201,26 @@ int iio_device_register(struct iio_dev *indio_dev)
 		indio_dev->setup_ops == NULL)
 		indio_dev->setup_ops = &noop_ring_setup_ops;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	cdev_init(&indio_dev->chrdev, &iio_buffer_fileops);
 	indio_dev->chrdev.owner = indio_dev->info->driver_module;
 	indio_dev->chrdev.kobj.parent = &indio_dev->dev.kobj;
 	ret = cdev_add(&indio_dev->chrdev, indio_dev->dev.devt, 1);
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 		goto error_unreg_eventset;
 	}
 
 	ret = device_add(&indio_dev->dev);
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	if (ret < 0) {
-		printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 		goto error_cdev_del;
 	}
 	return 0;
 error_cdev_del:
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	cdev_del(&indio_dev->chrdev);
 error_unreg_eventset:
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	iio_device_unregister_eventset(indio_dev);
 error_free_sysfs:
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	iio_device_unregister_sysfs(indio_dev);
 error_unreg_debugfs:
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	iio_device_unregister_debugfs(indio_dev);
 	return ret;
 }
@@ -1223,6 +1232,7 @@ EXPORT_SYMBOL(iio_device_register);
  **/
 void iio_device_unregister(struct iio_dev *indio_dev)
 {
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	mutex_lock(&indio_dev->info_exist_lock);
 
 	device_del(&indio_dev->dev);
@@ -1268,6 +1278,7 @@ int devm_iio_device_register(struct device *dev, struct iio_dev *indio_dev)
 	struct iio_dev **ptr;
 	int ret;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	ptr = devres_alloc(devm_iio_device_unreg, sizeof(*ptr), GFP_KERNEL);
 	if (!ptr)
 		return -ENOMEM;
@@ -1294,6 +1305,7 @@ void devm_iio_device_unregister(struct device *dev, struct iio_dev *indio_dev)
 {
 	int rc;
 
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 	rc = devres_release(dev, devm_iio_device_unreg,
 			    devm_iio_device_match, indio_dev);
 	WARN_ON(rc);
