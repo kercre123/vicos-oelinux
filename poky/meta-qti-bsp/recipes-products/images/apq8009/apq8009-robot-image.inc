@@ -13,7 +13,6 @@ IMAGE_INSTALL += "reboot-daemon"
 # Add additional components
 IMAGE_INSTALL += "system-core-debuggerd"
 IMAGE_INSTALL += "e2fsprogs"
-IMAGE_INSTALL += "start-scripts-userfs-reset"
 IMAGE_INSTALL += "chrony"
 IMAGE_INSTALL += "chronyc"
 IMAGE_INSTALL += "openssh"
