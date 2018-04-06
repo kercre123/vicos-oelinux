@@ -37,7 +37,7 @@ void module_add_driver(struct module *mod, struct device_driver *drv)
 	char *driver_name;
 	int no_warn;
 	struct module_kobject *mk = NULL;
-	printk(KERN_ALERT "DEBUG: -ENTER  Passed %s %d\n",__FUNCTION__,__LINE__);
+	pr_info(">> %s %d\n",__FUNCTION__,__LINE__);
 
 	if (!drv)
 		return;
@@ -59,7 +59,6 @@ void module_add_driver(struct module *mod, struct device_driver *drv)
 	}
 
 	if (!mk) {
-		printk(KERN_ALERT "DEBUG: - EXIT  Passed %s %d\n",__FUNCTION__,__LINE__);
 		return;
 
 	}
@@ -73,7 +72,6 @@ void module_add_driver(struct module *mod, struct device_driver *drv)
 					    driver_name);
 		kfree(driver_name);
 	}
-	printk(KERN_ALERT "DEBUG: - EXIT  Passed %s %d\n",__FUNCTION__,__LINE__);
 }
 
 void module_remove_driver(struct device_driver *drv)
