@@ -338,28 +338,27 @@
 }
 
 
-#if 0
-/* not yet soup :-) */
 
-#define BMI160_TEMP_CHAN(addr, bits) { \
-        .type = IIO_TEMP, \
-        .indexed = 1, \
-        .channel = 0, \
-        .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | \
-                BIT(IIO_CHAN_INFO_OFFSET) | \
-                BIT(IIO_CHAN_INFO_SCALE), \
+#define BMI160_TEMP_CHAN(addr, _index) { 			\
+        .type = IIO_TEMP, 					\
+        .indexed = 1, 						\
+        .channel = 0, 						\
+        .info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | 		\
+                BIT(IIO_CHAN_INFO_OFFSET) | 			\
+                BIT(IIO_CHAN_INFO_SCALE), 			\
         .info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SAMP_FREQ), \
-        .address = (addr), \
-        .scan_index = ADIS16350_SCAN_TEMP_X, \
-        .scan_type = { \
-                .sign = 's', \
-                .realbits = (bits), \
-                .storagebits = 16, \
-                .shift = 0, \
-                .endianness = IIO_BE, \
-        }, \
+        .address = (addr), 					\
+        .scan_index = _index, 					\
+        .scan_type = { 						\
+                .sign = 's', 					\
+                .realbits = 16, 				\
+                .storagebits = 16, 				\
+                .shift = 0, 					\
+                .endianness = IIO_LE, 				\
+        }, 							\
 }
 
+#if 0
 to use do 
 BMI160_TEMP_CHAN(BMI160_REG_TEMPERATURE_LSB, 16)
 
@@ -387,6 +386,7 @@ enum bmi160_scan_axis {
 	BMI160_SCAN_ACCEL_Y,
 	BMI160_SCAN_ACCEL_Z,
 	BMI160_SCAN_TIMESTAMP,
+	BMI160_SCAN_TEMPERATURE,
 };
 
 enum bmi160_sensor_type {
@@ -448,12 +448,19 @@ struct bmi160_scale {
 	int uscale;
 };
 
+/* 
+ * Output Data Rate 
+*/
 struct bmi160_odr {
 	u8 bits;
 	int odr;
 	int uodr;
 };
 
+
+/* 
+ * Available ranges for Acceleration  
+*/
 static const struct bmi160_scale bmi160_accel_scale[] = {
 	{ BMI160_ACCEL_RANGE_2G, 598},
 	{ BMI160_ACCEL_RANGE_4G, 1197},
@@ -461,6 +468,10 @@ static const struct bmi160_scale bmi160_accel_scale[] = {
 	{ BMI160_ACCEL_RANGE_16G, 4788},
 };
 
+
+/* 
+ * Available range for Gyro 
+*/
 static const struct bmi160_scale bmi160_gyro_scale[] = {
 	{ BMI160_GYRO_RANGE_2000DPS, 1065},
 	{ BMI160_GYRO_RANGE_1000DPS, 532},
@@ -469,6 +480,11 @@ static const struct bmi160_scale bmi160_gyro_scale[] = {
 	{ BMI160_GYRO_RANGE_125DPS, 66},
 };
 
+
+/* 
+ * Entry definition in the table of available scales 
+ *
+*/ 
 struct bmi160_scale_item {
 	const struct bmi160_scale *tbl;
 	int num;
@@ -537,6 +553,7 @@ static const struct iio_chan_spec bmi160_channels[] = {
 	BMI160_CHANNEL(IIO_ANGL_VEL, Y, BMI160_SCAN_GYRO_Y),
 	BMI160_CHANNEL(IIO_ANGL_VEL, Z, BMI160_SCAN_GYRO_Z),
 	IIO_CHAN_SOFT_TIMESTAMP(BMI160_SCAN_TIMESTAMP),
+
 };
 
 
@@ -746,8 +763,11 @@ static irqreturn_t bmi160_trigger_handler(int irq, void *p)
 			 indio_dev->masklength) {
 		ret = regmap_bulk_read(data->regmap, base + i * sizeof(sample),
 				       &sample, sizeof(sample));
-		if (ret < 0)
+		if (ret < 0) {
+			pr_err("failed the regmap_bulk_read\n");
 			goto done;
+		}
+		pr_info("sample = %x\n", sample);
 		buf[j++] = sample;
 	}
 
