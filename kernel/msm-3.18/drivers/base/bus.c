@@ -22,7 +22,6 @@
 #include "base.h"
 #include "power/power.h"
 
-#define DEBUG
 
 /* /sys/devices/system */
 static struct kset *system_kset;
@@ -680,15 +679,13 @@ int bus_add_driver(struct device_driver *drv)
 	struct driver_private *priv;
 	int error = 0;
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d device_driver: %p \n",__FUNCTION__,__LINE__, drv);
+	pr_info(">> %s %d device_driver: %p \n",__FUNCTION__,__LINE__, drv);
 
 	bus = bus_get(drv->bus);
 	if (!bus) {
-		printk(KERN_ALERT "DEBUG: - Passed %s %d \n",__FUNCTION__,__LINE__);
 		return -EINVAL;
 	}
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d\n",__FUNCTION__,__LINE__);
 	pr_debug("bus: '%s': add driver %s\n", bus->name, drv->name);
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
@@ -702,11 +699,9 @@ int bus_add_driver(struct device_driver *drv)
 	priv->kobj.kset = bus->p->drivers_kset;
 	error = kobject_init_and_add(&priv->kobj, &driver_ktype, NULL,
 				     "%s", drv->name);
-	printk(KERN_ALERT "DEBUG: - Passed %s %d\n",__FUNCTION__,__LINE__);
 	if (error)
 		goto out_unregister;
 
-	printk(KERN_ALERT "DEBUG: - Passed %s %d\n",__FUNCTION__,__LINE__);
 	klist_add_tail(&priv->knode_bus, &bus->p->klist_drivers);
 	if (drv->bus->p->drivers_autoprobe) {
 		if (driver_allows_async_probing(drv)) {
@@ -719,7 +714,6 @@ int bus_add_driver(struct device_driver *drv)
 				goto out_unregister;
 		}
 	}
-	printk(KERN_ALERT "DEBUG: - Passed %s %d\n",__FUNCTION__,__LINE__);
 	module_add_driver(drv->owner, drv);
 
 	error = driver_create_file(drv, &driver_attr_uevent);
@@ -727,14 +721,12 @@ int bus_add_driver(struct device_driver *drv)
 		printk(KERN_ERR "%s: uevent attr (%s) failed\n",
 			__func__, drv->name);
 	}
-	printk(KERN_ALERT "DEBUG: - Passed %s %d\n",__FUNCTION__,__LINE__);
 	error = driver_add_groups(drv, bus->drv_groups);
 	if (error) {
 		/* How the hell do we get out of this pickle? Give up */
 		printk(KERN_ERR "%s: driver_create_groups(%s) failed\n",
 			__func__, drv->name);
 	}
-	printk(KERN_ALERT "DEBUG: - Passed %s %d\n",__FUNCTION__,__LINE__);
 
 	if (!drv->suppress_bind_attrs) {
 		error = add_bind_files(drv);
@@ -745,7 +737,6 @@ int bus_add_driver(struct device_driver *drv)
 		}
 	}
 
-	printk(KERN_ALERT "DEBUG: -EXIT  Passed %s %d\n",__FUNCTION__,__LINE__);
 	return 0;
 
 out_unregister:
@@ -753,7 +744,6 @@ out_unregister:
 	kfree(drv->p);
 	drv->p = NULL;
 out_put_bus:
-	printk(KERN_ALERT "DEBUG: -EXIT  Passed %s %d\n",__FUNCTION__,__LINE__);
 	bus_put(bus);
 	return error;
 }
