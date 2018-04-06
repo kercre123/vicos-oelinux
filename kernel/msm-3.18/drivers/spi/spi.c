@@ -21,7 +21,6 @@
 
 #include <linux/kernel.h>
 #include <linux/kmod.h>
-#define DEBUG
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/cache.h>
@@ -86,24 +85,21 @@ ATTRIBUTE_GROUPS(spi_dev);
 static const struct spi_device_id *spi_match_id(const struct spi_device_id *id,
 						const struct spi_device *sdev)
 {
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  spi_device_id: %p spi_device: %p \n",__FUNCTION__,__LINE__, id, sdev);
+	pr_info(">> %s %d  spi_device_id: %p spi_device: %p \n",__FUNCTION__,__LINE__, id, sdev);
 	while (id->name[0]) {
 		if (!strcmp(sdev->modalias, id->name)) {
-			printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 			return id;
 		}
 		id++;
 	}
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d \n",__FUNCTION__,__LINE__);
 	return NULL;
 }
 
 const struct spi_device_id *spi_get_device_id(const struct spi_device *sdev)
 {
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  spi_device %p \n",__FUNCTION__,__LINE__, sdev);
+	pr_info(">> %s %d  spi_device %p \n",__FUNCTION__,__LINE__, sdev);
 	const struct spi_driver *sdrv = to_spi_driver(sdev->dev.driver);
 
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d spi_driver %p\n",__FUNCTION__,__LINE__, sdrv);
 	return spi_match_id(sdrv->id_table, sdev);
 }
 EXPORT_SYMBOL_GPL(spi_get_device_id);
@@ -308,7 +304,7 @@ static void spi_drv_shutdown(struct device *dev)
 int spi_register_driver(struct spi_driver *sdrv)
 {
 	int ret;
-	printk(KERN_ALERT "DEBUG: ENTER - Passed %s %d  spi_driver: %p\n",__FUNCTION__,__LINE__, sdrv);
+	pr_info(">> %s %d  spi_driver: %p\n",__FUNCTION__,__LINE__, sdrv);
 	sdrv->driver.bus = &spi_bus_type;
 	if (sdrv->probe)
 		sdrv->driver.probe = spi_drv_probe;
@@ -317,7 +313,6 @@ int spi_register_driver(struct spi_driver *sdrv)
 	if (sdrv->shutdown)
 		sdrv->driver.shutdown = spi_drv_shutdown;
 	ret =  driver_register(&sdrv->driver);
-	printk(KERN_ALERT "DEBUG: EXIT - Passed %s %d  ret: %x\n",__FUNCTION__,__LINE__, ret);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(spi_register_driver);
