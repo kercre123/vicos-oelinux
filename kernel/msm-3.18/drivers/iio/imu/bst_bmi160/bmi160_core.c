@@ -140,6 +140,41 @@
 #define BMI160_REG_TEMPERATURE_MSB		0x21
 
 /*
+ * 
+ * The register contains FIFO status flags
+ * fifo_byte_counter: Current fill level of FIFO buffer. 
+ * This includes the skip frame for a full FIFO. 
+ * An empty FIFO corresponds to 0x000. 
+ * The byte counter may be reset by reading out all frames 
+ * from the FIFO buffer or when the FIFO is reset 
+ * through the Register (0x7E) CMD. 
+ * The byte counter is updated, when a complete frame is read or written.
+ * This value is 10 bits wide. 
+
+*/
+#define BMI160_REG_FIFO_LENGTH_0		0x22
+#define BMI160_REG_FIFO_LENGTH_1		0x23
+
+
+
+/* 
+ * FIFO data readout register.
+ * The FIFO data are organized in frames as described in chapter 2.5.1. 
+ * The new data flag is preserved. 
+ * Read burst access must be used, 
+ * the address will not increment when the read burst reads at the address of FIFO_DATA. 
+ * When a frame is only partially read out, 
+ * it is retransmitted including the header at the next readout.
+ * fifo_data<7:0>: FIFO data readout; 
+ * data format depends on the setting of Register (0x46-0x47) FIFO_CONFIG.
+*/
+#define BMI160_REG_FIFO_DATA			0x24
+
+
+
+
+
+/*
  *  Sets the output data rate, 
  * the bandwidth, and 
  * the read mode of the acceleration sensor
@@ -221,19 +256,194 @@
 #define BMI160_GYRO_RANGE_250DPS	0x03
 #define BMI160_GYRO_RANGE_125DPS	0x04
 
+
+
+
 /* 
+ *
+ * Used to configure the down sampling ratios of the accel and gyro data for FIFO. 
+ * The downsampling ratio for the gyro data are given by 2Val(gyr_fifo_downs), 
+ * the downsampling ratio for accel data are given by 2Val(acc_fifo_downs). 
+ * [acc,gyr]_fifo_filt_data=0 (1) selects pre-filtered (filtered) data 
+ * for the FIFO for accelerometer and gyroscope, respectively.
+*/
+
+#define BMI160_REG_FIFO_DOWNS		0x45
+
+
+
+/* 
+ * The Register (0x46-0x47) FIFO_CONFIG is a read/write register and 
+ * can be used for reading or setting the current FIFO watermark level. 
+ * This register can also be used for setting the different modes of operation of the FIFO, 
+ * e.g. which data is going to be stored in it and which 
+ * format is going to be used (header or headerless mode).
+*/
+#define BMI160_REG_FIFO_CONFIG_0	0x46
+
+/* 
+ * fifo_water_mark <7:0>: fifo_water_mark defines 
+ * the FIFO watermark level. 
+ * An interrupt will be generated, when the number of 
+ * entries in the FIFO exceeds fifo_water_mark. 
+ * The unit of fifo_water_mark are 4 bytes.
+*/
+#define BMI160_FIFO_WATER_MARK		0xFF 
+
+
+#define BMI160_REG_FIFO_CONFIG_1	0x47
+
+/* 
+ * fifo_time_en: ‘1’(‘0’) returns (does not return) 
+ * a sensortime frame after the last valid frame 
+ * when more data are read than valid frames are in the FIFO.
+*/
+#define BMI160_FIFO_TIME_EN		0x02
+
+/* 
+ * fifo_tag_int2_en:
+ * 1’ (‘0’) enables (disables) FIFO tag (interrupt)
+*/
+#define BMI160_FIFO_TAG_INT2		0x04
+
+
+/* 
+ * fifo_tag_int1_en:
+ * 1’ (‘0’) enables (disables) FIFO tag (interrupt)
+*/
+#define BMI160_FIFO_TAG_INT1		0x08
+
+
+/* 
+ * fifo_header_en:
+ * If ‘1’ each frame contains a header as defined in chapter 2.5. 
+ * If ‘0’ the frame format will be headerless. 
+ * In this case, the output data rates of all enabled sensors 
+ * for the FIFO need to be identical.
+*/
+#define BMI160_FIFO_HEADER_EN		0x10
+
+
+/* 
+ * fifo_mag_en:
+ * ‘0’ no mag data are stored in FIFO, 
+ * ‘1’ mag data are stored in FIFO (all 3 axes)
+*/
+#define BMI160_FIFO_MAG_EN		0x20
+
+/*
+ * fifo_acc_en:
+ * ‘0’ no acc data are stored in FIFO, 
+ * ‘1’ acc data are stored in FIFO (all 3 axes)
+*/
+
+#define BMI160_FIFO_ACC_EN		0x40
+/*
+ * fifo_gyr_en: 
+ * '0’ no gyro data are stored in FIFO, 
+ * ‘1’ gyro data are stored in FIFO (all 3 axes)
+*/
+#define BMI160_FIFO_GYR_EN		0x80
+
+/*
  * Command register triggers operations like softreset, NVM programming, etc.
+ * During the time a command is executed, it occupies the Register (0x7E) CMD. 
+ * All new writes to this register are dropped during 
+ * this time with the exception of the softreset command. 
+ * If a write to the Register (0x7E) CMD is dropped, 
+ * drop_cmd_err in Register (0x02) ERR_REG is set.
+
 */
 #define BMI160_REG_CMD			0x7E
 
+
+
+/* Commands  */
+
+
+
+/*
+ * start_foc: 0x03
+ * Starts Fast Offset Calibration for the accel and gyro 
+ * as configured in Register (0x69) FOC_CONF and stores 
+ * the result into the Register (0x71-0x77) OFFSET register.
+*/
+#define BMI160_CMD_FOC_START            0x03
+
+
+/* 
+ * acc_set_pmu_mode: 0b0001 00nn
+ * Sets the PMU mode for the accelerometer. 
+ * The encoding for ‘nn’ is identical 
+ * to acc_pmu_status in Register (0x03) PMU_STATUS.
+ * 
+*/
 #define BMI160_CMD_ACCEL_PM_SUSPEND	0x10
 #define BMI160_CMD_ACCEL_PM_NORMAL	0x11
 #define BMI160_CMD_ACCEL_PM_LOW_POWER	0x12
+#define BMI160_CMD_ACCEL_PM_LOW_POWER2  0x13
+
+
+/*
+ * gyr_set_pmu_mode: 0b0001 01nn
+ * Sets the PMU mode for the gyroscope. 
+ * The encoding for ‘nn’ is identical 
+ * to gyr_pmu_status in Register (0x03) PMU_STATUS 
+*/
 
 #define BMI160_CMD_GYRO_PM_SUSPEND	0x14
 #define BMI160_CMD_GYRO_PM_NORMAL	0x15
 #define BMI160_CMD_GYRO_PM_FAST_STARTUP	0x17
 
+/*
+ *  mag_set_pmu_mode: 0b0001 10nn
+ * Sets the PMU mode for the mag interface. 
+ * The encoding for ‘nn’ is identical 
+ * to mag_pmu_status in Register (0x03) PMU_STATUS. 
+*/
+#define BMI160_CMD_PMU_MAG_SUSPEND      0x18
+#define BMI160_CMD_PMU_MAG_NORMAL       0x19
+#define BMI160_CMD_PMU_MAG_LOW_POWER    0x1A
+#define BMI160_CMD_PMU_MAG_LOW_POWER2   0x1B
+
+/* 
+ * prog_nvm: 0xA0
+ * Writes the NVM backed registers into NVM.
+*/
+#define BMI160_CMD_PROG_NVM		0xA0
+
+
+/*
+ * fifo_flush: 0xB0
+ * clears all data in the FIFO, does not change the Register 
+ * (0x46-0x47) FIFO_CONFIG and Register (0x45) FIFO_DOWNS registers.
+*/
+#define BMI160_CMD_CLR_FIFO_DATA        0xB0
+
+
+/* 
+ * int_reset: 0xB1
+ * resets the interrupt engine, 
+ * the Register (0x1C-0x1F) INT_STATUS and the interrupt pin.
+*/
+#define BMI160_CMD_RESET_INT_ENGINE     0xB1
+
+/* 
+ * step_cnt_clr: 0xB2
+ * triggers a reset of the step counter. 
+ * This register is functional in all operation modes.
+*/
+#define BMI160_CMD_STEP_CNT_CLR		0xB2
+
+/* 
+ * triggers a reset including a reboot. 
+ * Other values are ignored. 
+ * Following a delay, all user configuration settings are 
+ * overwritten with their default state or 
+ * the setting stored in the NVM, wherever applicable. 
+ * This register is functional in all operation modes. 
+*/
+#define BMI160_CMD_RESET_USER_REG       0xB6
 
 /*
  * triggers a reset including a reboot. 
@@ -249,6 +459,12 @@
 #define BMI160_ACCEL_PMU_MIN_USLEEP	3800
 #define BMI160_GYRO_PMU_MIN_USLEEP	80000
 #define BMI160_SOFTRESET_USLEEP		1000
+
+
+
+
+
+
 
 
 /* 
@@ -582,6 +798,23 @@ static enum bmi160_sensor_type bmi160_to_sensor(enum iio_chan_type iio_type)
 	default:
 		pr_err( " Unknow iio_type %s %d  iio_chan_type: %x \n",__FUNCTION__,__LINE__, iio_type);
 		return -EINVAL;
+	}
+}
+
+
+/* 
+ * 
+ */
+static
+int bmi160_fifo_flush(struct bmi160_data *data)
+{
+	int ret;
+
+	ret = regmap_write(data->regmap, BMI160_REG_CMD, 0);
+	
+	if ( ret < 0) {
+		pr_err("Failed to flush the FIFO\n");
+		return ret;
 	}
 }
 
