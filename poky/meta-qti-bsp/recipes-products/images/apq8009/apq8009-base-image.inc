@@ -11,10 +11,10 @@ IMAGE_INSTALL += "${ROOTFS_PKGMANAGE_BOOTSTRAP}"
 IMAGE_INSTALL += "${CORE_IMAGE_EXTRA_INSTALL}"
 
 # utils and scripts needed for SELinux
-IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','packagegroup-core-selinux',' ',d)}"
-IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','selinux-config',' ',d)}"
-IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','refpolicy-mls',' ',d)}"
-IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','start-scripts-misc-daemon',' ',d)}"
+IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','packagegroup-core-selinux','',d)}"
+IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','selinux-config','',d)}"
+IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','refpolicy-mls','',d)}"
+IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','start-scripts-misc-daemon','',d)}"
 
 # The MSM Linux minimal boot image files.
 
@@ -54,6 +54,8 @@ IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'gdbserver', d)}"
 
 # Below is to generate sparse ext4 system image (OE by default supports raw ext4 images)
 SELINUX_FILE_CONTEXTS = "${IMAGE_ROOTFS}/etc/selinux/mls/contexts/files/file_contexts"
+IMAGE_EXT4_SELINUX_OPTIONS = "${@base_contains('DISTRO_FEATURES','selinux',' -a / -S ${SELINUX_FILE_CONTEXTS} ','',d)}"
+
 CONFIG_FILE = "${COREBASE}/meta-qti-bsp/files/config_files/anki_user_config"
 do_makesystem() {
     echo "================ Creating system ================="
@@ -69,10 +71,6 @@ do_makesystem() {
     which make_ext4fs
 
     echo "making the sparse ext4 file system"
-    if [[ "${DISTRO_FEATURES}" =~ "selinux" ]]; then
-        make_ext4fs -s -a /  -C ${CONFIG_FILE} -S ${SELINUX_FILE_CONTEXTS} -l ${SYSTEM_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4 ${IMAGE_ROOTFS}
-    else
-        make_ext4fs -s -a /  -C ${CONFIG_FILE} -l ${SYSTEM_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4 ${IMAGE_ROOTFS}
-    fi
+    make_ext4fs -s ${IMAGE_EXT4_EXTRA_OPTIONS} -C ${CONFIG_FILE} ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4 ${IMAGE_ROOTFS}
     make_ext4fs  -l ${SYSTEMRW_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-systemrw.ext4
 }
