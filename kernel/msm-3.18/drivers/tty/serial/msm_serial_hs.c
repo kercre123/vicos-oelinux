@@ -77,6 +77,11 @@
 #define UART_DMA_DESC_NR 8
 #define BUF_DUMP_SIZE 32
 
+/*
+ * this is the way to apply Vitaly's patch 
+*/ 
+//#define VIC2206 
+
 /* If the debug_mask gets set to FATAL_LEV,
  * a fatal error has happened and further IPC logging
  * is disabled so that this problem can be detected
@@ -172,6 +177,9 @@ struct msm_hs_tx {
 	struct task_struct *task;
 	struct msm_hs_sps_ep_conn_data cons;
 	struct timer_list tx_timeout_timer;
+#ifdef  VIC2206
+        bool timer_initialized;
+#endif
 	void *ipc_tx_ctxt;
 };
 
@@ -1437,9 +1445,17 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 			&tx_buf->buf[tx_buf->tail], (u64)src_addr, tx_count);
 	sps_pipe_handle = tx->cons.pipe_handle;
 
-	/* Set 1 second timeout */
-	mod_timer(&tx->tx_timeout_timer,
-		jiffies + msecs_to_jiffies(MSEC_PER_SEC));
+#ifdef VIC2206
+        if (tx->timer_initialized) {
+                /* Set 1 second timeout */
+                mod_timer(&tx->tx_timeout_timer,
+                        jiffies + msecs_to_jiffies(MSEC_PER_SEC));
+        }
+#else
+        /* Set 1 second timeout */
+        mod_timer(&tx->tx_timeout_timer,
+                jiffies + msecs_to_jiffies(MSEC_PER_SEC));
+#endif
 	/* Queue transfer request to SPS */
 	ret = sps_transfer_one(sps_pipe_handle, src_addr, tx_count,
 				msm_uport, flags);
@@ -2704,7 +2720,9 @@ static int msm_hs_startup(struct uart_port *uport)
 	setup_timer(&(tx->tx_timeout_timer),
 			tx_timeout_handler,
 			(unsigned long) msm_uport);
-
+#ifdef VIC2206
+        tx->timer_initialized = true;
+#endif
 	/* Enable reading the current CTS, no harm even if CTS is ignored */
 	msm_uport->imr_reg |= UARTDM_ISR_CURRENT_CTS_BMSK;
 
@@ -2771,6 +2789,9 @@ static int uartdm_init_port(struct uart_port *uport)
 		MSM_HS_ERR("%s(): error creating task", __func__);
 		goto exit_lh_init;
 	}
+#ifdef VIC2206
+        tx->timer_initialized = false;
+#endif
 	init_kthread_work(&rx->kwork, msm_serial_hs_rx_work);
 
 	init_kthread_worker(&tx->kworker);
