@@ -25,19 +25,9 @@ clean:
 deepclean: clean
 	rm -f $(IMG_DIR)/*
 
-.PHONY: clean deepclean hlos fbc
+.PHONY: clean deepclean
 
 .PRECIOUS: $(BUILD)/%.img
-
-hlos:
-	cd common/build; python2 update_common_info.py --hlos
-
-fbc:
-	cd common/build; python2 fastboot_complete.py
-	fastboot erase userdata
-	fastboot erase boot_a
-	fastboot erase boot_b
-	fastboot flash oem factory.img
 
 $(BUILD):
 	mkdir $(BUILD)
@@ -74,7 +64,7 @@ $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	echo "wbits=$(GZIP_WBITS)"              >> $@
 	cat $(SYS_STATS)                        >> $@
 
-
+# COPYFILE_DISABLE=1 causes OSX not to put '._' junk in our TAR file when files have extended attributes
 $(OTA_TAR): $(MANIFEST).sha256 $(BOOT_GZ) $(SYS_GZ)
 	COPYFILE_DISABLE=1 tar cf $@ -C $(BUILD) manifest.ini manifest.sha256 apq8009-robot-boot.img.gz apq8009-robot-sysfs.img.gz
 	cp $@ $(BUILD)/$(UPDATE_VERSION).ota
