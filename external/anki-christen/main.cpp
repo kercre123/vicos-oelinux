@@ -44,17 +44,17 @@ int main(int argc, char *argv[])
   // In addition, we exclude '1', 'I', and 'L' for the same reason.
 
   std::vector<char> letters = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J',
-                               'K', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U',
-                               'V', 'W', 'X', 'Y', 'Z'};
+                               'K', 'M', 'N', 'P', 'R', 'S', 'T', 'U', 'V',
+                               'W', 'X', 'Y', 'Z'};
   std::vector<char> digits =  {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
 
 
   std::random_device rd;
   std::mt19937 gen(rd());
 
-  // 207 = 23 * 9.  This should allow for a uniform distribution of values
+  // 198 = 22 * 9.  This should allow for a uniform distribution of values
   // when we select from either the letters or digits vectors.
-  std::uniform_int_distribution<> dis(1, 207);
+  std::uniform_int_distribution<> dis(1, 198);
 
   std::string robot_id;
   for (int i = 0 ; i < 2 ; i++) {
