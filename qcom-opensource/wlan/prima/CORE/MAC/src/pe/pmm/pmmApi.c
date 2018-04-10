@@ -633,7 +633,7 @@ tSirRetStatus  pmmSendInitPowerSaveMsg(tpAniSirGlobal pMac,tpPESession psessionE
     tSirMsgQ msgQ;
     tpEnterBmpsParams pBmpsParams = NULL;
     tANI_U32    rssiFilterPeriod = 5;
-    tANI_U32    numBeaconPerRssiAverage = 20;
+    tANI_U32    numBeaconPerRssiAverage = 7; // VW: modified to improve roaming
     tANI_U32    bRssiFilterEnable = FALSE;
 
     if(psessionEntry->currentBssBeaconCnt == 0 )
