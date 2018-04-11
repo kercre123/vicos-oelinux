@@ -1,9 +1,8 @@
 IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot
-BUILD=_build
+BUILD=../_build
 BOOT_STEM=apq8009-robot-boot
 SYS_STEM=apq8009-robot-sysfs
 MANIFEST=$(BUILD)/manifest
-OTA_TAR=$(BUILD)/ota.tar
 
 BOOT_GZ=$(BUILD)/$(BOOT_STEM).img.gz
 BOOT_STATS=$(BUILD)/$(BOOT_STEM).stats
@@ -15,9 +14,11 @@ GZIP_WBITS=31
 
 OTAKEY ?= ota_test.key
 
-UPDATE_VERSION ?= 0.8.3
+UPDATE_VERSION ?= 0.9.d
 
-all: $(BUILD) $(OTA_TAR)
+OTA_FILE=$(BUILD)/$(UPDATE_VERSION).ota
+
+all: $(BUILD) $(OTA_FILE)
 
 clean:
 	rm -rf $(BUILD)
@@ -65,9 +66,8 @@ $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	cat $(SYS_STATS)                        >> $@
 
 # COPYFILE_DISABLE=1 causes OSX not to put '._' junk in our TAR file when files have extended attributes
-$(OTA_TAR): $(MANIFEST).sha256 $(BOOT_GZ) $(SYS_GZ)
+$(OTA_FILE): $(MANIFEST).sha256 $(BOOT_GZ) $(SYS_GZ)
 	COPYFILE_DISABLE=1 tar cf $@ -C $(BUILD) manifest.ini manifest.sha256 apq8009-robot-boot.img.gz apq8009-robot-sysfs.img.gz
-	cp $@ $(BUILD)/$(UPDATE_VERSION).ota
 
-serve: $(OTA_TAR)
+serve: $(OTA_FILE)
 	cd $(BUILD); python -m SimpleHTTPServer 5555

@@ -28,9 +28,11 @@ export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE ANKI_BUILD_VERSION"
 
 build-victor-robot-image
 
+popd
+
+make -C ${TOPLEVEL}/ota UPDATE_VERSION=${ANKI_BUILD_VERSION}
+
 # Re-enable check for unset variables
 set -u
 
 echo "Build finished at `date`"
-
-popd
