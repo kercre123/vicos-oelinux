@@ -172,7 +172,6 @@ struct msm_hs_tx {
 	struct task_struct *task;
 	struct msm_hs_sps_ep_conn_data cons;
 	struct timer_list tx_timeout_timer;
-	bool timer_initialized;
 	void *ipc_tx_ctxt;
 };
 
@@ -1438,11 +1437,9 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 			&tx_buf->buf[tx_buf->tail], (u64)src_addr, tx_count);
 	sps_pipe_handle = tx->cons.pipe_handle;
 
-	if (tx->timer_initialized) {
-		/* Set 1 second timeout */
-		mod_timer(&tx->tx_timeout_timer,
-			jiffies + msecs_to_jiffies(MSEC_PER_SEC));
-	}
+	/* Set 1 second timeout */
+	mod_timer(&tx->tx_timeout_timer,
+		jiffies + msecs_to_jiffies(MSEC_PER_SEC));
 	/* Queue transfer request to SPS */
 	ret = sps_transfer_one(sps_pipe_handle, src_addr, tx_count,
 				msm_uport, flags);
@@ -2707,7 +2704,6 @@ static int msm_hs_startup(struct uart_port *uport)
 	setup_timer(&(tx->tx_timeout_timer),
 			tx_timeout_handler,
 			(unsigned long) msm_uport);
-	tx->timer_initialized = true;
 
 	/* Enable reading the current CTS, no harm even if CTS is ignored */
 	msm_uport->imr_reg |= UARTDM_ISR_CURRENT_CTS_BMSK;
@@ -2785,7 +2781,6 @@ static int uartdm_init_port(struct uart_port *uport)
 		goto exit_lh_init;
 	}
 
-	tx->timer_initialized = false;
 	init_kthread_work(&tx->kwork, msm_serial_hs_tx_work);
 
 	rx->buffer = dma_alloc_coherent(uport->dev,
