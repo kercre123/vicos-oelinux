@@ -26,4 +26,4 @@ do_install() {
 }
 
 FILES_${PN} += "/bin"
-FILES_${PN} += "/etc/systemd/system"
+FILES_${PN} += "/lib/systemd/system"
