@@ -15,6 +15,8 @@
 #include "msm_camera_i2c_mux.h"
 #include "msm_cci.h"
 
+#define DEBUG
+
 #define CAM_SENSOR_PINCTRL_STATE_SLEEP "cam_suspend"
 #define CAM_SENSOR_PINCTRL_STATE_DEFAULT "cam_default"
 /*#define CONFIG_MSM_CAMERA_DT_DEBUG*/
@@ -31,6 +33,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 {
 	uint16_t i = 0;
 	int      j = 0;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 
 	/* Validate input parameters */
 	if (!cam_vreg || !power_setting) {
@@ -195,6 +198,7 @@ int msm_sensor_get_sub_module_index(struct device_node *of_node,
 	struct device_node *src_node = NULL;
 	struct msm_sensor_info_t *sensor_info;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	sensor_info = kzalloc(sizeof(*sensor_info), GFP_KERNEL);
 	if (!sensor_info) {
 		pr_err("%s:%d failed\n", __func__, __LINE__);
@@ -415,6 +419,7 @@ int msm_sensor_get_dt_actuator_data(struct device_node *of_node,
 	uint32_t val = 0;
 	struct msm_actuator_info *actuator_info;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	rc = of_property_read_u32(of_node, "qcom,actuator-cam-name", &val);
 	CDBG("%s qcom,actuator-cam-name %d, rc %d\n", __func__, val, rc);
 	if (rc < 0)
@@ -452,6 +457,7 @@ int msm_sensor_get_dt_csi_data(struct device_node *of_node,
 	int rc = 0;
 	uint32_t val = 0;
 	struct msm_camera_csi_lane_params *clp;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 
 	clp = kzalloc(sizeof(*clp), GFP_KERNEL);
 	if (!clp) {
@@ -496,6 +502,7 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 	uint16_t *power_setting_size, size = 0;
 	bool need_reverse = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!power_info)
 		return -EINVAL;
 
@@ -706,6 +713,7 @@ int msm_camera_get_dt_gpio_req_tbl(struct device_node *of_node,
 	uint32_t count = 0;
 	uint32_t *val_array = NULL;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!of_get_property(of_node, "qcom,gpio-req-tbl-num", &count))
 		return 0;
 
@@ -788,6 +796,7 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 {
 	int rc = 0, val = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	gconf->gpio_num_info = kzalloc(sizeof(struct msm_camera_gpio_num_info),
 		GFP_KERNEL);
 	if (!gconf->gpio_num_info) {
@@ -1110,6 +1119,7 @@ int msm_camera_get_dt_vreg_data(struct device_node *of_node,
 	struct camera_vreg_t *vreg = NULL;
 	bool custom_vreg_name =  false;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	count = of_property_count_strings(of_node, "qcom,cam-vreg-name");
 	CDBG("%s qcom,cam-vreg-name count %d\n", __func__, count);
 
@@ -1253,6 +1263,7 @@ ERROR1:
 
 static int msm_camera_enable_i2c_mux(struct msm_camera_i2c_conf *i2c_conf)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	struct v4l2_subdev *i2c_mux_sd =
 		dev_get_drvdata(&i2c_conf->mux_dev->dev);
 	v4l2_subdev_call(i2c_mux_sd, core, ioctl,
@@ -1264,6 +1275,7 @@ static int msm_camera_enable_i2c_mux(struct msm_camera_i2c_conf *i2c_conf)
 
 static int msm_camera_disable_i2c_mux(struct msm_camera_i2c_conf *i2c_conf)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	struct v4l2_subdev *i2c_mux_sd =
 		dev_get_drvdata(&i2c_conf->mux_dev->dev);
 	v4l2_subdev_call(i2c_mux_sd, core, ioctl,
@@ -1274,6 +1286,7 @@ static int msm_camera_disable_i2c_mux(struct msm_camera_i2c_conf *i2c_conf)
 int msm_camera_pinctrl_init(
 	struct msm_pinctrl_info *sensor_pctrl, struct device *dev) {
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	sensor_pctrl->pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR_OR_NULL(sensor_pctrl->pinctrl)) {
 		pr_err("%s:%d Getting pinctrl handle failed\n",
@@ -1304,6 +1317,7 @@ int msm_cam_sensor_handle_reg_gpio(int seq_val,
 
 	int gpio_offset = -1;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!gconf) {
 		pr_err("ERR:%s: Input Parameters are not proper\n", __func__);
 		return -EINVAL;
@@ -1362,6 +1376,7 @@ int32_t msm_sensor_driver_get_gpio_data(
 	int16_t                     gpio_array_size = 0;
 	struct msm_camera_gpio_conf *gconf = NULL;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	/* Validate input parameters */
 	if (!of_node) {
 		pr_err("failed: invalid param of_node %pK", of_node);
@@ -1420,6 +1435,7 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 	int rc = 0, index = 0, no_gpio = 0, ret = 0;
 	struct msm_sensor_power_setting *power_setting = NULL;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	CDBG("%s:%d\n", __func__, __LINE__);
 	if (!ctrl || !sensor_i2c_client) {
 		pr_err("failed ctrl %pK sensor_i2c_client %pK\n", ctrl,
@@ -1625,6 +1641,7 @@ msm_camera_get_power_settings(struct msm_camera_power_ctrl_t *ctrl,
 	struct msm_sensor_power_setting *power_setting, *ps = NULL;
 	int idx;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	for (idx = 0; idx < ctrl->power_setting_size; idx++) {
 		power_setting = &ctrl->power_setting[idx];
 		if (power_setting->seq_type == seq_type &&
@@ -1645,6 +1662,7 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 	struct msm_sensor_power_setting *pd = NULL;
 	struct msm_sensor_power_setting *ps;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	CDBG("%s:%d\n", __func__, __LINE__);
 	if (!ctrl || !sensor_i2c_client) {
 		pr_err("failed ctrl %pK sensor_i2c_client %pK\n", ctrl,

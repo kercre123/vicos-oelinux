@@ -18,6 +18,7 @@
 #include "msm_sensor.h"
 #include "msm_sd.h"
 
+#define DEBUG
 /* Logging macro */
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
@@ -43,6 +44,7 @@ static int msm_sensor_wait_for_probe_done(struct msm_sensor_init_t *s_init)
 {
 	int rc;
 	int tm = 10000;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (s_init->module_init_status == 1) {
 		CDBG("msm_cam_get_module_init_status -2\n");
 		return 0;
@@ -64,6 +66,7 @@ static int32_t msm_sensor_driver_cmd(struct msm_sensor_init_t *s_init,
 	int32_t                      rc = 0;
 	struct sensor_init_cfg_data *cfg = (struct sensor_init_cfg_data *)arg;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	/* Validate input parameters */
 	if (!s_init || !cfg) {
 		pr_err("failed: s_init %pK cfg %pK", s_init, cfg);
@@ -104,6 +107,8 @@ static long msm_sensor_init_subdev_ioctl(struct v4l2_subdev *sd,
 {
 	long rc = 0;
 	struct msm_sensor_init_t *s_init = v4l2_get_subdevdata(sd);
+
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	CDBG("Enter");
 
 	/* Validate input parameters */
@@ -136,6 +141,7 @@ static long msm_sensor_init_subdev_do_ioctl(
 		(struct sensor_init_cfg_data32 *)arg;
 	struct sensor_init_cfg_data sensor_init_data;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	switch (cmd) {
 	case VIDIOC_MSM_SENSOR_INIT_CFG32:
 		memset(&sensor_init_data, 0, sizeof(sensor_init_data));
@@ -160,6 +166,7 @@ static long msm_sensor_init_subdev_do_ioctl(
 static long msm_sensor_init_subdev_fops_ioctl(
 	struct file *file, unsigned int cmd, unsigned long arg)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	return video_usercopy(file, cmd, arg, msm_sensor_init_subdev_do_ioctl);
 }
 #endif
@@ -167,6 +174,7 @@ static long msm_sensor_init_subdev_fops_ioctl(
 static int __init msm_sensor_init_module(void)
 {
 	int ret = 0;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	/* Allocate memory for msm_sensor_init control structure */
 	s_init = kzalloc(sizeof(struct msm_sensor_init_t), GFP_KERNEL);
 	if (!s_init)
@@ -213,6 +221,7 @@ error:
 
 static void __exit msm_sensor_exit_module(void)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	msm_sd_unregister(&s_init->msm_sd);
 	mutex_destroy(&s_init->imutex);
 	kfree(s_init);

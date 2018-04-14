@@ -28,6 +28,7 @@
 #include "include/msm_csiphy_3_5_hwreg.h"
 #include "cam_hw_ops.h"
 
+#define DEBUG
 #define DBG_CSIPHY 0
 #define SOF_DEBUG_ENABLE 1
 #define SOF_DEBUG_DISABLE 0
@@ -61,6 +62,7 @@ static void msm_csiphy_cphy_irq_config(
 {
 	void __iomem *csiphybase;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	csiphybase = csiphy_dev->base;
 	msm_camera_io_w(csiphy_dev->ctrl_reg->csiphy_3ph_reg.
 		mipi_csiphy_3ph_cmn_ctrl11.data,
@@ -115,6 +117,7 @@ static int msm_csiphy_3phase_lane_config(
 	uint8_t i = 0;
 	uint16_t lane_mask = 0, lane_enable = 0, temp;
 	void __iomem *csiphybase;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 
 	csiphybase = csiphy_dev->base;
 	lane_mask = csiphy_params->lane_mask & 0x7;
@@ -293,6 +296,7 @@ static int msm_csiphy_2phase_lane_config(
 	uint16_t lane_mask = 0, i = 0, offset;
 	void __iomem *csiphybase;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	csiphybase = csiphy_dev->base;
 	lane_mask = csiphy_params->lane_mask & 0x1f;
 
@@ -468,6 +472,7 @@ static int msm_csiphy_lane_config(struct csiphy_device *csiphy_dev,
 	int32_t lane_val = 0, lane_right = 0, num_lanes = 0;
 	int ratio = 1;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	csiphybase = csiphy_dev->base;
 	if (!csiphybase) {
 		pr_err("%s: csiphybase NULL\n", __func__);
@@ -649,6 +654,7 @@ void msm_csiphy_disable_irq(
 {
 	void __iomem *csiphybase;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	csiphybase = csiphy_dev->base;
 	msm_camera_io_w(0,
 		csiphybase + csiphy_dev->ctrl_reg->csiphy_3ph_reg.
@@ -690,6 +696,7 @@ static irqreturn_t msm_csiphy_irq(int irq_num, void *data)
 	uint32_t irq;
 	int i;
 	struct csiphy_device *csiphy_dev = data;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 
 	if (csiphy_dev->csiphy_sof_debug == SOF_DEBUG_ENABLE) {
 		if (csiphy_dev->csiphy_sof_debug_count < CSIPHY_SOF_DEBUG_COUNT)
@@ -728,6 +735,7 @@ static irqreturn_t msm_csiphy_irq(int irq_num, void *data)
 
 static void msm_csiphy_reset(struct csiphy_device *csiphy_dev)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	msm_camera_io_w(0x1, csiphy_dev->base +
 		csiphy_dev->ctrl_reg->csiphy_reg.mipi_csiphy_glbl_reset_addr);
 	usleep_range(5000, 8000);
@@ -737,6 +745,7 @@ static void msm_csiphy_reset(struct csiphy_device *csiphy_dev)
 
 static void msm_csiphy_3ph_reset(struct csiphy_device *csiphy_dev)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	msm_camera_io_w(0x1, csiphy_dev->base +
 		csiphy_dev->ctrl_reg->csiphy_3ph_reg.
 		mipi_csiphy_3ph_cmn_ctrl0.addr);
@@ -750,6 +759,7 @@ static void msm_csiphy_3ph_reset(struct csiphy_device *csiphy_dev)
 static int msm_csiphy_init(struct csiphy_device *csiphy_dev)
 {
 	int rc = 0;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (csiphy_dev == NULL) {
 		pr_err("%s: csiphy_dev NULL\n", __func__);
 		rc = -ENOMEM;
@@ -857,6 +867,7 @@ csiphy_vreg_config_fail:
 static int msm_csiphy_init(struct csiphy_device *csiphy_dev)
 {
 	int rc = 0;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (csiphy_dev == NULL) {
 		pr_err("%s: csiphy_dev NULL\n", __func__);
 		rc = -ENOMEM;
@@ -962,6 +973,7 @@ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
 	int rc = 0;
 	struct msm_camera_csi_lane_params *csi_lane_params;
 	uint16_t csi_lane_mask;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	csi_lane_params = (struct msm_camera_csi_lane_params *)arg;
 
 	if (!csiphy_dev || !csiphy_dev->ref_count) {
@@ -1076,6 +1088,7 @@ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
 	int i = 0, rc = 0;
 	struct msm_camera_csi_lane_params *csi_lane_params;
 	uint16_t csi_lane_mask;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	csi_lane_params = (struct msm_camera_csi_lane_params *)arg;
 
 	if (!csiphy_dev || !csiphy_dev->ref_count) {
@@ -1191,6 +1204,7 @@ static int32_t msm_csiphy_cmd(struct csiphy_device *csiphy_dev, void *arg)
 	struct csiphy_cfg_data *cdata = (struct csiphy_cfg_data *)arg;
 	struct msm_camera_csiphy_params csiphy_params;
 	struct msm_camera_csi_lane_params csi_lane_params;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!csiphy_dev || !cdata) {
 		pr_err("%s: csiphy_dev NULL\n", __func__);
 		return -EINVAL;
@@ -1241,6 +1255,7 @@ static int32_t msm_csiphy_get_subdev_id(struct csiphy_device *csiphy_dev,
 	void *arg)
 {
 	uint32_t *subdev_id = (uint32_t *)arg;
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!subdev_id) {
 		pr_err("%s:%d failed\n", __func__, __LINE__);
 		return -EINVAL;
@@ -1255,6 +1270,7 @@ static long msm_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
 {
 	int rc = -ENOIOCTLCMD;
 	struct csiphy_device *csiphy_dev = v4l2_get_subdevdata(sd);
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!csiphy_dev) {
 		pr_err("%s:%d failed\n", __func__, __LINE__);
 		return  -EINVAL;
@@ -1342,6 +1358,7 @@ static int msm_csiphy_get_clk_info(struct csiphy_device *csiphy_dev,
 	char *csi_3p_clk_src_name = "csiphy_3p_clk_src";
 	uint32_t clk_cnt = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	rc = msm_camera_get_clk_info(csiphy_dev->pdev,
 		&csiphy_dev->csiphy_all_clk_info,
 		&csiphy_dev->csiphy_all_clk,
@@ -1411,6 +1428,8 @@ static int csiphy_probe(struct platform_device *pdev)
 {
 	struct csiphy_device *new_csiphy_dev;
 	int rc = 0;
+
+	pr_info(">> %s %d \n",__FUNCTION__,__LINE__);
 
 	new_csiphy_dev = kzalloc(sizeof(struct csiphy_device), GFP_KERNEL);
 	if (!new_csiphy_dev) {
@@ -1578,6 +1597,7 @@ static int msm_csiphy_exit(struct platform_device *pdev)
 	struct csiphy_device *csiphy_dev =
 		v4l2_get_subdevdata(subdev);
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	msm_camera_put_clk_info(pdev,
 		&csiphy_dev->csiphy_all_clk_info,
 		&csiphy_dev->csiphy_all_clk,
@@ -1611,11 +1631,13 @@ static struct platform_driver csiphy_driver = {
 
 static int __init msm_csiphy_init_module(void)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	return platform_driver_register(&csiphy_driver);
 }
 
 static void __exit msm_csiphy_exit_module(void)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	platform_driver_unregister(&csiphy_driver);
 }
 

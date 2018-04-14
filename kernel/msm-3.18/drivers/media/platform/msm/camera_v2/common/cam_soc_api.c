@@ -14,6 +14,8 @@
 #define NO_SET_RATE -1
 #define INIT_RATE -2
 
+#define CONFIG_CAM_SOC_API_DBG
+
 #ifdef CONFIG_CAM_SOC_API_DBG
 #define CDBG(fmt, args...) pr_err(fmt, ##args)
 #else
@@ -52,6 +54,7 @@ static int msm_camera_get_clk_info_internal(struct device *dev,
 	bool clock_cntl_support = false;
 	struct device_node *of_node;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	of_node = dev->of_node;
 
 	cnt = of_property_count_strings(of_node, "clock-names");
@@ -116,6 +119,7 @@ static int msm_camera_get_clk_info_internal(struct device *dev,
 		goto err3;
 	}
 
+	pr_info("Processing %d clocks \n", cnt);
 	for (i = 0; i < cnt; i++) {
 		rc = of_property_read_string_index(of_node, "clock-names",
 				i, &((*clk_info)[i].clk_name));
@@ -177,6 +181,7 @@ err2:
 	devm_kfree(dev, *clk_ptr);
 err1:
 	devm_kfree(dev, *clk_info);
+	pr_info("<<  %s %d \n",__FUNCTION__,__LINE__);
 	return rc;
 }
 
@@ -188,6 +193,7 @@ int msm_camera_i2c_dev_get_clk_info(struct device *dev,
 {
 	int rc = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!dev || !clk_info || !clk_ptr || !num_clk)
 		return -EINVAL;
 
@@ -204,6 +210,7 @@ int msm_camera_get_clk_info(struct platform_device *pdev,
 {
 	int rc = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !&pdev->dev || !clk_info || !clk_ptr || !num_clk)
 		return -EINVAL;
 
@@ -229,6 +236,7 @@ int msm_camera_get_clk_info_and_rates(
 	struct clk **clks;
 	struct msm_cam_clk_info *clk_info;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !pclk_info || !num_clk
 		|| !pclk_rates || !pclks || !num_set)
 		return -EINVAL;
@@ -351,9 +359,13 @@ int msm_camera_clk_enable(struct device *dev,
 	int rc = 0;
 	long clk_rate;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (enable) {
+		pr_info("Process all clocks - Number of clocks %d\n", num_clk);
 		for (i = 0; i < num_clk; i++) {
 			CDBG("enable %s\n", clk_info[i].clk_name);
+			CDBG("clock rate is  %d\n", clk_info[i].clk_rate);
+
 			if (clk_info[i].clk_rate > 0) {
 				clk_rate = clk_round_rate(clk_ptr[i],
 					clk_info[i].clk_rate);
@@ -431,6 +443,7 @@ long msm_camera_clk_set_rate(struct device *dev,
 	int rc = 0;
 	long rate = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!dev || !clk || (clk_rate < 0))
 		return -EINVAL;
 
@@ -461,6 +474,7 @@ static int msm_camera_put_clk_info_internal(struct device *dev,
 {
 	int i;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	for (i = cnt - 1; i >= 0; i--) {
 		if (clk_ptr[i] != NULL)
 			devm_clk_put(dev, (*clk_ptr)[i]);
@@ -481,6 +495,7 @@ int msm_camera_i2c_dev_put_clk_info(struct device *dev,
 {
 	int rc = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!dev || !clk_info || !clk_ptr)
 		return -EINVAL;
 
@@ -496,6 +511,7 @@ int msm_camera_put_clk_info(struct platform_device *pdev,
 {
 	int rc = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !&pdev->dev || !clk_info || !clk_ptr)
 		return -EINVAL;
 
@@ -512,6 +528,7 @@ int msm_camera_put_clk_info_and_rates(struct platform_device *pdev,
 {
 	int i;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	for (i = set - 1; i >= 0; i--)
 		devm_kfree(&pdev->dev, (*clk_rates)[i]);
 
@@ -541,6 +558,7 @@ int msm_camera_get_regulator_info(struct platform_device *pdev,
 	char prop_name[32];
 	struct msm_cam_regulator *tmp_reg;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !vdd_info || !num_reg)
 		return -EINVAL;
 
@@ -615,6 +633,7 @@ int msm_camera_regulator_enable(struct msm_cam_regulator *vdd_info,
 	int rc;
 	struct msm_cam_regulator *tmp = vdd_info;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!tmp) {
 		pr_err("Invalid params");
 		return -EINVAL;
@@ -658,6 +677,7 @@ void msm_camera_put_regulators(struct platform_device *pdev,
 {
 	int i;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!vdd_info || !*vdd_info) {
 		pr_err("Invalid params\n");
 		return;
@@ -677,6 +697,7 @@ EXPORT_SYMBOL(msm_camera_put_regulators);
 struct resource *msm_camera_get_irq(struct platform_device *pdev,
 							char *irq_name)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !irq_name) {
 		pr_err("Invalid params\n");
 		return NULL;
@@ -693,6 +714,7 @@ int msm_camera_register_irq(struct platform_device *pdev,
 {
 	int rc = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !irq || !handler || !irq_name || !dev_id) {
 		pr_err("Invalid params\n");
 		return -EINVAL;
@@ -718,6 +740,7 @@ int msm_camera_register_threaded_irq(struct platform_device *pdev,
 {
 	int rc = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !irq || !irq_name || !dev_id) {
 		pr_err("Invalid params\n");
 		return -EINVAL;
@@ -738,6 +761,7 @@ EXPORT_SYMBOL(msm_camera_register_threaded_irq);
 
 int msm_camera_enable_irq(struct resource *irq, int enable)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!irq) {
 		pr_err("Invalid params\n");
 		return -EINVAL;
@@ -757,6 +781,7 @@ int msm_camera_unregister_irq(struct platform_device *pdev,
 	struct resource *irq, void *dev_id)
 {
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !irq || !dev_id) {
 		pr_err("Invalid params\n");
 		return -EINVAL;
@@ -775,6 +800,7 @@ void __iomem *msm_camera_get_reg_base(struct platform_device *pdev,
 	struct resource *mem;
 	void *base;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !device_name) {
 		pr_err("Invalid params\n");
 		return NULL;
@@ -818,6 +844,7 @@ uint32_t msm_camera_get_res_size(struct platform_device *pdev,
 {
 	struct resource *mem;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !device_name) {
 		pr_err("Invalid params\n");
 		return 0;
@@ -840,6 +867,7 @@ int msm_camera_put_reg_base(struct platform_device *pdev,
 {
 	struct resource *mem;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (!pdev || !base || !device_name) {
 		pr_err("Invalid params\n");
 		return -EINVAL;
@@ -872,6 +900,7 @@ uint32_t msm_camera_register_bus_client(struct platform_device *pdev,
 	struct msm_bus_scale_pdata *pdata;
 	struct device_node *of_node;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	CDBG("Register client ID: %d\n", id);
 
 	if (id >= CAM_BUS_CLIENT_MAX || !pdev) {
@@ -942,6 +971,7 @@ uint32_t msm_camera_update_bus_bw(int id, uint64_t ab, uint64_t ib)
 	struct msm_bus_scale_pdata *pdata;
 	int idx = 0;
 
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (id >= CAM_BUS_CLIENT_MAX) {
 		pr_err("Invalid params");
 		return -EINVAL;
@@ -976,6 +1006,7 @@ EXPORT_SYMBOL(msm_camera_update_bus_bw);
 uint32_t msm_camera_update_bus_vector(enum cam_bus_client id,
 	int vector_index)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (id >= CAM_BUS_CLIENT_MAX || g_cv[id].dyn_vote == true) {
 		pr_err("Invalid params");
 		return -EINVAL;
@@ -997,6 +1028,7 @@ EXPORT_SYMBOL(msm_camera_update_bus_vector);
 /* Unregister the bus client */
 uint32_t msm_camera_unregister_bus_client(enum cam_bus_client id)
 {
+	pr_info(">>  %s %d \n",__FUNCTION__,__LINE__);
 	if (id >= CAM_BUS_CLIENT_MAX) {
 		pr_err("Invalid params");
 		return -EINVAL;
