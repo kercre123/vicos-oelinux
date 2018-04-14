@@ -8,16 +8,21 @@ SRC_URI = "file://rampost \
            file://rampost.service \
            "
 
+inherit systemd
+
+
 do_install() {
   install -d ${D}/bin
   install -m 0755 ${WORKDIR}/rampost ${D}/bin/
 
-  install -d  ${D}${systemd_unitdir}/system/
-  install -m 0644 ${WORKDIR}/rampost.service -D ${D}${sysconfdir}/system/rampost.service
-  install -d ${D}${sysconfdir}/system/sysinit.target.wants/
-  # enable the service for sysinit.target
-  ln -sf ${sysconfdir}/system/rampost.service \
-       ${D}${sysconfdir}/system/sysinit.target.wants/rampost.service
+  if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+    install -d  ${D}${systemd_unitdir}/system/
+    install -m 0644 ${WORKDIR}/rampost.service -D ${D}${systemd_unitdir}/system/rampost.service
+    install -d ${D}${systemd_unitdir}/system/sysinit.target.wants/
+    # enable the service for sysinit.target
+    ln -sf ${systemd_unitdir}/system/rampost.service \
+         ${D}${systemd_unitdir}/system/sysinit.target.wants/rampost.service
+  fi
 }
 
 FILES_${PN} += "/bin"
