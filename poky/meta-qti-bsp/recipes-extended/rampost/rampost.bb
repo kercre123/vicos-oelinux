@@ -15,14 +15,12 @@ do_install() {
   install -d ${D}/bin
   install -m 0755 ${WORKDIR}/rampost ${D}/bin/
 
-  if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
-    install -d  ${D}${systemd_unitdir}/system/
-    install -m 0644 ${WORKDIR}/rampost.service -D ${D}${systemd_unitdir}/system/rampost.service
-    install -d ${D}${systemd_unitdir}/system/sysinit.target.wants/
-    # enable the service for sysinit.target
-    ln -sf ${systemd_unitdir}/system/rampost.service \
-         ${D}${systemd_unitdir}/system/sysinit.target.wants/rampost.service
-  fi
+  install -d  ${D}${systemd_unitdir}/system/
+  install -m 0644 ${WORKDIR}/rampost.service -D ${D}${systemd_unitdir}/system/rampost.service
+  install -d ${D}${systemd_unitdir}/system/sysinit.target.wants/
+  # enable the service for sysinit.target
+  ln -sf ${systemd_unitdir}/system/rampost.service \
+       ${D}${systemd_unitdir}/system/sysinit.target.wants/rampost.service
 }
 
 FILES_${PN} += "/bin"
