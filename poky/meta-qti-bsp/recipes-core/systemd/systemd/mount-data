@@ -64,7 +64,6 @@ make_homes() {
 
 case "$1" in
   start )
-    make_homes
     if grep $UNBRICK_KEY /proc/cmdline > /dev/null; then
       echo "Mount-data in UNBRICK MODE" > /dev/kmsg
       mount -o size=64M -t tmpfs none /data/
