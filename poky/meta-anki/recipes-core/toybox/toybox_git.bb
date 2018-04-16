@@ -69,8 +69,8 @@ do_install() {
 inherit update-alternatives
 
 # If you've chosen to install toybox you probably want it to take precedence
-# over busybox where possible but not over other packages
-ALTERNATIVE_PRIORITY = "60"
+# over busybox and coreutils where possible but not over other packages
+ALTERNATIVE_PRIORITY = "110"
 
 python do_package_prepend () {
     # Read links from /etc/toybox.links and create appropriate

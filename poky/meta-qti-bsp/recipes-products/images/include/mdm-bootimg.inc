@@ -16,11 +16,11 @@ IMAGE_LINGUAS = ""
 # Default image output types
 IMAGE_FSTYPES ?= "tar.gz ${INITRAMFS_FSTYPES}"
 
-# Use busybox as login manager
-IMAGE_LOGIN_MANAGER = "busybox-static"
+# Use toybox as login manager
+IMAGE_LOGIN_MANAGER = "toybox-static"
 
 # Include minimum init and init scripts
-IMAGE_DEV_MANAGER ?= "busybox-static-mdev"
+IMAGE_DEV_MANAGER ?= "toybox-static-mdev"
 IMAGE_INIT_MANAGER ?= "sysvinit sysvinit-pidof"
 IMAGE_INITSCRIPTS ?= ""
 
