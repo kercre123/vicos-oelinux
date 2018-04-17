@@ -20,7 +20,7 @@ do_compile () {
    echo "gitdir: ${WORKSPACE}/.git/modules/anki/victor" > .git
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
-   ./project/victor/build-victor.sh -p android -c Release
+   ./project/victor/build-victor.sh -p android -c Release -F factoryTest
    ./project/victor/build-victor.sh -p vicos -c Release
 }
 

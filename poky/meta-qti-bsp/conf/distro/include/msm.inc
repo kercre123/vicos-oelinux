@@ -52,3 +52,7 @@ IMAGE_DEPENDS_fastboot = "mkbootimg-native virtual/kernel"
 IMAGE_CMD_fastboot = "${STAGING_BINDIR_NATIVE}/mkbootimg --kernel ${STAGING_DIR_TARGET}/kernel/arch/arm/boot/Image --ramdisk /dev/null --ramdisk_offset $(awk --non-decimal-data '/ _end/ {end="0x" $1} /_stext/ {beg="0x" $1} END {size1=end-beg+4096; size=and(size1,compl(4095)); printf("%#x",size)}' ${STAGING_DIR_TARGET}/boot/System.map-${MACHINE_KERNEL_VERSION}) --cmdline 'root=${MACHINE_ROOTDEV} rw init=/sbin/init --verbose loglevel=7 rootwait console=${MACHINE_CONSOLE} no_console_suspend=1 androidboot.hardware=qcom log_buf_len=262144' --base ${MACHINE_KERNEL_BASE} ${EXTRA_IMAGECMD} --pagesize ${MACHINE_FLASH_PAGE_SIZE} --output ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.fastboot"
 
 PREFERRED_VERSION_readline = "5.2"
+
+# Anki Version Info
+ANKI_PRODUCT_VERSION = "0.9.2"
+QCOM_RELEASE = "r00014.1"

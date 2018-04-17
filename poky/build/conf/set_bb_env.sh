@@ -84,6 +84,15 @@ function build-8009-robot-perf-image() {
   cdbitbake machine-robot-image
 }
 
+function build-8009-robot-user-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-user
+  export VARIANT=perf
+  export PRODUCT=robot
+  cdbitbake machine-robot-image
+}
+
 build-all-8009-robot-images() {
   build-8009-robot-image
   build-8009-robot-perf-image
@@ -95,6 +104,10 @@ function build-victor-robot-image() {
 
 function build-victor-robot-perf-image() {
   build-8009-robot-perf-image
+}
+
+function build-victor-robot-user-image() {
+  build-8009-robot-user-image
 }
 
 # Utility commands
@@ -149,7 +162,7 @@ export TEMPLATECONF="meta-qti-bsp/conf"
 
 # Yocto/OE-core works a bit differently than OE-classic so we're
 # going to source the OE build environment setup script they provided.
-# This will dump the user in ${WS}/yocto/build, ready to run the 
+# This will dump the user in ${WS}/yocto/build, ready to run the
 # convienence function or straight up bitbake commands.
 . ${WS}/poky/oe-init-build-env
 
