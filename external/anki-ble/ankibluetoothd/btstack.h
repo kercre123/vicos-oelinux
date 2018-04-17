@@ -52,6 +52,7 @@ bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
                   const std::vector<uint8_t>& value);
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings);
 bool StopAdvertisement();
+void RestartAdvertisement();
 
 bool SetScanning(const bool enable);
 bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct);

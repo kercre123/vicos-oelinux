@@ -1791,6 +1791,13 @@ bool StopGattService(BluetoothGattService* service) {
 
 }
 
+void ScheduleAdvertisementRestart() {
+  // Restart Advertisement after 1 minute
+  auto f = std::bind(&RestartAdvertisement);
+  auto when = std::chrono::steady_clock::now() + std::chrono::minutes(1);
+  sTaskExecutor.WakeAfter(f, when);
+}
+
 bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings)
 {
   const Anki::BLEAdvertiseData& advertisement = settings.GetAdvertisement();
@@ -1846,6 +1853,10 @@ bool StartAdvertisement(const Anki::BLEAdvertiseSettings& settings)
     return false;
   }
 
+  sBtAdvertisingEnabled = true;
+
+  ScheduleAdvertisementRestart();
+
   return true;
 }
 
@@ -1856,9 +1867,35 @@ bool StopAdvertisement() {
     return false;
   }
 
+  sBtAdvertisingEnabled = false;
+
   return true;
 }
 
+void RestartAdvertisement() {
+  if (!sBtAdvertisingEnabled) {
+    return;
+  }
+
+  if (!sBtGattInterface) {
+    return;
+  }
+
+  bt_status_t status = sBtGattInterface->client->listen(sBtGattClientIf, false /* start */);
+  if (status != BT_STATUS_SUCCESS) {
+    logw("failed to stop advertising during a restart. status = %s",
+         bt_status_t_to_string(status).c_str());
+    return;
+  }
+
+  status = sBtGattInterface->client->listen(sBtGattClientIf, true /* start */);
+  if (status != BT_STATUS_SUCCESS) {
+    logw("failed to start advertising during a restart. status = %s",
+         bt_status_t_to_string(status).c_str());
+  }
+
+  ScheduleAdvertisementRestart();
+}
 
 bool SendResponse(int conn_id, int trans_id, int handle, int error, int offset,
                   const std::vector<uint8_t>& value)
