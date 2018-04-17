@@ -54,5 +54,4 @@ IMAGE_CMD_fastboot = "${STAGING_BINDIR_NATIVE}/mkbootimg --kernel ${STAGING_DIR_
 PREFERRED_VERSION_readline = "5.2"
 
 # Anki Version Info
-ANKI_PRODUCT_VERSION = "0.9.2"
 QCOM_RELEASE = "r00014.1"
