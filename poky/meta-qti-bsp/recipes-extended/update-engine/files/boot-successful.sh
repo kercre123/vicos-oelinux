@@ -1,7 +1,9 @@
 #!/bin/sh
 set -e
 
-SLOT_SUFFIX=`tr ' ' '\n' < /proc/cmdline | awk -F= /androidboot.slot_suffix/'{print $2}' | xargs`
+SLOT_SUFFIX="$(cat /proc/cmdline)"
+SLOT_SUFFIX="${SLOT_SUFFIX##*androidboot.slot_suffix=}"
+SLOT_SUFFIX="${SLOT_SUFFIX%% *}"
 
 case "$SLOT_SUFFIX" in
   '_a')
