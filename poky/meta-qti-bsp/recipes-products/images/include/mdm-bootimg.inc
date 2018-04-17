@@ -33,33 +33,34 @@ gen_buildprop() {
    echo ${MACHINE} >> ${IMAGE_ROOTFS}/target
 
    # Anki-specific version
-   echo "ro.anki.version=${ANKI_PRODUCT_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   ANKI_VERSION=`cat ${IMAGE_ROOTFS}/etc/anki-version`
+   RELEASE_VERSION=`cat ${IMAGE_ROOTFS}/etc/version`
+   
+   echo "ro.anki.version=${ANKI_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
 
-   # ANKI_BUILD_VERSION will be set by TeamCity for CI builds, default to 0 for developer builds
-   : ${ANKI_BUILD_VERSION:=0}
-
-   ANKI_VERSION="${ANKI_PRODUCT_VERSION}-${ANKI_BUILD_VERSION}"
-
+   REV_TAG=""
    GIT=`which git`
    if [ ! -z $GIT ]; then
       REV=`git rev-parse --short HEAD`
+      REV_TAG="-${REV}"
       # ro.revision is used by debuggerd to tag tombstone crash dumps
       echo "ro.revision=${REV}" >> ${IMAGE_ROOTFS}/build.prop
    fi
 
    # ro.build.fingerprint is used by debuggerd to tag tombstone crash dumps
-   echo "ro.build.fingerprint=${ANKI_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   echo "ro.build.fingerprint=${ANKI_VERSION}-${RELEASE_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
 
    # standard Android build info
 
    # build.id can be an alpha-numeric build identifier
-   echo "ro.build.id=${ANKI_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   echo "ro.build.id=${ANKI_VERSION}${REV_TAG}-${RELEASE_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
 
    # build.display.id is intended for displaying a consumer facing build id
-   echo "ro.build.display.id=${ANKI_PRODUCT_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   echo "ro.build.display.id=${ANKI_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
 
    # build.version.incremental is should be an increasing number
-   echo "ro.build.version.incremental=${ANKI_BUILD_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   VERSION_CODE=`cat ${IMAGE_ROOTFS}/etc/anki-version-code`
+   echo "ro.build.version.incremental=${VERSION_CODE}" >> ${IMAGE_ROOTFS}/build.prop
 
    echo "ro.build.user=${USER}" >> ${IMAGE_ROOTFS}/build.prop
 }

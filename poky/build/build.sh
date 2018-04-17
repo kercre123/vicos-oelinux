@@ -30,7 +30,7 @@ build-victor-robot-image
 
 popd
 
-make -C ${TOPLEVEL}/ota UPDATE_VERSION=${ANKI_BUILD_VERSION}
+make -C ${TOPLEVEL}/ota
 
 # Re-enable check for unset variables
 set -u
