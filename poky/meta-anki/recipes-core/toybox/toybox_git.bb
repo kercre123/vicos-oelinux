@@ -14,7 +14,8 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=f0b8b3dd6431bcaa245da0a08bd0d511"
 SECTION = "base"
 
 TOYBOX_BIN = "generated/unstripped/toybox"
-RDEPENDS_${PN} = "zlib libattr"
+DEPENDS = "openssl"
+RDEPENDS_${PN} = "zlib libattr openssl"
 
 do_configure() {
     [[ -f .config ]] && echo "Found .config"
