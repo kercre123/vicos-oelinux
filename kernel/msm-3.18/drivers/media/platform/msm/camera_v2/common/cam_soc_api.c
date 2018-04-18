@@ -367,8 +367,9 @@ int msm_camera_clk_enable(struct device *dev,
 			CDBG("clock rate is  %d\n", clk_info[i].clk_rate);
 
 			if (clk_info[i].clk_rate > 0) {
-				clk_rate = clk_round_rate(clk_ptr[i],
-					clk_info[i].clk_rate);
+				pr_info("do rounding of rate %d\n", clk_info[i].clk_rate);
+				clk_rate = clk_round_rate(clk_ptr[i], clk_info[i].clk_rate);
+				pr_info("clk_rate after rounding = %d \n", clk_rate);
 				if (clk_rate < 0) {
 					pr_err("%s round failed\n",
 						   clk_info[i].clk_name);

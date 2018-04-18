@@ -60,6 +60,8 @@
 #define MAX_PIX_OVERFLOW_ERROR_COUNT 10
 static int pix_overflow_error_count[VFE_MAX] = { 0 };
 
+#define CONFIG_MSMB_CAMERA_DEBUG
+
 #undef CDBG
 #ifdef CONFIG_MSMB_CAMERA_DEBUG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
