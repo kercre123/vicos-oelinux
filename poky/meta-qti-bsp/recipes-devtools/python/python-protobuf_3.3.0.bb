@@ -42,8 +42,8 @@ do_install() {
     # the above fails to add the path, just install that into ${D}
     rm -f ${D}${PYTHON_SITEPACKAGES_DIR}/protobuf.pth
     echo "./${SRCNAME}-${PV}-py${PYTHON_BASEVERSION}.egg" > ${D}${PYTHON_SITEPACKAGES_DIR}/protobuf.pth
-#    cp "${S}/dist/${SRCNAME}-${PV}-py${PYTHON_BASEVERSION}.egg" ${D}${PYTHON_SITEPACKAGES_DIR}
-#    cp "${S}/${SRCNAME}.egg-info/PKG-INFO" "${D}${PYTHON_SITEPACKAGES_DIR}/${SRCNAME}-${PV}-py${PYTHON_BASEVERSION}.egg-info"
+    cp "${S}/dist/${SRCNAME}-${PV}-py${PYTHON_BASEVERSION}.egg" ${D}${PYTHON_SITEPACKAGES_DIR}
+    cp "${S}/${SRCNAME}.egg-info/PKG-INFO" "${D}${PYTHON_SITEPACKAGES_DIR}/${SRCNAME}-${PV}-py${PYTHON_BASEVERSION}.egg-info"
 }
 
 
