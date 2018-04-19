@@ -26,7 +26,7 @@ source build/conf/set_bb_env.sh
 export ANKI_BUILD_VERSION
 export BB_ENV_EXTRAWHITE="$BB_ENV_EXTRAWHITE ANKI_BUILD_VERSION"
 
-build-victor-robot-image
+build-victor-robot-perf-image
 
 popd
 

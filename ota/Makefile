@@ -1,4 +1,4 @@
-IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot
+IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf
 BUILD=../_build
 BOOT_STEM=apq8009-robot-boot
 SYS_STEM=apq8009-robot-sysfs
