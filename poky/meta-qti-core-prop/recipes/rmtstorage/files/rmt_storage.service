@@ -1,7 +1,8 @@
 [Unit]
 Description= Remote Storage Service
 SourcePath=/sbin/rmt_storage
-After=usb.service
+Wants=systemd-udevd.service
+After=usb.service systemd-udevd.service
 Before=init_sys_mss.service
 
 [Service]
