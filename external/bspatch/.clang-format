@@ -1,4 +1,0 @@
-BasedOnStyle: Chromium
-
-MaxEmptyLinesToKeep: 2
-AllowShortBlocksOnASingleLine: true
