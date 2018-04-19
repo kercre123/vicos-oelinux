@@ -124,7 +124,7 @@ do_install_append_msm() {
         if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
           install -d ${D}${systemd_unitdir}/system/
           #QCMAP service
-          if (test "x${BASEPRODUCT}" != "xdrone"); then
+          if (test "x${BASEPRODUCT}" != "xdrone" && test "x${BASEPRODUCT}" != "xrobot"); then
             rm -rf ${D}${sysconfdir}/init.d/start_QCMAP_ConnectionManager_le
             install -m 0644 ${WORKDIR}/QCMAP_ConnectionManagerd.service -D ${D}${systemd_unitdir}/system/QCMAP_ConnectionManagerd.service
             install -d ${D}${systemd_unitdir}/system/multi-user.target.wants/
