@@ -12,13 +12,15 @@
 LICENSE = "PD"
 LIC_FILES_CHKSUM = "file://start-stop-daemon.c;endline=26;md5=d12ebbc165f2c86fec2dd1bf92653167"
 
-SRC_URI = "git://github.com/daleobrien/start-stop-daemon.git;protocol=https"
+# Our source is based on 
+#SRC_URI = "git://github.com/daleobrien/start-stop-daemon.git;protocol=https"
+#PV = "1.0+git${SRCPV}"
+#SRCREV = "${AUTOREV}"
+#S = "${WORKDIR}/git"
 
-# Modify these as desired
-PV = "1.0+git${SRCPV}"
-SRCREV = "${AUTOREV}"
-
-S = "${WORKDIR}/git"
+PV = "3.1415"
+SRC_URI = "file://start-stop-daemon.c"
+S = "${WORKDIR}"
 
 FILES_${PN} += "start-stop-daemon"
 
