@@ -5,10 +5,14 @@ Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 
 SRC_URI = "file://rampost \
            file://rampost.service \
-           file://rampost.c
-           file://spine_hal.c
-           file://gpio.c
-           file://lcd.c
+           file://rampost.c \
+           file://spine_hal.c \
+           file://gpio.c \
+           file://lcd.c \
+           file://rampost.h \
+           file://spine_hal.h \
+           file://gpio.h \
+           file://messages.h \
            "
 
 inherit systemd

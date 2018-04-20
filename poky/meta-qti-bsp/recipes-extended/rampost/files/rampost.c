@@ -1,10 +1,12 @@
 #include <stdio.h>
+#include <time.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <termios.h>
 #include <stdbool.h>
 #include <sys/ioctl.h>
 #include <assert.h>
@@ -104,7 +106,7 @@ int recovery_mode_check(void) {
   return 0; //fault mode
 }
 
-void on_exit(void)
+void exit_cleanup(void)
 {
   lcd_device_sleep();
   lcd_set_brightness(0);
@@ -113,7 +115,7 @@ void on_exit(void)
 
 int error_exit(RampostErr err) {
 set_body_leds(0, 0);
-on_exit();
+exit_cleanup();
 exit(err);
 
 }
@@ -133,7 +135,7 @@ int main(int argc, const char* argv[]) {
   set_body_leds(success, recovery_mode_check());
   
 
-  on_exit();
+  exit_cleanup();
 
   return 0;
 }
