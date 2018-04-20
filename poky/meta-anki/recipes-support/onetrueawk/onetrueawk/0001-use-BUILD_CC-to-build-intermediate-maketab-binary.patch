@@ -1,0 +1,25 @@
+From 929dbac5021ad12797ff98379959ff8b97d34f4e Mon Sep 17 00:00:00 2001
+From: Alexander Kaplan <alexander@anki.com>
+Date: Fri, 20 Apr 2018 13:59:14 -0700
+Subject: [PATCH] use BUILD_CC to build intermediate maketab binary
+
+---
+ makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/makefile b/makefile
+index b2c8697..cdb1b79 100644
+--- a/makefile
++++ b/makefile
+@@ -62,7 +62,7 @@ proctab.c:	maketab
+ 	./maketab >proctab.c
+ 
+ maketab:	ytab.h maketab.c
+-	$(CC) $(CFLAGS) maketab.c -o maketab
++	$(BUILD_CC) $(BUILD_CFLAGS) maketab.c -o maketab
+ 
+ bundle:
+ 	@cp ytab.h ytabh.bak
+-- 
+2.1.2
+
