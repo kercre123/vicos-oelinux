@@ -49,6 +49,7 @@ DEPENDS_append = " ${@bb.utils.contains('DISTRO_FEATURES','systemd','systemd-sys
 PACKAGES =+ "${PN}-functions"
 RDEPENDS_${PN} = "${PN}-functions \
                   ${@bb.utils.contains('DISTRO_FEATURES','selinux','bash','',d)} \
+		  awk \
 		 "
 FILES_${PN}-functions = "${sysconfdir}/init.d/functions*"
 
