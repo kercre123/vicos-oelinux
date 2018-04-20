@@ -5,7 +5,7 @@ Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 
 DEPENDS = "zlib liblog"
 
-SRC_URI = "file://update-engine.py \
+SRC_URI = " \
       file://bootctl.cpp \
       file://bootctl.h \
       file://gpt-utils.cpp \
@@ -21,7 +21,6 @@ do_compile () {
 
 do_install() {
   install -d ${D}/bin
-  install -m 0700 ${WORKDIR}/update-engine.py ${D}/bin/update-engine
   install -m 0700 ${WORKDIR}/bootctl ${D}/bin/
 
   install -d ${D}${sysconfdir}/initscripts

@@ -29,7 +29,7 @@ do_install() {
     if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
         install -m 0755 ${S}/init_qcom_audio -D ${D}${sysconfdir}/initscripts/init_qcom_audio
         install -d ${D}/etc/systemd/system/
-        install -m 0755 ${S}/init_audio.service -D ${D}${sysconfdir}/systemd/system/init_audio.service
+        install -m 0644 ${S}/init_audio.service -D ${D}${sysconfdir}/systemd/system/init_audio.service
         install -d ${D}/etc/systemd/system/multi-user.target.wants
         ln -sf /etc/systemd/system/init_audio.service ${D}/etc/systemd/system/multi-user.target.wants/init_audio.service
         install -d ${D}/etc/systemd/system/ffbm.target.wants
