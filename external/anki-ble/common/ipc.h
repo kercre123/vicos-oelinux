@@ -263,10 +263,12 @@ class IPCEndpoint {
     TaskExecutor* task_executor_;
   };
   void AddPeerByFD(const int fd);
+  void RemovePeerByFD(const int fd);
   void CreateSocket();
   void CloseSocket();
   void ReceiveMessage(PeerState* p);
   void SendQueuedMessagesToPeer(const int sockfd);
+  void HandleSocketCloseOrError(const int sockfd);
   virtual void OnReceiveError(const int sockfd);
   virtual void OnPeerClose(const int sockfd);
   virtual void OnReceiveIPCMessage(const int sockfd,
