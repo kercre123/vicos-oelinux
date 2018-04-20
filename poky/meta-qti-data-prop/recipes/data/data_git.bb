@@ -26,12 +26,12 @@ SRC_URI  += "file://qtid.service"
 S       =  "${WORKDIR}/data"
 SRC_DIR =  "${WORKSPACE}/data/"
 
-FILES_${PN}-dbg += " ${prefix}/tests/.debug \
-                     /WEBSERVER/www/cgi-bin/.debug "
+FILES_${PN}-dbg += " ${prefix}/tests/.debug"
+FILES_${PN}-dbg += " ${@base_conditional('BASEPRODUCT', 'robot', '', '/WEBSERVER/www/cgi-bin/.debug', d)}"
 
 FILES_${PN} += " ${prefix}/tests \
-                 /WEBSERVER/* \
                  /lib/systemd/*"
+FILES_${PN} += " ${@base_conditional('BASEPRODUCT', 'robot', '', '/WEBSERVER/*', d)}"
 
 BASEPRODUCT = "${@d.getVar('PRODUCT', False)}"
 
@@ -124,13 +124,17 @@ do_install_append_msm() {
         if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
           install -d ${D}${systemd_unitdir}/system/
           #QCMAP service
-          if (test "x${BASEPRODUCT}" != "xdrone"); then
+          if (test "x${BASEPRODUCT}" != "xdrone" && test "x${BASEPRODUCT}" != "xrobot"); then
             rm -rf ${D}${sysconfdir}/init.d/start_QCMAP_ConnectionManager_le
             install -m 0644 ${WORKDIR}/QCMAP_ConnectionManagerd.service -D ${D}${systemd_unitdir}/system/QCMAP_ConnectionManagerd.service
             install -d ${D}${systemd_unitdir}/system/multi-user.target.wants/
             # enable the service for multi-user.target
             ln -sf ${systemd_unitdir}/system/QCMAP_ConnectionManagerd.service \
             ${D}${systemd_unitdir}/system/multi-user.target.wants/QCMAP_ConnectionManagerd.service
+          fi
+
+          if (test "x${BASEPRODUCT}" == "xrobot"); then
+            rm -rf ${D}/WEBSERVER
           fi
 
           #QTI service
