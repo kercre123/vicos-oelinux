@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+#include "rampost.h"
+
 enum Gpio_Dir {
   gpio_DIR_INPUT,
   gpio_DIR_OUTPUT
@@ -28,9 +30,6 @@ struct GPIO_t
 };
 typedef struct GPIO_t* GPIO;
 
-void gpio_set_direction(GPIO gp, enum Gpio_Dir direction);
-void gpio_set_value(GPIO gp, enum Gpio_Level value);
-
 
 int gpio_get_base_offset()
 {
@@ -47,18 +46,18 @@ int gpio_get_base_offset()
     }
 
     if (fd < 0) {
-      error_exit(app_DEVICE_OPEN_ERROR, "can't access gpiochip base [%d]", errno);
+      error_exit(err_GPIOCHIP_BASE);
     }
 
     char base_buf[5] = {0};
     int r = read(fd, base_buf, sizeof(base_buf));
     if (r < 0) {
-      error_exit(app_IO_ERROR, "can't read gpiopchip base property");
+      error_exit(err_GPIOCHIP_BASE);
     }
 
     if (isdigit(base_buf[0]) == 0)
     {
-      error_exit(app_VALIDATION_ERROR, "can't parse gpiochip base property");
+      error_exit(err_GPIOCHIP_BASE);
     }
 
     GPIO_BASE_OFFSET = atoi(base_buf);
@@ -67,18 +66,53 @@ int gpio_get_base_offset()
   return GPIO_BASE_OFFSET;
 }
 
+static inline enum Gpio_Dir gpio_drain_direction(enum Gpio_Level value) {
+  return value == gpio_LOW ? gpio_DIR_OUTPUT : gpio_DIR_INPUT;
+}
+
+
+void gpio_set_direction(GPIO gp, enum Gpio_Dir direction)
+{
+  assert(gp != NULL);
+   char ioname[40];
+//   printf("settting direction of %d  to %s\n", gp->pin, direction  ? "out": "in");
+   snprintf(ioname, 40, "/sys/class/gpio/gpio%d/direction", gp->pin+gpio_get_base_offset());
+   int fd =  open(ioname, O_WRONLY );
+   if (fd <  0) {
+     error_exit(err_GPIO_DIRECTION);
+   }
+   if (direction == gpio_DIR_OUTPUT) {
+     write(fd, "out", 3);
+   }
+   else {
+     write(fd, "in", 2);
+   }
+   close(fd);
+}
+
+void gpio_set_value(GPIO gp, enum Gpio_Level value) {
+  assert(gp != NULL);
+  if (gp->isOpenDrain) {
+    gpio_set_direction(gp, gpio_drain_direction(value));
+    return;
+  }
+  static const char* trigger[] = {"0","1"};
+  write(gp->fd, trigger[value!=0], 1);
+}
+
+
 GPIO gpio_create(int gpio_number, enum Gpio_Dir direction, enum Gpio_Level initial_value) {
    char ioname[32];
    GPIO gp  = malloc(sizeof(struct GPIO_t));
-   if (!gp) error_exit(app_MEMORY_ERROR, "can't alloc memory for gpio %d", gpio_number);
+   if (!gp) error_exit(err_MEMORY_ERROR);
 
    //create io
    int fd = open("/sys/class/gpio/export", O_WRONLY);
-   snprintf(ioname, 32, "%d\n", gpio_number+gpio_get_base_offset());
    if (fd<0) {
      free(gp);
-     error_exit(app_DEVICE_OPEN_ERROR, "Can't create exporter %d- %s\n", errno, strerror(errno));
+     error_exit(err_GPIO_CREATE);
    }
+   snprintf(ioname, 32, "%d\n", gpio_number+gpio_get_base_offset());
    write(fd, ioname, strlen(ioname));
    close(fd);
 
@@ -95,7 +129,7 @@ GPIO gpio_create(int gpio_number, enum Gpio_Dir direction, enum Gpio_Level initi
 
    if (fd <0) {
      free(gp);
-     error_exit(app_IO_ERROR, "can't create gpio %d value control %d - %s", gpio_number, errno, strerror(errno));
+     error_exit(err_GPIO_CREATE);
    }
    gp->fd = fd;
    if  (fd>0) {
@@ -105,9 +139,6 @@ GPIO gpio_create(int gpio_number, enum Gpio_Dir direction, enum Gpio_Level initi
    return gp;
 }
 
-static inline enum Gpio_Dir gpio_drain_direction(enum Gpio_Level value) {
-  return value == gpio_LOW ? gpio_DIR_OUTPUT : gpio_DIR_INPUT;
-}
 
 
 GPIO gpio_create_open_drain_output(int gpio_number, enum Gpio_Level initial_value) {
@@ -118,32 +149,6 @@ GPIO gpio_create_open_drain_output(int gpio_number, enum Gpio_Level initial_valu
 
 }
 
-
-void gpio_set_direction(GPIO gp, enum Gpio_Dir direction)
-{
-  assert(gp != NULL);
-   char ioname[40];
-//   printf("settting direction of %d  to %s\n", gp->pin, direction  ? "out": "in");
-   snprintf(ioname, 40, "/sys/class/gpio/gpio%d/direction", gp->pin+gpio_get_base_offset());
-   int fd =  open(ioname, O_WRONLY );
-   if (direction == gpio_DIR_OUTPUT) {
-      write(fd, "out", 3);
-   }
-   else {
-      write(fd, "in", 2);
-   }
-   close(fd);
-}
-
-void gpio_set_value(GPIO gp, enum Gpio_Level value) {
-  assert(gp != NULL);
-  if (gp->isOpenDrain) {
-    gpio_set_direction(gp, gpio_drain_direction(value));
-    return;
-  }
-  static const char* trigger[] = {"0","1"};
-  write(gp->fd, trigger[value!=0], 1);
-}
 
 void gpio_close(GPIO gp) {
   assert(gp != NULL);

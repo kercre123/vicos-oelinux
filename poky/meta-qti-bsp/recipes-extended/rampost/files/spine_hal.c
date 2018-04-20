@@ -8,8 +8,16 @@
 #include <termios.h>
 /* #include <string.h> */
 
+#include "spine_hal.h"
+
+#include "messages.h"
+#include "rampost.h"
+
 #define SPINE_TTY "/dev/ttyHS0"
 #define SPINE_TTY_LEGACY "/dev/ttyHSL1"
+
+
+
 
 
 #include <stdint.h>
@@ -114,7 +122,7 @@ static struct HalGlobals {
 
 static void hal_serial_close()
 {
-  LOGD("close(fd = %d)", gHal.fd);
+  spine_debug("close(fd = %d)", gHal.fd);
   //TODO: restore?:  tcsetattr(gHal.fd, TCSANOW, &gHal.oldcfg))
   close(gHal.fd);
   gHal.fd = 0;
@@ -148,12 +156,12 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
 //?    memcpy(gHal.oldcfg,cfg,sizeof(gHal.oldcfg)); //make backup;
 
     cfmakeraw(&cfg);
-
-    platform_set_baud(gHal.fd, cfg, baudrate);
+    cfsetispeed(&cfg, baudrate);
+    cfsetospeed(&cfg, baudrate);
 
     cfg.c_cflag |= (CS8 | CSTOPB);    // Use N82 bit words
 
-    LOGD("configuring port %s (fd=%d)", devicename, gHal.fd);
+    spine_debug("configuring port %s (fd=%d)", devicename, gHal.fd);
 
 
     if (tcsetattr(gHal.fd, TCSANOW, &cfg)) {
@@ -264,10 +272,10 @@ static int spine_sync(const uint8_t* buf, unsigned int idx)
     struct SpineMessageHeader* candidate = (struct SpineMessageHeader*)buf;
     int expected_len = get_payload_len(candidate->payload_type, dir_READ);
     if (expected_len < 0 || (expected_len != candidate->bytes_to_follow)) {
-      LOGE("spine_header %x %x %x : %d", candidate->sync_bytes,
-           candidate->payload_type,
-           candidate->bytes_to_follow,
-           expected_len);
+//      LOGE("spine_header %x %x %x : %d", candidate->sync_bytes,
+           /* candidate->payload_type, */
+           /* candidate->bytes_to_follow, */
+           /* expected_len); */
       //bad header,
       //we need to check the length bytes for the beginning of a sync word
       unsigned int pos = idx - SPINE_LEN_LEN;
@@ -358,11 +366,6 @@ const struct SpineMessageHeader* hal_read_frame()
     if (rslt > 0) {
       index = spine_sync(gHal.inbuffer, index);
     }
-    else if (rslt < 0) {
-      if ((gHal.errcount++ & 0x3FF) == 0) { //TODO: at somepoint maybe we handle this?
-        LOGI("spine_read_error %d", rslt);
-      }
-    }
     else {
        return NULL; //wait a bit more
     }
@@ -385,7 +388,7 @@ const struct SpineMessageHeader* hal_read_frame()
     }
     else if (rslt < 0) {
       if ((gHal.errcount++ & 0x3FF) == 0) { //TODO: at somepoint maybe we handle this?
-        LOGI("spine_payload_read_error %d", rslt);
+//        LOGI("spine_payload_read_error %d", rslt);
       }
     }
     else {
@@ -400,7 +403,7 @@ const struct SpineMessageHeader* hal_read_frame()
   crc_t true_crc = calc_crc(gHal.inbuffer + SPINE_HEADER_LEN, payload_length);
   if (expected_crc != true_crc && !SKIP_CRC_CHECK) {
     spine_debug("\nspine_crc_error: calc %08x vs data %08x\n", true_crc, expected_crc);
-    LOGI("spine_crc_error %08x != %08x", true_crc, expected_crc);
+//    LOGI("spine_crc_error %08x != %08x", true_crc, expected_crc);
 
 
     // Scan the whole payload for sync, to recover after dropped bytes,
@@ -421,7 +424,7 @@ const void* hal_get_next_frame(int32_t timeout_ms) {
   const struct SpineMessageHeader* hdr;
   do {
     if (timeout_ms>0 && --timeout_ms==0) {
-      LOGE("TIMEOUT in hal_get_next_frame() TIMEOUT");
+//      LOGE("TIMEOUT in hal_get_next_frame() TIMEOUT");
       return NULL;
     }
     hdr = hal_read_frame();
