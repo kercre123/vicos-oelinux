@@ -16,3 +16,5 @@ esac
 
 bootctl $THIS_SLOT mark_successful
 setprop ro.boot.successful 1
+
+dmesg > /data/boot.log
