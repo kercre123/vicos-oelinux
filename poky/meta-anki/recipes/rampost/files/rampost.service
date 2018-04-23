@@ -1,0 +1,13 @@
+[Unit]
+Description=Early boot self test
+SourcePath=/bin/rampost
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Restart=no
+RemainAfterExit=yes
+ExecStart=/bin/rampost
+
+[Install]
+WantedBy=sysinit.target
