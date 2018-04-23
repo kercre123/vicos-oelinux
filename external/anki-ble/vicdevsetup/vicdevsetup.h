@@ -13,6 +13,7 @@
 #include "ipc-client.h"
 #include "anki_ble_uuids.h"
 #include "exec_command.h"
+#include "robot_name.h"
 
 class VicDevSetup : public Anki::BluetoothDaemon::IPCClient {
  public:
@@ -20,6 +21,8 @@ class VicDevSetup : public Anki::BluetoothDaemon::IPCClient {
       : IPCClient(loop)
       , connection_id_(-1)
       , heartbeat_count_(1)
+      , robot_name_(Anki::GetRobotName())
+      , adapter_name_set_(false)
       , send_output_callback_(std::bind(&VicDevSetup::SendOutputToConnectedCentral,
                                         this, std::placeholders::_1, std::placeholders::_2))
                               {}
@@ -50,6 +53,8 @@ class VicDevSetup : public Anki::BluetoothDaemon::IPCClient {
   int connection_id_;
   std::vector<uint8_t> multipart_message_;
   uint8_t heartbeat_count_;
+  std::string robot_name_;
+  bool adapter_name_set_;
   ev::timer* heartbeat_timer_;
   Anki::ExecCommandCallback send_output_callback_;
 };

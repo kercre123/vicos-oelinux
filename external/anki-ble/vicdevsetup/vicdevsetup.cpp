@@ -69,6 +69,10 @@ void VicDevSetup::OnPeripheralStateUpdate(const bool advertising,
                                           const bool congested)
 {
   (void) congested; // currently unused
+  if (!adapter_name_set_) {
+    SetAdapterName(robot_name_);
+    adapter_name_set_ = true;
+  }
   OnInboundConnectionChange(connection_id, connected);
   if (!connected && !advertising) {
     Anki::BLEAdvertiseSettings settings;
