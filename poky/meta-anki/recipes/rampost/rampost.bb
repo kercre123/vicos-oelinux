@@ -14,6 +14,7 @@ SRC_URI = "file://rampost.service \
            file://gpio.h \
            file://messages.h \
            file://animfail.c \
+           file://error_565.h \
            "
 
 do_compile () {
