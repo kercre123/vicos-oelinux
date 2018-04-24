@@ -13,15 +13,20 @@ SRC_URI = "file://rampost.service \
            file://spine_hal.h \
            file://gpio.h \
            file://messages.h \
+           file://animfail.c \
+           file://error_565.h \
            "
 
 do_compile () {
   ${CC} ${WORKDIR}/rampost.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c ${WORKDIR}/spine_hal.c -o ${WORKDIR}/rampost
+  ${CC} ${WORKDIR}/animfail.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c -o ${WORKDIR}/animfail
 }
 
 do_install() {
   install -d ${D}/bin
   install -m 0755 ${WORKDIR}/rampost ${D}/bin/
+
+install -m 0755 ${WORKDIR}/animfail ${D}/bin/
 
   install -d  ${D}${systemd_unitdir}/system/
   install -m 0644 ${WORKDIR}/rampost.service -D ${D}${systemd_unitdir}/system/rampost.service

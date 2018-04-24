@@ -20,7 +20,7 @@ enum {
   app_IO_ERROR,
   app_VALIDATION_ERROR,
   app_MEMORY_ERROR,
-  
+
 };
 
 /******** TIMING UTILITIES ********/
@@ -93,7 +93,7 @@ int recovery_mode_check(void) {
   int result = read(fd, buffer, sizeof(buffer)-1);
   if  (result > 0) {
     buffer[result] = '\0'; //null terminate
-    printf("scanning [%s] for [%s]\n", buffer, RECOVERY_MODE_INDICATOR); 
+    printf("scanning [%s] for [%s]\n", buffer, RECOVERY_MODE_INDICATOR);
     char* pos = strstr(buffer, RECOVERY_MODE_INDICATOR);
     printf("%s\n", pos?"found":"nope");
     return (pos!=NULL);
@@ -104,7 +104,6 @@ int recovery_mode_check(void) {
 void exit_cleanup(void)
 {
   lcd_device_sleep();
-  lcd_set_brightness(0);
   lcd_gpio_teardown();
 }
 
@@ -119,7 +118,6 @@ exit(err);
 
 int main(int argc, const char* argv[]) {
   bool success = false;
-  lcd_set_brightness(5);
 
   lcd_gpio_setup();
   lcd_spi_init();
@@ -128,10 +126,8 @@ int main(int argc, const char* argv[]) {
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
   set_body_leds(success, recovery_mode_check());
-  
 
   exit_cleanup();
 
   return 0;
 }
-
