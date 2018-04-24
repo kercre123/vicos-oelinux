@@ -202,6 +202,13 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
                                          args->timeout);
       }
       break;
+    case IPCMessageType::SetAdapterName:
+      logv("ipc-server: SetAdapterName received");
+      {
+        SetAdapterNameArgs* args = (SetAdapterNameArgs *) data.data();
+        SetAdapterName(std::string(args->name));
+      }
+      break;
     default:
       loge("ipc-server: Unknown IPC message (%d)", (int) type);
       break;

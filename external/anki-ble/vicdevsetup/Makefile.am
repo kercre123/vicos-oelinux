@@ -39,7 +39,8 @@ vicdevsetup_SOURCES =	vicdevsetup.cpp \
 			$(COMMON_DIR)/fileutils.cpp \
 			$(COMMON_DIR)/stringutils.cpp \
 			$(COMMON_DIR)/strlcpy.c \
-			$(COMMON_DIR)/properties_compat.c
+			$(COMMON_DIR)/properties_compat.c \
+			$(COMMON_DIR)/robot_name.cpp
 
 EXTRA_vicdevsetup_DEPENDENCIES = connmanbus.c connmanbus.h
 

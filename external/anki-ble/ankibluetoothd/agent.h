@@ -57,6 +57,7 @@ class Agent : public IPCServer {
                                                 int max_interval,
                                                 int latency,
                                                 int timeout);
+  virtual void SetAdapterName(const std::string& name);
 
 
  private:

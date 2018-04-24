@@ -15,6 +15,7 @@
 #include "device_info.h"
 #include "log.h"
 #include "agent.h"
+#include "robot_name.h"
 
 #include <cutils/properties.h>
 #include <unistd.h>
@@ -38,12 +39,11 @@ static struct ev_signal sTermSig;
 
 std::string GetDesiredAdapterName() {
   char value[PROPERTY_VALUE_MAX] = {0};
-
-  (void) property_get("ro.anki.product.name", value, "Vector");
+  (void) property_get(Anki::kProductNamePropertyKey.c_str(), value, Anki::kDefaultProductName.c_str());
   std::string defaultName = std::string(value) + "_" + GetDeviceSerialNumber();
 
   memset(value, 0, sizeof(value));
-  (void) property_get("persist.anki.robot.name", value, defaultName.c_str());
+  (void) property_get(Anki::kRobotNamePropertyKey.c_str(), value, defaultName.c_str());
   return std::string(value);
 }
 

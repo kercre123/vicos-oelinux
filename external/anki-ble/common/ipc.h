@@ -39,6 +39,7 @@ const uint32_t kIPCMessageVersion = 1;
 const size_t k128BitUUIDSize = 37;
 const size_t k16BitUUIDSize = 5;
 const size_t kAddressSize = 18;
+const size_t kAdapterNameSize = 240;
 const size_t kLocalNameSize = 32;
 const size_t kManufacturerDataMaxSize = 32;
 const size_t kServiceDataMaxSize = 32;
@@ -67,7 +68,8 @@ enum class IPCMessageType {
     DescriptorReadRequest,
     OnDescriptorReadResult,
     RequestConnectionParameterUpdate,
-    OnRequestConnectionParameterUpdateResult
+    OnRequestConnectionParameterUpdateResult,
+    SetAdapterName
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -222,6 +224,10 @@ typedef struct __attribute__ ((__packed__)) OnRequestConnectionParameterUpdateRe
   char address[kAddressSize];
   int status;
 } OnRequestConnectionParameterUpdateResultArgs;
+
+typedef struct __attribute__ ((__packed__)) SetAdapterNameArgs {
+  char name[kAdapterNameSize];
+} SetAdapterNameArgs;
 
 class IPCEndpoint {
  public:

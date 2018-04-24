@@ -10,7 +10,6 @@
  *
  **/
 
-#pragma once
 
 #include <cutils/properties.h>
 #include <stdlib.h>

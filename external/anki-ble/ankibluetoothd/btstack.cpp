@@ -1586,6 +1586,7 @@ std::string GetAdapterName() {
 }
 
 bool SetAdapterName(const std::string& name) {
+  logv("Anki::BluetoothStack::SetAdapterName('%s')", name.c_str());
   std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
   if (!sBtInterface || !sBtAdapterEnabled) {
     return false;

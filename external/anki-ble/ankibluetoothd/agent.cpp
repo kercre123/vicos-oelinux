@@ -521,6 +521,13 @@ void Agent::RequestConnectionParameterUpdate(const int sockfd,
   OnRequestConnectionParameterUpdateResult(sockfd, address, status);
 }
 
+void Agent::SetAdapterName(const std::string& name) {
+  bool result = BluetoothStack::SetAdapterName(name);
+  if (!result) {
+    loge("Error setting adapter name to %s", name.c_str());
+  }
+}
+
 
 void Agent::OnPeerClose(const int sockfd) {
   logv("agent - OnPeerClose(sockfd = %d)", sockfd);
