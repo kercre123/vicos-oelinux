@@ -4,11 +4,12 @@ pipeline {
       label 'vicos'
     }
   }
+
   stages {
     stage('Build') {
       steps {
         sh './poky/build/build.sh'
-        timeout(unit: 'MINUTES', time: 60)
+        //timeout(unit: 'MINUTES', time: 60)
       }
     }
     stage('Collect Artifacts') {
@@ -17,4 +18,5 @@ pipeline {
       }
     }
   }
+
 }
