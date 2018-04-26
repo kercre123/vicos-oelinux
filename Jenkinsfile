@@ -5,15 +5,10 @@ pipeline {
     }
   }
   stages {
-    stage('Get VM') {
-      steps {
-        node(label: 'vicos')
-      }
-    }
     stage('Build') {
       steps {
         sh './poky/build/build.sh'
-        timeout(unit: 'MINUTES', time: 120)
+        timeout(unit: 'MINUTES', time: 60)
       }
     }
     stage('Collect Artifacts') {
