@@ -144,8 +144,9 @@ delta_gen = subprocess.Popen(["delta_generator",
 delta_gen_out, delta_gen_err = delta_gen.communicate()
 if delta_gen.returncode != 0:
     die(219,
-        "Delta generation failed \n{0}\n{1}".format(delta_gen_out,
-                                                    delta_gen_err))
+        "Delta generation failed \n{}\n{}"
+        .format(delta_gen_out.decode("utf-8"),
+                delta_gen_err.decode("utf-8")))
 
 with open('delta.bin', 'rb') as f_in, gzip.open('delta.bin.gz', 'wb') as f_out:
     shutil.copyfileobj(f_in, f_out)
@@ -175,8 +176,10 @@ create_signature_status = create_signature("manifest.ini",
 
 if not create_signature_status[0]:
     die(219,
-        "Failed to sign manifest.ini, openssl returned {1:d} {2:s} {3:s}"
-        .format(*create_signature_status))
+        "Failed to sign manifest.ini, openssl returned {}\n{}\n{}"
+        .format(create_signature_status[1],
+                create_signature_status[2].decode("utf-8"),
+                create_signature_status[3].decode("utf-8")))
 
 ota = tarfile.open(delta_ota_name, "w")
 namelist = ["manifest.ini",
