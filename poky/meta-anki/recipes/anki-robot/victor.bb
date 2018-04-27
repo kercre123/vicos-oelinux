@@ -10,6 +10,7 @@ SRCREV   = "${AUTOREV}"
 S        = "${WORKDIR}/victor"
 BUILDSRC = "${S}/_build/android/Release"
 VICOSSRC = "${S}/_build/vicos/Release"
+DEPENDS += "python-pycrypto"
 
 export SSH_AUTH_SOCK
 
