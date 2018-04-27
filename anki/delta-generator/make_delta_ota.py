@@ -36,6 +36,7 @@ def cleanup_working_dirs():
     os.remove("manifest.ini")
     os.remove("manifest.sha256")
     os.remove("delta.bin")
+    os.remove("delta.bin.gz.plaintext")
     os.remove("delta.bin.gz")
 
 
@@ -103,6 +104,24 @@ def create_signature(file_path_name, sig_path_name, private_key):
     return ret_code == 0, ret_code, openssl_out, openssl_err
 
 
+def encrypt_file(plaintext_path, ciphertext_path, key_path):
+    "Encrypt the file using the key"
+    openssl = subprocess.Popen(["/usr/bin/openssl",
+                                "aes-256-ctr",
+                                "-pass",
+                                "file:{0}".format(key_path),
+                                "-in",
+                                "{0}".format(plaintext_path),
+                                "-out",
+                                "{0}".format(ciphertext_path)],
+                               shell=False,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    ret_code = openssl.wait()
+    openssl_out, openssl_err = openssl.communicate()
+    return ret_code == 0, ret_code, openssl_out, openssl_err
+
+
 parser = argparse.ArgumentParser(description="Create a delta .ota file "
                                  "from 2 full .ota files.",
                                  formatter_class=argparse
@@ -148,18 +167,33 @@ if delta_gen.returncode != 0:
         .format(delta_gen_out.decode("utf-8"),
                 delta_gen_err.decode("utf-8")))
 
-with open('delta.bin', 'rb') as f_in, gzip.open('delta.bin.gz', 'wb') as f_out:
+with open('delta.bin', 'rb') as f_in, \
+     gzip.open('delta.bin.gz.plaintext', 'wb') as f_out:
     shutil.copyfileobj(f_in, f_out)
 
+private_pass = os.getenv('OTAPASS',
+                         os.path.join(TOPLEVEL, "ota", "ota_test.pass"))
+
+encrypt_status = encrypt_file('delta.bin.gz.plaintext',
+                              'delta.bin.gz',
+                              private_pass)
+if not encrypt_status[0]:
+    die(219,
+        "Failed to encrypt delta payload, openssl returned {}\n{}\n{}"
+        .format(encrypt_status[1],
+                encrypt_status[2].decode("utf-8"),
+                encrypt_status[3].decode("utf-8")))
+
 delta_manifest = configparser.ConfigParser()
-delta_manifest['META'] = {'manifest_version': '0.9.4',
+delta_manifest['META'] = {'manifest_version': '0.9.5',
                           'update_version': new_manifest_ver,
                           'num_images': '1'}
 delta_manifest['DELTA'] = {'base_version': old_manifest_ver,
                            'compression': 'gz',
+                           'encryption': os.getenv('OTAENC', '1'),
                            'wbits': '31',
-                           'bytes': os.path.getsize('delta.bin.gz'),
-                           'sha256': sha256_file('delta.bin.gz'),
+                           'bytes': os.path.getsize('delta.bin'),
+                           'sha256': sha256_file('delta.bin'),
                            'system_size':
                            os.path.getsize(os.path.join("new", "system.img")),
                            'boot_size':
