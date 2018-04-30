@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <errno.h>
 
-static const char* kEMRFile = "/factory/birthcertificate";
+static const char* kEMRFile = "/dev/block/bootdevice/by-name/emr";
 
 static const char* USAGE_FMT = \
 "%s <KEY TO READ>\n" \

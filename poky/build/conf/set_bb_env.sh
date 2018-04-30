@@ -75,6 +75,16 @@ function build-8009-robot-image() {
   cdbitbake machine-robot-image
 }
 
+function build-8009-robot-facdev-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-perf
+  export VARIANT=perf
+  export PRODUCT=robot
+  export FACTORY="1"
+  cdbitbake machine-robot-image
+}
+
 function build-8009-robot-perf-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
@@ -93,6 +103,16 @@ function build-8009-robot-user-image() {
   cdbitbake machine-robot-image
 }
 
+function build-8009-robot-factory-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-user
+  export VARIANT=perf
+  export PRODUCT=robot
+  export FACTORY="1"
+  cdbitbake machine-robot-image
+}
+
 build-all-8009-robot-images() {
   build-8009-robot-image
   build-8009-robot-perf-image
@@ -108,6 +128,14 @@ function build-victor-robot-perf-image() {
 
 function build-victor-robot-user-image() {
   build-8009-robot-user-image
+}
+
+function build-victor-robot-factory-image() {
+  build-8009-robot-factory-image
+}
+
+function build-victor-robot-facdev-image() {
+  build-8009-robot-facdev-image
 }
 
 # Utility commands
@@ -170,6 +198,6 @@ export TEMPLATECONF="meta-qti-bsp/conf"
 # (BBLAYERS is explicitly blocked from this within OE-Core itself, though...)
 # oe-init-build-env calls oe-buildenv-internal which sets
 # BB_ENV_EXTRAWHITE, append our vars to the list
-export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT"
+export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY"
 
 list-build-commands

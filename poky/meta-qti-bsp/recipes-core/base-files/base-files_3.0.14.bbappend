@@ -19,6 +19,7 @@ SRC_URI_append_apq8017 += "file://apq8017/proc-bus-usb.mount"
 SRC_URI_append_apq8017 += "file://apq8017/var-volatile.mount"
 SRC_URI_append_apq8017 += "file://apq8017/dash.mount"
 SRC_URI_append_apq8009 += "file://apq8009/robot-fstab"
+SRC_URI_append_apq8009 += "file://apq8009/robot-factory-fstab"
 SRC_URI_append_apq8009 += "file://apq8009/ro-fstab"
 
 dirs755 += "/media/cf /media/net /media/ram \
@@ -39,7 +40,11 @@ do_install_append(){
             install -m 0644 ${WORKDIR}/${BASEMACHINE}/ro-fstab ${D}${sysconfdir}/fstab
         elif [  ${BASEMACHINE} == "apq8009" ]; then
             if [ "${PRODUCT}" == "robot" ] || [ "${PRODUCT}" == "robot-rome" ]; then
-                install -m 0644 ${WORKDIR}/${BASEMACHINE}/robot-fstab ${D}${sysconfdir}/fstab
+                if [ "${FACTORY}" == "1" ]; then
+                    install -m 0644 ${WORKDIR}/${BASEMACHINE}/robot-factory-fstab ${D}${sysconfdir}/fstab
+                else
+                    install -m 0644 ${WORKDIR}/${BASEMACHINE}/robot-fstab ${D}${sysconfdir}/fstab
+                fi
             else
                 install -m 0644 ${WORKDIR}/${BASEMACHINE}/ro-fstab ${D}${sysconfdir}/fstab
             fi

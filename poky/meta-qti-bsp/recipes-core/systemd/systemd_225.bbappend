@@ -5,6 +5,7 @@ SRC_URI += "file://mountpartitions.rules"
 SRC_URI += "file://systemd-udevd.service"
 SRC_URI += "file://ffbm.target"
 SRC_URI += "file://mount-data"
+SRC_URI += "file://mount-factory-data"
 SRC_URI += "file://mount-data.service"
 SRC_URI += "file://mtpserver.rules"
 
@@ -30,8 +31,13 @@ do_install_append () {
    ln -sf /lib/systemd/system/systemd-logind.service ${D}/lib/systemd/system/ffbm.target.wants/systemd-logind.service
    ln -sf /lib/systemd/system/getty.target ${D}/lib/systemd/system/ffbm.target.wants/getty.target
    ln -sf /lib/systemd/system/systemd-ask-password-wall.path ${D}/lib/systemd/system/ffbm.target.wants/systemd-ask-password-wall.path
+   if [ "${FACTORY}" == "1" ]; then
+       install -m 0750 ${WORKDIR}/mount-factory-data \
+                    -D ${D}${sysconfdir}/initscripts/mount-data
+   else
    install -m 0750 ${WORKDIR}/mount-data \
                 -D ${D}${sysconfdir}/initscripts/mount-data
+   fi
    install -d ${D}${systemd_unitdir}/system/
    install -m 0644 ${WORKDIR}/mount-data.service \
                 -D ${D}${systemd_unitdir}/system/mount-data.service

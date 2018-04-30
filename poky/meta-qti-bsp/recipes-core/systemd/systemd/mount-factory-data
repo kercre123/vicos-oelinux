@@ -34,11 +34,6 @@ CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 
 
 make_userdata() {
-  if $1; then
-    echo "Remaking /data" > /dev/kmsg
-    mkfs.ext4 /dev/block/bootdevice/by-name/userdata
-    mount /data
-  fi
   # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
   # determine that /data is mounted and it isn't well integrated into systemd so making it here is the easiest way
   # to make it work.
@@ -53,28 +48,32 @@ make_userdata() {
 }
 
 
+make_tomlog() {
+  if ! test -f $TOM_LOG; then
+    ls -la /factory/cloud >> $TOM_LOG
+  fi
+  sync
+}
+
 case "$1" in
   start )
-    if grep $UNBRICK_KEY /proc/cmdline > /dev/null; then
-      echo "Mount-data in UNBRICK MODE" > /dev/kmsg
-      mount -o size=64M -t tmpfs none /data/
-      make_userdata false
-    else
-      if ! mount /data; then
-        make_userdata true
+    make_userdata
+    PACKOUT_FLAG=`/bin/emr-cat o`
+    if [ $? -eq 0 ]; then # If we can't test the packout flag we don't want to risk remounting
+      if [ $PACKOUT_FLAG -eq 00000000 ]; then # If packout flag is not set
+        echo "Not packed out, remounting /factory rw" > /dev/kmsg
         sync
+        mount -o remount,rw /factory
+        make_tomlog
       fi
+    else
+      echo "Couldn't determine packout status" > /dev/kmsg
     fi
     ;;
 
   stop )
     echo "Unmounting /data"
-    sync
     umount /data
-    if test -e $WIPE_COOKIE; then
-      blkdiscard -s /dev/block/bootdevice/by-name/userdata
-      blkdiscard -s /dev/block/bootdevice/by-name/switchboard
-    fi
     ;;
 
   * )
