@@ -65,33 +65,21 @@ $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	echo "update_version=$(UPDATE_VERSION)" >> $@
 	echo "num_images=2"                     >> $@
 	echo "[BOOT]"                           >> $@
+	echo "encryption=0" 	                >> $@
 	echo "delta=0"                          >> $@
 	echo "compression=gz"                   >> $@
 	echo "wbits=$(GZIP_WBITS)"              >> $@
 	cat $(BOOT_STATS)                       >> $@
 	echo "[SYSTEM]"                         >> $@
+	echo "encryption=0"                     >> $@
 	echo "delta=0"                          >> $@
 	echo "compression=gz"                   >> $@
 	echo "wbits=$(GZIP_WBITS)"              >> $@
 	cat $(SYS_STATS)                        >> $@
 
-$(MANIFEST).enc.ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
-	echo "[META]"                           > $@
-	echo "manifest_version=0.9.5"           >> $@
-	echo "update_version=$(UPDATE_VERSION)" >> $@
-	echo "num_images=2"                     >> $@
-	echo "[BOOT]"                           >> $@
-	echo "encryption=$(OTAENC)"             >> $@
-	echo "delta=0"                          >> $@
-	echo "compression=gz"                   >> $@
-	echo "wbits=$(GZIP_WBITS)"              >> $@
-	cat $(BOOT_STATS)                       >> $@
-	echo "[SYSTEM]"                         >> $@
-	echo "encryption=$(OTAENC)"             >> $@
-	echo "delta=0"                          >> $@
-	echo "compression=gz"                   >> $@
-	echo "wbits=$(GZIP_WBITS)"              >> $@
-	cat $(SYS_STATS)                        >> $@
+$(MANIFEST).enc.ini: $(MANIFEST).ini
+	cat $< | sed -e "s#encryption=0#encryption=$(OTAENC)##g" \
+		     -e "s#manifest_version=0.9.2#manifest_version=0.9.5##g"> $@
 
 # COPYFILE_DISABLE=1 causes OSX not to put '._' junk in our TAR file when files have extended attributes
 $(OTA_FILE): $(MANIFEST).sha256 $(BOOT_GZ) $(SYS_GZ)
