@@ -1,18 +1,14 @@
 pipeline {
-  job('make VM') {
-    steps {
+ agent {
+    node {
         vSphereDeployFromTemplate {
             server('https://vsphere.ankicore.com')
             template('jenkins-vicos-slave')
             clone('clone')
             cluster('sjc-vm-cluster')
             datastore('sjc-san-build')
-        }
-    }
-  }
-  agent {
-    node {
-      label 'vicos2'
+       }
+       label 'vicos2'
     }
   }
 
