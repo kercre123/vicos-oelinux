@@ -81,12 +81,31 @@ $(MANIFEST).enc.ini: $(MANIFEST).ini
 	cat $< | sed -e "s#encryption=0#encryption=$(OTAENC)##g" \
 		     -e "s#manifest_version=0.9.2#manifest_version=0.9.5##g"> $@
 
+PERMS="0400"
+OWNER="root:0"
+GROUP="root:0"
 # COPYFILE_DISABLE=1 causes OSX not to put '._' junk in our TAR file when files have extended attributes
 $(OTA_FILE): $(MANIFEST).sha256 $(BOOT_GZ) $(SYS_GZ)
-	COPYFILE_DISABLE=1 tar cf $@ -C $(BUILD) manifest.ini manifest.sha256 apq8009-robot-boot.img.gz apq8009-robot-sysfs.img.gz
+	COPYFILE_DISABLE=1 tar -cf $@ \
+	--mode=$(PERMS) \
+	--owner=$(OWNER) \
+	--group=$(GROUP) \
+	-C $(BUILD) \
+	manifest.ini \
+	manifest.sha256 \
+	apq8009-robot-boot.img.gz \
+	apq8009-robot-sysfs.img.gz
 
 $(ENC_OTA_FILE): $(MANIFEST).enc.sha256 $(BOOT_GZ_ENC) $(SYS_GZ_ENC)
-	COPYFILE_DISABLE=1 tar --transform='flags=r;s|.enc||' -cf $@ -C $(BUILD) manifest.enc.ini manifest.enc.sha256 apq8009-robot-boot.img.gz.enc apq8009-robot-sysfs.img.gz.enc
+	COPYFILE_DISABLE=1 tar --transform='flags=r;s|.enc||' -cf $@ \
+	--mode=$(PERMS) \
+	--owner=$(OWNER) \
+	--group=$(GROUP) \
+	-C $(BUILD) \
+	manifest.enc.ini \
+	manifest.enc.sha256 \
+	apq8009-robot-boot.img.gz.enc \
+	apq8009-robot-sysfs.img.gz.enc
 
 serve: $(OTA_FILE) $(ENC_OTA_FILE)
 	cd $(BUILD); python -m SimpleHTTPServer 5555
