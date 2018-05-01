@@ -7,9 +7,6 @@ Wants=vic-robot.service
 Requires=anki-audio-init.service
 After=vic-robot.service anki-audio-init.service
 
-ConditionFileIsExecutable=/usr/bin/logwrapper
-ConditionFileIsExecutable=/anki/bin/vic-anim
-
 OnFailure=animfail.service
 
 [Service]
