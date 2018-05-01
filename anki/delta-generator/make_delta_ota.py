@@ -33,11 +33,11 @@ def safe_rmtree(name):
 def cleanup_working_dirs():
     safe_rmtree("old")
     safe_rmtree("new")
-    os.remove("manifest.ini")
-    os.remove("manifest.sha256")
-    os.remove("delta.bin")
-    os.remove("delta.bin.gz.plaintext")
-    os.remove("delta.bin.gz")
+    safe_rmtree("manifest.ini")
+    safe_rmtree("manifest.sha256")
+    safe_rmtree("delta.bin")
+    safe_rmtree("delta.bin.gz.plaintext")
+    safe_rmtree("delta.bin.gz")
 
 
 def die(code, text):
@@ -50,6 +50,8 @@ def die(code, text):
 def get_manifest(fileobj):
     "Returns config parsed from INI file in filelike object"
     config = configparser.ConfigParser()
+    config['BOOT'] = {'encryption': 0}
+    config['SYSTEM'] = {'encryption': 0}
     config.readfp(fileobj)
     return config
 
@@ -70,20 +72,63 @@ def sha256_file(name):
             digest.update(block)
     return digest.hexdigest()
 
+def decrypt_file(ciphertext_path, plaintext_path, key_path):
+    "Use openssl to decrypt a file"
+    openssl = subprocess.Popen(["/usr/bin/openssl",
+                                "enc",
+                                "-d",
+                                "-aes-256-ctr",
+                                "-pass",
+                                "file:{0}".format(key_path),
+                                "-in",
+                                "{0}".format(ciphertext_path),
+                                "-out",
+                                "{0}".format(plaintext_path)],
+                               shell=False,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    ret_code = openssl.wait()
+    openssl_out, openssl_err = openssl.communicate()
+    return ret_code == 0, ret_code, openssl_out, openssl_err
 
-def extract_full_ota(name, tmpdir):
+
+def extract_full_ota(name, tmpdir, private_pass):
     safe_rmtree(tmpdir)
     os.makedirs(tmpdir)
     with make_tar_stream(name) as tar_stream:
         tar_stream.extractall(tmpdir)
+    manifest = get_manifest(open(os.path.join(tmpdir, "manifest.ini"), "r"))
+    encryption = int(manifest.get("BOOT", "encryption"))
     boot_img_gz = os.path.join(tmpdir, 'apq8009-robot-boot.img.gz')
+    if encryption == 1:
+        ciphertext = boot_img_gz
+        boot_img_gz = os.path.join(tmpdir, "boot.img.gz")
+        decrypt_status = decrypt_file(ciphertext, boot_img_gz, private_pass)
+        if not decrypt_status[0]:
+            die(219,
+                "Failed to decrypt boot image, openssl returned {}\n{}\n{}"
+                .format(decrypt_status[1],
+                        decrypt_status[2].decode("utf-8"),
+                        decrypt_status[3].decode("utf-8")))
     boot_img = os.path.join(tmpdir, 'boot.img')
     with gzip.open(boot_img_gz, 'rb') as f_in, open(boot_img, 'wb') as f_out:
         shutil.copyfileobj(f_in, f_out)
     sys_img_gz = os.path.join(tmpdir, 'apq8009-robot-sysfs.img.gz')
+    encryption = int(manifest.get("SYSTEM", "encryption"))
+    if encryption == 1:
+        ciphertext = sys_img_gz
+        sys_img_gz = os.path.join(tmpdir, "system.img.gz")
+        decrypt_status = decrypt_file(ciphertext, sys_img_gz, private_pass)
+        if not decrypt_status[0]:
+            die(219,
+                "Failed to decrypt system image, openssl returned {}\n{}\n{}"
+                .format(decrypt_status[1],
+                        decrypt_status[2].decode("utf-8"),
+                        decrypt_status[3].decode("utf-8")))
     sys_img = os.path.join(tmpdir, 'system.img')
     with gzip.open(sys_img_gz, 'rb') as f_in, open(sys_img, 'wb') as f_out:
         shutil.copyfileobj(f_in, f_out)
+    return manifest.get("META", "update_version")
 
 
 def create_signature(file_path_name, sig_path_name, private_key):
@@ -132,14 +177,13 @@ parser.add_argument('--new', action='store', required=True,
                     help="File with the new version to update to")
 args = parser.parse_args()
 
-extract_full_ota(args.old, "old")
-extract_full_ota(args.new, "new")
+cleanup_working_dirs()
 
-old_manifest = get_manifest(open(os.path.join("old", "manifest.ini"), "r"))
-new_manifest = get_manifest(open(os.path.join("new", "manifest.ini"), "r"))
+private_pass = os.getenv('OTAPASS',
+                         os.path.join(TOPLEVEL, "ota", "ota_test.pass"))
 
-old_manifest_ver = old_manifest.get("META", "update_version")
-new_manifest_ver = new_manifest.get("META", "update_version")
+old_manifest_ver = extract_full_ota(args.old, "old", private_pass)
+new_manifest_ver = extract_full_ota(args.new, "new", private_pass)
 
 delta_ota_name = "vicos-{0}_to_{1}.ota".format(old_manifest_ver,
                                                new_manifest_ver)
@@ -170,9 +214,6 @@ if delta_gen.returncode != 0:
 with open('delta.bin', 'rb') as f_in, \
      gzip.open('delta.bin.gz.plaintext', 'wb') as f_out:
     shutil.copyfileobj(f_in, f_out)
-
-private_pass = os.getenv('OTAPASS',
-                         os.path.join(TOPLEVEL, "ota", "ota_test.pass"))
 
 encrypt_status = encrypt_file('delta.bin.gz.plaintext',
                               'delta.bin.gz',
