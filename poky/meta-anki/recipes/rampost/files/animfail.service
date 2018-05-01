@@ -1,0 +1,10 @@
+[Unit]
+Description=Fallback error code if animation process can't run
+SourcePath=/bin/animfail
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Restart=no
+RemainAfterExit=yes
+ExecStart=/bin/animfail

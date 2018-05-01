@@ -15,6 +15,7 @@ SRC_URI = "file://rampost.service \
            file://messages.h \
            file://animfail.c \
            file://error_565.h \
+           file://animfail.service \
            "
 
 do_compile () {
@@ -25,10 +26,10 @@ do_compile () {
 do_install() {
   install -d ${D}/bin
   install -m 0755 ${WORKDIR}/rampost ${D}/bin/
-
-install -m 0755 ${WORKDIR}/animfail ${D}/bin/
+  install -m 0755 ${WORKDIR}/animfail ${D}/bin/
 
   install -d  ${D}${systemd_unitdir}/system/
+  install -m 0644 ${WORKDIR}/animfail.service -D ${D}${systemd_unitdir}/system/animfail.service
   install -m 0644 ${WORKDIR}/rampost.service -D ${D}${systemd_unitdir}/system/rampost.service
   install -d ${D}${systemd_unitdir}/system/sysinit.target.wants/
   # enable the service for sysinit.target
