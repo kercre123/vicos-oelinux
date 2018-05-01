@@ -55,3 +55,6 @@ PREFERRED_VERSION_readline = "5.2"
 
 # Anki Version Info
 QCOM_RELEASE = "r00014.1"
+
+# Force bash version 3.2.48 (GPLv2)
+PREFERRED_VERSION_bash="3.2.48"
