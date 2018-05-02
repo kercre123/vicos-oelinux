@@ -33,8 +33,5 @@ SYSTEMRW_SIZE_EXT4 ?= "8388608"
 USERDATA_SIZE_EXT4 ?= "805306368"
 CACHE_SIZE_EXT4 ?= "939524096"
 
-#Enable Recovery image generation
-RECOVERY_IMAGE ?= "1"
-
 # Formats of root filesystem images.
 IMAGE_FSTYPES += "ext4"
