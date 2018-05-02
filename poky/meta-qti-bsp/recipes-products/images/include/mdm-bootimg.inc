@@ -28,38 +28,51 @@ IMAGE_PREPROCESS_COMMAND_prepend = " gen_buildprop;"
 EXTRA_IMAGE_FEATURES += "${@base_contains('DISTRO_FEATURES','ro-rootfs','read-only-rootfs','',d)}"
 gen_buildprop() {
    mkdir -p ${IMAGE_ROOTFS}/cache
-   echo ro.build.version.release=`cat ${IMAGE_ROOTFS}/etc/version ` >> ${IMAGE_ROOTFS}/build.prop
+   BUILD_TIMESTAMP=`cat ${IMAGE_ROOTFS}/etc/version`
+   echo ro.build.version.release=${BUILD_TIMESTAMP} >> ${IMAGE_ROOTFS}/build.prop
    echo ro.product.name=${ANKI_PRODUCT_NAME} >> ${IMAGE_ROOTFS}/build.prop
    echo ${MACHINE} >> ${IMAGE_ROOTFS}/target
 
-   # Anki-specific version
-   ANKI_VERSION=`cat ${IMAGE_ROOTFS}/etc/anki-version`
+   # Anki-specific version info
+   OS_VERSION=`cat ${IMAGE_ROOTFS}/etc/os-version`
    RELEASE_VERSION=`cat ${IMAGE_ROOTFS}/etc/version`
    
-   echo "ro.anki.version=${ANKI_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
-
-   REV_TAG=""
-   GIT=`which git`
-   if [ ! -z $GIT ]; then
-      REV=`git rev-parse --short HEAD`
-      REV_TAG="-${REV}"
-      # ro.revision is used by debuggerd to tag tombstone crash dumps
-      echo "ro.revision=${REV}" >> ${IMAGE_ROOTFS}/build.prop
+   # read from /anki/etc/version to prepend build.id
+   VICTOR_BUILD_VERSION=`cat ${IMAGE_ROOTFS}/anki/etc/version`
+   VICTOR_BUILD_REV=`cat ${IMAGE_ROOTFS}/anki/etc/revision`
+   VICTOR_REV_TAG=""
+   if [ ! -z "${VICTOR_BUILD_REV}" ]; then
+      VICTOR_REV_TAG="-${VICTOR_BUILD_REV}"
    fi
 
+   OS_REV=`cat ${IMAGE_ROOTFS}/etc/os-version-rev`
+   REV_TAG=""
+   if [ ! -z "${OS_REV}" ]; then
+     REV_TAG="-${OS_REV}"
+      # ro.revision is used by debuggerd to tag tombstone crash dumps
+      echo "ro.revision=anki-${VICTOR_BUILD_REV}_os-${OS_REV}" >> ${IMAGE_ROOTFS}/build.prop
+   fi
+
+   # Combine victor + OS build versions
+   VERSION_ID="v${VICTOR_BUILD_VERSION}_os${OS_VERSION}"
+   BUILD_ID="v${VICTOR_BUILD_VERSION}${VICTOR_REV_TAG}_os${OS_VERSION}${REV_TAG}-${BUILD_TIMESTAMP}"
+
+   echo "ro.anki.version=${OS_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   echo "ro.anki.victor.version=${VICTOR_BUILD_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+
    # ro.build.fingerprint is used by debuggerd to tag tombstone crash dumps
-   echo "ro.build.fingerprint=${ANKI_VERSION}-${RELEASE_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   echo "ro.build.fingerprint=${BUILD_ID}" >> ${IMAGE_ROOTFS}/build.prop
 
    # standard Android build info
 
    # build.id can be an alpha-numeric build identifier
-   echo "ro.build.id=${ANKI_VERSION}${REV_TAG}-${RELEASE_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   echo "ro.build.id=${BUILD_ID}" >> ${IMAGE_ROOTFS}/build.prop
 
    # build.display.id is intended for displaying a consumer facing build id
-   echo "ro.build.display.id=${ANKI_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
+   echo "ro.build.display.id=${VERSION_ID}" >> ${IMAGE_ROOTFS}/build.prop
 
    # build.version.incremental is should be an increasing number
-   VERSION_CODE=`cat ${IMAGE_ROOTFS}/etc/anki-version-code`
+   VERSION_CODE=`cat ${IMAGE_ROOTFS}/etc/os-version-code`
    echo "ro.build.version.incremental=${VERSION_CODE}" >> ${IMAGE_ROOTFS}/build.prop
 
    echo "ro.build.user=${USER}" >> ${IMAGE_ROOTFS}/build.prop

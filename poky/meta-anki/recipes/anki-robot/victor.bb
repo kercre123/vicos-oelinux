@@ -13,6 +13,7 @@ VICOSSRC = "${S}/_build/vicos/Release"
 DEPENDS += "python-pycrypto"
 
 export SSH_AUTH_SOCK
+export ANKI_BUILD_VERSION
 
 do_package_qa[noexec] = "1"
 
