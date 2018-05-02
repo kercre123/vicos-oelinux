@@ -3919,8 +3919,11 @@ void aboot_init(const struct app_descriptor *app)
 	}
 	ASSERT((MEMBASE + MEMSIZE) > MEMBASE);
 
-	read_device_info(&device);
-	read_allow_oem_unlock(&device);
+	device.is_unlocked = false;
+	device.is_tampered = false;
+	device.is_unlock_critical = false;
+	device.charger_screen_enabled = false;
+	device.verity_mode = true;
 
 	/* Detect multi-slot support */
 	if (partition_multislot_is_supported())

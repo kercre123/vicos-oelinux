@@ -307,24 +307,13 @@ int target_get_vb_version()
 }
 #endif
 
-#if VERIFIED_BOOT_LE
-int verified_boot_le = 1;
-#else
-int verified_boot_le = 0;
-#endif
-
 int is_vb_le_enabled(void)
 {
-	uint32_t platform = board_platform_id();
-
-	switch(platform)
-	{
-		case APQ8053:
-			return verified_boot_le;
-		default:
-			break;
-	}
-	return 0;
+  #if VERIFIED_BOOT_LE
+    return 1;
+  #else
+    return 0;
+  #endif
 }
 
 #if PON_VIB_SUPPORT

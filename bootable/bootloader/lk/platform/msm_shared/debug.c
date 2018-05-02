@@ -151,9 +151,11 @@ void platform_halt(void)
 #if PON_VIB_SUPPORT
 	vib_turn_off();
 #endif
+#if 0
 	dprintf(CRITICAL, "HALT: reboot into dload mode...\n");
-	reboot_device(NORMAL_DLOAD);
-
+	reboot_device(FASTBOOT_MODE);  /// ANKI DC make debugging kernel signing easier
+#else
 	dprintf(CRITICAL, "HALT: spinning forever...\n");
 	for (;;) ;
+#endif
 }
