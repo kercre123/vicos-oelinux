@@ -74,6 +74,9 @@ case "$1" in
   stop )
     echo "Unmounting /data"
     umount /data
+    if test -e $WIPE_COOKIE; then
+      blkdiscard -s /dev/block/bootdevice/by-name/switchboard
+    fi
     ;;
 
   * )
