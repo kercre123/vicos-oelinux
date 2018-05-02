@@ -60,7 +60,6 @@ do_compile () {
 
 do_install () {
     ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
-    ${S}/project/victor/scripts/install.sh -k ${VICOSSRC} ${D}
 
     # Remove "other" permission and remove unnecessary exec on everything in /anki
     # BRC: Setting this here is a dirty hack, we should correctly set permissions in a
