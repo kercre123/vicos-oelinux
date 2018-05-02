@@ -1,4 +1,5 @@
 IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf
+OS_VERSION_FILE=../poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/machine-robot-image/1.0-r0/rootfs/etc/os-version
 BUILD=../_build
 BOOT_STEM=apq8009-robot-boot
 SYS_STEM=apq8009-robot-sysfs
@@ -18,9 +19,7 @@ OTAKEY ?= ota_test.key
 OTAPASS ?= ota_test.pass
 OTAENC ?= 1
 
-BASE_VERSION=$(shell cat ../ANKI_VERSION)
-ANKI_BUILD_VERSION ?= 0
-UPDATE_VERSION ?= $(BASE_VERSION).$(ANKI_BUILD_VERSION)
+UPDATE_VERSION ?= $(shell cat $(OS_VERSION_FILE))
 
 OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).ota
 ENC_OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).enc.ota
