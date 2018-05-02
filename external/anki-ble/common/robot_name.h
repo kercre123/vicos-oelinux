@@ -16,7 +16,7 @@
 
 namespace Anki {
 
-const std::string kRobotNamePropertyKey("persist.anki.robot.name");
+const std::string kRobotNamePropertyKey("anki.robot.name");
 const std::string kProductNamePropertyKey("ro.anki.product.name");
 const std::string kDefaultProductName("Vector");
 

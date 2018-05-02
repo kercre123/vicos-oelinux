@@ -2,7 +2,6 @@
 IMAGE_INSTALL += "anki-audio-init"
 IMAGE_INSTALL += "anki-robot-target"
 IMAGE_INSTALL += "vic-anim"
-IMAGE_INSTALL += "vic-christen"
 IMAGE_INSTALL += "vic-cloud"
 IMAGE_INSTALL += "vic-dasmgr"
 IMAGE_INSTALL += "vic-engine"

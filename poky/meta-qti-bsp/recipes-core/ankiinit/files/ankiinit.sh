@@ -42,14 +42,8 @@ do
     sleep 1;
 done
 
-if [ -x /usr/bin/vic-christen ]; then
-    /usr/bin/vic-christen
-fi
-
 if $HAVE_EMR; then
   echo $SERIALNO > /sys/class/android_usb/android0/iSerial
 fi
-
-/bin/hostname `getprop persist.anki.robot.name | tr ' ' '-'`
 
 exit 0
