@@ -8,8 +8,7 @@ SRC_URI   = "file://anki/victor"
 
 SRCREV   = "${AUTOREV}"
 S        = "${WORKDIR}/victor"
-BUILDSRC = "${S}/_build/android/Release"
-VICOSSRC = "${S}/_build/vicos/Release"
+BUILDSRC = "${S}/_build/vicos/Release"
 DEPENDS += "python-pycrypto"
 
 export SSH_AUTH_SOCK
@@ -50,8 +49,13 @@ do_compile () {
    echo "gitdir: ${WORKSPACE}/.git/modules/anki/victor" > .git
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
-   ./project/victor/build-victor.sh -p android -c Release
-   ./project/victor/build-victor.sh -p vicos -c Release
+
+   BUILD_FLAVOR_FLAGS=""
+   if [[ ${USER_BUILD} == "1" ]]; then
+       BUILD_FLAVOR_FLAGS=" -a \"-DAUDIO_RELEASE=ON\""
+   fi
+   
+   ./project/victor/build-victor.sh -p vicos -c Release ${BUILD_FLAVOR_FLAGS}
 }
 
 do_install () {
