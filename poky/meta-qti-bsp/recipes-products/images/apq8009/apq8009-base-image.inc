@@ -54,7 +54,7 @@ IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'gdbserver', d)}"
 
 # Below is to generate sparse ext4 system image (OE by default supports raw ext4 images)
 SELINUX_FILE_CONTEXTS = "${IMAGE_ROOTFS}/etc/selinux/mls/contexts/files/file_contexts"
-IMAGE_EXT4_SELINUX_OPTIONS = "${@base_contains('DISTRO_FEATURES','selinux',' -a / -S ${SELINUX_FILE_CONTEXTS} ','',d)}"
+IMAGE_EXT4_SELINUX_OPTIONS = "${@base_contains('DISTRO_FEATURES','selinux',' -S ${SELINUX_FILE_CONTEXTS} ','',d)}"
 
 DEPENDS += "cryptsetup-native"
 
@@ -80,10 +80,9 @@ do_makesystem() {
     DATA_BLOCKS=$( expr ${SYSTEM_SIZE_EXT4} / $BLOCK_SIZE )
 
     echo "making the sparse ext4 file system"
-    make_ext4fs ${IMAGE_EXT4_EXTRA_OPTIONS} -C ${CONFIG_FILE} ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${RAW_FILE} ${IMAGE_ROOTFS}
+    make_ext4fs ${IMAGE_EXT4_EXTRA_OPTIONS} -a / -C ${CONFIG_FILE} ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${RAW_FILE} ${IMAGE_ROOTFS}
     make_ext4fs -l ${SYSTEMRW_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-systemrw.ext4
 
     veritysetup --data-block-size=${BLOCK_SIZE} --data-blocks=${DATA_BLOCKS} --hash-offset=${SYSTEM_SIZE_EXT4} format ${RAW_FILE} ${RAW_FILE} >${VERITYSETUP_OUTPUT}
     img2simg ${RAW_FILE} ${SPARSE_FILE}
-
 }

@@ -15,6 +15,34 @@ DEPENDS += "python-pycrypto"
 export SSH_AUTH_SOCK
 export ANKI_BUILD_VERSION
 
+inherit useradd
+
+# You must set USERADD_PACKAGES when you inherit useradd. This
+# lists which output packages will include the user/group
+# creation code.
+USERADD_PACKAGES = "${PN} "
+
+# For standard Android user/group ids (AID) defs see:
+# system/core/include/private/android_filesystem_config.h
+# We currently use the reserved OEM range (2900-2999)
+
+# Add groups
+GROUPADD_PARAM_${PN} =  "  -g 2901 anki"
+GROUPADD_PARAM_${PN} += "; -g 2902 robot"
+GROUPADD_PARAM_${PN} += "; -g 2903 engine"
+GROUPADD_PARAM_${PN} += "; -g 2904 bluetooth"
+GROUPADD_PARAM_${PN} += "; -g 2905 ankinet"
+GROUPADD_PARAM_${PN} += "; -g 2906 cloud"
+GROUPADD_PARAM_${PN} += "; -g 2907 camera"
+
+# Add users
+USERADD_PARAM_${PN} =  "  -u 2901 -g 2901 -s /bin/false anki"
+USERADD_PARAM_${PN} += "; -u 2902 -g 2902 -G 2901 -s /bin/false robot"
+USERADD_PARAM_${PN} += "; -u 2903 -g 2903 -G 2901 -s /bin/false engine"
+USERADD_PARAM_${PN} += "; -u 2904 -g 2904 -G 2901 -s /bin/false bluetooth"
+USERADD_PARAM_${PN} += "; -u 2905 -g 2905 -G 2901 -s /bin/false net"
+USERADD_PARAM_${PN} += "; -u 2906 -g 2906 -G 2901 -s /bin/false cloud"
+
 do_package_qa[noexec] = "1"
 
 do_compile () {
@@ -29,6 +57,14 @@ do_compile () {
 do_install () {
     ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
     ${S}/project/victor/scripts/install.sh -k ${VICOSSRC} ${D}
+
+    # Remove "other" permission and remove unnecessary exec on everything in /anki
+    # BRC: Setting this here is a dirty hack, we should correctly set permissions in a
+    # cmake install step.
+    chmod -R 640 ${D}/anki
+    chmod 750 ${D}/anki
+    chmod 750 ${D}/anki/{data,etc,lib}
+    chmod -R 750 ${D}/anki/bin
 }
 
 FILES_${PN} += "anki/"
