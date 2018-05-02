@@ -162,6 +162,8 @@ do_install_append() {
 
 nand_boot_flag = "${@base_contains('DISTRO_FEATURES', 'nand-boot', '1', '0', d)}"
 
+do_deploy[depends] += "machine-robot-image:do_makesystem"
+
 do_deploy_prepend() {
 
     if [ -f ${D}/${KERNEL_IMAGEDEST}/-${KERNEL_VERSION} ]; then
@@ -196,10 +198,36 @@ do_deploy () {
 
     mkdir -p ${DEPLOY_DIR_IMAGE}
 
+    VERITYSETUP_OUTPUT=${DEPLOY_DIR_IMAGE}/apq8009-robot-veritysetup.txt
+
+    HASH_TYPE=$(sed -n -e '/Hash type:/ s/.*:\s*// p' $VERITYSETUP_OUTPUT)
+    HASH_ALGORITHM=$(sed -n -e '/Hash algorithm:/ s/.*:\s*// p' $VERITYSETUP_OUTPUT)
+    DATA_BLOCKS=$(sed -n -e '/Data blocks:/ s/.*:\s*// p' $VERITYSETUP_OUTPUT)
+    DATA_BLOCK_SIZE=$(sed -n -e '/Data block size:/ s/.*:\s*// p' $VERITYSETUP_OUTPUT)
+    HASH_BLOCK_SIZE=$(sed -n -e '/Hash block size:/ s/.*:\s*// p' $VERITYSETUP_OUTPUT)
+    SALT=$(sed -n -e '/Salt:/ s/.*:\s*// p' $VERITYSETUP_OUTPUT)
+    ROOT_HASH=$(sed -n -e '/Root hash:/ s/.*:\s*// p' $VERITYSETUP_OUTPUT)
+
+    FS_SIZE_IN_512_BLOCKS=$(expr \( $DATA_BLOCKS \* $DATA_BLOCK_SIZE / 512 \) )
+    HASH_OFFSET=$(expr \( $DATA_BLOCKS \+ 1 \) )
+
+    ## Where does the magic number `179` below come from?
+    ## -> see kernel/msm-3.18/Documentation/devices.txt
+    ## -> All MMC block devices get the major device number 179
+    ## -> The minor number corresponds to the partition number (counting from 1)
+    ## -> We assume the boot partition is always on the first MMC block device
+    KERNEL_CMD_PARAMS="${@ d.getVar("KERNEL_CMD_PARAMS") } dm=\"system none ro,0 $FS_SIZE_IN_512_BLOCKS verity $HASH_TYPE 179:##SYSTEM_BOOT_PART## 179:##SYSTEM_BOOT_PART## $DATA_BLOCK_SIZE $HASH_BLOCK_SIZE $DATA_BLOCKS $HASH_OFFSET $HASH_ALGORITHM $ROOT_HASH $SALT\" root=/dev/dm-0"
+
+    ## Save kernel cmd line for debugging purposes
+    echo "KERNEL_CMD_PARAMS=$KERNEL_CMD_PARAMS" > ${DEPLOY_DIR_IMAGE}/kernel_params.txt
+
+    ## NOTE: don't use ${KERNEL_CMD_PARAMS} below - it will be expanded to the same what ${@ d.getVar("KERNEL_CMD_PARAMS") } returns
+    ##       we are modifying a local shell variable here, that can only be dereferenced by using $KERNEL_CMD_PARAMS
+    ##       c.f. https://stackoverflow.com/questions/48213497/how-do-i-update-a-datastore-variable-from-inside-a-bash-variable
     # Make bootimage
     ${STAGING_BINDIR_NATIVE}/mkbootimg --kernel ${D}/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION} \
         --ramdisk /dev/null \
-        --cmdline "${KERNEL_CMD_PARAMS}" \
+        --cmdline "$KERNEL_CMD_PARAMS" \
         --pagesize ${PAGE_SIZE} \
         --base ${KERNEL_BASE} \
         --ramdisk_offset 0x0 \

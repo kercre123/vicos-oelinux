@@ -56,6 +56,8 @@ IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'gdbserver', d)}"
 SELINUX_FILE_CONTEXTS = "${IMAGE_ROOTFS}/etc/selinux/mls/contexts/files/file_contexts"
 IMAGE_EXT4_SELINUX_OPTIONS = "${@base_contains('DISTRO_FEATURES','selinux',' -a / -S ${SELINUX_FILE_CONTEXTS} ','',d)}"
 
+DEPENDS += "cryptsetup-native"
+
 CONFIG_FILE = "${COREBASE}/meta-qti-bsp/files/config_files/anki_user_config"
 do_makesystem() {
     echo "================ Creating system ================="
@@ -70,7 +72,18 @@ do_makesystem() {
     echo "CONFIG_FILE=" ${CONFIG_FILE}
     which make_ext4fs
 
+    RAW_FILE=${DEPLOY_DIR_IMAGE}/${MACHINE}-raw-sysfs.ext4
+    SPARSE_FILE=${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4
+    VERITYSETUP_OUTPUT=${DEPLOY_DIR_IMAGE}/${MACHINE}-veritysetup.txt
+
+    BLOCK_SIZE=4096
+    DATA_BLOCKS=$( expr ${SYSTEM_SIZE_EXT4} / $BLOCK_SIZE )
+
     echo "making the sparse ext4 file system"
-    make_ext4fs -s ${IMAGE_EXT4_EXTRA_OPTIONS} -C ${CONFIG_FILE} ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-sysfs.ext4 ${IMAGE_ROOTFS}
-    make_ext4fs  -l ${SYSTEMRW_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-systemrw.ext4
+    make_ext4fs ${IMAGE_EXT4_EXTRA_OPTIONS} -C ${CONFIG_FILE} ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${RAW_FILE} ${IMAGE_ROOTFS}
+    make_ext4fs -l ${SYSTEMRW_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-systemrw.ext4
+
+    veritysetup --data-block-size=${BLOCK_SIZE} --data-blocks=${DATA_BLOCKS} --hash-offset=${SYSTEM_SIZE_EXT4} format ${RAW_FILE} ${RAW_FILE} >${VERITYSETUP_OUTPUT}
+    img2simg ${RAW_FILE} ${SPARSE_FILE}
+
 }

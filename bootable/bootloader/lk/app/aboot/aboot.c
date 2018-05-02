@@ -183,9 +183,7 @@ static const char *baseband_sglte2  = " androidboot.baseband=sglte2";
 static const char *warmboot_cmdline = " qpnp-power-on.warm_boot=1";
 static const char *baseband_apq_nowgr   = " androidboot.baseband=baseband_apq_nowgr";
 static const char *androidboot_slot_suffix = " androidboot.slot_suffix=";
-static const char *skip_ramfs = " skip_initramfs";
 static const char *sys_path_cmdline = " rootwait ro";
-static const char *sys_path = "  root=/dev/mmcblk0p";
 
 static const char *unbrick_cmdline = " anki.unbrick";
 
@@ -335,6 +333,7 @@ unsigned char *update_cmdline(const char * cmdline)
 {
 	int cmdline_len = 0;
 	int have_cmdline = 0;
+	int target_boot_params_status = 0;
 	unsigned char *cmdline_final = NULL;
 	int pause_at_bootup = 0;
 	bool warm_boot = false;
@@ -345,8 +344,6 @@ unsigned char *update_cmdline(const char * cmdline)
 	int current_active_slot = INVALID;
 	unsigned int lun = 0;
 	char lun_char_base = 'a';
-	int syspath_buflen = strlen(sys_path) + sizeof(int) + 1; /*allocate buflen for largest possible string*/
-	char syspath_buf[syspath_buflen];
 #if VERIFIED_BOOT
 	uint32_t boot_state = RED;
 #endif
@@ -421,11 +418,15 @@ unsigned char *update_cmdline(const char * cmdline)
 		cmdline_len += strlen(auth_kernel);
 	}
 
-	if (get_target_boot_params(cmdline, boot_into_recovery ? "recoveryfs" :
-								 "system",
-						&target_boot_params) == 0) {
+	target_boot_params_status = get_target_boot_params(cmdline, boot_into_recovery ? "recoveryfs" : "system", &target_boot_params);
+	if (target_boot_params_status == 0) {
 		have_target_boot_params = 1;
 		cmdline_len += strlen(target_boot_params);
+	}
+	else if (target_boot_params_status == 1) {
+		have_target_boot_params = 1;
+		have_cmdline = 0;
+		cmdline_len += strlen(target_boot_params) - strlen(cmdline);
 	}
 
 	/* Determine correct androidboot.baseband to use */
@@ -502,9 +503,6 @@ unsigned char *update_cmdline(const char * cmdline)
 					strlen(SUFFIX_SLOT(current_active_slot)));
 
 		cmdline_len += strlen(sys_path_cmdline);
-		cmdline_len += strlen(syspath_buf);
-		if (!boot_into_recovery)
-			cmdline_len += strlen(skip_ramfs);
 	}
 
 #if TARGET_CMDLINE_SUPPORT
@@ -712,21 +710,11 @@ unsigned char *update_cmdline(const char * cmdline)
 				--dst;
 				while ((*dst++ = *src++));
 				--dst;
-				src = SUFFIX_SLOT(current_active_slot);
+				if (boot_into_recovery) src = "_f";
+				else src = SUFFIX_SLOT(current_active_slot);
 				while ((*dst++ = *src++));
-
-				if (!boot_into_recovery)
-				{
-					src = skip_ramfs;
-					--dst;
-					while ((*dst++ = *src++));
-				}
 
 				src = sys_path_cmdline;
-				--dst;
-				while ((*dst++ = *src++));
-
-				src = syspath_buf;
 				--dst;
 				while ((*dst++ = *src++));
 		}

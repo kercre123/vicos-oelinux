@@ -553,75 +553,96 @@ int get_target_boot_params(const char *cmdline, const char *part, char **buf)
 		dprintf(CRITICAL, "WARN: Invalid input param\n");
 		return -1;
 	}
+	
+	system_ptn_index = partition_get_index(part);
+	if (system_ptn_index < 0) {
+		dprintf(CRITICAL,
+		"WARN: Cannot get partition index for %s\n", part);
+		return -1;
+	}
 
-	if (1) // We know we're LE based, we're not trying to build a purpose bootloader
+	if (strstr(cmdline, "dm=") == NULL) // Not a DM verity enabled kernel
 	{
-		if (!target_is_emmc_boot())
+		if (strstr(cmdline, "root=") != NULL) // But has a root= argument!
 		{
-			ptable = flash_get_ptable();
-			if (!ptable)
-			{
-				dprintf(CRITICAL,
-					"WARN: Cannot get flash partition table\n");
-				return -1;
-			}
-			system_ptn_index = ptable_get_index(ptable, part);
-		}
-		else
-			system_ptn_index = partition_get_index(part);
-		if (system_ptn_index < 0) {
-			dprintf(CRITICAL,
-				"WARN: Cannot get partition index for %s\n", part);
-			return -1;
-		}
-		/*
-		* check if cmdline contains "root=" at the beginning of buffer or
-		* " root=" in the middle of buffer.
-		*/
-		if (((!strncmp(cmdline, "root=", strlen("root="))) ||
-			(strstr(cmdline, " root=")))) {
 			dprintf(DEBUG, "DEBUG: cmdline has root=\n");
 			return -1;
 		}
 		else
-		/*in success case buf will be freed in the calling function of this*/
 		{
-			if (!target_is_emmc_boot())
-			{
-				buflen = strlen(UBI_CMDLINE) + strlen(" root=ubi0:rootfs ubi.mtd=") + sizeof(int) + 1; /* 1 byte for null character*/
+		        static const char* root_part_fmt = " root=/dev/mmcblk0p%d";
+			buflen = strlen(root_part_fmt) + 3; // 2 characters of number + null termination
 
-				/* In success case, this memory is freed in calling function */
-				*buf = (char *)malloc(buflen);
-				if(!(*buf)) {
-					dprintf(CRITICAL,"Unable to allocate memory for boot params \n");
-					return -1;
-				}
-
-				/* Adding command line parameters according to target boot type */
-				snprintf(*buf, buflen, UBI_CMDLINE);
-				snprintf(*buf+strlen(*buf), buflen, " root=ubi0:rootfs ubi.mtd=%d", system_ptn_index);
+			// In success case, this memory is freed in calling function 
+			*buf = (char *)malloc(buflen);
+			if(!(*buf)) {
+				dprintf(CRITICAL,"Unable to allocate memory for boot params \n");
+				return -1;
 			}
-			else
-			{
-				/* Extra character is for Null termination */
-				buflen = strlen(" root=/dev/mmcblk0p") + sizeof(int) + 1;
 
-				/* In success case, this memory is freed in calling function */
-				*buf = (char *)malloc(buflen);
-				if(!(*buf)) {
-					dprintf(CRITICAL,"Unable to allocate memory for boot params \n");
-					return -1;
-				}
+			// For Emmc case increase the ptn_index by 1
+			snprintf(*buf, buflen, root_part_fmt, system_ptn_index + 1);
+			return 0;
+		}
+	}
+	
+	else // DM Verity enabled kernel
+	{
+		static const char* search = "##SYSTEM_BOOT_PART##";
 
-				/*For Emmc case increase the ptn_index by 1*/
-				snprintf(*buf, buflen, " root=/dev/mmcblk0p%d",system_ptn_index + 1);
-			}
+		char *p;
+		char *q;
+		size_t count;
+		size_t search_len;
+		size_t replace_len;
+		size_t cmdline_len;
+
+		#define DM_MAX_REPLACE 1024
+		static char replace[DM_MAX_REPLACE];
+
+		// Find number of occurences of the search pattern in cmdline
+		count = 0;
+		p = cmdline;
+		search_len = strlen(search);
+		while ((p = strstr(p,search))) {
+			++count;
+			p += search_len;
 		}
 
-		/*Return for LE based Targets.*/
-		return 0;
+		if (count == 0) {
+			*buf = NULL;
+			dprintf(CRITICAL, "Unable to locate system boot part token\n");
+			return -1;
+		}
+
+		replace_len = snprintf(replace,DM_MAX_REPLACE,"%d",system_ptn_index + 1);
+		cmdline_len = strlen(cmdline);
+		buflen = cmdline_len + ((replace_len - search_len) * count) + 1;
+
+		// In success case, this memory is freed in calling function
+		*buf = (char *)malloc(buflen);
+		if(!(*buf)) {
+			dprintf(CRITICAL,"Unable to allocate memory for boot params \n");
+			return -1;
+		}
+		memset(*buf,'\0',buflen);
+
+		p = cmdline;
+		while ((q = strstr(p,search))) {
+			int l = q-p;
+			strncat(*buf, p, l);
+			strncat(*buf, replace, replace_len);
+			p = q + search_len;
+		}
+
+		//copy last chunk
+		if(p < cmdline+cmdline_len) {
+			strncat(*buf, p, cmdline+cmdline_len-p);
+		}
+
+		return 1; // target command line replaces input cmdline
+
 	}
-	return -1;
 }
 
 unsigned target_baseband()
