@@ -94,7 +94,12 @@ def decrypt_file(ciphertext_path, plaintext_path, key_path):
 def zero_pad_file_to_blocksize(path, block_size):
     remainder = os.path.getsize(path) % block_size
     if remainder:
-        pad = b"\x00"*(block_size - remainder)
+        pad_len = block_size - remainder
+        sys.stdout.write("{0} is not a multiple of the required block "
+                         "size ({1}).  Appending {2} bytes to fix it.\n"
+                         .format(path, block_size, pad_len));
+
+        pad = b"\x00"*(pad_len)
         open(path, "ab").write(pad)
 
 
