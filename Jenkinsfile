@@ -3,10 +3,12 @@ pipeline {
     node {
         vSphereDeployFromTemplate {
             server('https://vsphere.ankicore.com')
-            template('jenkins-vicos-slave')
+            template('js-vicos-IV')
             clone('clone')
-            cluster('sjc-vm-cluster')
-            datastore('sjc-san-build')
+            cluster('sjc-vm-04.ankicore.com')
+            resourcepool('vicos-sjc-vm-04-test')
+            datastore('jc-vm-04-localds')
+            folder('vmos')
        }
        label 'vicos2'
     }
