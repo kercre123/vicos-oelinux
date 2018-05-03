@@ -21,7 +21,7 @@ from hashlib import sha256
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 TOPLEVEL = os.path.dirname(os.path.dirname(SCRIPT_PATH))
 DD_BLOCK_SIZE = 1024*256
-
+DELTA_GEN_BLOCK_SIZE = 4096
 
 def safe_rmtree(name):
     if os.path.isfile(name):
@@ -91,6 +91,17 @@ def decrypt_file(ciphertext_path, plaintext_path, key_path):
     openssl_out, openssl_err = openssl.communicate()
     return ret_code == 0, ret_code, openssl_out, openssl_err
 
+def zero_pad_file_to_blocksize(path, block_size):
+    remainder = os.path.getsize(path) % block_size
+    if remainder:
+        pad_len = block_size - remainder
+        sys.stdout.write("{0} is not a multiple of the required block "
+                         "size ({1}).  Appending {2} bytes to fix it.\n"
+                         .format(path, block_size, pad_len));
+
+        pad = b"\x00"*(pad_len)
+        open(path, "ab").write(pad)
+
 
 def extract_full_ota(name, tmpdir, private_pass):
     safe_rmtree(tmpdir)
@@ -113,6 +124,7 @@ def extract_full_ota(name, tmpdir, private_pass):
     boot_img = os.path.join(tmpdir, 'boot.img')
     with gzip.open(boot_img_gz, 'rb') as f_in, open(boot_img, 'wb') as f_out:
         shutil.copyfileobj(f_in, f_out)
+    zero_pad_file_to_blocksize(boot_img, DELTA_GEN_BLOCK_SIZE)
     sys_img_gz = os.path.join(tmpdir, 'apq8009-robot-sysfs.img.gz')
     encryption = int(manifest.get("SYSTEM", "encryption"))
     if encryption == 1:
@@ -128,6 +140,7 @@ def extract_full_ota(name, tmpdir, private_pass):
     sys_img = os.path.join(tmpdir, 'system.img')
     with gzip.open(sys_img_gz, 'rb') as f_in, open(sys_img, 'wb') as f_out:
         shutil.copyfileobj(f_in, f_out)
+    zero_pad_file_to_blocksize(sys_img, DELTA_GEN_BLOCK_SIZE)
     return manifest.get("META", "update_version")
 
 
