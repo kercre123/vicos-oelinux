@@ -13,7 +13,6 @@ pipeline {
        label 'vicos2'
      }
     }
-  }
 
   stages {
     stage('Build') {
