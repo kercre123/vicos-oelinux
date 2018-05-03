@@ -1,7 +1,6 @@
 pipeline {
  agent {
-    node {
-        vSphereDeployFromTemplate {
+    vSphereDeployFromTemplate {
             server('https://vsphere.ankicore.com')
             template('js-vicos-IV')
             clone('clone')
@@ -9,8 +8,10 @@ pipeline {
             resourcepool('vicos-sjc-vm-04-test')
             datastore('jc-vm-04-localds')
             folder('vmos')
-       }
+     }
+     node {
        label 'vicos2'
+     }
     }
   }
 
