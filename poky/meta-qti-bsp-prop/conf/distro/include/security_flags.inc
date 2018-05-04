@@ -22,3 +22,6 @@ SECURITY_CFLAGS_pn-loc-glue  = "${SECURITY_PIC_CFLAGS}"
 SECURITY_CFLAGS_pn-loc-hal-test-shim  = "${SECURITY_PIC_CFLAGS}"
 SECURITY_CFLAGS_pn-location-service  = "${SECURITY_PIC_CFLAGS}"
 SECURITY_CFLAGS_pn-data-items  = "${SECURITY_PIC_CFLAGS}"
+
+# Anki
+SECURITY_CFLAGS_pn-ankibluetoothd = "${SECURITY_PIE_CFLAGS}"
