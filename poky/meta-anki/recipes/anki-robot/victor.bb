@@ -55,7 +55,7 @@ do_compile () {
        BUILD_FLAVOR_FLAGS=" -a -DAUDIO_RELEASE=ON"
    fi
    
-   ./project/victor/build-victor.sh -p vicos -c Release $BUILD_FLAVOR_FLAGS
+   ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
 }
 
 do_install () {
