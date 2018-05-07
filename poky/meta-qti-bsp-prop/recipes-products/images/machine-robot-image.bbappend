@@ -24,3 +24,27 @@ do_build[nostamp]  = "1"
 
 # Call function makesystem to generate sparse ext4 image
 addtask makesystem after do_rootfs before do_build
+
+KEYDIR := "${THISDIR}/kernel"
+TARGET_SHA_TYPE = "sha256"
+
+do_makesystem_append() {
+    #Generating signed boot.img
+    cd ${DEPLOY_DIR_IMAGE}
+    cp ${MACHINE}-boot.img ${MACHINE}-boot.img.nonsecure
+
+    echo "KEYDIR=${KEYDIR}"
+    echo "ls ${KEYDIR}" && ls ${KEYDIR}
+
+    openssl dgst -${TARGET_SHA_TYPE} -binary ${MACHINE}-boot.img.nonsecure > ${MACHINE}-boot.img.${TARGET_SHA_TYPE}
+    if ${@bb.utils.contains('DISTRO_FEATURES', 'vble', 'true', 'false', d)}; then
+        openssl pkeyutl -sign -in ${MACHINE}-boot.img.${TARGET_SHA_TYPE} -inkey ${KEYDIR}/vble-qti.key -out ${MACHINE}-boot.img.sig -pkeyopt digest:${TARGET_SHA_TYPE} -pkeyopt rsa_padding_mode:pkcs1
+    else
+        openssl rsautl -sign -in ${MACHINE}-boot.img.${TARGET_SHA_TYPE} -inkey ${KEYDIR}/qti.key -out ${MACHINE}-boot.img.sig
+    fi
+    dd if=/dev/zero of=${MACHINE}-boot.img.sig.padded bs=2048 count=1
+    dd if=${MACHINE}-boot.img.sig of=${MACHINE}-boot.img.sig.padded conv=notrunc
+    cat ${MACHINE}-boot.img.nonsecure ${MACHINE}-boot.img.sig.padded > ${MACHINE}-boot.img.secure
+    rm -rf ${MACHINE}-boot.img.${TARGET_SHA_TYPE} ${MACHINE}-boot.img.sig ${MACHINE}-boot.img.sig.padded
+    mv -f ${MACHINE}-boot.img.secure ${MACHINE}-boot.img
+}
