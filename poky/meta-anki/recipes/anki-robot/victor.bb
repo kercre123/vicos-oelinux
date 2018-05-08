@@ -9,7 +9,6 @@ SRC_URI   = "file://anki/victor"
 SRCREV   = "${AUTOREV}"
 S        = "${WORKDIR}/victor"
 BUILDSRC = "${S}/_build/vicos/Release"
-DEPENDS += "python-pycrypto"
 
 export SSH_AUTH_SOCK
 export ANKI_BUILD_VERSION
@@ -54,7 +53,7 @@ do_compile () {
    if [[ ${USER_BUILD} == "1" ]]; then
        BUILD_FLAVOR_FLAGS=" -a -DAUDIO_RELEASE=ON"
    fi
-   
+
    ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
 }
 
