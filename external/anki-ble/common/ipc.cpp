@@ -217,7 +217,7 @@ void IPCEndpoint::SendQueuedMessagesToPeer(const int sockfd)
   }
   while (!search->second->IsQueueEmpty()) {
     const std::vector<uint8_t>& packed_message = search->second->GetMessageAtFrontOfQueue();
-    ssize_t bytesSent = send(sockfd, packed_message.data(), packed_message.size(), 0);
+    ssize_t bytesSent = send(sockfd, packed_message.data(), packed_message.size(), MSG_NOSIGNAL);
     if (-1 == bytesSent) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         logv("ipc-endpoint: send would block");
