@@ -2067,13 +2067,6 @@ void DisconnectGattPeerByAddress(const std::string& address)
   return;
 }
 
-static bool sScanning = false;
-void TimeoutScanning() {
-  if (sScanning) {
-    SetScanning(false);
-  }
-}
-
 bool SetScanning(const bool enable)
 {
   std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
@@ -2088,15 +2081,6 @@ bool SetScanning(const bool enable)
          enable ? "start" : "stop",
          bt_status_t_to_string(status).c_str());
     return false;
-  }
-
-  sScanning = enable;
-
-  if (enable) {
-    // Timeout Scanning after 1 minute
-    auto f = std::bind(&TimeoutScanning);
-    auto when = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 60);
-    sTaskExecutor.WakeAfter(f, when);
   }
 
   return true;
