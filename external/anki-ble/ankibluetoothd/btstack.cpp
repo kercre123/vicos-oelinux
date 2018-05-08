@@ -592,7 +592,10 @@ static void device_found_cb(int num_properties, bt_property_t *properties) {
 
 static void bond_state_changed_cb(bt_status_t status, bt_bdaddr_t *bd_addr,
                                   bt_bond_state_t state) {
-  logv("%s", __FUNCTION__);
+  logv("%s(status = %s, bd_addr = %s, state = %s)",
+       __FUNCTION__, bt_status_t_to_string(status).c_str(),
+       bt_bdaddr_t_to_string(bd_addr).c_str(),
+       bt_bond_state_t_to_string(state).c_str());
 }
 
 static void acl_state_changed_cb(bt_status_t status, bt_bdaddr_t *bd_addr,
@@ -2065,6 +2068,8 @@ void DisconnectGattPeerByAddress(const std::string& address)
     loge("Failed to disconnect from %s", address.c_str());
   }
 
+  sBtInterface->remove_bond(&bda);
+
   return;
 }
 
@@ -2106,6 +2111,10 @@ bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct)
   sOutboundConnections[address] = info;
   bt_bdaddr_t bda;
   bt_bdaddr_t_from_string(address, &bda);
+  int connection_state = sBtInterface->get_connection_state(&bda);
+  if (connection_state) {
+    logw("Unexpected connection state (%d) with %s", connection_state, address.c_str());
+  }
   bt_status_t status = sBtGattInterface->client->connect(sBtGattClientIf,
                                                          &bda,
                                                          is_direct,
