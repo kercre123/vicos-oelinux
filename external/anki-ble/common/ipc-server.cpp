@@ -218,7 +218,6 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
 void IPCServer::OnPeerClose(const int sockfd)
 {
   IPCEndpoint::OnPeerClose(sockfd);
-  close(sockfd);
 }
 
 void IPCServer::OnPeripheralStateUpdate(const bool advertising,
