@@ -832,6 +832,7 @@ void btgattc_notify_cb(int conn_id, btgatt_notify_params_t *p_data)
   if (search == sOutboundConnections.end()) {
     loge("%s(conn_id = %d). %s not found in outbound connections",
          __FUNCTION__, conn_id, address.c_str());
+    sTaskExecutor.Wake(std::bind(&DisconnectGattPeerByAddress, address));
     return;
   }
   std::string char_uuid = GetCharacteristicUUIDFromConnIDAndHandle(conn_id, p_data->handle);
