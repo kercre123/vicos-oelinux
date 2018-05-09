@@ -223,6 +223,7 @@ void IPCEndpoint::SendQueuedMessagesToPeer(const int sockfd)
         logv("ipc-endpoint: send would block");
         break;
       }
+      logd("ipc-endpoint: send failed. errno = %s (%d)", strerror(errno), errno);
       OnPeerClose(sockfd);
       break;
     } else if (bytesSent < packed_message.size()) {
