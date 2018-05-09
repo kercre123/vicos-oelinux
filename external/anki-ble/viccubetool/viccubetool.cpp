@@ -64,6 +64,8 @@ void show_cube_rssi(const char* cube_id, int rssi) {
 VicCubeTool::~VicCubeTool() {
   delete connect_retry_timer_; connect_retry_timer_ = nullptr;
   delete stop_scan_timer_; stop_scan_timer_ = nullptr;
+  delete cube_connect_retry_timer_; cube_connect_retry_timer_ = nullptr;
+  delete idle_cube_connection_timer_; idle_cube_connection_timer_ = nullptr;
   delete task_executor_; task_executor_ = nullptr;
 }
 
@@ -197,14 +199,40 @@ void VicCubeTool::OnScanResults(int error,
       }
       scanning_ = false;
       StopScan();
+      delete stop_scan_timer_; stop_scan_timer_ = nullptr;
       address_ = r.address;
       ConnectToCube();
     }
   }
 }
 
+void VicCubeTool::CubeConnectRetryTimerCallback(ev::timer& w, int revents) {
+  DisconnectByAddress(address_);
+  if (--retries_ > 0) {
+    w.again();
+    ConnectToPeripheral(address_);
+  } else {
+    w.stop();
+    std::cout << "Failed to connect to " << address_ << std::endl;
+    _exit(0);
+  }
+}
+
+void VicCubeTool::IdleCubeConnectionTimerCallback(ev::timer& w, int revents) {
+  std::cout << "Cube connection has gone idle.  Disconnecting...." << std::endl;
+  w.stop();
+  DisconnectByAddress(address_);
+}
+
 void VicCubeTool::ConnectToCube() {
   std::cout << "Connecting to " << address_ << "....." << std::endl;
+  if (!cube_connect_retry_timer_) {
+    cube_connect_retry_timer_ = new ev::timer(loop_);
+  }
+  cube_connect_retry_timer_->set <VicCubeTool, &VicCubeTool::CubeConnectRetryTimerCallback> (this);
+  cube_connect_retry_timer_->set(0., 20.);
+  cube_connect_retry_timer_->again();
+
   ConnectToPeripheral(address_);
 }
 
@@ -218,6 +246,7 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
               << address << std::endl;
     return;
   }
+  delete cube_connect_retry_timer_; cube_connect_retry_timer_ = nullptr;
   std::cout << std::string(connected ? "Connected to " : "Disconnected from ")
             << address << std::endl;
 
@@ -233,6 +262,13 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
       _exit(0);
     }
   }
+  if (!idle_cube_connection_timer_) {
+    idle_cube_connection_timer_ = new ev::timer(loop_);
+  }
+  idle_cube_connection_timer_->set <VicCubeTool, &VicCubeTool::IdleCubeConnectionTimerCallback> (this);
+  idle_cube_connection_timer_->set(0., 10.);
+  idle_cube_connection_timer_->again();
+
   connection_id_ = connection_id;
   ReadCharacteristic(connection_id_, Anki::kModelNumberString_128_BIT_UUID);
 }
@@ -247,6 +283,7 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
     std::cerr << "Got message from wrong connection" << connection_id << std::endl;
     return;
   }
+  idle_cube_connection_timer_->again();
   if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kCubeAppVersion_128_BIT_UUID)) {
     if (!value.empty()) {
       std::string firmware_version(value.begin(), value.end());
@@ -287,6 +324,8 @@ void VicCubeTool::OnCharacteristicReadResult(const int connection_id,
 
   int connectionTimeout = kGattConnectionTimeoutDefault;
   if (cube_test_mode_) { connectionTimeout /= 80; } //from 20 seconds to .25
+
+  idle_cube_connection_timer_->again();
 
   if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kModelNumberString_128_BIT_UUID)) {
     cube_model_number_ = std::string(data.begin(), data.end());
