@@ -69,7 +69,8 @@ enum class IPCMessageType {
     OnDescriptorReadResult,
     RequestConnectionParameterUpdate,
     OnRequestConnectionParameterUpdateResult,
-    SetAdapterName
+    SetAdapterName,
+    DisconnectByAddress
 };
 
 typedef struct __attribute__ ((__packed__)) IPCMessage {
@@ -228,6 +229,10 @@ typedef struct __attribute__ ((__packed__)) OnRequestConnectionParameterUpdateRe
 typedef struct __attribute__ ((__packed__)) SetAdapterNameArgs {
   char name[kAdapterNameSize];
 } SetAdapterNameArgs;
+
+typedef struct __attribute__ ((__packed__)) DisconnectByAddressArgs {
+  char address[kAddressSize];
+} DisconnectByAddressArgs;
 
 class IPCEndpoint {
  public:
