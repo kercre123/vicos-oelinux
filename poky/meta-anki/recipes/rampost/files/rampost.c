@@ -14,6 +14,7 @@
 #include "messages.h"
 #include "spine_hal.h"
 #include "rampost.h"
+#include "lcd.h"
 
 enum {
   app_DEVICE_OPEN_ERROR = 1,
@@ -72,7 +73,7 @@ void set_body_leds(int success, int inRecovery) {
   }
 
   int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
-if (errCode) { error_exit(errCode); }
+  if (errCode) { error_exit(errCode); }
 
   hal_set_mode(RobotMode_RUN);
 
@@ -108,14 +109,89 @@ void exit_cleanup(void)
 }
 
 int error_exit(RampostErr err) {
-set_body_leds(0, 0);
-exit_cleanup();
-exit(err);
+  set_body_leds(0, 0);
+  exit_cleanup();
+  exit(err);
 
 }
 
 
+/*********** ORANGE MODE UTILS **************/
 
+#if (ORANGE == 1 )
+#include "warning_orange.h"
+#define REACTION_TIME  (0.5 * NSEC_PER_SEC)
+#define FRAME_WAIT_MS 200
+#define SHUTDOWN_FRAME_INTERVAL (0.5 * NSEC_PER_SEC)
+
+#define IMU_ACC_RANGE 2.0    // g       [2.11.12: acc_range 2 => +- 2g ]
+#define MAX_16BIT_POSITIVE 0x7FFF
+#define IMU_ACCEL_SCALE_G ((double)(IMU_ACC_RANGE)/MAX_16BIT_POSITIVE)
+#define MIN_INVERTED_G  ((long)(0.5 / IMU_ACCEL_SCALE_G))
+
+void show_orange_icon(void) {
+  lcd_draw_frame2(warning_orange, warning_orange_len);
+}
+
+bool imu_is_inverted(void) {
+  IMURawData rawData[IMU_MAX_SAMPLES_PER_READ];
+  const int imu_read_samples = imu_manage(rawData);
+  if (rawData[0].acc[2] > MIN_INVERTED_G) {
+    return true;
+  }
+  return false;
+}
+
+bool button_was_released(struct BodyToHead* bodyData) {
+  static bool buttonPressed = false;
+  if (bodyData->touchLevel[1] > 0) {
+    buttonPressed = true;
+  }
+  else if (buttonPressed) {
+    buttonPressed = false;
+    return true;
+  }
+  return false;
+}
+
+typedef enum {
+  unlock_SUCCESS,
+  unlock_TIMEOUT,
+} UnlockState;
+
+UnlockState wait_for_unlock(void) {
+  int buttonCount = 0;
+  uint64_t start = steady_clock_now();
+  uint64_t now;
+  for (now = steady_clock_now(); now-start > REACTION_TIME; now=steady_clock_now()) {
+    struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_DATA_FRAME, FRAME_WAIT_MS);
+    struct BodyToHead* bodyData = (struct BodyToHead*)(hdr+1);
+    if ( imu_is_inverted() ) {
+      if (button_was_released(bodyData)) {
+        buttonCount++;
+        if (buttonCount >= 3 ) {
+          return unlock_SUCCESS;
+        }
+      }
+    }
+  }
+  return unlock_TIMEOUT;
+}
+
+void send_shutdown_message(void) {
+  static uint64_t lastMsgTime = steady_clock_now();
+  uint64_t now = steady_clock_now();
+
+  if (now - lastMsgTime > SHUTDOWN_FRAME_INTERVAL) {
+    hal_send_frame(PAYLOAD_DATA_FRAME, NULL, 0);
+    lastMsgTime = now;
+  }
+}
+
+#endif
+
+
+/************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
 
@@ -126,6 +202,19 @@ int main(int argc, const char* argv[]) {
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
   set_body_leds(success, recovery_mode_check());
+
+#if (ORANGE == 1)
+
+
+  show_orange_icon();
+  imu_init();
+  if (wait_for_unlock() != unlock_SUCCESS) {
+    while (1) {
+      send_shutdown_message();
+    }
+  }
+
+#endif
 
   exit_cleanup();
 

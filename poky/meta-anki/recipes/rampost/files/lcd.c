@@ -12,6 +12,7 @@
 
 #include "gpio.h"
 #include "rampost.h"
+#include "lcd.h"
 
 /************** LCD INTERFACE *****************/
 
