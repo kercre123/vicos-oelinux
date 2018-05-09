@@ -404,3 +404,20 @@ std::string bt_acl_state_t_to_string(const bt_acl_state_t state) {
   }
 
 }
+
+std::string bt_bond_state_t_to_string(const bt_bond_state_t state) {
+  switch(state) {
+    case BT_BOND_STATE_NONE:
+      return "BT_BOND_STATE_NONE";
+    case BT_BOND_STATE_BONDING:
+      return "BT_BOND_STATE_BONDING";
+    case BT_BOND_STATE_BONDED:
+      return "BT_BOND_STATE_BONDED";
+    default:
+      {
+        std::ostringstream oss;
+        oss << "Unknown (" << (int) state << ")";
+        return oss.str();
+      }
+  }
+}

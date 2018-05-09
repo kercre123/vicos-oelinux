@@ -592,7 +592,10 @@ static void device_found_cb(int num_properties, bt_property_t *properties) {
 
 static void bond_state_changed_cb(bt_status_t status, bt_bdaddr_t *bd_addr,
                                   bt_bond_state_t state) {
-  logv("%s", __FUNCTION__);
+  logv("%s(status = %s, bd_addr = %s, state = %s)",
+       __FUNCTION__, bt_status_t_to_string(status).c_str(),
+       bt_bdaddr_t_to_string(bd_addr).c_str(),
+       bt_bond_state_t_to_string(state).c_str());
 }
 
 static void acl_state_changed_cb(bt_status_t status, bt_bdaddr_t *bd_addr,
@@ -832,6 +835,7 @@ void btgattc_notify_cb(int conn_id, btgatt_notify_params_t *p_data)
   if (search == sOutboundConnections.end()) {
     loge("%s(conn_id = %d). %s not found in outbound connections",
          __FUNCTION__, conn_id, address.c_str());
+    sTaskExecutor.Wake(std::bind(&DisconnectGattPeerByAddress, address));
     return;
   }
   std::string char_uuid = GetCharacteristicUUIDFromConnIDAndHandle(conn_id, p_data->handle);
@@ -2064,14 +2068,9 @@ void DisconnectGattPeerByAddress(const std::string& address)
     loge("Failed to disconnect from %s", address.c_str());
   }
 
-  return;
-}
+  sBtInterface->remove_bond(&bda);
 
-static bool sScanning = false;
-void TimeoutScanning() {
-  if (sScanning) {
-    SetScanning(false);
-  }
+  return;
 }
 
 bool SetScanning(const bool enable)
@@ -2090,40 +2089,7 @@ bool SetScanning(const bool enable)
     return false;
   }
 
-  sScanning = enable;
-
-  if (enable) {
-    // Timeout Scanning after 1 minute
-    auto f = std::bind(&TimeoutScanning);
-    auto when = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 60);
-    sTaskExecutor.WakeAfter(f, when);
-  }
-
   return true;
-}
-
-void TimeoutConnectionAttempt(const std::string& address)
-{
-  std::lock_guard<std::mutex> lock(sBtStackCallbackMutex);
-  auto search = sOutboundConnections.find(address);
-  if (search == sOutboundConnections.end()) {
-    return;
-  }
-  BluetoothGattConnectionInfo& info = search->second;
-  if (info.status == BluetoothGattConnectionStatus::Connected) {
-    return;
-  }
-  BluetoothGattConnection& connection = info.connection;
-  if (connection.conn_id != -1) {
-    DisconnectOutboundConnectionById(connection.conn_id);
-  } else {
-    if (sCallbacks.outbound_connection_cb) {
-      sCallbacks.outbound_connection_cb(address,
-                                        0,
-                                        connection);
-    }
-    sOutboundConnections.erase(address);
-  }
 }
 
 // From Fluoride's stack/include/bt_types.h
@@ -2145,6 +2111,10 @@ bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct)
   sOutboundConnections[address] = info;
   bt_bdaddr_t bda;
   bt_bdaddr_t_from_string(address, &bda);
+  int connection_state = sBtInterface->get_connection_state(&bda);
+  if (connection_state) {
+    logw("Unexpected connection state (%d) with %s", connection_state, address.c_str());
+  }
   bt_status_t status = sBtGattInterface->client->connect(sBtGattClientIf,
                                                          &bda,
                                                          is_direct,
@@ -2155,11 +2125,6 @@ bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct)
     sOutboundConnections.erase(address);
     return false;
   }
-
-  // Timeout connection attempts after 2 minutes
-  auto f = std::bind(&TimeoutConnectionAttempt, address);
-  auto when = std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 120);
-  sTaskExecutor.WakeAfter(f, when);
 
   return true;
 }
