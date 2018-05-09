@@ -506,6 +506,10 @@ void Agent::ConnectToPeripheral(const int sockfd, const std::string& address) {
   }
 }
 
+void Agent::DisconnectByAddress(const std::string& address) {
+  BluetoothStack::DisconnectGattPeerByAddress(address);
+}
+
 void Agent::RequestConnectionParameterUpdate(const int sockfd,
                                              const std::string& address,
                                              int min_interval,
