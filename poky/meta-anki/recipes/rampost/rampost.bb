@@ -9,12 +9,15 @@ SRC_URI = "file://rampost.service \
            file://spine_hal.c \
            file://gpio.c \
            file://lcd.c \
+           file://imu.c \
            file://rampost.h \
            file://spine_hal.h \
            file://gpio.h \
+           file://lcd.h \
            file://messages.h \
            file://animfail.c \
            file://error_565.h \
+           file://warning_orange.h \
            file://animfail.service \
            "
 
