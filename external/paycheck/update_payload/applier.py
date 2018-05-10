@@ -474,6 +474,8 @@ class PayloadApplier(object):
       else:
         raise PayloadError('%s: unknown operation type (%d)' %
                            (op_name, op.type))
+      if self.payload.progress_tick_callback:
+          next(self.payload.progress_tick_callback)
 
   def _ApplyToPartition(self, operations, part_name, base_name,
                         new_part_file_name, new_part_info,

@@ -63,6 +63,7 @@ class Payload(object):
       self.manifest_len = None
       self.metadata_signature_len = None
       self.size = None
+      self.progress_tick_callback = None
 
     def ReadFromPayload(self, payload_file, hasher=None):
       """Reads the payload header from a file.
