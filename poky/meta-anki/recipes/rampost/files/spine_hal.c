@@ -224,6 +224,11 @@ static int get_payload_len(PayloadId payload_type, enum MsgDir dir)
   case PAYLOAD_DFU_PACKET:
     return sizeof(struct WriteDFU);
     break;
+  case PAYLOAD_SHUT_DOWN:
+    return 0;
+  case PAYLOAD_BOOT_FRAME:
+    return sizeof(struct MicroBodyToHead);
+    break;
   default:
     break;
   }
@@ -236,6 +241,7 @@ static int get_payload_len(PayloadId payload_type, enum MsgDir dir)
 //Creates header for frame
 static const uint8_t* spine_construct_header(PayloadId payload_type,  uint16_t payload_len)
 {
+printf("constructing %x\n",payload_type);
 #ifndef NDEBUG
   int expected_len = get_payload_len(payload_type, dir_SEND);
   assert(expected_len >= 0); //valid type

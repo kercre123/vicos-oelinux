@@ -14,6 +14,7 @@ SRC_URI = "file://rampost.service \
            file://spine_hal.h \
            file://gpio.h \
            file://lcd.h \
+           file://imu.h \
            file://messages.h \
            file://animfail.c \
            file://error_565.h \
@@ -22,7 +23,7 @@ SRC_URI = "file://rampost.service \
            "
 
 do_compile () {
-  ${CC} ${WORKDIR}/rampost.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c ${WORKDIR}/spine_hal.c -o ${WORKDIR}/rampost
+  ${CC} ${WORKDIR}/rampost.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c ${WORKDIR}/spine_hal.c ${WORKDIR}/imu.c -o ${WORKDIR}/rampost
   ${CC} ${WORKDIR}/animfail.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c -o ${WORKDIR}/animfail
 }
 
