@@ -19,7 +19,7 @@ FILES_${PN} += "${libdir}"
 FILES_${PN} += "/misc/bluetooth/*"
 INSANE_SKIP_${PN} = "dev-so"
 
-CFLAGS_append = " -DUSE_ANDROID_LOGGING -DUSE_LIBHW_AOSP -DREDUCED_LOGGING"
+CFLAGS_append = " -DUSE_ANDROID_LOGGING -DUSE_LIBHW_AOSP"
 LDFLAGS_append = " -llog "
 
 BASEPRODUCT = "${@d.getVar('PRODUCT', False)}"

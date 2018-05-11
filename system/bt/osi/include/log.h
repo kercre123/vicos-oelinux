@@ -67,15 +67,9 @@ extern bool bt_logger_enabled;
 #ifdef USE_ANDROID_LOGGING
 #include <utils/Log.h>
 #define LOG_TAG "bt_stack"
-#ifdef REDUCED_LOGGING
-#define LOG_VERBOSE(...)
-#define LOG_DEBUG(...)
-#define LOG_INFO(...)
-#else
 #define LOG_VERBOSE(...) ALOGV(__VA_ARGS__)
 #define LOG_DEBUG(...)   ALOGD(__VA_ARGS__)
 #define LOG_INFO(...)   ALOGI(__VA_ARGS__)
-#endif
 #define LOG_WARN(...)   ALOGW(__VA_ARGS__)
 #define LOG_ERROR(...)   ALOGE(__VA_ARGS__)
 #else
