@@ -41,7 +41,9 @@ c_sources = \
         src/thread.c \
         src/time.c \
         src/wakelock.c \
-        src/vnd_log.c
+        src/vnd_log.c \
+        src/log.c \
+        src/properties_compat.c
 
 common_LDFLAGS = -lpthread
 common_CFLAGS =  $(AM_CFLAGS) -fPIC -D_GNU_SOURCE

@@ -21,6 +21,27 @@
 #include <stdbool.h>
 #include "include/bt_logger_lib.h"
 
+#define kLogLevelVerbose 2
+#define kLogLevelDebug 3
+#define kLogLevelInfo 4
+#define kLogLevelWarn 5
+#define kLogLevelError 6
+#define kLogLevelOff 7
+
+
+bool isUsingAndroidLogging();
+void enableAndroidLogging(const bool enable);
+void setAndroidLoggingTag(const char* tag);
+int getMinLogLevel();
+void setMinLogLevel(const int level);
+
+void logv(const char* fmt, ...);
+void logd(const char* fmt, ...);
+void logi(const char* fmt, ...);
+void logw(const char* fmt, ...);
+void loge(const char* fmt, ...);
+
+
 extern bt_logger_interface_t *logger_interface;
 extern bool bt_logger_enabled;
 
@@ -66,12 +87,17 @@ extern bool bt_logger_enabled;
 
 #ifdef USE_ANDROID_LOGGING
 #include <utils/Log.h>
+#define ALOGV(...) logv(__VA_ARGS__)
+#define ALOGD(...) logd(__VA_ARGS__)
+#define ALOGI(...) logi(__VA_ARGS__)
+#define ALOGW(...) logw(__VA_ARGS__)
+#define ALOGE(...) loge(__VA_ARGS__)
 #define LOG_TAG "bt_stack"
-#define LOG_VERBOSE(...) ALOGV(__VA_ARGS__)
-#define LOG_DEBUG(...)   ALOGD(__VA_ARGS__)
-#define LOG_INFO(...)   ALOGI(__VA_ARGS__)
-#define LOG_WARN(...)   ALOGW(__VA_ARGS__)
-#define LOG_ERROR(...)   ALOGE(__VA_ARGS__)
+#define LOG_VERBOSE(...) logv(__VA_ARGS__)
+#define LOG_DEBUG(...)   logd(__VA_ARGS__)
+#define LOG_INFO(...)   logi(__VA_ARGS__)
+#define LOG_WARN(...)   logw(__VA_ARGS__)
+#define LOG_ERROR(...)   loge(__VA_ARGS__)
 #else
 #include <syslog.h>
 
