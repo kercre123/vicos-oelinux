@@ -35,9 +35,6 @@ do_install_append() {
         install -d ${D}${systemd_unitdir}/system/
         install -m 0644 ${WORKDIR}/busybox-syslog.service -D ${D}${systemd_unitdir}/system/busybox-syslog.service
         install -d ${D}${systemd_unitdir}/system/multi-user.target.wants/
-        # enable the service for multi-user.target
-        ln -sf ${systemd_unitdir}/system/busybox-syslog.service \
-           ${D}${systemd_unitdir}/system/multi-user.target.wants/busybox-syslog.service
     else
         install -d ${D}${sysconfdir}/mdev
         install -m 0755 ${WORKDIR}/automountsdcard.sh ${D}${sysconfdir}/mdev/
