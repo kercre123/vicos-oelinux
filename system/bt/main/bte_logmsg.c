@@ -61,10 +61,10 @@
 
 #ifdef USE_ANDROID_LOGGING
 #include <utils/Log.h>
-#define LOGI0 ALOGI
-#define LOGD0 ALOGD
-#define LOGW0 ALOGW
-#define LOGE0 ALOGE
+#define LOGI0 logi
+#define LOGD0 logd
+#define LOGW0 logw
+#define LOGE0 loge
 #endif
 
 #ifndef DEFAULT_CONF_TRACE_LEVEL
