@@ -56,14 +56,6 @@
 #include "osi/include/list.h"
 #include <string.h>
 
-#ifdef REDUCED_LOGGING
-#undef ALOGV
-#define ALOGV(fmt, arg...)
-
-#undef ALOGD
-#define ALOGD(fmt, arg...)
-#endif
-
 /*******************************************************************************
 **  Local type definitions
 *******************************************************************************/
