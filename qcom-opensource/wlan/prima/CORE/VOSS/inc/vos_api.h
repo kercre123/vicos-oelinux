@@ -74,6 +74,7 @@
 #include <vos_threads.h>
 #include <vos_timer.h>
 #include <vos_pack_align.h>
+#include <vos_diag_core_log.h>
 
 /**
  * enum userspace_log_level - Log level at userspace
