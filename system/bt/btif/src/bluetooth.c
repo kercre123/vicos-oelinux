@@ -195,6 +195,9 @@ void get_logger_config_value()
 *****************************************************************************/
 
 static int init(bt_callbacks_t *callbacks) {
+  setAndroidLoggingTag("btstack");
+  setMinLogLevel(property_get_int32("persist.anki.btd.log_level", kLogLevelOff));
+
   LOG_INFO(LOG_TAG, "%s", __func__);
 
   if (interface_ready())

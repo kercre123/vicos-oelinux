@@ -134,11 +134,7 @@ extern void BTA_setStackLog( const char* log_layer, int log_level);
 
 /* Enables or disables all trace messages. */
 #ifndef BT_USE_TRACES
-#ifdef REDUCED_LOGGING
-#define BT_USE_TRACES       FALSE
-#else
 #define BT_USE_TRACES       TRUE
-#endif
 #endif
 
 /******************************************************************************
@@ -366,16 +362,10 @@ extern UINT8 audio_latency_trace_level;
 #define BTIF_TRACE_IMP(...)                      {LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_DEBUG, ##__VA_ARGS__);}
 #define BTIF_TRACE_ERROR(...)                    { LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_ERROR, ##__VA_ARGS__);}
 #define BTIF_TRACE_WARNING(...)                  {LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_WARNING, ##__VA_ARGS__); }
-#ifdef REDUCED_LOGGING
-#define BTIF_TRACE_API(...)
-#define BTIF_TRACE_DEBUG(...)
-#define BTIF_TRACE_VERBOSE(...)
-#else
 #define BTIF_TRACE_API(...)                      { LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_API, ##__VA_ARGS__); }
+#define BTIF_TRACE_EVENT(...)                    {LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_EVENT, ##__VA_ARGS__);}
 #define BTIF_TRACE_DEBUG(...)                    { LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_DEBUG, ##__VA_ARGS__);}
 #define BTIF_TRACE_VERBOSE(...)                  { LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_DEBUG, ##__VA_ARGS__);}
-#endif
-#define BTIF_TRACE_EVENT(...)                    {LogMsg(TRACE_CTRL_GENERAL | TRACE_LAYER_NONE | TRACE_ORG_APPL | TRACE_TYPE_EVENT, ##__VA_ARGS__);}
 
 
 /* define traces for application */
