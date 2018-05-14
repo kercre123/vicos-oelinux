@@ -10,6 +10,7 @@
  *
  **/
 
+#include "codeTimer.h"
 #include "ipc-client.h"
 
 class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
@@ -71,6 +72,7 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   bool use_dvt1_flasher_;
   int connection_id_;
   int retries_;
+  Anki::Util::CodeTimer::TimePoint connection_start_time_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
   std::string new_firmware_version_;
