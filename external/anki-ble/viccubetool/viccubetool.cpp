@@ -145,6 +145,7 @@ void VicCubeTool::CubeConnectRetryTimerCallback(ev::timer& w, int revents) {
   DisconnectByAddress(address_);
   if (--retries_ > 0) {
     w.again();
+    connection_start_time_ = Anki::Util::CodeTimer::Start();
     ConnectToPeripheral(address_);
   } else {
     w.stop();
@@ -167,7 +168,7 @@ void VicCubeTool::ConnectToCube() {
   cube_connect_retry_timer_->set <VicCubeTool, &VicCubeTool::CubeConnectRetryTimerCallback> (this);
   cube_connect_retry_timer_->set(0., 20.);
   cube_connect_retry_timer_->again();
-
+  connection_start_time_ = Anki::Util::CodeTimer::Start();
   ConnectToPeripheral(address_);
 }
 
@@ -185,6 +186,9 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
   if (!connected) {
     _exit(0);
   }
+  std::cout << "Connection established in "
+            << Anki::Util::CodeTimer::MillisecondsElapsed(connection_start_time_)
+            << " milliseconds" << std::endl;
   if (!idle_cube_connection_timer_) {
     idle_cube_connection_timer_ = new ev::timer(loop_);
   }
