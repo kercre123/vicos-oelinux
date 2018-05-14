@@ -13,6 +13,7 @@
 #include "btstack.h"
 
 #include "anki_ble_uuids.h"
+#include "codeTimer.h"
 #include "log.h"
 #include "btutils.h"
 #include "gatt_constants.h"
@@ -128,13 +129,15 @@ enum class BluetoothGattConnectionStatus {
 };
 
 typedef struct BluetoothGattConnectionInfo {
+  Anki::Util::CodeTimer::TimePoint start;
   BluetoothGattConnectionStatus status;
   BluetoothGattConnection connection;
   BluetoothGattConnectionInfo()
       : BluetoothGattConnectionInfo("") {}
   BluetoothGattConnectionInfo(const std::string &address)
       : connection(BluetoothGattConnection(address))
-      , status(BluetoothGattConnectionStatus::Connecting) {}
+      , status(BluetoothGattConnectionStatus::Connecting)
+      , start(Anki::Util::CodeTimer::Start()) {}
 } BluetoothGattConnectionInfo;
 
 static std::map<std::string, BluetoothGattConnectionInfo> sOutboundConnections;
@@ -307,6 +310,13 @@ static bool IsOutboundConnectionFullyEstablished(const int conn_id)
   }
   search->second.status = BluetoothGattConnectionStatus::Connected;
   return true;
+}
+
+static void LogConnectionEstablishmentDuration(const BluetoothGattConnectionInfo& info)
+{
+  logi("connection to %s established in %d milliseconds",
+       info.connection.address.c_str(),
+       Anki::Util::CodeTimer::MillisecondsElapsed(info.start));
 }
 
 static void TransmitNextWriteItem() {
@@ -810,6 +820,7 @@ void btgattc_register_for_notification_cb(int conn_id, int registered,
   }
 
   if (IsOutboundConnectionFullyEstablished(conn_id)) {
+    LogConnectionEstablishmentDuration(search->second);
     if (sCallbacks.outbound_connection_cb) {
       sCallbacks.outbound_connection_cb(connection.address, 1, connection);
     }
@@ -965,6 +976,7 @@ void btgattc_write_descriptor_cb(int conn_id, int status, uint16_t handle)
   descriptor->descriptor_written = true;
 
   if (IsOutboundConnectionFullyEstablished(conn_id)) {
+    LogConnectionEstablishmentDuration(search->second);
     if (sCallbacks.outbound_connection_cb) {
       sCallbacks.outbound_connection_cb(connection.address, 1, connection);
     }
