@@ -67,7 +67,7 @@
 
 
 #ifndef VERIFY_PRINT_ERROR
-#define VERIFY_EPRINTF(format, args) (void)0
+#define VERIFY_EPRINTF(format, args) pr_err(format, args)
 #endif
 
 #ifndef VERIFY_PRINT_INFO
