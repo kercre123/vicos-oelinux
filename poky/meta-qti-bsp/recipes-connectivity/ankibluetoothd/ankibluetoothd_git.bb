@@ -18,13 +18,13 @@ S = "${WORKDIR}/external/anki-ble/"
 
 DEPENDS += "btvendorhal libhardware bt-property"
 
-do_install_append() {
+do_install() {
+  oe_runmake DESTDIR=${D} -C ankibluetoothd install
+  oe_runmake DESTDIR=${D} -C viccubetool install
   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
     install -d ${D}${sysconfdir}/systemd/system/
     install -m 0644 ${WORKDIR}/ankibluetoothd.service \
       -D ${D}${sysconfdir}/systemd/system/ankibluetoothd.service
-    install -m 0644 ${WORKDIR}/vicdevsetup.service \
-      -D ${D}${sysconfdir}/systemd/system/vicdevsetup.service
     install -d ${D}${sysconfdir}/systemd/system/multi-user.target.wants/
     ln -sf /etc/systemd/system/ankibluetoothd.service \
       ${D}${sysconfdir}/systemd/system/multi-user.target.wants/ankibluetoothd.service
