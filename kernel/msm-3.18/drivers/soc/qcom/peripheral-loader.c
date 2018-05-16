@@ -786,6 +786,9 @@ int pil_boot(struct pil_desc *desc)
 
 	down_read(&pil_pm_rwsem);
 	snprintf(fw_name, sizeof(fw_name), "%s.mdt", desc->fw_name);
+
+	pil_info(desc, "Requesting to load firmware: %s\n", fw_name);
+
 	ret = request_firmware(&fw, fw_name, desc->dev);
 	if (ret) {
 		pil_err(desc, "Failed to locate %s\n", fw_name);
