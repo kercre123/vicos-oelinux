@@ -112,7 +112,7 @@ do_makesystem() {
 
     if [ "${FACTORY}" == "1" ] || [ "${USER_BUILD}" == "1" ]; then
         # Enable dm-verity for any FACTORY build or if we are making a USER build
-        KERNEL_CMD_PARAMS="${@ d.getVar("KERNEL_CMD_PARAMS") } dm=\"system none ro,0 $FS_SIZE_IN_512_BLOCKS verity $HASH_TYPE 179:##SYSTEM_BOOT_PART## 179:##SYSTEM_BOOT_PART## $DATA_BLOCK_SIZE $HASH_BLOCK_SIZE $DATA_BLOCKS $HASH_OFFSET $HASH_ALGORITHM $ROOT_HASH $SALT\" root=/dev/dm-0"
+        KERNEL_CMD_PARAMS="${@ d.getVar("KERNEL_CMD_PARAMS") } dm-verity.dev_wait=1 dm=\"system none ro,0 $FS_SIZE_IN_512_BLOCKS verity $HASH_TYPE 179:##SYSTEM_BOOT_PART## 179:##SYSTEM_BOOT_PART## $DATA_BLOCK_SIZE $HASH_BLOCK_SIZE $DATA_BLOCKS $HASH_OFFSET $HASH_ALGORITHM $ROOT_HASH $SALT\" root=/dev/dm-0"
     else
         # Disable dm-verity for Developer builds
         KERNEL_CMD_PARAMS="${@ d.getVar("KERNEL_CMD_PARAMS") }"
