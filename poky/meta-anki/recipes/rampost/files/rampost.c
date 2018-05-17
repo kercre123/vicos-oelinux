@@ -145,7 +145,7 @@ bool imu_is_inverted(void) {
   const int imu_read_samples = imu_manage(rawData);
 //  if (!--imu_print_freq) {
 //    imu_print_freq = 20;
-//    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2], 
+//    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
 //                                      (rawData->acc[2] < -MIN_INVERTED_G));
 //  }
   if (rawData[0].acc[2] < -MIN_INVERTED_G) {
@@ -154,9 +154,9 @@ bool imu_is_inverted(void) {
   return false;
 }
 
-bool button_was_released(const struct BodyToHead* bodyData) {
+bool button_was_released(uint16_t buttonState) {
   static bool buttonPressed = false;
-  if (bodyData->touchLevel[1] > 0) {
+  if (buttonState > 0) {
     buttonPressed = true;
   }
   else if (buttonPressed) {
@@ -171,6 +171,7 @@ typedef enum {
   unlock_TIMEOUT,
 } UnlockState;
 
+
 UnlockState wait_for_unlock(void) {
   int buttonCount = 0;
   uint64_t start = steady_clock_now();
@@ -179,13 +180,17 @@ UnlockState wait_for_unlock(void) {
   printf("Waiting %lld ns for UNLOCK!\n", REACTION_TIME);
 
   for (now = steady_clock_now(); now-start < REACTION_TIME; now=steady_clock_now()) {
-//    now = steady_clock_now();
-//.    printf("%lld ns elapsed", now-start);
-//    while ( now-start > REACTION_TIME; now=steady_clock_now()) {
-    const struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_DATA_FRAME, FRAME_WAIT_MS);
-    const struct BodyToHead* bodyData = (struct BodyToHead*)(hdr+1);
+    uint16_t buttonState = 0;
+    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
+    if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
+      buttonState = ((struct BodyToHead*)(hdr+1))->touchLevel[1];
+    }
+    else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) {
+      //extract button data from stub packet and put in fake full packet
+      buttonState = ((struct MicroBodyToHead*)(hdr+1))->buttonPressed;
+    }
     if ( imu_is_inverted() ) {
-      if (button_was_released(bodyData)) {
+      if (button_was_released(buttonState)) {
         buttonCount++;
 printf("Press %d!\n", buttonCount);
         if (buttonCount >= 3 ) {
@@ -203,7 +208,7 @@ void send_shutdown_message(void) {
 
   if (now - lastMsgTime > SHUTDOWN_FRAME_INTERVAL) {
     printf("Shutting Down\n");
-    hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);  
+    hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);
     lastMsgTime = now;
   }
 }
