@@ -9,15 +9,14 @@
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 
-#include "platform/platform.h"
-#include "anki/cozmo/robot/spi_imu.h"
+#include "imu.h"
 
 
-//#define CONSOLE_DEBUG_PRINTF
+#define CONSOLE_DEBUG_PRINTF
 #ifdef CONSOLE_DEBUG_PRINTF
 #define imu_debug(fmt, args...) printf(fmt, ##args)
 #else
-#define imu_debug(fmt, args...) (LOGD( fmt, ##args))
+#define imu_debug(fmt, args...)
 #endif
 
 #define REALTIME_CONSOLE_OUTPUT 0
@@ -161,7 +160,6 @@ static int spi_setup(int fd, uint32_t key, uint32_t* val)
 
 static int spi_transfer(int bytes, const void* data, void* response)
 {
-
   struct spi_ioc_transfer tr = {
     .tx_buf = (unsigned long)data,
     .rx_buf = (unsigned long)response,
@@ -170,6 +168,9 @@ static int spi_transfer(int bytes, const void* data, void* response)
     .speed_hz = k_spi_speed,
     .bits_per_word = k_spi_bits,
   };
+//const char* datastr = (const char*)data;
+//  for (printf("imu_spi <- [");bytes--;printf(", ")) { printf("%02x",datastr[tr.len-bytes+1]); } printf("\n");
+
   int result = ioctl(gSPI_fd, SPI_IOC_MESSAGE(1), &tr);
   if (result < 1) {
     int errnum  = errno;
@@ -283,7 +284,7 @@ void imu_purge(void)
 
    0x24 triggers burst read.  read out as many bytes as needed.
 */
-int imu_manage(struct IMURawData* data)
+int imu_manage(IMURawData* data)
 {
   assert(data != NULL);
 

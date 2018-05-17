@@ -15,6 +15,9 @@
 #include "spine_hal.h"
 #include "rampost.h"
 #include "lcd.h"
+#include "imu.h"
+
+#define ORANGE 1
 
 enum {
   app_DEVICE_OPEN_ERROR = 1,
@@ -40,7 +43,7 @@ uint64_t steady_clock_now(void) {
 void microwait(long microsec)
 {
   struct timespec time;
-  uint64_t nsec = microsec * NSEC_PER_MSEC;
+  uint64_t nsec = microsec * NSEC_PER_USEC;
   time.tv_sec =  nsec / NSEC_PER_SEC;
   time.tv_nsec = nsec % NSEC_PER_SEC;
   nanosleep(&time, NULL);
@@ -73,7 +76,9 @@ void set_body_leds(int success, int inRecovery) {
   }
 
   int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
-  if (errCode) { error_exit(errCode); }
+  if (errCode) {
+    error_exit(errCode);
+  }
 
   hal_set_mode(RobotMode_RUN);
 
@@ -109,7 +114,11 @@ void exit_cleanup(void)
 }
 
 int error_exit(RampostErr err) {
-  set_body_leds(0, 0);
+  static bool exiting = false;
+  if (!exiting) {  //prevent endless loop on led failure
+     exiting = true;
+     set_body_leds(0, 0);
+  }
   exit_cleanup();
   exit(err);
 
@@ -120,29 +129,32 @@ int error_exit(RampostErr err) {
 
 #if (ORANGE == 1 )
 #include "warning_orange.h"
-#define REACTION_TIME  (0.5 * NSEC_PER_SEC)
+#define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define FRAME_WAIT_MS 200
-#define SHUTDOWN_FRAME_INTERVAL (0.5 * NSEC_PER_SEC)
+#define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
-#define IMU_ACC_RANGE 2.0    // g       [2.11.12: acc_range 2 => +- 2g ]
-#define MAX_16BIT_POSITIVE 0x7FFF
-#define IMU_ACCEL_SCALE_G ((double)(IMU_ACC_RANGE)/MAX_16BIT_POSITIVE)
-#define MIN_INVERTED_G  ((long)(0.5 / IMU_ACCEL_SCALE_G))
 
 void show_orange_icon(void) {
   lcd_draw_frame2(warning_orange, warning_orange_len);
 }
 
 bool imu_is_inverted(void) {
+
+//  static int imu_print_freq =  20;
   IMURawData rawData[IMU_MAX_SAMPLES_PER_READ];
   const int imu_read_samples = imu_manage(rawData);
-  if (rawData[0].acc[2] > MIN_INVERTED_G) {
+//  if (!--imu_print_freq) {
+//    imu_print_freq = 20;
+//    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2], 
+//                                      (rawData->acc[2] < -MIN_INVERTED_G));
+//  }
+  if (rawData[0].acc[2] < -MIN_INVERTED_G) {
     return true;
   }
   return false;
 }
 
-bool button_was_released(struct BodyToHead* bodyData) {
+bool button_was_released(const struct BodyToHead* bodyData) {
   static bool buttonPressed = false;
   if (bodyData->touchLevel[1] > 0) {
     buttonPressed = true;
@@ -163,12 +175,19 @@ UnlockState wait_for_unlock(void) {
   int buttonCount = 0;
   uint64_t start = steady_clock_now();
   uint64_t now;
-  for (now = steady_clock_now(); now-start > REACTION_TIME; now=steady_clock_now()) {
-    struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_DATA_FRAME, FRAME_WAIT_MS);
-    struct BodyToHead* bodyData = (struct BodyToHead*)(hdr+1);
+
+  printf("Waiting %lld ns for UNLOCK!\n", REACTION_TIME);
+
+  for (now = steady_clock_now(); now-start < REACTION_TIME; now=steady_clock_now()) {
+//    now = steady_clock_now();
+//.    printf("%lld ns elapsed", now-start);
+//    while ( now-start > REACTION_TIME; now=steady_clock_now()) {
+    const struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_DATA_FRAME, FRAME_WAIT_MS);
+    const struct BodyToHead* bodyData = (struct BodyToHead*)(hdr+1);
     if ( imu_is_inverted() ) {
       if (button_was_released(bodyData)) {
         buttonCount++;
+printf("Press %d!\n", buttonCount);
         if (buttonCount >= 3 ) {
           return unlock_SUCCESS;
         }
@@ -179,11 +198,12 @@ UnlockState wait_for_unlock(void) {
 }
 
 void send_shutdown_message(void) {
-  static uint64_t lastMsgTime = steady_clock_now();
+  static uint64_t lastMsgTime = 0;
   uint64_t now = steady_clock_now();
 
   if (now - lastMsgTime > SHUTDOWN_FRAME_INTERVAL) {
-    hal_send_frame(PAYLOAD_DATA_FRAME, NULL, 0);
+    printf("Shutting Down\n");
+    hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);  
     lastMsgTime = now;
   }
 }
@@ -198,6 +218,8 @@ int main(int argc, const char* argv[]) {
   lcd_gpio_setup();
   lcd_spi_init();
 
+  lcd_set_brightness(5);
+
   lcd_device_reset();
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
@@ -205,9 +227,11 @@ int main(int argc, const char* argv[]) {
 
 #if (ORANGE == 1)
 
-
+  lcd_device_init();
   show_orange_icon();
+  imu_open();
   imu_init();
+
   if (wait_for_unlock() != unlock_SUCCESS) {
     while (1) {
       send_shutdown_message();
