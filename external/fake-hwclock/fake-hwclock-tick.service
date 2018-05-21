@@ -1,0 +1,13 @@
+# Fake hwclock timer
+# Requires mount-data.service to periodically save clock value in /data
+
+[Unit]
+Description=Save hwclock by timer
+Requires=mount-data.service
+After=mount-data.service fake-hwclock.service
+Wants=time-sync.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/fake-hwclock tick > /dev/null
+

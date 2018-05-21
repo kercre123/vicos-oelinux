@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# Get the saved time (or empty) and clock time
+# The format sorts lexicographically
+
+# Use the build timestamp as the minimum clock value instead of Jan 1, 1970
+TIMESTAMP="/etc/timestamp"
+ETIME=$(test -f "${TIMESTAMP}" && date -u -D '%Y%m%d%H%M%S' -d `cat ${TIMESTAMP}` +'%Y-%m-%d %H:%M:%S')
+
+CLOCKFILE="/data/opt/fake-hwclock/fake-hwclock.data"
+CTIME=$(date -u +'%Y-%m-%d %H:%M:%S')
+FTIME=$(test -f "${CLOCKFILE}" && cat "${CLOCKFILE}")
+
+if expr "${ETIME}" \> "${FTIME}"; then
+    FTIME=${ETIME}
+fi
+
+# if the file time is in the future, use that
+setclock() {
+	if expr "${FTIME}" \> "${CTIME}" ; then
+		echo "loading saved time ${FTIME} over ${CTIME}"
+		date -u --set="${FTIME}"
+	else
+		echo "ignoring saved time ${FTIME} over ${CTIME}"
+	fi
+}
+
+
+# if current time is greater than what is in the file, save it
+saveclock() {
+	if expr "${CTIME}" \> "${FTIME}" ; then
+		mkdir -p `dirname "${CLOCKFILE}"`
+		echo "saving time ${CTIME} over ${FTIME}"
+		echo "${CTIME}" > "${CLOCKFILE}"
+	else
+		echo "not saving time ${CTIME} over ${FTIME}"
+	fi
+}
+
+
+case "$1" in
+	load)
+		setclock
+		;;
+	save)
+		saveclock
+		;;
+	tick)
+		saveclock
+		;;
+	*)
+		echo "Usage: $0 {load|save|tick}"
+		exit 1
+		;;
+esac
