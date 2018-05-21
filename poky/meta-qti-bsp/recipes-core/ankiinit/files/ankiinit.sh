@@ -42,7 +42,7 @@ do
     sleep 1;
 done
 
-if $HAVE_EMR; then
+if [ $HAVE_EMR -eq 0 ]; then
   echo $SERIALNO > /sys/class/android_usb/android0/iSerial
 fi
 
