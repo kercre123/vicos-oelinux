@@ -26,8 +26,11 @@ do_install_append() {
     install -m 0644 ${WORKDIR}/vicdevsetup.service \
       -D ${D}${sysconfdir}/systemd/system/vicdevsetup.service
     install -d ${D}${sysconfdir}/systemd/system/multi-user.target.wants/
-    ln -sf /etc/systemd/system/ankibluetoothd.service \
-      ${D}${sysconfdir}/systemd/system/multi-user.target.wants/ankibluetoothd.service
+    if [ "${FIXTURE}" != "1" ]; then
+      # For Fixture builds, disable ankibluetoothd by default
+      ln -sf /etc/systemd/system/ankibluetoothd.service \
+        ${D}${sysconfdir}/systemd/system/multi-user.target.wants/ankibluetoothd.service
+    fi
   fi
 }
 

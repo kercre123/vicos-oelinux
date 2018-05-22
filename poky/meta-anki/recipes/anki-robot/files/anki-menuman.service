@@ -1,0 +1,20 @@
+#
+# poky/meta-anki/recipes/anki-robot/files/anki-menuman.service
+#
+[Unit]
+Description=Anki menuman service
+SourcePath=/anki/menuman/menuman.sh
+PartOf=multi-user.target
+
+Wants=ankiinit.service
+After=ankiinit.service
+
+ConditionFileIsExecutable=/anki/menuman/menuman.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh /anki/menuman/menuman.sh
+
+[Install]
+WantedBy=multi-user.target
