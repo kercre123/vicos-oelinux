@@ -18,7 +18,8 @@ IMAGE_INSTALL += "vic-neuralnets"
 IMAGE_INSTALL += "vic-robot"
 IMAGE_INSTALL += "vic-switchboard"
 IMAGE_INSTALL += "vic-webserver"
-IMAGE_INSTALL += "victor"
+IMAGE_INSTALL += "${@base_conditional('FIXTURE', '1', '', 'victor', d)}"
+IMAGE_INSTALL += "${@base_conditional('FIXTURE', '1', 'anki-menuman', '', d)}"
 #
 # Other stuff
 IMAGE_INSTALL += "bspatch"

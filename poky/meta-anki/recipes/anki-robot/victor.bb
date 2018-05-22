@@ -71,10 +71,23 @@ do_compile () {
        fi
        ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
    fi
+   if [[ ${FIXTURE} == "1" ]]; then
+       pushd robot/fixture/helpware
+       make menuman
+       popd
+   fi
 }
 
 do_install () {
+    # install victor progs
     ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
+
+    if [[ ${FIXTURE} == "1" ]]; then
+        # install menuman
+        install -d ${D}$/anki/menuman
+        install -m 0755 ${S}/robot/fixture/helpware/menuman ${D}/anki/menuman/menuman
+        install -m 0755 ${S}/robot/fixture/helpware/files/* ${D}/anki/menuman/
+    fi
 
     # Remove "other" permission and remove unnecessary exec on everything in /anki
     # BRC: Setting this here is a dirty hack, we should correctly set permissions in a
