@@ -29,7 +29,8 @@
 [Unit]
 Description=mount-data
 SourcePath=/etc/initscripts/mount-data
-Before=connman.service
+Before=connman.service chronyd.service
+RequiredBy=connman.service chronyd.service
 
 [Service]
 Restart=no
