@@ -33,6 +33,7 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=751419260aa954499f7abaabaa882bbe"
 SRC_URI = "https://download.tuxfamily.org/chrony/chrony-${PV}.tar.gz \
     file://chrony.conf \
     file://chronyd \
+    file://chronyd.service \
 "
 SRC_URI[md5sum] = "d0598aa8a9be8faccef9386f6fc0d5f2"
 SRC_URI[sha256sum] = "8d04e7cda2333289c2104b731d39c3c1db94816e43bae35d7ee4e7ae8af6391f"
@@ -90,24 +91,11 @@ do_install() {
     install -d ${D}${sysconfdir}/init.d
     install -m 755 ${WORKDIR}/chronyd ${D}${sysconfdir}/init.d
 
-    # systemd unit configuration file
-    install -d ${D}${systemd_unitdir}/system
-    install -m 0644 ${S}/examples/chronyd.service ${D}${systemd_unitdir}/system/
-
-    # Variable data (for drift and/or rtc file)
-    install -d ${D}${localstatedir}/lib/chrony
-
-    # Log files
-    install -d ${D}${localstatedir}/log/chrony
-
-    # Fix hard-coded paths in config files and init scripts
-    sed -i -e 's!/var/!${localstatedir}/!g' -e 's!/etc/!${sysconfdir}/!g' \
-           -e 's!/usr/sbin/!${sbindir}/!g' -e 's!/usr/bin/!${bindir}/!g' \
-           ${D}${sysconfdir}/chrony.conf \
-           ${D}${sysconfdir}/init.d/chronyd \
-           ${D}${systemd_unitdir}/system/chronyd.service
-    sed -i 's!^PATH=.*!PATH=${base_sbindir}:${base_bindir}:${sbindir}:${bindir}!' ${D}${sysconfdir}/init.d/chronyd
-    sed -i 's!^EnvironmentFile=.*!EnvironmentFile=-${sysconfdir}/default/chronyd!' ${D}${systemd_unitdir}/system/chronyd.service
+    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+	# systemd unit configuration file
+	install -d ${D}${systemd_unitdir}/system
+	install -m 0644 ${WORKDIR}/chronyd.service ${D}${systemd_unitdir}/system/
+    fi
 }
 
 FILES_${PN} = "${sbindir}/chronyd ${sysconfdir} ${localstatedir}"
