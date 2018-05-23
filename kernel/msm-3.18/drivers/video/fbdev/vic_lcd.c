@@ -31,13 +31,13 @@
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 
-#define MAX_XFER_SIZE		0x1000
 #define RSHIFT			0x001C
 
 #define LCD_FRAME_WIDTH		184
 #define LCD_FRAME_HEIGHT	96
 #define BYTES_PER_PIXEL		2
 #define FRAMEBUFFER_SIZE	(LCD_FRAME_WIDTH * LCD_FRAME_HEIGHT * BYTES_PER_PIXEL)
+#define MAX_XFER_SIZE		FRAMEBUFFER_SIZE
 
 struct vicspi_device {
 	struct spi_device *spi;
@@ -45,6 +45,7 @@ struct vicspi_device {
 	int cmd_gpio;
 	int gpio_reset1;
 	int gpio_reset2;
+	u32 pseudo_palette[256];
 };
 
 static int vicspi_write(struct vicspi_device *vic, int cmd, const u8 *wbuf,
@@ -112,6 +113,18 @@ static void vicspi_update_lcd(struct vicspi_device *vic, struct fb_info *info,
 	vicspi_write(vic, 0x2c, info->screen_base, FRAMEBUFFER_SIZE);
 }
 
+static int vicspi_lcd_checkvar(struct fb_var_screeninfo *var,
+				struct fb_info *info)
+{
+	switch (var->bits_per_pixel) {
+	case 16:
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
 static void vicspi_fillrect(struct fb_info *info,
 			   const struct fb_fillrect *rect)
 {
@@ -202,12 +215,25 @@ static ssize_t vicspi_lcd_write(struct fb_info *info, const char __user *buf,
 	if (count + *ppos > FRAMEBUFFER_SIZE)
 		count = FRAMEBUFFER_SIZE - *ppos;
 
-	pr_info("%s: count %d *ppos %x\n", __func__, count, p);
+	pr_debug("%s: count %d *ppos %x\n", __func__, count, p);
 	copy_from_user(info->screen_base + *ppos, buf, count);
 	vicspi_write(vic, 0x2c, info->screen_base, count + p);
 	*ppos += count;
 
 	return count;
+}
+
+static int vicspi_setcolreg(unsigned regno, unsigned red, unsigned green,
+			    unsigned blue, unsigned transp,
+			    struct fb_info *info)
+{
+	// TODO: limits
+
+	pr_debug("%s: regno %d\n", __func__, regno);
+	((u32 *)info->pseudo_palette)[regno] = (red & 0xf800) |
+						((green & 0xf800) >> 5) |
+						((blue & 0xf800) >> 11);
+	return 0;
 }
 
 static void vicspi_lcd_clear(struct fb_info *info)
@@ -220,6 +246,7 @@ static void vicspi_lcd_clear(struct fb_info *info)
 
 static int vicspi_blank(int blank_mode, struct fb_info *info)
 {
+	// TODO
 	return 0;
 }
 
@@ -228,17 +255,20 @@ static struct fb_ops vicspi_fb_ops = {
 	.fb_pan_display = vicspi_pan_display,
 	.fb_read = fb_sys_read,
 	.fb_write = vicspi_lcd_write,
+	.fb_check_var = vicspi_lcd_checkvar,
 	.fb_fillrect = vicspi_fillrect,
 	.fb_imageblit = vicspi_imageblit,
 	.fb_copyarea = vicspi_copyarea,
 	.fb_blank = vicspi_blank,
+	.fb_setcolreg = vicspi_setcolreg,
 };
 
 static struct fb_fix_screeninfo vicspi_screeninfo = {
 	.id = "vicspi_lcd",
 	.type = FB_TYPE_PACKED_PIXELS,
 	.visual = FB_VISUAL_TRUECOLOR,
-	.accel =	FB_ACCEL_NONE,
+	.accel = FB_ACCEL_NONE,
+	.line_length = LCD_FRAME_WIDTH * BYTES_PER_PIXEL,
 };
 
 static struct fb_var_screeninfo vicspi_var = {
@@ -246,7 +276,7 @@ static struct fb_var_screeninfo vicspi_var = {
 	.yres = LCD_FRAME_HEIGHT,
 	.xres_virtual = LCD_FRAME_WIDTH,
 	.yres_virtual = LCD_FRAME_HEIGHT,
-	.bits_per_pixel = BYTES_PER_PIXEL * 2,
+	.bits_per_pixel = BYTES_PER_PIXEL * 8,
 	.nonstd = 1,
 };
 
@@ -270,6 +300,9 @@ static int vicspi_lcd_probe(struct spi_device *spi)
 
 	if (!videomem)
 		return -ENOMEM;
+
+	vicspi_screeninfo.smem_start = virt_to_phys(videomem);
+	vicspi_screeninfo.smem_len = FRAMEBUFFER_SIZE;
 
 	fbi = framebuffer_alloc(sizeof(struct vicspi_device), &spi->dev);
 	if (fbi == NULL) {
@@ -320,6 +353,8 @@ static int vicspi_lcd_probe(struct spi_device *spi)
 	fbi->fix = vicspi_screeninfo;
 	fbi->var = vicspi_var;
 
+	fbi->pseudo_palette = vic->pseudo_palette;
+
 	ret = register_framebuffer(fbi);
 	if (ret) {
 		dev_err(&spi->dev, "failed to register framebuffer\n");
@@ -329,7 +364,8 @@ static int vicspi_lcd_probe(struct spi_device *spi)
 
 	vicspi_lcd_reset(vic);
 	vicspi_init_lcd(vic);
-//	vicspi_lcd_clear(fbi);
+	/* eventually we'll have the fb_blank function instead */
+	vicspi_lcd_clear(fbi);
 	return 0;
 }
 
