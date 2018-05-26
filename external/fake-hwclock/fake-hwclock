@@ -1,0 +1,83 @@
+#!/bin/sh
+
+# Establish an epoch time for Victor.  Our clock should never be set to a value before this.
+EPOCH="2018-05-10 12:34:56"
+SAVEDTIME="${EPOCH}"
+
+# Try to use the timestamp file to update the SAVEDTIME
+TIMESTAMP="/etc/timestamp"
+if [ -f "${TIMESTAMP}" ]; then
+    ETIME=$(date -u -D '%Y%m%d%H%M%S' -d `cat ${TIMESTAMP}` +'%Y-%m-%d %H:%M:%S')
+
+    if expr "${ETIME}" \> "${SAVEDTIME}"; then
+	SAVEDTIME=${ETIME}
+    fi
+fi
+
+# Get the Current UTC Time
+CTIME=$(date -u +'%Y-%m-%d %H:%M:%S')
+# Get the current value in seconds for the hardware clock
+HWCLOCK=$(date -u -D '%a %b %d %T %Y' -d "`hwclock`" +'%s')
+FHWCLOCK=${HWCLOCK}
+
+# If we have a saved time and hardware clock value, load them
+CLOCKFILE="/data/opt/fake-hwclock/fake-hwclock.data"
+if [ -f "${CLOCKFILE}" ]; then
+    FTIME=$(grep TIME "${CLOCKFILE}" | awk -F= '{print $2;}')
+    FHWCLOCK=$(grep HWCLOCK "${CLOCKFILE}" | awk -F= '{print $2;}')
+
+    if expr "${FTIME}" \> "${SAVEDTIME}"; then
+	SAVEDTIME=${FTIME}
+    fi
+fi
+
+
+# if the file time is in the future, use that
+setclock() {
+    if expr "${HWCLOCK}" \> "${FHWCLOCK}" ; then
+	# If the RTC clock has continued to advance since our last boot
+	# then add in the difference here
+	CLOCK_OFFSET=$(expr "${HWCLOCK}" - "${FHWCLOCK}")
+	SAVEDTIME_SECS=$(date -u -D '%Y-%m-%d %H:%M:%S' -d "${SAVEDTIME}" +'%s')
+	SAVEDTIME_SECS=$(expr "${SAVEDTIME_SECS}" + "${CLOCK_OFFSET}")
+	SAVEDTIME=$(date -u -D '%s' -d "${SAVEDTIME_SECS}" +'%Y-%m-%d %H:%M:%S')
+    fi
+
+    if expr "${SAVEDTIME}" \> "${CTIME}" ; then
+	echo "loading saved time ${SAVEDTIME} over ${CTIME}"
+	date -u --set="${SAVEDTIME}"
+    else
+	echo "ignoring saved time ${SAVEDTIME} over ${CTIME}"
+    fi
+}
+
+
+# if current time is greater than what is in the file, save it
+saveclock() {
+	if expr "${CTIME}" \> "${SAVEDTIME}" ; then
+		mkdir -p `dirname "${CLOCKFILE}"`
+		echo "saving time ${CTIME} over ${SAVEDTIME}"
+		echo "TIME=${CTIME}" > "${CLOCKFILE}.tmp"
+		echo "HWCLOCK=${HWCLOCK}" >> "${CLOCKFILE}.tmp"
+		mv "${CLOCKFILE}.tmp" "${CLOCKFILE}"
+	else
+		echo "not saving time ${CTIME} over ${SAVEDTIME}"
+	fi
+}
+
+
+case "$1" in
+	load)
+		setclock
+		;;
+	save)
+		saveclock
+		;;
+	tick)
+		saveclock
+		;;
+	*)
+		echo "Usage: $0 {load|save|tick}"
+		exit 1
+		;;
+esac

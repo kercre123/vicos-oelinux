@@ -1,0 +1,17 @@
+# Fake hwclock service
+# No default dependencies to enable very early execution.
+# Manually add shutdown.target dependency because no default.
+# pulls in time-sync.target (see man systemd.special)
+# Runs before the other time sync daemons, if they are being started
+
+[Unit]
+Description=Fake Hardware Clock Early Boot
+DefaultDependencies=No
+Wants=time-sync.target
+Before=shutdown.target time-sync.target ntpdate.service ntpd.service chronyd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/fake-hwclock load
+
