@@ -2,6 +2,8 @@ DESCRIPTION = "fake-hwclock tool to keep the time since RTC does not work"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=a109bd21357ed8a1fa56e8879764d28d"
 
+DEPENDS = "busybox"
+
 FILESPATH =+ "${WORKSPACE}:"
 SRC_URI = "file://external/fake-hwclock/"
 
