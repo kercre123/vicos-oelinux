@@ -51,7 +51,7 @@ do_compile () {
 
    BUILD_FLAVOR_FLAGS=""
    if [[ ${USER_BUILD} == "1" ]]; then
-       BUILD_FLAVOR_FLAGS=" -a -DAUDIO_RELEASE=ON"
+       BUILD_FLAVOR_FLAGS=" -a -DAUDIO_RELEASE=ON -DANKI_WEBSERVER_ENABLED=1"
    fi
 
    ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
