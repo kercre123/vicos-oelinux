@@ -1,6 +1,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/systemd:"
 
 SRC_URI += "file://1001-systemd-Disable-unused-mount-points.patch"
+SRC_URI += "file://1002-systemd-Use-data-etc-localtime.patch"
 SRC_URI += "file://mountpartitions.rules"
 SRC_URI += "file://systemd-udevd.service"
 SRC_URI += "file://ffbm.target"
@@ -8,6 +9,8 @@ SRC_URI += "file://mount-data"
 SRC_URI += "file://mount-factory-data"
 SRC_URI += "file://mount-data.service"
 SRC_URI += "file://mtpserver.rules"
+SRC_URI += "file://setup_localtime_link"
+SRC_URI += "file://setup_localtime_link.service"
 
 DEPENDS += "emr-cat blkdiscard"
 
@@ -44,6 +47,13 @@ do_install_append () {
    install -d ${D}${systemd_unitdir}/system/local-fs.target.requires/
    ln -sf ${systemd_unitdir}/system/mount-data.service \
                ${D}${systemd_unitdir}/system/local-fs.target.requires/mount-data.service
+
+   install -m 0750 ${WORKDIR}/setup_localtime_link \
+                -D ${D}${sysconfdir}/initscripts/setup_localtime_link
+   install -m 0644 ${WORKDIR}/setup_localtime_link.service \
+                -D ${D}${sysconfdir}/systemd/system/setup_localtime_link.service
+   ln -sf ${sysconfdir}/systemd/system/setup_localtime_link.service \
+               ${D}${sysconfdir}/systemd/system/multi-user.target.wants/setup_localtime_link.service
 }
 
 FILES_${PN} += "/etc/initscripts"
