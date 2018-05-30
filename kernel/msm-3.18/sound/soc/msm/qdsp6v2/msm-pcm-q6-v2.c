@@ -277,6 +277,12 @@ static void event_handler(uint32_t opcode,
 		wake_up(&the_locks.write_wait);
 		wake_up(&the_locks.read_wait);
 		break;
+	case ASM_SESSION_CMDRSP_GET_PATH_DELAY_V2:
+		pr_debug("%s got ASM_SESSION_CMDRSP_GET_PATH_DELAY_V2 event -> don't know what to do\n", __func__);
+		break;
+	case ASM_CMDRSP_SHARED_MEM_MAP_REGIONS:
+		pr_debug("%s got ASM_CMDRSP_SHARED_MEM_MAP_REGIONS event -> don't know what to do\n", __func__);
+		break;
 	default:
 		pr_debug("Not Supported Event opcode[0x%x]\n", opcode);
 		break;
@@ -508,34 +514,27 @@ static int msm_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		pr_debug("%s: Trigger start\n", __func__);
-		ret = q6asm_run_nowait(prtd->audio_client, 0, 0, 0);
+		if(test_bit(CMD_EOS, &prtd->cmd_pending)) {
+			pr_debug("%s: CMD_EOS pending -> ignore start\n", __func__);
+			ret = EINVAL;
+		} else {
+			pr_debug("%s: Trigger start\n", __func__);
+			ret = q6asm_run_nowait(prtd->audio_client, 0, 0, 0);
+		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
-		pr_debug("SNDRV_PCM_TRIGGER_STOP\n");
-		atomic_set(&prtd->start, 0);
-		if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK) {
-			prtd->enabled = STOPPED;
-			ret = q6asm_cmd_nowait(prtd->audio_client, CMD_PAUSE);
-			if (!ret)
-				ret = q6asm_cmd_nowait(prtd->audio_client,
-					CMD_FLUSH);
-			break;
-		}
-		/* pending CMD_EOS isn't expected */
-		WARN_ON_ONCE(test_bit(CMD_EOS, &prtd->cmd_pending));
-		set_bit(CMD_EOS, &prtd->cmd_pending);
-		ret = q6asm_cmd_nowait(prtd->audio_client, CMD_EOS);
-		if (ret)
-			clear_bit(CMD_EOS, &prtd->cmd_pending);
-		break;
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		pr_debug("SNDRV_PCM_TRIGGER_PAUSE\n");
 		ret = q6asm_cmd_nowait(prtd->audio_client, CMD_PAUSE);
+		if (!ret) {
+			ret = q6asm_cmd_nowait(prtd->audio_client,
+					CMD_FLUSH);
+		}
 		atomic_set(&prtd->start, 0);
 		break;
 	default:
+		pr_debug("%s: unhandled command:%d\n",__func__,cmd);
 		ret = -EINVAL;
 		break;
 	}
