@@ -2,14 +2,15 @@ SUMMARY = "Timezone data"
 HOMEPAGE = "http://www.iana.org/time-zones"
 SECTION = "base"
 LICENSE = "PD & BSD & BSD-3-Clause"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=ef1a352b901ee7b75a75df8171d6aca7"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=c679c9d6b02bc2757b3eaf8f53c43fba"
 
 DEPENDS = "tzcode-native"
 
 SRC_URI = "http://www.iana.org/time-zones/repository/releases/tzdata${PV}.tar.gz;name=tzdata"
+UPSTREAM_CHECK_URI = "http://www.iana.org/time-zones"
 
-SRC_URI[tzdata.md5sum] = "73912ecfa6a9a8048ddf2e719d9bc39d"
-SRC_URI[tzdata.sha256sum] = "b6966ec982ef64fe48cebec437096b4f57f4287519ed32dde59c86d3a1853845"
+SRC_URI[tzdata.md5sum] = "97d654f4d7253173b3eeb76a836dd65e"
+SRC_URI[tzdata.sha256sum] = "6b288e5926841a4cb490909fe822d85c36ae75538ad69baf20da9628b63b692e"
 
 inherit allarch
 
@@ -21,6 +22,7 @@ RCONFLICTS_${PN} = "timezones timezone-africa timezone-america timezone-antarcti
 S = "${WORKDIR}"
 
 DEFAULT_TIMEZONE ?= "Universal"
+INSTALL_TIMEZONE_FILE ?= "1"
 
 TZONES= "africa antarctica asia australasia europe northamerica southamerica  \
          factory etcetera backward systemv \
@@ -43,24 +45,33 @@ do_install () {
         cp -pPR ${S}/$exec_prefix ${D}/
         # libc is removing zoneinfo files from package
         cp -pP "${S}/zone.tab" ${D}${datadir}/zoneinfo
+        cp -pP "${S}/zone1970.tab" ${D}${datadir}/zoneinfo
         cp -pP "${S}/iso3166.tab" ${D}${datadir}/zoneinfo
 
         # Install default timezone
         if [ -e ${D}${datadir}/zoneinfo/${DEFAULT_TIMEZONE} ]; then
             install -d ${D}${sysconfdir}
-            echo ${DEFAULT_TIMEZONE} > ${D}${sysconfdir}/timezone
-            ln -s ${datadir}/zoneinfo/${DEFAULT_TIMEZONE} ${D}${sysconfdir}/localtime
+            if [ "${INSTALL_TIMEZONE_FILE}" = "1" ]; then
+                echo ${DEFAULT_TIMEZONE} > ${D}${sysconfdir}/timezone.default
+            fi
+            ln -s ${datadir}/zoneinfo/${DEFAULT_TIMEZONE} ${D}${sysconfdir}/localtime.default
         else
             bberror "DEFAULT_TIMEZONE is set to an invalid value."
             exit 1
         fi
 
+	# Setup symlink between /etc/localtime and /data/etc/localtime
+	ln -s /data${sysconfdir}/localtime ${D}${sysconfdir}/localtime
+
+	# Setup symlink between /etc/timezone and /data/etc/timezone
+	ln -s /data${sysconfdir}/timezone ${D}${sysconfdir}/timezone
+
         chown -R root:root ${D}
 }
 
 pkg_postinst_${PN} () {
-	etc_lt="$D${sysconfdir}/localtime"
-	src="$D${sysconfdir}/timezone"
+	etc_lt="$D${sysconfdir}/localtime.default"
+	src="$D${sysconfdir}/timezone.default"
 
 	if [ -e ${src} ] ; then
 		tz=$(sed -e 's:#.*::' -e 's:[[:space:]]*::g' -e '/^$/d' "${src}")
@@ -166,7 +177,7 @@ FILES_${PN} += "${datadir}/zoneinfo/Pacific/Honolulu     \
                 ${datadir}/zoneinfo/Asia/Dubai           \
                 ${datadir}/zoneinfo/Asia/Karachi         \
                 ${datadir}/zoneinfo/Asia/Dhaka           \
-                ${datadir}/zoneinfo/Asia/Bankok          \
+                ${datadir}/zoneinfo/Asia/Bangkok         \
                 ${datadir}/zoneinfo/Asia/Hong_Kong       \
                 ${datadir}/zoneinfo/Asia/Tokyo           \
                 ${datadir}/zoneinfo/Australia/Darwin     \
@@ -202,7 +213,11 @@ FILES_${PN} += "${datadir}/zoneinfo/Pacific/Honolulu     \
                 ${datadir}/zoneinfo/WET                  \
                 ${datadir}/zoneinfo/Zulu                 \
                 ${datadir}/zoneinfo/zone.tab             \
+                ${datadir}/zoneinfo/zone1970.tab         \
                 ${datadir}/zoneinfo/iso3166.tab          \
                 ${datadir}/zoneinfo/Etc/*"
 
-CONFFILES_${PN} += "${sysconfdir}/timezone ${sysconfdir}/localtime"
+CONFFILES_${PN} += "${@ "${sysconfdir}/timezone" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE')) else "" }"
+CONFFILES_${PN} += "${@ "${sysconfdir}/timezone.default" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE')) else "" }"
+CONFFILES_${PN} += "${sysconfdir}/localtime"
+CONFFILES_${PN} += "${sysconfdir}/localtime.default"
