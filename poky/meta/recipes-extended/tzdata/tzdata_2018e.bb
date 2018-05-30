@@ -52,20 +52,26 @@ do_install () {
         if [ -e ${D}${datadir}/zoneinfo/${DEFAULT_TIMEZONE} ]; then
             install -d ${D}${sysconfdir}
             if [ "${INSTALL_TIMEZONE_FILE}" = "1" ]; then
-                echo ${DEFAULT_TIMEZONE} > ${D}${sysconfdir}/timezone
+                echo ${DEFAULT_TIMEZONE} > ${D}${sysconfdir}/timezone.default
             fi
-            ln -s ${datadir}/zoneinfo/${DEFAULT_TIMEZONE} ${D}${sysconfdir}/localtime
+            ln -s ${datadir}/zoneinfo/${DEFAULT_TIMEZONE} ${D}${sysconfdir}/localtime.default
         else
             bberror "DEFAULT_TIMEZONE is set to an invalid value."
             exit 1
         fi
 
+	# Setup symlink between /etc/localtime and /data/etc/localtime
+	ln -s /data${sysconfdir}/localtime ${D}${sysconfdir}/localtime
+
+	# Setup symlink between /etc/timezone and /data/etc/timezone
+	ln -s /data${sysconfdir}/timezone ${D}${sysconfdir}/timezone
+
         chown -R root:root ${D}
 }
 
 pkg_postinst_${PN} () {
-	etc_lt="$D${sysconfdir}/localtime"
-	src="$D${sysconfdir}/timezone"
+	etc_lt="$D${sysconfdir}/localtime.default"
+	src="$D${sysconfdir}/timezone.default"
 
 	if [ -e ${src} ] ; then
 		tz=$(sed -e 's:#.*::' -e 's:[[:space:]]*::g' -e '/^$/d' "${src}")
@@ -212,4 +218,6 @@ FILES_${PN} += "${datadir}/zoneinfo/Pacific/Honolulu     \
                 ${datadir}/zoneinfo/Etc/*"
 
 CONFFILES_${PN} += "${@ "${sysconfdir}/timezone" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE')) else "" }"
+CONFFILES_${PN} += "${@ "${sysconfdir}/timezone.default" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE')) else "" }"
 CONFFILES_${PN} += "${sysconfdir}/localtime"
+CONFFILES_${PN} += "${sysconfdir}/localtime.default"
