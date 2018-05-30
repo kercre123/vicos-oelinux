@@ -13,3 +13,4 @@ done
 set -e
 tinymix set "RX3 MIX1 INP1" "RX1"
 tinymix set "SPK" 1
+tinymix set "RX3 Digital Volume" 74
