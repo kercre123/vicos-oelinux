@@ -49,9 +49,9 @@ do_compile () {
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
 
-   BUILD_FLAVOR_FLAGS=""
+   BUILD_FLAVOR_FLAGS="-DANKI_WEBSERVER_ENABLED=1"
    if [[ ${USER_BUILD} == "1" ]]; then
-       BUILD_FLAVOR_FLAGS=" -a -DAUDIO_RELEASE=ON -DANKI_WEBSERVER_ENABLED=1"
+       BUILD_FLAVOR_FLAGS=" -a -DAUDIO_RELEASE=ON"
    fi
 
    ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
