@@ -1,0 +1,12 @@
+# Run the rebooter service every day
+
+[Unit]
+Description=Reboot the robot every day between 1AM and 5AM
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+
+[Timer]
+OnCalendar=*-*-* 01:00:00
+
+[Install]
+WantedBy=multi-user.target

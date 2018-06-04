@@ -1,0 +1,11 @@
+# Service to periodically reboot the robot
+
+[Unit]
+Description=Robot Rebooter
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+
+[Service]
+Type=simple
+ExecStart=/sbin/rebooter.py
+
