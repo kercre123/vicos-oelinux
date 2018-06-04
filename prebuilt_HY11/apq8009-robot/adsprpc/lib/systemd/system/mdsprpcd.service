@@ -8,7 +8,7 @@ Description=mdsprpc Service
 SourcePath= /usr/bin/mdsprpcd
 
 [Service]
-Restart=yes
+Restart=always
 ExecStart= /usr/bin/mdsprpcd
 
 [Install]
