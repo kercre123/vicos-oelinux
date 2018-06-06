@@ -64,10 +64,10 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   bool connect_to_first_cube_found_;
   bool flash_cube_after_connect_;
   bool use_dvt1_flasher_;
+  bool cube_test_mode_;
   int connection_id_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
   std::string new_firmware_version_;
   Anki::TaskExecutor* task_executor_;
 };
-

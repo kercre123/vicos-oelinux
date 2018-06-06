@@ -76,7 +76,8 @@ void VicCubeTool::OnConnectedToDaemon() {
       ConnectToCube();
     }
   } else if (AreCaseInsensitiveStringsEqual(command, "flash")
-             || AreCaseInsensitiveStringsEqual(command, "flashdvt1")) {
+             || AreCaseInsensitiveStringsEqual(command, "flashdvt1")
+             || AreCaseInsensitiveStringsEqual(command, "cube-test")) {
     if (args_.size() < 2) {
       std::cerr << "Path to firmware required" << std::endl;
       _exit(1);
@@ -84,6 +85,9 @@ void VicCubeTool::OnConnectedToDaemon() {
     use_dvt1_flasher_ = AreCaseInsensitiveStringsEqual(command, "flashdvt1");
     path_to_firmware_ = args_[1];
     flash_cube_after_connect_ = true;
+    if (AreCaseInsensitiveStringsEqual(command, "cube-test")) {
+      cube_test_mode_ = true;
+    }
     if (address_.empty()) {
       connect_to_first_cube_found_ = true;
       ScanForCubes();
@@ -95,12 +99,18 @@ void VicCubeTool::OnConnectedToDaemon() {
   }
 }
 
+
 void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
   scanning_ = false;
   StopScan();
   if (scan_records_.empty()) {
-    std::cerr << "No cubes found.  Exiting..." << std::endl;
-    _exit(1);
+    if (cube_test_mode_) {
+      ScanForCubes();
+    }
+    else {
+      std::cerr << "No cubes found. Exiting..." << std::endl;
+      _exit(1);
+    }
   }
 }
 
@@ -112,8 +122,33 @@ void VicCubeTool::ScanForCubes() {
     stop_scan_timer_ = new ev::timer(loop_);
   }
   stop_scan_timer_->set <VicCubeTool, &VicCubeTool::ScanTimerCallback> (this);
-  stop_scan_timer_->start(2.0);
+  stop_scan_timer_->start(cube_test_mode_ ? 60.0 : 2.0);
 }
+
+
+// void VicCubeTool::CubeTestScanTimerCallback(ev::timer& w, int revents) {
+//   scanning_ = false;
+//   StopScan();
+//   if (scan_records_.empty()) {
+//     std::cerr << "Waiting for cubes...." << std::endl;
+//     DoCubeTest();
+//   }
+//   else {
+//   }
+// }
+
+// void VicCubeTool::DoCubeTest(void) {
+//   std::cout << "Scanning for cubes...." << std::endl;
+//   scanning_ = true;
+//   StartScan(Anki::kCubeService_128_BIT_UUID);
+//   if (!stop_scan_timer_) {
+//     stop_scan_timer_ = new ev::timer(loop_);
+//   }
+//   stop_scan_timer_->stop();
+//   stop_scan_timer_->set <VicCubeTool, &VicCubeTool::CubeTestScanTimerCallback> (this);
+//   stop_scan_timer_->start(60.0);
+
+// }
 
 void VicCubeTool::OnScanResults(int error,
                           const std::vector<Anki::BluetoothDaemon::ScanResultRecord>& records)
@@ -148,13 +183,24 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
                                              const int connection_id,
                                              const std::vector<Anki::BluetoothDaemon::GattDbRecord>& records) {
   if (address != address_) {
+    std::cout << "Unexpected "
+              << std::string(connected ? "Connection to " : "Disconnection from ")
+              << address << std::endl;
     return;
   }
   std::cout << std::string(connected ? "Connected to " : "Disconnected from ")
             << address << std::endl;
 
   if (!connected) {
-    _exit(0);
+    if (cube_test_mode_) {  //TODO: declare this
+      //Go back to scanning
+      ScanForCubes();
+      return;
+    }
+    else {
+      //normal mode quits right away
+      _exit(0);
+    }
   }
   connection_id_ = connection_id;
   ReadCharacteristic(connection_id_, Anki::kModelNumberString_128_BIT_UUID);
