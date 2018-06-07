@@ -12,6 +12,7 @@ import random
 import sys
 import time
 
+INHIBITOR_FILES = ['/data/inhibit_reboot', '/run/inhibit_reboot']
 INTERPRETERS = ['python']
 LOCALTIME_FILE = "/data/etc/localtime"
 DEFAULT_TIMEZONE = "/usr/share/zoneinfo/Universal"
@@ -79,7 +80,7 @@ def processes():
 
 
 def inhibitors():
-    inhibitors = []
+    inhibitors = [file for file in INHIBITOR_FILES if os.path.exists(file)]
     powersave = False
     try:
         governor = '/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor'
