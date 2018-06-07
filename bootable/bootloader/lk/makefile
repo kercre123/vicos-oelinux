@@ -62,6 +62,7 @@ endif
 
 ifeq ($(TARGET_BUILD_VARIANT),user)
   CFLAGS += -DDISABLE_FASTBOOT_CMDS=1
+  CFLAGS += -DPROD_BOOT_KEY=1
 endif
 
 ifeq ($(APPEND_CMDLINE),1)
@@ -82,7 +83,7 @@ CFLAGS += -fno-strict-overflow
 CPPFLAGS := -fno-exceptions -fno-rtti -fno-threadsafe-statics
 #CPPFLAGS += -Weffc++
 ASMFLAGS := -DASSEMBLY
-LDFLAGS := 
+LDFLAGS :=
 
 CFLAGS += -ffunction-sections -fdata-sections
 LDFLAGS += -gc-sections
@@ -92,17 +93,17 @@ all:: $(OUTBIN) $(OUTELF).lst $(OUTELF).debug.lst $(OUTELF).sym $(OUTELF).size $
 
 # the following three object lists are identical except for the ordering
 # which is bootobjs, kobjs, objs
-BOOTOBJS :=	
+BOOTOBJS :=
 OBJS :=
 
 # a linker script needs to be declared in one of the project/target/platform files
-LINKER_SCRIPT := 			
+LINKER_SCRIPT :=
 
 # anything you add here will be deleted in make clean
 GENERATED := $(CONFIGHEADER)
 
 # anything added to DEFINES will be put into $(BUILDDIR)/config.h
-DEFINES := LK=1				
+DEFINES := LK=1
 
 # Anything added to SRCDEPS will become a dependency of every source file in the system.
 # Useful for header files that may be included by one or more source files.
@@ -149,10 +150,10 @@ ALLMODULES :=
 MODULES :=
 
 # any rules you put here will also be built by the system before considered being complete
-EXTRA_BUILDDEPS := 
+EXTRA_BUILDDEPS :=
 
 # any rules you put here will be depended on in clean builds
-EXTRA_CLEANDEPS := 
+EXTRA_CLEANDEPS :=
 
 include project/$(PROJECT).mk
 include target/$(TARGET)/rules.mk
@@ -196,7 +197,7 @@ ALLOBJS := $(addprefix $(BUILDDIR)/,$(ALLOBJS))
 DEPS := $(ALLOBJS:%o=%d)
 
 # default to no ccache
-CCACHE ?= 
+CCACHE ?=
 CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
 ifeq ($(LD),ld)
 LD := $(TOOLCHAIN_PREFIX)ld
