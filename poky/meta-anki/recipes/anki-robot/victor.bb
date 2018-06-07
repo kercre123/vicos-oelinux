@@ -4,7 +4,8 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta-qti-bsp/files/anki-licenses/\
 Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 
 FILESPATH =+ "${WORKSPACE}:"
-SRC_URI   = "file://anki/victor"
+SRC_URI   = "file://anki/victor \
+             file://ota/ota_prod.pub"
 
 SRCREV   = "${AUTOREV}"
 S        = "${WORKDIR}/victor"
@@ -13,7 +14,8 @@ BUILDSRC = "${S}/_build/vicos/Release"
 export SSH_AUTH_SOCK
 export ANKI_BUILD_VERSION
 
-inherit useradd
+# Must inherit qperf if using the USER_BUILD flag
+inherit useradd qperf
 
 # You must set USERADD_PACKAGES when you inherit useradd. This
 # lists which output packages will include the user/group
@@ -81,6 +83,10 @@ do_install () {
     chmod 750 ${D}/anki
     chmod 750 ${D}/anki/{data,etc,lib}
     chmod -R 750 ${D}/anki/bin
+    # If a user build, overwrite ota public key with production one
+    if [[ ${USER_BUILD} == "1" ]]; then
+      install -m 0640 ${WORKDIR}/ota/ota_prod.pub ${D}/anki/etc/ota.pub
+    fi
 }
 
 FILES_${PN} += "anki/"

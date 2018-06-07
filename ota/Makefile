@@ -15,8 +15,17 @@ SYS_GZ_ENC=$(SYS_GZ).enc
 GZIP_MODE=--best
 GZIP_WBITS=31
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+  TAR=gtar
+  export COPYFILE_DISABLE=1
+  # COPYFILE_DISABLE=1 causes OSX not to put '._' junk in our TAR file when files have extended attributes
+else
+  TAR=tar
+endif
+
 OTAKEY ?= ota_test.key
-OTAPASS ?= ota_test.pass
+OTAPASS ?= file:ota_test.pass
 OTAENC ?= 1
 
 UPDATE_VERSION ?= $(shell cat $(OS_VERSION_FILE))
@@ -24,7 +33,7 @@ UPDATE_VERSION ?= $(shell cat $(OS_VERSION_FILE))
 OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).ota
 ENC_OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).enc.ota
 
-all: $(BUILD) $(OTA_FILE) $(ENC_OTA_FILE)
+all: $(BUILD) $(OTA_FILE)
 
 clean:
 	rm -rf $(BUILD)
@@ -46,7 +55,7 @@ $(BUILD)/%.img: $(IMG_DIR)/%.img
 	gzip $(GZIP_MODE) --force --keep $<
 
 %.img.gz.enc: %.img.gz
-	openssl aes-256-ctr -pass file:$(OTAPASS) -in $< -out $@
+	openssl aes-256-ctr -pass $(OTAPASS) -in $< -out $@
 
 $(BUILD)/%.img: $(IMG_DIR)/%.ext4
 	simg2img $< $@
@@ -64,47 +73,47 @@ $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	echo "update_version=$(UPDATE_VERSION)" >> $@
 	echo "num_images=2"                     >> $@
 	echo "[BOOT]"                           >> $@
-	echo "encryption=0" 	                >> $@
+	echo "encryption=$(OTAENC)"             >> $@
 	echo "delta=0"                          >> $@
 	echo "compression=gz"                   >> $@
 	echo "wbits=$(GZIP_WBITS)"              >> $@
 	cat $(BOOT_STATS)                       >> $@
 	echo "[SYSTEM]"                         >> $@
-	echo "encryption=0"                     >> $@
+	echo "encryption=$(OTAENC)"             >> $@
 	echo "delta=0"                          >> $@
 	echo "compression=gz"                   >> $@
 	echo "wbits=$(GZIP_WBITS)"              >> $@
 	cat $(SYS_STATS)                        >> $@
 
-$(MANIFEST).enc.ini: $(MANIFEST).ini
-	cat $< | sed -e "s#encryption=0#encryption=$(OTAENC)##g" \
-		     -e "s#manifest_version=0.9.2#manifest_version=0.9.5##g"> $@
-
 PERMS="0400"
 OWNER="root:0"
 GROUP="root:0"
-# COPYFILE_DISABLE=1 causes OSX not to put '._' junk in our TAR file when files have extended attributes
-$(OTA_FILE): $(MANIFEST).sha256 $(BOOT_GZ) $(SYS_GZ)
-	COPYFILE_DISABLE=1 tar -cf $@ \
+
+$(OTA_FILE): $(MANIFEST).sha256 $(BOOT_GZ_ENC) $(SYS_GZ_ENC)
+	$(TAR) --transform='flags=r;s|.enc||' -cf $@ \
 	--mode=$(PERMS) \
 	--owner=$(OWNER) \
 	--group=$(GROUP) \
 	-C $(BUILD) \
 	manifest.ini \
 	manifest.sha256 \
-	apq8009-robot-boot.img.gz \
-	apq8009-robot-sysfs.img.gz
-
-$(ENC_OTA_FILE): $(MANIFEST).enc.sha256 $(BOOT_GZ_ENC) $(SYS_GZ_ENC)
-	COPYFILE_DISABLE=1 tar --transform='flags=r;s|.enc||' -cf $@ \
-	--mode=$(PERMS) \
-	--owner=$(OWNER) \
-	--group=$(GROUP) \
-	-C $(BUILD) \
-	manifest.enc.ini \
-	manifest.enc.sha256 \
 	apq8009-robot-boot.img.gz.enc \
 	apq8009-robot-sysfs.img.gz.enc
 
-serve: $(OTA_FILE) $(ENC_OTA_FILE)
+serve: $(OTA_FILE)
 	cd $(BUILD); python -m SimpleHTTPServer 5555
+
+
+###############################################################################
+
+NON_SECURE_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img.nonsecure
+PROD_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img
+BOOT_KEY ?= qtipri.encrypted.key
+
+resign:
+	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
+	openssl pkeyutl -sign -in $(NON_SECURE_KERNEL).sha256 -inkey $(BOOT_KEY) -out $(NON_SECURE_KERNEL).sig -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1
+	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
+	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
+	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
+	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
