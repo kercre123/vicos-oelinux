@@ -1596,10 +1596,10 @@ int isp_set_aec_trigger_update(isp_t *isp, isp_port_t *isp_sink_port,
 
    pthread_mutex_lock(
       &isp->data.session_critical_section[session->session_idx]);
-
-   if(session->saved_params.dig_gain > 32.0){
-     CDBG_ERROR("%s : Digital Gain invalid! %f", __func__,
-       session->saved_params.dig_gain);
+   
+   if(*dig_gain > 32.0){
+     CDBG_ERROR("%s : Digital Gain invalid! %f cur %f", __func__,
+       *dig_gain, session->saved_params.dig_gain);
    } else {
      session->saved_params.dig_gain = *dig_gain;
    }

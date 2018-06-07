@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "sensor_lib.h"
 #include <utils/Log.h>
+#include <math.h>
 
 #define SENSOR_MODEL_NO_OV8856_F8V05A "ov8856_f8v05a"
 #define OV8856_F8V05A_LOAD_CHROMATIX(n) \
@@ -139,8 +140,8 @@ static struct msm_sensor_exp_gain_info_t exp_gain_info = {
 };
 
 static sensor_aec_data_t aec_info = {
-  .max_gain = 15.5,
-  .max_linecount = 65530,
+  .max_gain = 3.984375,
+  .max_linecount = 1477,
 };
 
 static sensor_lens_info_t default_lens_info = {
@@ -552,6 +553,17 @@ static struct sensor_lib_chromatix_array ov8856_f8v05a_lib_chromatix_array = {
 #define FIXED_POINT_TO_GAIN(fp) ((float)((fp) * (0.015625)))
 static uint8_t real_to_register_gain(float gain)
 {
+  const float max_gain = FIXED_POINT_TO_GAIN(0xFF);
+  const float min_gain = FIXED_POINT_TO_GAIN(0x01);
+  if(gain > max_gain)
+  {
+    gain = max_gain;
+  }
+  else if(gain < min_gain)
+  {
+    gain = min_gain;
+  }
+
   return GAIN_TO_FIXED_POINT(gain);
 }
 
@@ -562,6 +574,12 @@ static uint8_t real_to_register_gain(float gain)
  *==========================================================================*/
 static float register_to_real_gain(uint8_t reg_gain)
 {
+  const uint8_t min_gain = 0x01;
+  if(reg_gain < min_gain)
+  {
+    reg_gain = min_gain;
+  }
+
   return FIXED_POINT_TO_GAIN(reg_gain);
 }
 
@@ -576,9 +594,21 @@ static int32_t ov8856_f8v05a_calculate_exposure(float real_gain,
   if (!exp_info) {
     return -1;
   }
+
   exp_info->reg_gain = real_to_register_gain(real_gain);
   exp_info->sensor_real_gain = register_to_real_gain(exp_info->reg_gain);
   exp_info->digital_gain = real_gain / exp_info->sensor_real_gain;
+
+  if(!isfinite(exp_info->digital_gain))
+  {
+    exp_info->digital_gain = 1;
+  }
+
+  if(line_count > 1477)
+  {
+    line_count = 1477;
+  }
+
   exp_info->line_count = line_count;
   exp_info->sensor_digital_gain = 0x1;
   return 0;
@@ -600,6 +630,20 @@ static int32_t ov8856_f8v05a_fill_exposure_array(uint16_t gain,
 
   if (!reg_setting) {
     return -1;
+  }
+
+  if(gain > 0xFF)
+  {
+    gain = 0xFF;
+  }
+  else if(gain < 0x01)
+  {
+    gain = 0x01;
+  }
+
+  if(line > 1477)
+  {
+    line = 1477;
   }
 
   reg_setting->reg_setting[reg_count].reg_addr = 0xfe;
@@ -634,6 +678,26 @@ static int sensor_fill_awb_array(unsigned short awb_gain_r,
 
   if (!reg_setting) {
     return -1;
+  }
+
+  const uint16_t max_gain = 0xFF;
+  const uint16_t min_gain = 0x01;
+  if(awb_gain_r > max_gain)
+  {
+    awb_gain_r = max_gain;
+  }
+  else if(awb_gain_r < min_gain)
+  {
+    awb_gain_r = min_gain;
+  }
+
+  if(awb_gain_b > max_gain)
+  {
+    awb_gain_b = max_gain;
+  }
+  else if(awb_gain_b < min_gain)
+  {
+    awb_gain_b = min_gain;
   }
 
   reg_setting->reg_setting[reg_count].reg_addr = 0xfe;

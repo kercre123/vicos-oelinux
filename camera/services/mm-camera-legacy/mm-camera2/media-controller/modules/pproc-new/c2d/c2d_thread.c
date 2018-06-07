@@ -186,8 +186,10 @@ static int32_t c2d_thread_handle_process_buf_event(c2d_module_ctrl_t* ctrl,
   } else {
     in_frame_fd =
       c2d_event->u.process_buf_data.isp_buf_divert.buffer.m.planes[0].m.userptr;
-    CDBG_ERROR("%s:%d input buf index %d", __func__, __LINE__,
+    
+    CDBG("%s:%d input buf index %d", __func__, __LINE__,
       c2d_event->u.process_buf_data.isp_buf_divert.buffer.index);
+    
     /* Get virtual address for input buffer */
     bool_ret = pp_buf_mgr_get_vaddr(ctrl->buf_mgr,
       c2d_event->u.process_buf_data.isp_buf_divert.buffer.index,
@@ -203,8 +205,10 @@ static int32_t c2d_thread_handle_process_buf_event(c2d_module_ctrl_t* ctrl,
       c2d_module_do_ack(ctrl, c2d_event->ack_key);
       return -EINVAL;
     }
-    CDBG_ERROR("%s:%d input vaddr %lx\n", __func__, __LINE__,
+
+    CDBG("%s:%d input vaddr %lx\n", __func__, __LINE__,
       hw_params->input_buffer_info.vaddr);
+  
   }
   hw_params->frame_id =
     c2d_event->u.process_buf_data.isp_buf_divert.buffer.sequence;

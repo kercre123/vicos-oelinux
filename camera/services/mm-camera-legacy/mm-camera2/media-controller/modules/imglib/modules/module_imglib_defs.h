@@ -197,7 +197,8 @@ typedef struct {
 #define MOD_IMGLIB_TOPOLOGY_REGISTER(t) \
   static module_imglib_topology_t (t)[] = { \
     { .stream_type = CAM_STREAM_TYPE_PREVIEW, \
-      .modules[0] = {MOD_IMGLIB_AFS, MOD_IMGLIB_FACEPROC}, \
+      /* Our camera does not support AFS (Auto Focus Single) */ \
+      .modules[0] = {/*MOD_IMGLIB_AFS, MOD_IMGLIB_FACEPROC */}, \
       .session_params = {CAM_INTF_PARM_FD, CAM_INTF_PARM_MAX}, \
     }, \
     { .feature_mask = CAM_QCOM_FEATURE_DENOISE2D, \

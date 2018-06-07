@@ -355,7 +355,8 @@ static void aec_port_save_update(mct_port_t *port, aec_output_data_t *output)
   }
 
   output->stats_update.aec_update.est_state = private->est_state;
-  CDBG_ERROR("%s:real_gain:%f linecnt:%d exp_idx:%d cur_luma:%d led_est:%d",
+  
+  CDBG("%s:real_gain:%f linecnt:%d exp_idx:%d cur_luma:%d led_est:%d",
     __func__,
     output->stats_update.aec_update.real_gain,
     output->stats_update.aec_update.linecount,

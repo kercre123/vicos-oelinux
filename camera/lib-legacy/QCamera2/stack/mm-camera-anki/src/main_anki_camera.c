@@ -40,6 +40,7 @@ void usage(char* name)
   printf("   --fps-reduction,-r <SCALE>          reduce frame rate to 30/<SCALE> fps (default: 2)\n");
   printf("   --verbose,-v <LOG LEVEL>            enable verbose output: 0-5 [silent,errors(default),warnings,info,debug,verbose]\n");
   printf("   --dump,-d                           dump processed image received from camera system\n");
+  printf("   --format,-f <FORMAT>                set initial capture format (RGB or YUV, default: RGB)\n");
   printf("   --help,-h                           this helpful message\n");
 }
 
@@ -75,6 +76,7 @@ int main(int argc, char* argv[])
   uint8_t debug_dump_images = 0;
   uint8_t fps_reduction = 2;
   uint8_t verbose_level = 1;
+  char* format = NULL;
   int c;
   int optidx = 0;
 
@@ -85,6 +87,7 @@ int main(int argc, char* argv[])
     {"fpsreduction",        1, NULL, 'r'},
     {"verbose",             1, NULL, 'v'},
     {"dump",                0, NULL, 'd'},
+    {"format",              1, NULL, 'f'},
     {"help",                0, NULL, 'h'},
     {0, 0, 0, 0}
   };
@@ -113,6 +116,9 @@ int main(int argc, char* argv[])
     case 'v':
       verbose_level = atoi(optarg);
       break;
+    case 'f':
+      format = strdup(optarg);
+      break;
     default:
       printf("bad arg\n");
       usage(argv[0]);
@@ -137,6 +143,19 @@ int main(int argc, char* argv[])
   s_camera_server.params.exit_on_disconnect = slave_mode;
   s_camera_server.params.debug_dump_images = debug_dump_images;
   s_camera_server.capture_params.fps_reduction = (fps_reduction) >= 1 ? fps_reduction : 1;
+  s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RGB888;
+
+  if(format != NULL)
+  {
+    if(strcmp(format, "YUV") == 0)
+    {
+      s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_YUV;
+    }
+    else if(strcmp(format, "RGB") != 0)
+    {
+      printf("Unrecognized capture format %s, defaulting to RGB\n", format);   
+    }
+  }
 
   if (rc == 0) {
     rc = start_server(&s_camera_server);

@@ -20,6 +20,7 @@
 
 /*************************************/
 #include "mm_camera_anki.h"
+#include "camera_process.h"
 
 typedef struct {
   float r_gain;
@@ -44,9 +45,102 @@ typedef struct cameraobj_t {
   void* callback_ctx;
   struct anki_camera_params params;
   int is_running;
+  anki_camera_pixel_format_t pixel_format;
 } CameraObj;
 
 static CameraObj gTheCamera;
+
+int initBatchUpdate(mm_camera_test_obj_t *test_obj)
+{
+    parm_buffer_new_t *param_buf = ( parm_buffer_new_t * ) test_obj->parm_buf.mem_info.data;
+
+    memset(param_buf, 0, sizeof(ONE_MB_OF_PARAMS));
+    param_buf->num_entry = 0;
+    param_buf->curr_size = 0;
+    param_buf->tot_rem_size = ONE_MB_OF_PARAMS - sizeof(parm_buffer_new_t);
+
+    return MM_CAMERA_OK;
+}
+
+int commitSetBatch(mm_camera_test_obj_t *test_obj)
+{
+    int rc = MM_CAMERA_OK;
+    parm_buffer_new_t *param_buf = (parm_buffer_new_t *)test_obj->parm_buf.mem_info.data;
+
+    if (param_buf->num_entry > 0) {
+        rc = test_obj->cam->ops->set_parms(test_obj->cam->camera_handle, param_buf);
+        CDBG("%s: commitSetBatch done\n",__func__);
+    }
+
+    return rc;
+}
+
+
+int commitGetBatch(mm_camera_test_obj_t *test_obj)
+{
+    int rc = MM_CAMERA_OK;
+    parm_buffer_new_t *param_buf = (parm_buffer_new_t *)test_obj->parm_buf.mem_info.data;
+
+    if (param_buf->num_entry > 0) {
+        rc = test_obj->cam->ops->get_parms(test_obj->cam->camera_handle, param_buf);
+        CDBG("%s: commitGetBatch done\n",__func__);
+    }
+    return rc;
+}
+
+int AddSetParmEntryToBatch(mm_camera_test_obj_t *test_obj,
+                           cam_intf_parm_type_t paramType,
+                           uint32_t paramLength,
+                           void *paramValue)
+{
+    uint32_t j = 0;
+    parm_buffer_new_t *param_buf = (parm_buffer_new_t *) test_obj->parm_buf.mem_info.data;
+    uint32_t num_entry = param_buf->num_entry;
+    uint32_t size_req = paramLength + sizeof(parm_entry_type_new_t);
+    uint32_t aligned_size_req = (size_req + 3U) & (~3U);
+    parm_entry_type_new_t *curr_param = (parm_entry_type_new_t *)&param_buf->entry[0];
+
+    /* first search if the key is already present in the batch list
+     * this is a search penalty but as the batch list is never more
+     * than a few tens of entries at most,it should be ok.
+     * if search performance becomes a bottleneck, we can
+     * think of implementing a hashing mechanism.
+     * but it is still better than the huge memory required for
+     * direct indexing
+     */
+    for (j = 0; j < num_entry; j++) {
+      if (paramType == curr_param->entry_type) {
+        CDBG_ERROR("%s:Batch parameter overwrite for param: %d\n",
+                                                __func__, paramType);
+        break;
+      }
+      curr_param = GET_NEXT_PARAM(curr_param, parm_entry_type_new_t);
+    }
+
+    //new param, search not found
+    if (j == num_entry) {
+      if (aligned_size_req > param_buf->tot_rem_size) {
+        CDBG_ERROR("%s:Batch buffer running out of size, commit and resend\n",__func__);
+        commitSetBatch(test_obj);
+        initBatchUpdate(test_obj);
+      }
+
+      curr_param = (parm_entry_type_new_t *)(&param_buf->entry[0] +
+                                                  param_buf->curr_size);
+      param_buf->curr_size += aligned_size_req;
+      param_buf->tot_rem_size -= aligned_size_req;
+      param_buf->num_entry++;
+    }
+
+    curr_param->entry_type = paramType;
+    curr_param->size = (size_t)paramLength;
+    curr_param->aligned_size = aligned_size_req;
+    memcpy(&curr_param->data[0], paramValue, paramLength);
+    CDBG("%s: num_entry: %d, paramType: %d, paramLength: %d, aligned_size_req: %d\n",
+            __func__, param_buf->num_entry, paramType, paramLength, aligned_size_req);
+
+    return MM_CAMERA_OK;
+}
 
 mm_camera_stream_t * anki_mm_app_add_rdi_stream(mm_camera_test_obj_t *test_obj,
     mm_camera_channel_t *channel,
@@ -244,28 +338,224 @@ void camera_install_callback(camera_cb cb)
   user_frame_callback = cb;
 }
 
-int dump_image_data(uint8_t *img, int width, int height)
+camera_cb  user_frame_callback_preview = NULL;
+void camera_install_callback_preview(camera_cb cb)
 {
-  char file_name[64];
-  static int frame_idx = 0;
-  const char* name = "vic_cam";
-  const char* ext = "bayer";
-  int file_fd;
+  user_frame_callback_preview = cb;
+}
 
-  snprintf(file_name, sizeof(file_name), "/data/misc/camera/test/%s_%04d.%s", name, frame_idx++, ext);
-  file_fd = open(file_name, O_RDWR | O_CREAT, 0777);
-  if (file_fd < 0) {
-    printf("%s: cannot open file %s \n", __func__, file_name);
-  }
-  else {
-    write(file_fd,
-          img,
-          width * height);
+static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
+    void *user_data)
+{
+  int rc;
+  static int frameid = 0;
+
+  uint32_t i = 0;
+  mm_camera_test_obj_t *pme = (mm_camera_test_obj_t *)user_data;
+  mm_camera_channel_t *channel = NULL;
+  mm_camera_stream_t *m_stream = NULL;
+  mm_camera_buf_def_t *m_frame = NULL;
+
+  if ((frameid % gTheCamera.params.capture_params.fps_reduction) != 0) {
+    goto EXIT;
   }
 
-  close(file_fd);
-  printf("dump %s", file_name);
-  return 0;
+  if (!user_frame_callback_preview) {
+    goto EXIT;
+  }
+
+  /* find channel */
+  for (i = 0; i < MM_CHANNEL_TYPE_MAX; i++) {
+    if (pme->channels[i].ch_id == bufs->ch_id) {
+      channel = &pme->channels[i];
+      break;
+    }
+  }
+  if (NULL == channel) {
+    CDBG_ERROR("%s: Wrong channel id (%d)", __func__, bufs->ch_id);
+    rc = -1;
+    goto EXIT;
+  }
+
+  /* find snapshot stream */
+  for (i = 0; i < channel->num_streams; i++) {
+    if (channel->streams[i].s_config.stream_info->stream_type == CAM_STREAM_TYPE_PREVIEW) {
+      m_stream = &channel->streams[i];
+      break;
+    }
+  }
+  if (NULL == m_stream) {
+    CDBG_ERROR("%s: cannot find preview stream", __func__);
+    rc = -1;
+    goto EXIT;
+  }
+
+  // Get raw frame info from stream
+  cam_stream_buf_plane_info_t *buf_planes = &m_stream->s_config.stream_info->buf_planes;
+  const int raw_frame_width = buf_planes->plane_info.mp[0].stride;
+  const int raw_frame_height = buf_planes->plane_info.mp[0].scanline;
+
+  // find snapshot frame
+  if (user_frame_callback_preview) {
+    for (i = 0; i < bufs->num_bufs; i++) {
+      if (bufs->bufs[i]->stream_id == m_stream->s_id) {
+
+        m_frame = bufs->bufs[i];
+        if (NULL == m_frame) {
+          CDBG_ERROR("%s: main frame is NULL", __func__);
+          rc = -1;
+          goto EXIT;
+        }
+
+        uint8_t* inbuf = (uint8_t *)m_frame->buffer;
+        uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
+	
+        rc = user_frame_callback_preview(inbuf,
+                                         timestamp,
+                                         frameid,
+                                         raw_frame_width,
+                                         raw_frame_height,
+                                         gTheCamera.callback_ctx);
+        break;
+      }
+    }
+  }
+
+EXIT:
+  for (i = 0; i < bufs->num_bufs; i++) {
+    if (MM_CAMERA_OK != pme->cam->ops->qbuf(bufs->camera_handle,
+                                            bufs->ch_id,
+                                            bufs->bufs[i])) {
+      CDBG_ERROR("%s: Failed in Qbuf\n", __func__);
+    }
+  }
+
+  ++frameid;
+}
+
+mm_camera_stream_t * anki_mm_app_add_preview_stream(mm_camera_test_obj_t *test_obj,
+						    mm_camera_channel_t *channel,
+						    mm_camera_buf_notify_t stream_cb,
+						    void *userdata,
+						    uint8_t num_bufs)
+{
+    int rc = MM_CAMERA_OK;
+    mm_camera_stream_t *stream = NULL;
+    cam_capability_t *cam_cap = (cam_capability_t *)(test_obj->cap_buf.buf.buffer);
+
+    stream = mm_app_add_stream(test_obj, channel);
+    if (NULL == stream) {
+        CDBG_ERROR("%s: add stream failed\n", __func__);
+        return NULL;
+    }
+    stream->s_config.mem_vtbl.get_bufs = mm_app_stream_initbuf;
+    stream->s_config.mem_vtbl.put_bufs = mm_app_stream_deinitbuf;
+    stream->s_config.mem_vtbl.clean_invalidate_buf =
+      mm_app_stream_clean_invalidate_buf;
+    stream->s_config.mem_vtbl.invalidate_buf = mm_app_stream_invalidate_buf;
+    stream->s_config.mem_vtbl.user_data = (void *)stream;
+    stream->s_config.stream_cb = stream_cb;
+    stream->s_config.userdata = userdata;
+    stream->num_of_bufs = num_bufs;
+
+    stream->s_config.stream_info = (cam_stream_info_t *)stream->s_info_buf.buf.buffer;
+    memset(stream->s_config.stream_info, 0, sizeof(cam_stream_info_t));
+    stream->s_config.stream_info->stream_type = CAM_STREAM_TYPE_PREVIEW;
+    stream->s_config.stream_info->streaming_mode = CAM_STREAMING_MODE_CONTINUOUS;
+    stream->s_config.stream_info->fmt = DEFAULT_PREVIEW_FORMAT;
+
+    stream->s_config.stream_info->dim.width = DEFAULT_PREVIEW_WIDTH;
+    stream->s_config.stream_info->dim.height = DEFAULT_PREVIEW_HEIGHT;
+
+    stream->s_config.padding_info = cam_cap->padding_info;
+
+    rc = mm_app_config_stream(test_obj, channel, stream, &stream->s_config);
+    if (MM_CAMERA_OK != rc) {
+        CDBG_ERROR("%s:config preview stream err=%d\n", __func__, rc);
+        return NULL;
+    }
+
+    return stream;
+}
+
+mm_camera_channel_t * anki_mm_app_add_preview_channel(mm_camera_test_obj_t *test_obj)
+{
+    mm_camera_channel_t *channel = NULL;
+    mm_camera_stream_t *stream = NULL;
+
+    channel = mm_app_add_channel(test_obj,
+                                 MM_CHANNEL_TYPE_PREVIEW,
+                                 NULL,
+                                 NULL,
+                                 NULL);
+    if (NULL == channel) {
+        CDBG_ERROR("%s: add channel failed", __func__);
+        return NULL;
+    }
+
+    stream = anki_mm_app_add_preview_stream(test_obj,
+					    channel,
+					    mm_app_snapshot_notify_cb_preview,
+					    (void *)test_obj,
+					    PREVIEW_BUF_NUM);
+
+    if (NULL == stream) {
+        CDBG_ERROR("%s: add stream failed\n", __func__);
+        mm_app_del_channel(test_obj, channel);
+        return NULL;
+    }
+
+    return channel;
+}
+
+int victor_start_preview(mm_camera_lib_handle *handle)
+{
+  mm_camera_test_obj_t* test_obj = &(handle->test_obj);
+
+  int rc = MM_CAMERA_OK;
+  mm_camera_channel_t *p_ch = NULL;
+
+  test_obj->enable_reproc = ENABLE_REPROCESSING;
+
+  p_ch = anki_mm_app_add_preview_channel(test_obj);
+  if (NULL == p_ch) 
+  {
+    CDBG_ERROR("%s: add preview channel failed", __func__);
+    rc = -MM_CAMERA_E_GENERAL;
+  }
+
+  rc = mm_app_start_channel(test_obj, p_ch);
+  if (MM_CAMERA_OK != rc) {
+      CDBG_ERROR("%s:start preview failed rc=%d\n", __func__, rc);
+      int i;
+      mm_camera_stream_t* stream = NULL;
+      for (i = 0; i < p_ch->num_streams; i++) {
+          stream = &p_ch->streams[i];
+          mm_app_del_stream(test_obj, p_ch, stream);
+      }
+      mm_app_del_channel(test_obj, p_ch);
+      return rc;
+  }
+
+  handle->stream_running = 1;
+
+  return rc;
+}
+
+int victor_stop_preview(mm_camera_test_obj_t* test_obj)
+{
+  int rc = MM_CAMERA_OK;
+  mm_camera_channel_t *p_ch = NULL;
+
+  p_ch = mm_app_get_channel_by_type(test_obj, MM_CHANNEL_TYPE_PREVIEW);
+
+  rc = mm_app_stop_and_del_channel(test_obj, p_ch);
+  if (MM_CAMERA_OK != rc) 
+  {
+    CDBG_ERROR("%s:Stop Preview failed rc=%d\n", __func__, rc);
+  }
+
+  return rc;
 }
 
 static void mm_app_snapshot_notify_cb_raw(mm_camera_super_buf_t *bufs,
@@ -368,98 +658,6 @@ int anki_mm_camera_start_rdi_capture(mm_camera_lib_handle *handle)
   return 0;
 }
 
-int initBatchUpdate(mm_camera_test_obj_t *test_obj)
-{
-    parm_buffer_new_t *param_buf = ( parm_buffer_new_t * ) test_obj->parm_buf.mem_info.data;
-
-    memset(param_buf, 0, sizeof(ONE_MB_OF_PARAMS));
-    param_buf->num_entry = 0;
-    param_buf->curr_size = 0;
-    param_buf->tot_rem_size = ONE_MB_OF_PARAMS - sizeof(parm_buffer_new_t);
-
-    return MM_CAMERA_OK;
-}
-
-int commitSetBatch(mm_camera_test_obj_t *test_obj)
-{
-    int rc = MM_CAMERA_OK;
-    parm_buffer_new_t *param_buf = (parm_buffer_new_t *)test_obj->parm_buf.mem_info.data;
-
-    if (param_buf->num_entry > 0) {
-        rc = test_obj->cam->ops->set_parms(test_obj->cam->camera_handle, param_buf);
-        CDBG("%s: commitSetBatch done\n",__func__);
-    }
-
-    return rc;
-}
-
-
-int commitGetBatch(mm_camera_test_obj_t *test_obj)
-{
-    int rc = MM_CAMERA_OK;
-    parm_buffer_new_t *param_buf = (parm_buffer_new_t *)test_obj->parm_buf.mem_info.data;
-
-    if (param_buf->num_entry > 0) {
-        rc = test_obj->cam->ops->get_parms(test_obj->cam->camera_handle, param_buf);
-        CDBG("%s: commitGetBatch done\n",__func__);
-    }
-    return rc;
-}
-
-int AddSetParmEntryToBatch(mm_camera_test_obj_t *test_obj,
-                           cam_intf_parm_type_t paramType,
-                           uint32_t paramLength,
-                           void *paramValue)
-{
-    uint32_t j = 0;
-    parm_buffer_new_t *param_buf = (parm_buffer_new_t *) test_obj->parm_buf.mem_info.data;
-    uint32_t num_entry = param_buf->num_entry;
-    uint32_t size_req = paramLength + sizeof(parm_entry_type_new_t);
-    uint32_t aligned_size_req = (size_req + 3U) & (~3U);
-    parm_entry_type_new_t *curr_param = (parm_entry_type_new_t *)&param_buf->entry[0];
-
-    /* first search if the key is already present in the batch list
-     * this is a search penalty but as the batch list is never more
-     * than a few tens of entries at most,it should be ok.
-     * if search performance becomes a bottleneck, we can
-     * think of implementing a hashing mechanism.
-     * but it is still better than the huge memory required for
-     * direct indexing
-     */
-    for (j = 0; j < num_entry; j++) {
-      if (paramType == curr_param->entry_type) {
-        CDBG_ERROR("%s:Batch parameter overwrite for param: %d\n",
-                                                __func__, paramType);
-        break;
-      }
-      curr_param = GET_NEXT_PARAM(curr_param, parm_entry_type_new_t);
-    }
-
-    //new param, search not found
-    if (j == num_entry) {
-      if (aligned_size_req > param_buf->tot_rem_size) {
-        CDBG_ERROR("%s:Batch buffer running out of size, commit and resend\n",__func__);
-        commitSetBatch(test_obj);
-        initBatchUpdate(test_obj);
-      }
-
-      curr_param = (parm_entry_type_new_t *)(&param_buf->entry[0] +
-                                                  param_buf->curr_size);
-      param_buf->curr_size += aligned_size_req;
-      param_buf->tot_rem_size -= aligned_size_req;
-      param_buf->num_entry++;
-    }
-
-    curr_param->entry_type = paramType;
-    curr_param->size = (size_t)paramLength;
-    curr_param->aligned_size = aligned_size_req;
-    memcpy(&curr_param->data[0], paramValue, paramLength);
-    CDBG("%s: num_entry: %d, paramType: %d, paramLength: %d, aligned_size_req: %d\n",
-            __func__, param_buf->num_entry, paramType, paramLength, aligned_size_req);
-
-    return MM_CAMERA_OK;
-}
-
 int setExposure(mm_camera_test_obj_t *test_obj, uint16_t exposure_ms, float gain)
 {
     int rc = MM_CAMERA_OK;
@@ -537,6 +735,12 @@ int camera_set_exposure(uint16_t exposure_ms, float gain)
   int rc;
   CameraObj* camera = &gTheCamera;
 
+  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV)
+  {
+    CDBG("%s: Not setting exposure while pixel_format is YUV", __func__);
+    return -1;
+  }
+
   rc = setExposure(&(camera->lib_handle.test_obj), exposure_ms, gain);
 
   return rc;
@@ -547,7 +751,109 @@ int camera_set_awb(float r_gain, float g_gain, float b_gain)
   int rc;
   CameraObj* camera = &gTheCamera;
 
+  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV)
+  {
+    CDBG("%s: Not setting awb while pixel_format is YUV", __func__);
+    return -1;
+  }
+
   rc = setAWBGain(&(camera->lib_handle.test_obj), r_gain, g_gain, b_gain);
+
+  return rc;
+}
+
+int start_camera_capture()
+{
+  int rc = MM_CAMERA_OK;
+  CameraObj* camera = &gTheCamera;
+
+  switch(gTheCamera.pixel_format)
+  {
+    // For now bayer and rgb888 are the same
+    // since we downsample bayer to rgb
+    case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10:
+    case ANKI_CAM_FORMAT_RGB888:
+    {
+      rc = anki_mm_camera_start_rdi_capture(&(camera->lib_handle));
+    }
+    break;
+
+    case ANKI_CAM_FORMAT_YUV:
+    {
+      rc = victor_start_preview(&(camera->lib_handle));
+    }
+    break;
+  }
+  return rc;
+}
+
+int stop_camera_capture()
+{
+  int rc = MM_CAMERA_OK;
+  CameraObj* camera = &gTheCamera;
+
+  switch(gTheCamera.pixel_format)
+  {
+    // For now bayer and rgb888 are the same
+    // since we downsample bayer to rgb
+    case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10:
+    case ANKI_CAM_FORMAT_RGB888:
+    {
+      rc = victor_stop_rdi(&(camera->lib_handle.test_obj));
+    }
+    break;
+
+    case ANKI_CAM_FORMAT_YUV:
+    {
+      rc = victor_stop_preview(&(camera->lib_handle.test_obj));
+    }
+    break;
+  }
+  return rc;
+}
+
+int camera_set_capture_format(struct anki_camera_capture* capture,
+                              anki_camera_pixel_format_t format,
+                              int(*realloc_with_format)
+                                (struct anki_camera_capture* capture,
+                                 anki_camera_pixel_format_t format))
+{
+  int rc;
+
+  // Stop current camera capture
+  rc = stop_camera_capture();
+  if (rc != MM_CAMERA_OK) {
+    CDBG_ERROR("%s:camera_set_capture_format() stop_capture err=%d format %d->%d\n", 
+               __func__, 
+               rc,
+               gTheCamera.pixel_format,
+               format);
+    return -1;
+  }
+
+  // Reallocate memory for the new format
+  rc = realloc_with_format(capture, format);
+  if (rc != MM_CAMERA_OK) {
+    CDBG_ERROR("%s:camera_set_capture_format() realloc_with_format err=%d format %d->%d\n", 
+               __func__, 
+               rc,
+               gTheCamera.pixel_format,
+               format);
+    return -1;
+  }
+
+  // Update format
+  gTheCamera.pixel_format = format;
+  
+  // Start camera capture using the new format
+  rc = start_camera_capture();
+  if (rc != MM_CAMERA_OK) {
+    CDBG_ERROR("%s:camera_set_capture_format() start_capture err=%d format %d\n", 
+               __func__, 
+               rc,
+               format);
+    return -1;
+  }
 
   return rc;
 }
@@ -584,7 +890,8 @@ int camera_start(struct anki_camera_params* params, void* callback_ctx)
   camera_set_params(params);
   gTheCamera.callback_ctx = callback_ctx;
 
-  rc = anki_mm_camera_start_rdi_capture(&gTheCamera.lib_handle);
+  rc = start_camera_capture();
+
   if (rc != MM_CAMERA_OK) {
     CDBG_ERROR("%s:mm_camera_lib_send_command() err=%d\n", __func__, rc);
     return rc;
@@ -597,8 +904,12 @@ int camera_start(struct anki_camera_params* params, void* callback_ctx)
 
 int camera_set_params(struct anki_camera_params* params)
 {
-  if (params->frame_callback != NULL) {
-    camera_install_callback(params->frame_callback);
+  if (params->frame_callback_raw != NULL) {
+    camera_install_callback(params->frame_callback_raw);
+  }
+
+  if (params->frame_callback_preview != NULL) {
+    camera_install_callback_preview(params->frame_callback_preview);
   }
 
   const uint8_t fps_reduction = params->capture_params.fps_reduction;
@@ -609,6 +920,8 @@ int camera_set_params(struct anki_camera_params* params)
   else {
     gTheCamera.params.capture_params.fps_reduction = fps_reduction;
   }
+
+  gTheCamera.pixel_format = params->capture_params.pixel_format;
 
 //  if (!gTheCamera.is_running) {
 //    gTheCamera.params.frame_format = params->frame_format;
@@ -622,7 +935,8 @@ int camera_stop()
   int rc;
   CameraObj* camera = &gTheCamera;
 
-  rc = victor_stop_rdi(&(camera->lib_handle.test_obj));
+  rc = stop_camera_capture();
+
   if (rc != MM_CAMERA_OK) {
     CDBG_ERROR("%s: mm_app_stop_capture() err=%d\n",
                __func__, rc);

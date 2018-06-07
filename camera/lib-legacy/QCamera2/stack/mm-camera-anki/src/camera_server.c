@@ -195,7 +195,7 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
     // allocate mem
     if (!is_camera_capture_initialized(&ctx->camera)) {
       logv("%s: initialize capture buffer", __FUNCTION__);
-      rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888);
+      rc = camera_capture_init(&ctx->camera, ctx->capture_params.pixel_format);
       if (rc != 0) {
         loge("%s: error initializing camera capture", __FUNCTION__);
         break;
@@ -248,6 +248,18 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
         anki_camera_awb_t awb;
         memcpy(&awb, payload->data, sizeof(awb));
         camera_capture_set_awb(awb);
+      }
+      break;
+      case ANKI_CAMERA_MSG_C2S_PARAMS_ID_FORMAT: {
+        anki_camera_pixel_format_t format;
+        memcpy(&format, payload->data, sizeof(format));
+        camera_capture_set_format(&ctx->camera, format);
+
+        logv("%s: sending buffer.fd=%d", __FUNCTION__, ctx->camera.buffer.fd);
+        struct anki_camera_msg* buf_msg = enqueue_message(ctx, ANKI_CAMERA_MSG_S2C_BUFFER);
+        buf_msg->fd = ctx->camera.buffer.fd;
+        // send buffer size in payload
+        memcpy(buf_msg->payload, &ctx->camera.buffer.size, sizeof(ctx->camera.buffer.size));
       }
       break;
     }
@@ -511,7 +523,7 @@ int start_server(struct server_ctx* ctx)
   if (ctx->params.autostart_camera) {
     if (!is_camera_capture_initialized(&ctx->camera)) {
       logd("%s: initialize capture buffer", __func__);
-      int rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888);
+      int rc = camera_capture_init(&ctx->camera, ctx->capture_params.pixel_format);
       if (rc != 0) {
         loge("%s: error initializing camera capture", __func__);
       }

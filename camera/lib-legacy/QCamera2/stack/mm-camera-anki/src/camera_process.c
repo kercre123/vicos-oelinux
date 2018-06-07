@@ -29,12 +29,7 @@
 static int  s_dump_images = 0;
 static char s_output_path[256] = "/data/misc/camera/test";
 
-// Camera Memory
-
-anki_camera_buf_t s_camera_capture_buf;
-const uint32_t CAMERA_CAPTURE_MEM_SIZE = 1843200; // 640*320*3*3
-
-void debug_dump_frame(uint8_t *frame, int width, int height, int bpp)
+void debug_dump_frame(uint8_t *frame, int num_bytes, char* prefix)
 {
   char file_name[512];
   static int frame_idx = 0;
@@ -42,14 +37,14 @@ void debug_dump_frame(uint8_t *frame, int width, int height, int bpp)
   const char* ext = "rgb";
   int file_fd;
 
-  snprintf(file_name, sizeof(file_name), "%s/%s_%04d.%s",
-           s_output_path, name, frame_idx++, ext);
+  snprintf(file_name, sizeof(file_name), "%s/%s_%s_%04d.%s",
+           s_output_path, prefix, name, frame_idx++, ext);
   file_fd = open(file_name, O_RDWR | O_CREAT, 0777);
   if (file_fd < 0) {
     loge("%s: cannot open file %s \n", __func__, file_name);
   }
   else {
-    write(file_fd, frame, width * height * bpp / 8);
+    write(file_fd, frame, num_bytes);
   }
 
   close(file_fd);
@@ -86,9 +81,6 @@ int anki_camera_frame_callback(const uint8_t* image,
                                int height,
                                void* cb_ctx)
 {
-  // bpp must be a whole byte value
-  assert((bpp % 8) == 0);
-
   struct anki_camera_capture* capture = (struct anki_camera_capture*)cb_ctx;
   uint8_t* data = (uint8_t*)capture->buffer.data;
   anki_camera_buf_header_t* header = (anki_camera_buf_header_t*)data;
@@ -112,13 +104,14 @@ int anki_camera_frame_callback(const uint8_t* image,
   // Process frame
   const uint32_t frame_offset = header->frame_offsets[slot];
   anki_camera_frame_t* frame = (anki_camera_frame_t*)&data[frame_offset];
+  const size_t frame_data_len = frame->bytes_per_row * frame->height;
 
   frame->frame_id = frame_id;
   frame->timestamp = timestamp;
 
-  if (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10) {
+  if (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10 ||
+      frame->format == ANKI_CAM_FORMAT_YUV) {
     // no downsample, just copy
-    const size_t frame_data_len = frame->bytes_per_row * frame->height;
     memcpy(frame->data, image, frame_data_len);
   }
   else {
@@ -126,8 +119,18 @@ int anki_camera_frame_callback(const uint8_t* image,
     bayer_mipi_bggr10_downsample(image, frame->data, width, height, 10);
   }
 
-  if (s_dump_images && (frame->format != ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10)) {
-    debug_dump_frame(frame->data, width, height, 24);
+  if(s_dump_images)
+  {
+    char* s;
+    if(frame->format == ANKI_CAM_FORMAT_RGB888)
+    {
+      s = "rgb";
+    }
+    else if(frame->format == ANKI_CAM_FORMAT_YUV)
+    {
+      s = "yuv";
+    }
+    debug_dump_frame(frame->data, frame_data_len, s);
   }
 
   // unlock frame
@@ -167,6 +170,14 @@ static anki_camera_frame_t s_frame_info_rgb888 = {
   .format = ANKI_CAM_FORMAT_RGB888,
 };
 
+static anki_camera_frame_t s_frame_info_yuv420sp = {
+  .width = 1280,
+  .height = 1080, // YUV data has 1080 rows which convert to 720 pixels
+  .bytes_per_row = 1280,
+  .bits_per_pixel = 12, // A block of 2x2 pixels is 4 Y + 1 U + 1 V = 6 bytes / 4 pixels = 12 bits/pixel
+  .format = ANKI_CAM_FORMAT_YUV,
+};
+
 int get_camera_frame_info(const anki_camera_pixel_format_t format, anki_camera_frame_t* out_frame)
 {
   if (out_frame == NULL) {
@@ -181,6 +192,10 @@ int get_camera_frame_info(const anki_camera_pixel_format_t format, anki_camera_f
   }
   case ANKI_CAM_FORMAT_RGB888: {
     *out_frame = s_frame_info_rgb888;
+    break;
+  }
+  case ANKI_CAM_FORMAT_YUV: {
+    *out_frame = s_frame_info_yuv420sp;
     break;
   }
   default: {
@@ -261,6 +276,10 @@ int camera_capture_alloc(struct anki_camera_capture* capture,
       memcpy(frame, &s_frame_info_rgb888, sizeof(s_frame_info_rgb888));
     }
     break;
+    case ANKI_CAM_FORMAT_YUV: {
+      memcpy(frame, &s_frame_info_yuv420sp, sizeof(s_frame_info_yuv420sp));
+    }
+    break;
     }
   }
 
@@ -300,7 +319,7 @@ int camera_capture_release(struct anki_camera_capture* capture)
 {
   assert(capture->buffer.data != NULL);
 
-  int rc = anki_camera_deallocate_ion_memory(&s_camera_capture_buf);
+  int rc = anki_camera_deallocate_ion_memory(&capture->buffer);
   if (rc < 0) {
     loge("%s: error deallocating capture buffer", __FUNCTION__);
   }
@@ -323,7 +342,8 @@ int camera_capture_start(struct anki_camera_capture* capture,
 
   struct anki_camera_params params = {
     .capture_params = *capture_params,
-    .frame_callback = anki_camera_frame_callback,
+    .frame_callback_raw = anki_camera_frame_callback,
+    .frame_callback_preview = anki_camera_frame_callback,
   };
 
   rc = camera_start(&params, capture);
@@ -356,4 +376,28 @@ int camera_capture_set_exposure(anki_camera_exposure_t exposure)
 int camera_capture_set_awb(anki_camera_awb_t awb)
 {
   return camera_set_awb(awb.r_gain, awb.g_gain, awb.b_gain);
+}
+
+int anki_camera_reallocate_ion_memory(struct anki_camera_capture* capture,
+                                      anki_camera_pixel_format_t format)
+{
+  assert(capture->buffer.data != NULL);
+
+  int rc = anki_camera_deallocate_ion_memory(&capture->buffer);
+  if (rc < 0) {
+    loge("%s: error deallocating capture buffer", __FUNCTION__);
+  }
+
+  rc = camera_capture_init(capture, format);
+  if (rc < 0) {
+    loge("%s: error allocating capture buffer", __FUNCTION__);
+  }
+
+  return rc;
+}
+
+int camera_capture_set_format(struct anki_camera_capture* capture,
+                              anki_camera_pixel_format_t format)
+{
+  return camera_set_capture_format(capture, format, anki_camera_reallocate_ion_memory);
 }

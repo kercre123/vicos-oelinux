@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include "camera_process.h"
 
-#define ANKI_CAMERA_MAX_PACKETS     8
+#define ANKI_CAMERA_MAX_PACKETS     12
 #define ANKI_CAMERA_MSG_PAYLOAD_LEN 128
 
 typedef enum {
@@ -43,6 +43,7 @@ struct anki_camera_msg {
 typedef enum {
   ANKI_CAMERA_MSG_C2S_PARAMS_ID_EXP,
   ANKI_CAMERA_MSG_C2S_PARAMS_ID_AWB,
+  ANKI_CAMERA_MSG_C2S_PARAMS_ID_FORMAT,
 } anki_camera_params_id_t;
 
 typedef struct {
