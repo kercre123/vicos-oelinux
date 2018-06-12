@@ -143,8 +143,13 @@ void VicCubeTool::OnScanResults(int error,
     scan_records_[r.address] = r;
     std::cout << r.address << " '" << r.local_name << "' " << "rssi = " << r.rssi << std::endl;
     if (connect_to_first_cube_found_) {
-      if (!cube_test_mode_) {
-      connect_to_first_cube_found_ = false;
+      if (cube_test_mode_) {
+        if (r.rssi < -40) {
+          continue; //reject far away cubes
+        }
+      }
+      else {  //normal mode only connects to one cube
+        connect_to_first_cube_found_ = false;
       }
       scanning_ = false;
       StopScan();
@@ -173,7 +178,7 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
             << address << std::endl;
 
   if (!connected) {
-    if (cube_test_mode_) {  //TODO: declare this
+    if (cube_test_mode_) {
       //Go back to scanning
       ScanForCubes();
       return;
