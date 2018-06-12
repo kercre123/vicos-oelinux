@@ -77,6 +77,22 @@ gen_buildprop() {
      echo "ro.build.display.id=${VERSION_ID}" >> ${IMAGE_ROOTFS}/build.prop
    fi
 
+   # build.type is intended for apps to know what build type they are running on
+   if [ "${USER_BUILD}" == "1" ]; then
+      if [ "${FACTORY}" == "1" ]; then
+         BUILD_TYPE_VALUE=factory
+      else
+         BUILD_TYPE_VALUE=production
+      fi
+   else
+      if [ "${FACTORY}" == "1" ]; then
+         BUILD_TYPE_VALUE=facdev
+      else
+         BUILD_TYPE_VALUE=development
+      fi
+   fi
+   echo "ro.build.type=${BUILD_TYPE_VALUE}" >> ${IMAGE_ROOTFS}/build.prop
+
    # build.version.incremental is should be an increasing number
    VERSION_CODE=`cat ${IMAGE_ROOTFS}/etc/os-version-code`
    echo "ro.build.version.incremental=${VERSION_CODE}" >> ${IMAGE_ROOTFS}/build.prop
