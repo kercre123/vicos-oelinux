@@ -26,6 +26,10 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   ~VicCubeTool();
   void Execute();
 
+  void SetMinRssi(int min) {
+    rssi_min_ = min;
+  }
+
  protected:
   virtual void OnScanResults(int error,
                              const std::vector<Anki::BluetoothDaemon::ScanResultRecord>& records);
@@ -66,6 +70,7 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   bool use_dvt1_flasher_;
   bool cube_test_mode_;
   int connection_id_;
+  int rssi_min_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
   std::string new_firmware_version_;

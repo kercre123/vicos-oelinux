@@ -144,7 +144,7 @@ void VicCubeTool::OnScanResults(int error,
     std::cout << r.address << " '" << r.local_name << "' " << "rssi = " << r.rssi << std::endl;
     if (connect_to_first_cube_found_) {
       if (cube_test_mode_) {
-        if (r.rssi < -40) {
+        if (r.rssi < rssi_min_) {
           continue; //reject far away cubes
         }
       }

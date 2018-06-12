@@ -51,14 +51,23 @@ void usage() {
             << "flashdvt1 path/to/firmware - Flash the DVT1/2 cube with new firmware" << std::endl;
 }
 
+long str_to_int(const char*str, long default_val) {
+  char* endp;
+  long l = strtol(str, &endp, 10);
+  if (endp==str) {return default_val};
+  return l;
+}
+
+
 int main(int argc, char *argv[]) {
   std::string address;
   std::vector<std::string> args;
+  int rssi_min = 0;
 
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "a:h")) != -1) {
+  while ((c = getopt(argc, argv, "a:hr:")) != -1) {
     switch(c) {
       case 'a':
         address = std::string(optarg);
@@ -66,6 +75,9 @@ int main(int argc, char *argv[]) {
       case 'h':
         usage();
         return 0;
+        break;
+      case 'r':
+        rssi_min = str_to_int(optarg,-40);
         break;
       case '?':
         if (optopt == 'a') {
@@ -95,10 +107,10 @@ int main(int argc, char *argv[]) {
   setAndroidLoggingTag("vctool");
   setMinLogLevel(kLogLevelVerbose);
   sVicCubeTool = new VicCubeTool(sDefaultLoop, address, args);
+  if (rssi_min) { sVicCubeTool->SetMinRssi(rssi_min);}
   sVicCubeTool->Execute();
 
   ev_loop(sDefaultLoop, 0);
   ExitHandler();
   return 0;
 }
-
