@@ -103,11 +103,12 @@ void VicCubeTool::OnConnectedToDaemon() {
 void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
   scanning_ = false;
   StopScan();
-  if (scan_records_.empty()) {
-    if (cube_test_mode_) {
+  if (cube_test_mode_) {
+      std::cerr << "No cubes found. Restarting Scan..." << std::endl;
       ScanForCubes();
-    }
-    else {
+  }
+  else {
+    if (scan_records_.empty()) {
       std::cerr << "No cubes found. Exiting..." << std::endl;
       _exit(1);
     }
@@ -121,39 +122,17 @@ void VicCubeTool::ScanForCubes() {
   if (!stop_scan_timer_) {
     stop_scan_timer_ = new ev::timer(loop_);
   }
+  stop_scan_timer_->stop();
   stop_scan_timer_->set <VicCubeTool, &VicCubeTool::ScanTimerCallback> (this);
-  stop_scan_timer_->start(cube_test_mode_ ? 60.0 : 2.0);
+  stop_scan_timer_->start(cube_test_mode_ ? 300 : 2.0);
 }
 
-
-// void VicCubeTool::CubeTestScanTimerCallback(ev::timer& w, int revents) {
-//   scanning_ = false;
-//   StopScan();
-//   if (scan_records_.empty()) {
-//     std::cerr << "Waiting for cubes...." << std::endl;
-//     DoCubeTest();
-//   }
-//   else {
-//   }
-// }
-
-// void VicCubeTool::DoCubeTest(void) {
-//   std::cout << "Scanning for cubes...." << std::endl;
-//   scanning_ = true;
-//   StartScan(Anki::kCubeService_128_BIT_UUID);
-//   if (!stop_scan_timer_) {
-//     stop_scan_timer_ = new ev::timer(loop_);
-//   }
-//   stop_scan_timer_->stop();
-//   stop_scan_timer_->set <VicCubeTool, &VicCubeTool::CubeTestScanTimerCallback> (this);
-//   stop_scan_timer_->start(60.0);
-
-// }
 
 void VicCubeTool::OnScanResults(int error,
                           const std::vector<Anki::BluetoothDaemon::ScanResultRecord>& records)
 {
   if (!scanning_) {
+    std::cerr << "Got scan results when not scanning. error = " << error << std::endl;
     return;
   }
   if (error) {
@@ -164,7 +143,9 @@ void VicCubeTool::OnScanResults(int error,
     scan_records_[r.address] = r;
     std::cout << r.address << " '" << r.local_name << "' " << "rssi = " << r.rssi << std::endl;
     if (connect_to_first_cube_found_) {
+      if (!cube_test_mode_) {
       connect_to_first_cube_found_ = false;
+      }
       scanning_ = false;
       StopScan();
       address_ = r.address;
@@ -213,6 +194,7 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
   logv("OnReceiveMessage(id = %d, char_uuid = '%s', value.size = %d)",
        connection_id, characteristic_uuid.c_str(), value.size());
   if (connection_id == -1 || connection_id != connection_id_) {
+    std::cerr << "Got message from wrong connection" << connection_id << std::endl;
     return;
   }
   if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kCubeAppVersion_128_BIT_UUID)) {
@@ -225,8 +207,10 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
         std::cout << "APP VERSION: " << std::string(value.begin(), value.end()) << std::endl;
         std::cout << "Firmware upload complete" << std::endl;
       }
-      task_executor_->WakeAfter(std::bind(&IPCClient::Disconnect, this, connection_id_),
+      if (!cube_test_mode_) {
+        task_executor_->WakeAfter(std::bind(&IPCClient::Disconnect, this, connection_id_),
                                 std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 5));
+      }
     }
   } else if (AreCaseInsensitiveStringsEqual(characteristic_uuid,Anki::kCubeAppRead_128_BIT_UUID)) {
     std::cout << "APP DATA: " << byteVectorToHexString(value, 1) << std::endl;
@@ -248,6 +232,9 @@ void VicCubeTool::OnCharacteristicReadResult(const int connection_id,
     return;
   }
 
+  int connectionTimeout = kGattConnectionTimeoutDefault;
+  if (cube_test_mode_) { connectionTimeout /= 80; } //from 20 seconds to .25
+
   if (AreCaseInsensitiveStringsEqual(characteristic_uuid, Anki::kModelNumberString_128_BIT_UUID)) {
     cube_model_number_ = std::string(data.begin(), data.end());
     std::cout << "Cube Model Number : " << cube_model_number_ << std::endl;
@@ -255,7 +242,7 @@ void VicCubeTool::OnCharacteristicReadResult(const int connection_id,
                                      kGattConnectionIntervalHighPriorityMinimum,
                                      kGattConnectionIntervalHighPriorityMaximum,
                                      kGattConnectionLatencyDefault,
-                                     kGattConnectionTimeoutDefault);
+                                     connectionTimeout);
 
     if (flash_cube_after_connect_) {
       if (use_dvt1_flasher_) {
