@@ -75,7 +75,10 @@ case "$1" in
     echo "Unmounting /data"
     umount /data
     if test -e $WIPE_COOKIE; then
+      blkdiscard -s /dev/block/bootdevice/by-name/userdata
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
+      bootctl f set_unbootable a
+      bootctl f set_unbootable b
     fi
     ;;
 
