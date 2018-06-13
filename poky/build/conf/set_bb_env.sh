@@ -182,7 +182,7 @@ rebake() {
 }
 
 unset_bb_env() {
-  unset DISTRO MACHINE PRODUCT VARIANT
+  unset DISTRO MACHINE PRODUCT VARIANT FACTORY
 }
 
 # Find build templates from qti meta layer.
