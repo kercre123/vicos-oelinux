@@ -6,10 +6,8 @@ Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 
 SRC_URI = "file://emr-cat.c"
 
-TARGET_CFLAGS += "-Os -Wall -Werror -Wno-unused-result -Wno-strict-aliasing -fPIC"
-
 do_compile () {
-  ${CC} ${TARGET_CFLAGS} ${WORKDIR}/emr-cat.c -o ${WORKDIR}/emr-cat
+  ${CC} ${WORKDIR}/emr-cat.c -o ${WORKDIR}/emr-cat
 }
 
 do_install() {

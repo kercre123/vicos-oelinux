@@ -12,9 +12,6 @@
 
 #include "gpio.h"
 #include "rampost.h"
-#include "lcd.h"
-
-void microwait(long microsec);
 
 /************** LCD INTERFACE *****************/
 
@@ -97,13 +94,14 @@ static const char* BACKLIGHT_DEVICES[] = {
 int lcd_spi_init()
 {
   // SPI setup
+  int err = -1;
   static const uint8_t  MODE = 0;
   spi_fd = open("/dev/spidev1.0", O_RDWR);
   if (!spi_fd)  {
     error_exit(err_SPI_INIT);
   }
   if (spi_fd>0) {
-    ioctl(spi_fd, SPI_IOC_RD_MODE, &MODE);
+    err = ioctl(spi_fd, SPI_IOC_RD_MODE, &MODE);
   }
   return spi_fd;
 }
@@ -254,7 +252,7 @@ static void lcd_run_script(const INIT_SCRIPT* script)
 
 
 
-void lcd_device_init(void)
+void lcd_device_init()
 {
   // Init registers and put the display in sleep mode
   lcd_run_script(init_scr);
