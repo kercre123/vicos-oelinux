@@ -45,16 +45,30 @@ do_package_qa[noexec] = "1"
 
 do_compile () {
    cd ${S}
-   echo "gitdir: ${WORKSPACE}/.git/modules/anki/victor" > .git
+   rm -rf .git
+   git init
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
 
-   BUILD_FLAVOR_FLAGS=""
-   if [[ ${USER_BUILD} == "1" ]]; then
-       BUILD_FLAVOR_FLAGS=" -a -DAUDIO_RELEASE=ON"
-   fi
+   if [ -x ./project/victor/scripts/victor_build_shipping.sh ]; then
 
-   ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
+       if [[ ${USER_BUILD} == "1" ]]; then
+	   ./project/victor/scripts/victor_build_shipping.sh
+       else
+	   ./project/victor/scripts/victor_build_release.sh
+       fi
+
+   else
+       BUILD_FLAVOR_FLAGS=""
+       if [[ ${USER_BUILD} == "1" ]]; then
+	   BUILD_FLAVOR_FLAGS="-DANKI_NO_WEBSERVER_ENABLED=1 \
+		-DANKI_DEV_CHEATS=0 \
+		-DANKI_PROFILING_ENABLED=0 \
+		-DREMOTE_CONSOLE_ENABLED=0 \
+		-a -DAUDIO_RELEASE=ON"
+       fi
+       ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
+   fi
 }
 
 do_install () {
