@@ -6854,7 +6854,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	if (!strcasecmp(prop, "smd")) {
+	if (1) { //!strcasecmp(prop, "smd")) {
 		printf("SOC is WCN\n");
 
 		fd = wcn_init_smd(argv[optind]);
