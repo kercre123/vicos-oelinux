@@ -3,12 +3,6 @@
 ##  bad. Anything that we can limp along without should be put somewhere else so that this script exits
 ##  with status 0 and the system init process can continue.
 
-# Enable power rails required for GPIO, LCD, IMU and Camera but not yet controlled by device tree
-# TODO Configure device tree to properly control these regulators.
-echo 1 > /sys/kernel/debug/regulator/8916_l8/enable
-echo 1 > /sys/kernel/debug/regulator/8916_l17/enable
-echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
-
 # @nathan-anki  - to stop overheating, limit CPU to 533MHz, RAM to 400MHz
 echo 533333 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
 echo disabled > /sys/kernel/debug/msm_otg/bus_voting  # This prevents USB from pinning RAM to 400MHz
@@ -33,7 +27,6 @@ echo out > /sys/class/gpio/gpio$CAM_REG_GPIO/direction
 echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # End camera force hack
 
-# Print the ID on the face
 # emr-cat prints a placeholder value even on error
 SERIALNO=`/bin/emr-cat e`
 HAVE_EMR=$?

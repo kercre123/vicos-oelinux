@@ -224,6 +224,13 @@ static int get_payload_len(PayloadId payload_type, enum MsgDir dir)
   case PAYLOAD_DFU_PACKET:
     return sizeof(struct WriteDFU);
     break;
+  case PAYLOAD_SHUT_DOWN:
+    return 0;
+  case PAYLOAD_LIGHT_STATE:
+    return sizeof(struct LightState);
+  case PAYLOAD_BOOT_FRAME:
+    return sizeof(struct MicroBodyToHead);
+    break;
   default:
     break;
   }
