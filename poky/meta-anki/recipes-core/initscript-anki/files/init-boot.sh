@@ -42,8 +42,13 @@ if [ -z "${CMDLINE##*dm=*}" ]; then
 	dmsetup create system -r --table "$DM_TABLE" || fatal "ERROR: dmsetup failed"
 else
 	set -e
-	# Run user confirmation check for non verity devices
-	rampost orange
+	# Confirm the serial number is on the white list or die
+	if grep -qw `cat /sys/devices/soc0/serial_number` unlock.list; then
+		# Run user confirmation check for non verity devices
+		rampost orange
+	else
+		exit 1;
+	fi
 fi
 
 ROOT_MOUNT_POINT=/rootfs

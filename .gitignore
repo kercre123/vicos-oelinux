@@ -1,3 +1,5 @@
 *~
 
 _build/
+bb-files.txt
+**.DS_Store
