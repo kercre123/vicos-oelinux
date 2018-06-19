@@ -51,6 +51,7 @@ make_userdata() {
 make_tomlog() {
   if ! test -f $TOM_LOG; then
     ls -la /factory/cloud >> $TOM_LOG
+    echo QSN=`cat /sys/devices/soc0/serial_number` >> $TOM_LOG
   fi
   sync
 }
