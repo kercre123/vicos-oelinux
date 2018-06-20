@@ -144,13 +144,15 @@ def extract_full_ota(name, tmpdir, private_pass):
     return manifest.get("META", "update_version")
 
 
-def create_signature(file_path_name, sig_path_name, private_key):
+def create_signature(file_path_name, sig_path_name, private_key, private_key_pass):
     "Create the signature of a file based on a key"
     openssl = subprocess.Popen(["/usr/bin/openssl",
                                 "dgst",
                                 "-sha256",
                                 "-sign",
                                 private_key,
+                                "-passin",
+                                "pass:{}".format(private_key_pass),
                                 "-out",
                                 sig_path_name,
                                 file_path_name],
@@ -257,10 +259,12 @@ with open("manifest.ini", "w") as manifest:
     delta_manifest.write(manifest)
 
 private_key = os.getenv('OTAKEY',
-                        os.path.join(TOPLEVEL, "ota", "ota_test.key"))
+                        os.path.join(TOPLEVEL, "ota", "ota_prod.key"))
+private_key_pass = os.getenv('OTA_KEY_PASS', "")
 create_signature_status = create_signature("manifest.ini",
                                            "manifest.sha256",
-                                           private_key)
+                                           private_key,
+                                           private_key_pass)
 
 if not create_signature_status[0]:
     die(219,
