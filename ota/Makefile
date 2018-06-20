@@ -24,7 +24,7 @@ else
   TAR=tar
 endif
 
-OTAKEY ?= ota_test.key
+OTAKEY ?= ota_prod.key
 OTAPASS ?= file:ota_test.pass
 OTAENC ?= 1
 
@@ -65,7 +65,13 @@ $(BUILD)/%.img: $(IMG_DIR)/%.ext4
 	echo "sha256=`shasum -a256 -b $< | awk '{ print $$1 }'`" >> $@
 
 %.sha256: %.ini
-	openssl dgst -sha256 -sign $(OTAKEY) -out $@ $<
+	openssl dgst -sha256 -sign $(OTAKEY) -passin pass:$(OTA_KEY_PASS) -out $@ $<
+
+orange_boot_img: $(BUILD)
+	curl http://vmosAlpha.ankicore.com/apq8009-robot-boot.img.gz.enc > $(BOOT_GZ_ENC)
+	touch $(BOOT_GZ_ENC)
+	curl http://vmosAlpha.ankicore.com/apq8009-robot-boot.stats > $(BOOT_STATS)
+	touch $(BOOT_STATS)
 
 $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	echo "[META]"                           > $@
@@ -111,7 +117,7 @@ PROD_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq80
 BOOT_KEY ?= qtipri.encrypted.key
 DEV_BOOT_KEY = ../poky/meta-qti-bsp-prop/recipes-products/images/kernel/vble-qti.key
 
-prodsign:
+prodsign: $(NON_SECURE_KERNEL)
 	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
 	openssl pkeyutl -sign -in $(NON_SECURE_KERNEL).sha256 -inkey $(BOOT_KEY) -out $(NON_SECURE_KERNEL).sig -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1
 	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
@@ -119,7 +125,10 @@ prodsign:
 	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
 	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
 
-devsign:
+orangejuice: $(BOOT_GZ_ENC) $(BOOT_STATS)
+	scp $(BOOT_GZ_ENC) $(BOOT_STATS) vmosAlpha.ankicore.com:/var/www/html/
+
+devsign: $(NON_SECURE_KERNEL)
 	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
 	openssl pkeyutl -sign -in $(NON_SECURE_KERNEL).sha256 -inkey $(DEV_BOOT_KEY) -out $(NON_SECURE_KERNEL).sig -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1
 	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1

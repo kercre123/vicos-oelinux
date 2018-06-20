@@ -83,10 +83,7 @@ do_install () {
     chmod 750 ${D}/anki
     chmod 750 ${D}/anki/{data,etc,lib}
     chmod -R 750 ${D}/anki/bin
-    # If a user build, overwrite ota public key with production one
-    if [[ ${USER_BUILD} == "1" ]]; then
-      install -m 0640 ${WORKDIR}/ota/ota_prod.pub ${D}/anki/etc/ota.pub
-    fi
+    install -m 0640 ${WORKDIR}/ota/ota_prod.pub ${D}/anki/etc/ota.pub
 }
 
 FILES_${PN} += "anki/"
