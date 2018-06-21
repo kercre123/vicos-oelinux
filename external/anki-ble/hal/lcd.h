@@ -21,6 +21,9 @@ enum LcdColor {
   lcd_WHITE = 0xFFFF,
 };
 
+int lcd_init(void);
+void lcd_set_brightness(int b); //0..20
+
 int lcd_spi_init(void);
 
 int lcd_device_read_status(void);

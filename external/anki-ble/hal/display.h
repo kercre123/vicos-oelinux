@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void display_init(void);
 
 void display_draw_text(int layer, int line , uint16_t fg, uint16_t bg, const char* text, int len, bool centered);
@@ -27,6 +31,9 @@ const char* parse_color(const char* cp, const char* endp, uint16_t* colorOut);
 #define DISPLAY_MASK_ALL ((1<<DISPLAY_NUM_LAYERS)-1)
 
 
+#ifdef __cplusplus
+}
+#endif
 
 
 

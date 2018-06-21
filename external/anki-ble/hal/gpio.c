@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+#include "display.h"
+
 #define error_exit exit
 enum {
   err_OK,
@@ -45,7 +47,7 @@ struct GPIO_t
 typedef struct GPIO_t* GPIO;
 
 
-int gpio_get_base_offset()
+int gpio_get_base_offset(void)
 {
   if (GPIO_BASE_OFFSET < 0) {
     // gpio pinctrl for msm8909:
@@ -90,10 +92,10 @@ void gpio_set_direction(GPIO gp, enum Gpio_Dir direction)
      error_exit(err_GPIO_DIRECTION);
    }
    if (direction == gpio_DIR_OUTPUT) {
-     write(fd, "out", 3);
+     (void)write(fd, "out", 3);
    }
    else {
-     write(fd, "in", 2);
+     (void)write(fd, "in", 2);
    }
    close(fd);
 }
@@ -133,7 +135,7 @@ GPIO gpio_create(int gpio_number, enum Gpio_Dir direction, enum Gpio_Level initi
 
    //open value fd
    snprintf(ioname, 32, "/sys/class/gpio/gpio%d/value", gpio_number+gpio_get_base_offset());
-   fd = open(ioname, O_WRONLY | O_CREAT );
+   fd = open(ioname, O_WRONLY | O_CREAT , 0600);
 
    if (fd <0) {
      free(gp);

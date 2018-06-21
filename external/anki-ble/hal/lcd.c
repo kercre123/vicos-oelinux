@@ -99,8 +99,6 @@ int lcd_spi_init()
 }
 
 
-
-
 static void lcd_spi_transfer(int cmd, int bytes, const void* data) {
   const uint8_t* tx_buf = data;
 
@@ -274,3 +272,10 @@ void lcd_device_sleep(void)
   }
 
 }
+int lcd_init() { 
+  lcd_gpio_setup();
+  lcd_spi_init();
+  lcd_device_reset();
+  lcd_device_init();
+}
+

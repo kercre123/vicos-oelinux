@@ -25,6 +25,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "lcd.h"
+#include "display.h"
 /*********** Display utils *************/
 void init_display()
 {
@@ -36,17 +38,19 @@ void init_display()
 void show_text(const char* text) {
   const int line = 1;
   display_clear_layer(DISPLAY_LAYER_LARGE, lcd_GREEN, lcd_BLACK);
-  display_draw_text(DISPLAY_LAYER_LARGE, 1, lcd_GREEN, lcd_BLACK, text, strlen(text), line);
+  display_draw_text(DISPLAY_LAYER_LARGE, line, lcd_GREEN, lcd_BLACK, text, strlen(text), 1);
   uint8_t rendermask =  (1<<DISPLAY_LAYER_LARGE) | (1<<DISPLAY_LAYER_SMALL);
   display_render(rendermask);
 }
 
 void show_cube_rssi(const char* cube_id, int rssi) {
+  uint8_t rendermask =  (1<<DISPLAY_LAYER_LARGE) | (1<<DISPLAY_LAYER_SMALL);
   if (cube_id) {
     char buf[36];
-    snprintf(buf, sizeof(buf), "%s %d", cube_id, rssi);
-    display_draw_text(DISPLAY_LAYER_SMALL, 1, lcd_BLUE, lcd_BLACK, buf, sizeof(buf), 8);
-    uint8_t rendermask =  (1<<DISPLAY_LAYER_LARGE) | (1<<DISPLAY_LAYER_SMALL);
+    snprintf(buf, sizeof(buf), "%s", cube_id);
+    display_draw_text(DISPLAY_LAYER_SMALL, 6, lcd_BLUE, lcd_BLACK, buf, sizeof(buf), 1);
+    snprintf(buf, sizeof(buf), "%d", rssi);
+    display_draw_text(DISPLAY_LAYER_SMALL, 7, lcd_BLUE, lcd_BLACK, buf, sizeof(buf), 1);
   }
   else {
     display_clear_layer(DISPLAY_LAYER_SMALL, lcd_GREEN, lcd_BLACK);
@@ -120,6 +124,7 @@ void VicCubeTool::OnConnectedToDaemon() {
     flash_cube_after_connect_ = true;
     if (AreCaseInsensitiveStringsEqual(command, "cube-test")) {
       cube_test_mode_ = true;
+      std::cout << "Initializing Display for cube-test" << std::endl;
       init_display();
     }
     if (address_.empty()) {
