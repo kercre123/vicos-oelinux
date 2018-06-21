@@ -4,12 +4,14 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta-qti-bsp/files/anki-licenses/\
 Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 
 FILESPATH =+ "${WORKSPACE}:"
-SRC_URI   = "file://anki/victor \
-             file://ota/ota_prod.pub"
 
 SRCREV   = "${AUTOREV}"
-S        = "${WORKDIR}/victor"
 BUILDSRC = "${S}/_build/vicos/Release"
+
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+
+inherit externalsrc
+EXTERNALSRC = "${WORKSPACE}/anki/victor"
 
 export SSH_AUTH_SOCK
 export ANKI_BUILD_VERSION
@@ -47,8 +49,6 @@ do_package_qa[noexec] = "1"
 
 do_compile () {
    cd ${S}
-   rm -rf .git
-   git init
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
 
@@ -83,7 +83,6 @@ do_install () {
     chmod 750 ${D}/anki
     chmod 750 ${D}/anki/{data,etc,lib}
     chmod -R 750 ${D}/anki/bin
-    install -m 0640 ${WORKDIR}/ota/ota_prod.pub ${D}/anki/etc/ota.pub
 }
 
 FILES_${PN} += "anki/"
