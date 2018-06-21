@@ -25,6 +25,38 @@
 #include <algorithm>
 #include <iostream>
 
+/*********** Display utils *************/
+void init_display()
+{
+  lcd_init();
+  lcd_set_brightness(10);
+  display_init();
+}
+
+void show_text(const char* text) {
+  const int line = 1;
+  display_clear_layer(DISPLAY_LAYER_LARGE, lcd_GREEN, lcd_BLACK);
+  display_draw_text(DISPLAY_LAYER_LARGE, 1, lcd_GREEN, lcd_BLACK, text, strlen(text), line);
+  uint8_t rendermask =  (1<<DISPLAY_LAYER_LARGE) | (1<<DISPLAY_LAYER_SMALL);
+  display_render(rendermask);
+}
+
+void show_cube_rssi(const char* cube_id, int rssi) {
+  if (cube_id) {
+    char buf[36];
+    snprintf(buf, sizeof(buf), "%s %d", cube_id, rssi);
+    display_draw_text(DISPLAY_LAYER_SMALL, 1, lcd_BLUE, lcd_BLACK, buf, sizeof(buf), 8);
+    uint8_t rendermask =  (1<<DISPLAY_LAYER_LARGE) | (1<<DISPLAY_LAYER_SMALL);
+  }
+  else {
+    display_clear_layer(DISPLAY_LAYER_SMALL, lcd_GREEN, lcd_BLACK);
+  }
+  display_render(rendermask);
+}
+
+/***************************************/
+
+
 VicCubeTool::~VicCubeTool() {
   delete connect_retry_timer_; connect_retry_timer_ = nullptr;
   delete stop_scan_timer_; stop_scan_timer_ = nullptr;
@@ -55,6 +87,7 @@ void VicCubeTool::ConnectRetryTimerCallback(ev::timer& w, int revents) {
     w.start(2.);
   }
 }
+
 
 void VicCubeTool::OnConnectedToDaemon() {
   if (args_.empty()) {
@@ -87,6 +120,7 @@ void VicCubeTool::OnConnectedToDaemon() {
     flash_cube_after_connect_ = true;
     if (AreCaseInsensitiveStringsEqual(command, "cube-test")) {
       cube_test_mode_ = true;
+      init_display();
     }
     if (address_.empty()) {
       connect_to_first_cube_found_ = true;
@@ -117,6 +151,9 @@ void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
 
 void VicCubeTool::ScanForCubes() {
   std::cout << "Scanning for cubes...." << std::endl;
+  if (cube_test_mode_) {
+    show_text("WAIT");
+  }
   scanning_ = true;
   StartScan(Anki::kCubeService_128_BIT_UUID);
   if (!stop_scan_timer_) {
@@ -147,6 +184,8 @@ void VicCubeTool::OnScanResults(int error,
         if (r.rssi < rssi_min_) {
           continue; //reject far away cubes
         }
+        show_text("FOUND");
+        show_cube_rssi(r.address, r.rssi);
       }
       else {  //normal mode only connects to one cube
         connect_to_first_cube_found_ = false;
@@ -180,6 +219,7 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
   if (!connected) {
     if (cube_test_mode_) {
       //Go back to scanning
+      show_cube_rssi(NULL,0); //clear
       ScanForCubes();
       return;
     }
@@ -211,6 +251,9 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
       } else {
         std::cout << "APP VERSION: " << std::string(value.begin(), value.end()) << std::endl;
         std::cout << "Firmware upload complete" << std::endl;
+        if (cube_test_mode_) {
+          show_text("TEST");
+        }
       }
       if (!cube_test_mode_) {
         task_executor_->WakeAfter(std::bind(&IPCClient::Disconnect, this, connection_id_),
@@ -276,6 +319,9 @@ void VicCubeTool::FlashCubeDVT1(const std::string& pathToFirmware) {
     _exit(1);
   }
   std::cout << "Flashing firmware....." << std::endl;
+  if (cube_test_mode_) {
+    show_text("LOAD");
+  }
   size_t offset = 0;
   while (offset < firmware.size()) {
     Anki::ByteVector packet;
@@ -301,6 +347,9 @@ void VicCubeTool::FlashCube(const std::string& pathToFirmware) {
   size_t offset = 0x10; // The first 16 bytes of the firmware data are the version string
   new_firmware_version_ = std::string(firmware.begin(), firmware.begin() + offset);
   std::cout << "Flashing firmware version : " << new_firmware_version_ << std::endl;
+  if (cube_test_mode_) {
+    show_text("LOAD");
+  }
   while (offset < firmware.size()) {
     Anki::ByteVector packet;
     size_t chunk_length = std::min(MAX_BYTES_PER_PACKET, (int) (firmware.size() - offset));
