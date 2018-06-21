@@ -43,10 +43,16 @@ if [ -z "${CMDLINE##*dm=*}" ]; then
 else
 	set -e
 	# Confirm the serial number is on the white list or die
-	if grep -qw `cat /sys/devices/soc0/serial_number` unlock.list; then
+	SERIAL=`cat /sys/devices/soc0/serial_number`
+	if test -z $SERIAL; then
+		echo "Unable to get serial number"
+		exit 1;
+	fi
+	if grep -qw $SERIAL unlock.list; then
 		# Run user confirmation check for non verity devices
 		rampost orange
 	else
+		rampost x
 		exit 1;
 	fi
 fi

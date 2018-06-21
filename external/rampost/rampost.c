@@ -118,6 +118,7 @@ int error_exit(RampostErr err) {
 
 
 #include "warning_orange.h"
+#include "locked_qsn.h"
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define FRAME_WAIT_MS 200
 #define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
@@ -125,6 +126,10 @@ int error_exit(RampostErr err) {
 
 void show_orange_icon(void) {
   lcd_draw_frame2((uint16_t*)warning_orange, warning_orange_len);
+}
+
+void show_locked_qsn_icon(void) {
+  lcd_draw_frame2((uint16_t*)locked_qsn, locked_qsn_len);
 }
 
 bool imu_is_inverted(void) {
@@ -216,15 +221,21 @@ int main(int argc, const char* argv[]) {
   printf("lcd check = %d\n",success);
   set_body_leds(success, recovery_mode_check());
 
-  if (argc > 1) { // Orange mode
+  if (argc > 1) { // Displaying something
     lcd_device_init();
-    show_orange_icon();
-    imu_open();
-    imu_init();
+    if (argv[1][0] == 'x') {
+      show_locked_qsn_icon();
+      while (1);
+    }
+    else { // Else orange
+      show_orange_icon();
+      imu_open();
+      imu_init();
 
-    if (wait_for_unlock() != unlock_SUCCESS) {
-      while (1) {
-        send_shutdown_message();
+      if (wait_for_unlock() != unlock_SUCCESS) {
+        while (1) {
+          send_shutdown_message();
+        }
       }
     }
   }
