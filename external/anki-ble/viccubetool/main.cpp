@@ -54,7 +54,7 @@ void usage() {
 long str_to_int(const char*str, long default_val) {
   char* endp;
   long l = strtol(str, &endp, 10);
-  if (endp==str) {return default_val};
+  if (endp==str) {return default_val;}
   return l;
 }
 
@@ -78,6 +78,7 @@ int main(int argc, char *argv[]) {
         break;
       case 'r':
         rssi_min = str_to_int(optarg,-40);
+          std::cerr << "Minimum rssi is "<< rssi_min << std::endl;
         break;
       case '?':
         if (optopt == 'a') {

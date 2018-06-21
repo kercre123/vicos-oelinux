@@ -22,6 +22,7 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
       , args_(args)
       , connection_id_(-1)
       , task_executor_(new Anki::TaskExecutor(loop))
+      , rssi_min_(-100)
   {}
   ~VicCubeTool();
   void Execute();
