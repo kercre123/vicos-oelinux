@@ -22,9 +22,14 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
       , args_(args)
       , connection_id_(-1)
       , task_executor_(new Anki::TaskExecutor(loop))
+      , rssi_min_(-100)
   {}
   ~VicCubeTool();
   void Execute();
+
+  void SetMinRssi(int min) {
+    rssi_min_ = min;
+  }
 
  protected:
   virtual void OnScanResults(int error,
@@ -64,10 +69,11 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   bool connect_to_first_cube_found_;
   bool flash_cube_after_connect_;
   bool use_dvt1_flasher_;
+  bool cube_test_mode_;
   int connection_id_;
+  int rssi_min_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
   std::string new_firmware_version_;
   Anki::TaskExecutor* task_executor_;
 };
-
