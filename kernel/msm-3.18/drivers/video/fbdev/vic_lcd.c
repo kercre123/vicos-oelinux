@@ -164,8 +164,9 @@ static void vicspi_init_lcd(struct vicspi_device *vic)
 		int	cmd;
 		int	wlen;
 		u8	wbuf[14];
+		u16	wait; /* ms */
 	} *init, init_ctrl[] = {
-		{ 0x11, 0 }, /* Sleep Off */
+		{ 0x10, 1, { 0x00 }, 120 }, /* Sleep */
 		{ 0x36, 1, { 0x00 } }, /* RGB565 */
 		{ 0xB0, 2, { 0x00, 0x08 } },  /* unswapped bytes in pixel */
 		{ 0xB7, 1, { 0x72 } }, // Gate control (VGH 14.97, VGL -8.23)
@@ -178,19 +179,22 @@ static void vicspi_init_lcd(struct vicspi_device *vic)
 		{ 0xD0, 2, { 0xA4, 0xA1 } }, // Power control 1
 		{ 0xE0, 14, { 0xD0, 0x10, 0x16, 0x0A, 0x0A, 0x26, 0x3C, 0x53, 0x53, 0x18, 0x15, 0x12, 0x36, 0x3C } }, // +ve voltage gamma control
 		{ 0xE1, 14, { 0xD0, 0x11, 0x19, 0x0A, 0x09, 0x25, 0x3D, 0x35, 0x54, 0x17, 0x15, 0x12, 0x36, 0x3C } }, // -ve voltage gamma control
+		{ 0xE9, 3, { 0x05, 0x05, 0x01 } },
 		{ 0x3A, 1, { 0x55 } },
 		{ 0x55, 1, { 0x03 } }, // Content Adaptive Brightness Control: 0x03 = Color Enhancement Off, Moving Image Mode
 		{ 0x21, 1, { 0x00 } },
 		{ 0x2A, 4, { 0x00, RSHIFT, (LCD_FRAME_WIDTH + RSHIFT - 1) >> 8, (LCD_FRAME_WIDTH + RSHIFT - 1) & 0xFF } },
 		{ 0x2B, 4, { 0x00, 0x00, (LCD_FRAME_HEIGHT -1) >> 8, (LCD_FRAME_HEIGHT -1) & 0xFF } },
-		{ 0x26, 1, { 0x08 } }, // Gamma Curve Setting: 0x01=2.2, 0x02=1.8, 0x04=2.5, 0x08=1.0
-		{ 0x29, 1, { 0x00 } }, // Display On
+		{ 0x11, 1, { 0x00 }, 120 }, /* Sleep off */
+		{ 0x29, 1, { 0x00 }, 400 }, /* Display On */
 		{ 0 }
 	};
 
 	init = init_ctrl;
 	while (init->cmd != 0) {
 		vicspi_write(vic, init->cmd, init->wbuf, init->wlen);
+		if (init->wait)
+			msleep(init->wait);
 		init++;
 	}
 }
@@ -280,11 +284,13 @@ static struct fb_var_screeninfo vicspi_var = {
 static void vicspi_lcd_reset(struct vicspi_device *vic)
 {
 	gpio_set_value(vic->gpio_reset1, 0);
-	gpio_set_value(vic->gpio_reset2, 0);
-	udelay(50);
+	if (vic->gpio_reset2 != 0)
+		gpio_set_value(vic->gpio_reset2, 0);
+	udelay(100);
 	gpio_set_value(vic->gpio_reset1, 1);
-	gpio_set_value(vic->gpio_reset2, 1);
-	udelay(50);
+	if (vic->gpio_reset2 != 0)
+		gpio_set_value(vic->gpio_reset2, 1);
+	udelay(100);
 }
 
 static int vicspi_lcd_probe(struct spi_device *spi)
@@ -315,12 +321,15 @@ static int vicspi_lcd_probe(struct spi_device *spi)
 
 	vic->spi = spi;
 	vic->cmd_gpio = of_get_named_gpio(np, "cmd-gpio", 0); // 110
-	vic->gpio_reset1 = of_get_named_gpio(np, "gpio-reset1", 0); //96
-	vic->gpio_reset2 = of_get_named_gpio(np, "gpio-reset2", 0); //55
+	vic->gpio_reset1 = of_get_named_gpio(np, "gpio-reset1", 0);
+	vic->gpio_reset2 = of_get_named_gpio(np, "gpio-reset2", 0);
+	if (vic->gpio_reset2 < 0)
+		vic->gpio_reset2 = 0;
 
 	dev_info(&spi->dev, "GPIO: CMD %d reset1 %d reset2 %d\n",
 		vic->cmd_gpio, vic->gpio_reset1, vic->gpio_reset2);
 
+	/* TODO: GPIO request proper error handling */
 	ret = gpio_request(vic->cmd_gpio, dev_name(&spi->dev));
 	if (ret)
 		dev_err(&spi->dev, "can't request gpio %d\n", vic->cmd_gpio);
@@ -328,10 +337,13 @@ static int vicspi_lcd_probe(struct spi_device *spi)
 				dev_name(&spi->dev));
 	if (ret)
 		dev_err(&spi->dev, "can't request gpio %d\n", vic->gpio_reset1);
-	ret = gpio_request_one(vic->gpio_reset2, GPIOF_OPEN_DRAIN,
-				dev_name(&spi->dev));
-	if (ret)
-		dev_err(&spi->dev, "can't request gpio %d\n", vic->gpio_reset2);
+	if (vic->gpio_reset2 != 0) {
+		ret = gpio_request_one(vic->gpio_reset2, GPIOF_OPEN_DRAIN,
+					dev_name(&spi->dev));
+		if (ret)
+			dev_err(&spi->dev, "can't request gpio %d\n",
+				vic->gpio_reset2);
+	}
 
 	ret = gpio_direction_output(vic->cmd_gpio, 1);
 	if (ret)
@@ -341,10 +353,13 @@ static int vicspi_lcd_probe(struct spi_device *spi)
 	if (ret)
 		dev_err(&spi->dev, "can't set gpio %d direction\n",
 			vic->gpio_reset1);
-	ret = gpio_direction_output(vic->gpio_reset2, 0);
-	if (ret)
-		dev_err(&spi->dev, "can't set gpio %d direction\n",
-			vic->gpio_reset2);
+
+	if (vic->gpio_reset2 != 0) {
+		ret = gpio_direction_output(vic->gpio_reset2, 0);
+		if (ret)
+			dev_err(&spi->dev, "can't set gpio %d direction\n",
+				vic->gpio_reset2);
+	}
 
 	fbi->fbops = &vicspi_fb_ops;
 	fbi->fix = vicspi_screeninfo;
@@ -373,7 +388,8 @@ static int vicspi_lcd_remove(struct spi_device *spi)
 
 	gpio_free(vic->cmd_gpio);
 	gpio_free(vic->gpio_reset1);
-	gpio_free(vic->gpio_reset2);
+	if (vic->gpio_reset2)
+		gpio_free(vic->gpio_reset2);
 	unregister_framebuffer(fbi);
 	kfree(fbi->screen_base);
 	framebuffer_release(fbi);
