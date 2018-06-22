@@ -253,7 +253,7 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
       case ANKI_CAMERA_MSG_C2S_PARAMS_ID_FORMAT: {
         anki_camera_pixel_format_t format;
         memcpy(&format, payload->data, sizeof(format));
-        camera_capture_set_format(&ctx->camera, format);
+        rc = camera_capture_set_format(&ctx->camera, format);
 
         logv("%s: sending buffer.fd=%d", __FUNCTION__, ctx->camera.buffer.fd);
         struct anki_camera_msg* buf_msg = enqueue_message(ctx, ANKI_CAMERA_MSG_S2C_BUFFER);
@@ -340,7 +340,7 @@ int read_incoming_data(struct server_ctx* ctx)
   while (rc > 0);
 
   if (rc == 0) {
-    process_incoming_messages(ctx);
+    rc = process_incoming_messages(ctx);
   }
 
   return rc;

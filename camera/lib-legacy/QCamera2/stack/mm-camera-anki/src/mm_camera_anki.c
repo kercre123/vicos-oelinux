@@ -522,6 +522,7 @@ int victor_start_preview(mm_camera_lib_handle *handle)
   {
     CDBG_ERROR("%s: add preview channel failed", __func__);
     rc = -MM_CAMERA_E_GENERAL;
+    return rc;
   }
 
   rc = mm_app_start_channel(test_obj, p_ch);
