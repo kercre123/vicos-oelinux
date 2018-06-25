@@ -1307,11 +1307,13 @@
 		qcom,master-id = <86>;
 		status = "okay";
 
-		spidev@0x00 {
+		lcd: viclcd@0 {
 				cell-index = <1>; // spidev1
-				compatible = "spidev";
+				compatible = "vicspi_lcd";
 				spi-max-frequency = <19200000>;
 				reg = <0>;
+				cmd-gpio = <&msm_gpio 110 0>;
+				gpio-reset1 = <&msm_gpio 55 0>;
 		};
 	};
 
