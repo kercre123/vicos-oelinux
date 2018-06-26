@@ -2806,7 +2806,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 #endif
 #endif
 
-	trace_sched_migrate_task(p, new_cpu, pct_task_load(p));
+	trace_sched_migrate_task(p, new_cpu);
 
 	note_run_start(p, sched_clock());
 

@@ -137,6 +137,8 @@ do_shared_workdir () {
                 scripts/mod/mk_elfconfig \
                 scripts/mod/modpost \
                 scripts/sign-file \
+                scripts/recordmcount \
+                scripts/genksyms/genksyms \
                 scripts/sortextable;
             do
                 if [ -e $i ]; then
