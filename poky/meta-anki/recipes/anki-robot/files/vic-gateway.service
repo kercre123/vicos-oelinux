@@ -1,0 +1,15 @@
+[Unit]
+Description=Victor gateway daemon
+SourcePath=/anki/bin/vic-gateway
+PartOf=anki-robot.target
+
+Wants=vic-engine.service
+After=vic-engine.service
+
+[Service]
+EnvironmentFile=/anki/etc/vic-gateway.env
+ExecStart=/anki/bin/vic-gateway $VIC_GATEWAY_OPTS
+Restart=no
+
+[Install]
+WantedBy=anki-robot.target
