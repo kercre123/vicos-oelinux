@@ -128,6 +128,34 @@ enum class BluetoothGattConnectionStatus {
     Connected,
 };
 
+static std::string BluetoothGattConnectionStatusToString(const BluetoothGattConnectionStatus status)
+{
+  switch(status) {
+    case BluetoothGattConnectionStatus::Invalid:
+      return "Invalid";
+      break;
+    case BluetoothGattConnectionStatus::Connecting:
+      return "Connecting";
+      break;
+    case BluetoothGattConnectionStatus::DiscoveringServices:
+      return "DiscoveringServices";
+      break;
+    case BluetoothGattConnectionStatus::GettingGattDb:
+      return "GettingGattDb";
+      break;
+    case BluetoothGattConnectionStatus::RegisteringForNotifications:
+      return "RegisteringForNotifications";
+      break;
+    case BluetoothGattConnectionStatus::Connected:
+      return "Connected";
+      break;
+    default:
+      return std::to_string(static_cast<int>(status));
+      break;
+  }
+
+}
+
 typedef struct BluetoothGattConnectionInfo {
   Anki::Util::CodeTimer::TimePoint start;
   BluetoothGattConnectionStatus status;
@@ -728,8 +756,14 @@ void btgattc_open_cb(int conn_id, int status, int clientIf, bt_bdaddr_t* bda)
     BluetoothGattConnection& connection = search->second.connection;
     connection.conn_id = conn_id;
     if (bt_status == BT_STATUS_SUCCESS) {
-      search->second.status = BluetoothGattConnectionStatus::DiscoveringServices;
-      bt_status = sBtGattInterface->client->search_service(conn_id, nullptr);
+      if (search->second.status == BluetoothGattConnectionStatus::Connecting) {
+        search->second.status = BluetoothGattConnectionStatus::DiscoveringServices;
+        bt_status = sBtGattInterface->client->search_service(conn_id, nullptr);
+      } else {
+        logw("%s(conn_id = %d, clientIf = %d, bda = %s) - Unexpected connection status = %s",
+             __FUNCTION__, conn_id, clientIf, address.c_str(),
+             BluetoothGattConnectionStatusToString(search->second.status).c_str());
+      }
     }
     if (bt_status != BT_STATUS_SUCCESS) {
       if (sCallbacks.outbound_connection_cb) {
