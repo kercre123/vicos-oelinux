@@ -1,0 +1,12 @@
+# Run the update checker every hour
+
+[Unit]
+Description=Check for an OS update every hour
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+
+[Timer]
+OnCalendar=*-*-* *:00:00
+
+[Install]
+WantedBy=multi-user.target

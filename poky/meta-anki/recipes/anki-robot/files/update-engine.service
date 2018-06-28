@@ -1,0 +1,25 @@
+#
+# Check for OS Updates
+#
+[Unit]
+Description=Victor OS Update Engine
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+ConditionFileIsExecutable=/anki/bin/update-engine
+ConditionFileNotEmpty=!/run/update-engine/done
+ConditionFileNotEmpty=!/run/vic-switchboard/disable-update-engine
+
+[Service]
+Type=simple
+Environment=UPDATE_ENGINE_MAX_SLEEP=1800
+Environment=UPDATE_ENGINE_ENABLED=False
+EnvironmentFile=-/anki/etc/update-engine.env
+EnvironmentFile=-/data/etc/update-engine.env
+EnvironmentFile=-/run/vic-switchboard/update-engine.env
+ExecStartPre=/bin/rm -rf /run/update-engine
+ExecStartPre=/bin/mkdir -p /run/update-engine /run/vic-switchboard
+ExecStartPre=/bin/test $UPDATE_ENGINE_ENABLED = "True"
+ExecStartPre=/bin/bash -c 'sleep $(( RANDOM % $UPDATE_ENGINE_MAX_SLEEP ))'
+ExecStartPre=/bin/bash -c 'echo Unclean exit > /run/update-engine/error'
+ExecStart=/anki/bin/update-engine
+ExecStopPost=/bin/rm -rf /run/vic-switchboard/update-engine.env
