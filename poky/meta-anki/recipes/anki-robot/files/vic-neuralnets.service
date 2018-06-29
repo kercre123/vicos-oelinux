@@ -1,0 +1,15 @@
+[Unit]
+Description=Victor neural nets daemon
+SourcePath=/anki/bin/vic-neuralnets
+PartOf=anki-robot.target
+
+Wants=vic-engine.service
+After=vic-engine.service
+
+[Service]
+EnvironmentFile=/anki/etc/vic-neuralnets.env
+ExecStart=/anki/bin/vic-neuralnets $VIC_VISION_CONFIG $VIC_DNN_MODELS $VIC_DNN_CACHE
+Restart=no
+
+[Install]
+WantedBy=anki-robot.target
