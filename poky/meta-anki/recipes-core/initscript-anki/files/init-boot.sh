@@ -10,7 +10,7 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 mkdir -p /proc
 mkdir -p /sys
 mkdir -p /dev
-mount -t proc proc /proc
+mount -t proc -o  proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs none /dev
 mount -t debugfs nodev /sys/kernel/debug
@@ -34,6 +34,7 @@ if [ -z "${CMDLINE##*dm=*}" ]; then
 	DM="${CMDLINE##*dm=\"}"
 	DM="${DM%\" *}"
 	DM_TABLE="${DM##*,}"
+	ROOTFS_OPTS="-o ro,noatime,noload,exec"
 
 	# Power on hardware test and led states
 	rampost
@@ -42,6 +43,7 @@ if [ -z "${CMDLINE##*dm=*}" ]; then
 	dmsetup create system -r --table "$DM_TABLE" || fatal "ERROR: dmsetup failed"
 else
 	set -e
+	ROOTFS_OPTS="-o ro,exec"
 	# Confirm the serial number is on the white list or die
 	SERIAL=`cat /sys/devices/soc0/serial_number`
 	if test -z $SERIAL; then
@@ -59,7 +61,7 @@ fi
 
 ROOT_MOUNT_POINT=/rootfs
 mkdir -p "$ROOT_MOUNT_POINT"
-mount "$ROOTFS" "$ROOT_MOUNT_POINT"
+mount $ROOTFS_OPTS "$ROOTFS" "$ROOT_MOUNT_POINT"
 mount -n --move /proc "$ROOT_MOUNT_POINT/proc"
 mount -n --move /sys "$ROOT_MOUNT_POINT/sys"
 mount -n --move /dev "$ROOT_MOUNT_POINT/dev"
