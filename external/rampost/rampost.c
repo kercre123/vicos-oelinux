@@ -110,7 +110,6 @@ void cleanup(bool blank_display)
     lcd_set_brightness(0);
     lcd_device_sleep();
   }
-  lcd_gpio_teardown();
 }
 
 int error_exit(RampostErr err) {
@@ -273,8 +272,7 @@ int main(int argc, const char* argv[]) {
   bool blank_on_exit = true;
   bool show_801 = false;
 
-  lcd_gpio_setup();
-  lcd_spi_init();
+  lcd_init();
 
   lcd_device_reset();
   success = lcd_device_read_status();
@@ -309,7 +307,6 @@ int main(int argc, const char* argv[]) {
     case battery_LEVEL_GOOD:
       break;
     case battery_LEVEL_TOOLOW:
-      lcd_device_init(); // We'll be displaying something
       lcd_set_brightness(5);
       show_lowbat_and_shutdown();
       return 1;
@@ -324,7 +321,6 @@ int main(int argc, const char* argv[]) {
 
   for (; argn < argc; argn++) {
     if (argv[argn][0] == '-') {
-      lcd_device_init(); // We'll be displaying something
       lcd_set_brightness(5);
       switch (argv[argn][1]) {
         case 'x':
