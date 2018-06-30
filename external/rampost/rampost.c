@@ -101,7 +101,6 @@ int recovery_mode_check(void) {
 void exit_cleanup(void)
 {
   lcd_device_sleep();
-  lcd_gpio_teardown();
 }
 
 int error_exit(RampostErr err) {
@@ -110,7 +109,6 @@ int error_exit(RampostErr err) {
      exiting = true;
      set_body_leds(0, 0);
   }
-  exit_cleanup();
   exit(err);
 
 }
@@ -211,8 +209,7 @@ void send_shutdown_message(void) {
 int main(int argc, const char* argv[]) {
   bool success = false;
 
-  lcd_gpio_setup();
-  lcd_spi_init();
+  lcd_init();
 
   lcd_set_brightness(5);
 
@@ -222,7 +219,6 @@ int main(int argc, const char* argv[]) {
   set_body_leds(success, recovery_mode_check());
 
   if (argc > 1) { // Displaying something
-    lcd_device_init();
     if (argv[1][0] == 'x') {
       show_locked_qsn_icon();
       while (1);
