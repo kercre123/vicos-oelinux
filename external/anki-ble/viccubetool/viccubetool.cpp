@@ -35,10 +35,10 @@ void init_display()
   display_init();
 }
 
-void show_text(const char* text) {
-  const int line = 1;
-  display_clear_layer(DISPLAY_LAYER_LARGE, lcd_GREEN, lcd_BLACK);
-  display_draw_text(DISPLAY_LAYER_LARGE, line, lcd_GREEN, lcd_BLACK, text, strlen(text), 1);
+void show_text(const char* text, int color) {
+  const int line = 0;
+  display_clear_layer(DISPLAY_LAYER_LARGE, color, lcd_BLACK);
+  display_draw_text(DISPLAY_LAYER_LARGE, line, color, lcd_BLACK, text, strlen(text), 1);
   uint8_t rendermask =  (1<<DISPLAY_LAYER_LARGE) | (1<<DISPLAY_LAYER_SMALL);
   display_render(rendermask);
 }
@@ -48,12 +48,12 @@ void show_cube_rssi(const char* cube_id, int rssi) {
   if (cube_id) {
     char buf[36];
     snprintf(buf, sizeof(buf), "%s", cube_id);
-    display_draw_text(DISPLAY_LAYER_SMALL, 6, lcd_BLUE, lcd_BLACK, buf, sizeof(buf), 1);
+    display_draw_text(DISPLAY_LAYER_SMALL, 4, lcd_ORANGE, lcd_BLACK, buf, strlen(buf), 1);
     snprintf(buf, sizeof(buf), "%d", rssi);
-    display_draw_text(DISPLAY_LAYER_SMALL, 7, lcd_BLUE, lcd_BLACK, buf, sizeof(buf), 1);
+    display_draw_text(DISPLAY_LAYER_SMALL, 6, lcd_ORANGE, lcd_BLACK, buf, strlen(buf), 1);
   }
   else {
-    display_clear_layer(DISPLAY_LAYER_SMALL, lcd_GREEN, lcd_BLACK);
+    display_clear_layer(DISPLAY_LAYER_SMALL, lcd_BLUE, lcd_BLACK);
   }
   display_render(rendermask);
 }
@@ -157,7 +157,7 @@ void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
 void VicCubeTool::ScanForCubes() {
   std::cout << "Scanning for cubes...." << std::endl;
   if (cube_test_mode_) {
-    show_text("WAIT");
+    show_text("WAIT", lcd_BLUE);
   }
   scanning_ = true;
   StartScan(Anki::kCubeService_128_BIT_UUID);
@@ -166,7 +166,7 @@ void VicCubeTool::ScanForCubes() {
   }
   stop_scan_timer_->stop();
   stop_scan_timer_->set <VicCubeTool, &VicCubeTool::ScanTimerCallback> (this);
-  stop_scan_timer_->start(cube_test_mode_ ? 300 : 2.0);
+  stop_scan_timer_->start(cube_test_mode_ ? 10 : 2.0);
 }
 
 
@@ -189,7 +189,7 @@ void VicCubeTool::OnScanResults(int error,
         if (r.rssi < rssi_min_) {
           continue; //reject far away cubes
         }
-        show_text("FOUND");
+        show_text("FOUND ", lcd_ORANGE);
         show_cube_rssi(r.address, r.rssi);
       }
       else {  //normal mode only connects to one cube
@@ -257,7 +257,7 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
         std::cout << "APP VERSION: " << std::string(value.begin(), value.end()) << std::endl;
         std::cout << "Firmware upload complete" << std::endl;
         if (cube_test_mode_) {
-          show_text("TEST");
+          show_text("TEST", lcd_GREEN);
         }
       }
       if (!cube_test_mode_) {
@@ -325,7 +325,7 @@ void VicCubeTool::FlashCubeDVT1(const std::string& pathToFirmware) {
   }
   std::cout << "Flashing firmware....." << std::endl;
   if (cube_test_mode_) {
-    show_text("LOAD");
+    show_text("LOAD", lcd_ORANGE);
   }
   size_t offset = 0;
   while (offset < firmware.size()) {
@@ -353,7 +353,7 @@ void VicCubeTool::FlashCube(const std::string& pathToFirmware) {
   new_firmware_version_ = std::string(firmware.begin(), firmware.begin() + offset);
   std::cout << "Flashing firmware version : " << new_firmware_version_ << std::endl;
   if (cube_test_mode_) {
-    show_text("LOAD");
+    show_text("LOAD", lcd_ORANGE);
   }
   while (offset < firmware.size()) {
     Anki::ByteVector packet;

@@ -19,6 +19,7 @@ enum LcdColor {
   lcd_GREEN   = 0x07E0,
   lcd_RED     = 0xF800,
   lcd_WHITE = 0xFFFF,
+  lcd_ORANGE =  lcd_RED | 0x500,   //red + 65% green
 };
 
 int lcd_init(void);
