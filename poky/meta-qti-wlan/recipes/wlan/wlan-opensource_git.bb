@@ -16,20 +16,9 @@ SRC_URI = "file://qcom-opensource/wlan/prima"
 
 S = "${WORKDIR}/qcom-opensource/prima"
 
-EXTRA_OEMAKE += "CONFIG_PRONTO_WLAN=m \
-                 KERNEL_BUILD=1"
+EXTRA_OEMAKE += 'CONFIG_PRONTO_WLAN=m WLAN_DIR="${S}"  KERNEL_BUILD=1'
 
 PACKAGES += "kernel-module-wlan"
-
-do_compile () {
-    unset CFLAGS CPPFLAGS CXXFLAGS LDFLAGS CC CPP LD
-    oe_runmake 'MODPATH="${base_libdir}/modules/wlan/prima"' \
-        'KERNEL_SOURCE="${STAGING_KERNEL_DIR}"' \
-        'KDIR="${STAGING_KERNEL_DIR}"' \
-        'CC="${KERNEL_CC}"' \
-        'LD="${KERNEL_LD}"' \
-        'WLAN_DIR="${S}"'
-}
 
 do_install () {
 	module_do_install

@@ -11,7 +11,7 @@ IMAGE_LINGUAS = ""
 LICENSE = "MIT"
 
 IMAGE_FSTYPES = "${INITRAMFS_FSTYPES}"
-inherit core-image
+inherit core-image qperf
 
 IMAGE_ROOTFS_SIZE = "8192"
 

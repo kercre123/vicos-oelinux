@@ -22,6 +22,12 @@ require apq-persist-image.inc
 do_rootfs[nostamp] = "1"
 do_build[nostamp]  = "1"
 
+python __anonymous () {
+        image = d.getVar('INITRAMFS_IMAGE', True)
+        if image:
+            d.appendVarFlag('do_makesystem', 'depends', ' ${INITRAMFS_IMAGE}:do_rootfs')
+}
+
 # Call function makesystem to generate sparse ext4 image
 addtask makesystem after do_rootfs before do_build
 
