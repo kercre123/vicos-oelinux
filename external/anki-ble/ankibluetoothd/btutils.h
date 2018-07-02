@@ -31,4 +31,4 @@ const char* bt_cb_thread_evt_to_string(const bt_cb_thread_evt evt);
 const char* bt_property_type_t_to_string(const bt_property_type_t property_type);
 const char* bt_device_type_t_to_string(const bt_device_type_t type);
 std::string bt_acl_state_t_to_string(const bt_acl_state_t state);
-
+std::string bt_bond_state_t_to_string(const bt_bond_state_t state);
