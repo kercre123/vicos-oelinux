@@ -10213,6 +10213,12 @@ static int wlan_hdd_cfg80211_start_bss(hdd_adapter_t *pHostapdAdapter,
 
     wlan_hdd_set_sapHwmode(pHostapdAdapter);
 
+    // VIC-4147 override hw_mode to be 802.11n
+    // When using connman without hostapd, it seems that initial beacon
+    // rates are never set correctly, causing wlan_hdd_set_sapHwmode (via wlan_hdd_check_11gmode)
+    // to set the rate to eSAP_DOT11_MODE_11g_ONLY
+    pConfig->SapHw_mode = eSAP_DOT11_MODE_11n;
+
 #ifdef WLAN_FEATURE_11AC
     /* Overwrite the hostapd setting for HW mode only for 11ac.
      * This is valid only if mode is set to 11n in hostapd, sapEnable11AC
