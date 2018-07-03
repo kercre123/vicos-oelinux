@@ -41,7 +41,7 @@ static struct ev_signal sTermSig;
 void usage() {
   std::cout << "viccubetool [ -a address ] command args" << std::endl
             << "-a address Bluetooth MAC address of cube. default is first found" << std::endl
-            << "-r<rssi>   Minimum RSSI for connection. default is -100" << std::endl
+            << "-r<rssi>   Minimum RSSI for connection. default is -40" << std::endl
             << "-h         Help (this message)" << std::endl
             << std::endl
             << "commands" << std::endl

@@ -146,6 +146,7 @@ void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
   StopScan();
   if (cube_test_mode_) {
       std::cerr << "No cubes found. Restarting Scan..." << std::endl;
+      CheckCubeLimit();
       ScanForCubes();
   }
   else {
@@ -168,9 +169,16 @@ void VicCubeTool::ScanForCubes() {
   }
   stop_scan_timer_->stop();
   stop_scan_timer_->set <VicCubeTool, &VicCubeTool::ScanTimerCallback> (this);
-  stop_scan_timer_->start(cube_test_mode_ ? 10 : 2.0);
+  stop_scan_timer_->start(cube_test_mode_ ? 8 : 2.0);
 }
 
+#define MAX_SEQUENTIAL_CUBES 8
+void VicCubeTool::CheckCubeLimit() {
+  if (found_cube_count_++ > MAX_SEQUENTIAL_CUBES) {
+      std::cout << "Exiting after " << MAX_SEQUENTIAL_CUBES << " cubes" << std::endl;
+       _exit(0);
+  }
+}
 
 void VicCubeTool::OnScanResults(int error,
                           const std::vector<Anki::BluetoothDaemon::ScanResultRecord>& records)
@@ -191,6 +199,7 @@ void VicCubeTool::OnScanResults(int error,
         if (r.rssi < rssi_min_) {
           continue; //reject far away cubes
         }
+        CheckCubeLimit();
         show_text("FOUND ", lcd_ORANGE);
         show_cube_rssi(r.address, r.rssi);
       }

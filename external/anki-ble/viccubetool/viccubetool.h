@@ -24,7 +24,8 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
       , connection_id_(-1)
       , retries_(3)
       , task_executor_(new Anki::TaskExecutor(loop))
-      , rssi_min_(-100)
+      , rssi_min_(-40)
+      , found_cube_count_(0)
   {}
   ~VicCubeTool();
   void Execute();
@@ -63,6 +64,7 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   void ScanTimerCallback(ev::timer& w, int revents);
   void CubeConnectRetryTimerCallback(ev::timer& w, int revents);
   void IdleCubeConnectionTimerCallback(ev::timer& w, int revents);
+  void CheckCubeLimit(void);
 
   std::string address_;
   std::vector<std::string> args_;
@@ -79,6 +81,7 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   int connection_id_;
   int rssi_min_;
   int retries_;
+  int found_cube_count_;
   Anki::Util::CodeTimer::TimePoint connection_start_time_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
