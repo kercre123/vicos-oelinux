@@ -631,6 +631,8 @@ int victor_stop_preview(mm_camera_test_obj_t* test_obj)
     CDBG_ERROR("%s:Stop Preview failed rc=%d\n", __func__, rc);
   }
 
+  handle->stream_running = 0;
+
   return rc;
 }
 
