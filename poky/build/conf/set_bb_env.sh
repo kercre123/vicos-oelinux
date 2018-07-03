@@ -3,15 +3,6 @@
 # Generate bblayers.conf from get_bblayers.py.
 # Some convenience macros are defined to save some typing.
 # Set the build environement
-if [[ ! $(readlink $(which sh)) =~ bash ]]
-then
-  echo ""
-  echo "### ERROR: Please Change your /bin/sh symlink to point to bash. ### "
-  echo ""
-  echo "### sudo ln -sf /bin/bash /bin/sh ### "
-  echo ""
-  return 1
-fi
 
 # The SHELL variable also needs to be set to /bin/bash otherwise the build
 # will fail, use chsh to change it to bash.
