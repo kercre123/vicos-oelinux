@@ -56,16 +56,6 @@ MM_AUDIO_ENABLED_FTM := true
 MM_AUDIO_ENABLED_SAFX := true
 TARGET_USES_QCOM_MM_AUDIO := true
 
-USESECIMAGETOOL := true
-## Gensecimage generation of signed apps bootloader
-QTI_GENSECIMAGE_MSM_IDS := msm8909
-## Use signed image as default
-QTI_GENSECIMAGE_SIGNED_DEFAULT := msm8909
-#
-##SECIMAGE tool feature flags
-USES_SEC_POLICY_MULTIPLE_DEFAULT_SIGN := 1
-USES_SEC_POLICY_INTEGRITY_CHECK := 1
-
 # Enables Adreno RS driver
 OVERRIDE_RS_DRIVER := libRSDriver_adreno.so
 
