@@ -514,22 +514,24 @@ int setFocusMode(mm_camera_test_obj_t *test_obj, cam_focus_mode_type mode)
 
     rc = initBatchUpdate(test_obj);
     if (rc != MM_CAMERA_OK) {
-        LOGE("Batch camera parameter update failed\n");
+      CDBG_ERROR("%s: Batch camera parameter update failed\n", __func__);
         goto ERROR;
     }
 
     uint32_t value = mode;
-
-    if (ADD_SET_PARAM_ENTRY_TO_BATCH(test_obj->parm_buf.mem_info.data,
-            CAM_INTF_PARM_FOCUS_MODE, value)) {
-        LOGE("Focus mode parameter not added to batch\n");
-        rc = -1;
-        goto ERROR;
+    
+    rc = AddSetParmEntryToBatch(test_obj,
+				CAM_INTF_PARM_FOCUS_MODE,
+				sizeof(value),
+				&value);
+    if (rc != MM_CAMERA_OK) {
+      CDBG_ERROR("%s: Focus mode parameter not added to batch\n", __func__);
+      goto ERROR;
     }
 
     rc = commitSetBatch(test_obj);
     if (rc != MM_CAMERA_OK) {
-        LOGE("Batch parameters commit failed\n");
+      CDBG_ERROR("%s: Batch parameters commit failed\n", __func__);
         goto ERROR;
     }
 
@@ -592,6 +594,7 @@ int victor_start_preview(mm_camera_lib_handle *handle)
       return rc;
   }
 
+  cam_capability_t camera_cap;
   // Maybe this will get rid of the "Set sensor configuration" errors
   // Configure focus mode after stream starts
   rc = mm_camera_lib_get_caps(handle, &camera_cap);
@@ -610,7 +613,7 @@ int victor_start_preview(mm_camera_lib_handle *handle)
   rc = setFocusMode(&handle->test_obj, handle->current_params.af_mode);
   if (rc != MM_CAMERA_OK) {
     CDBG_ERROR("%s:autofocus error\n", __func__);
-    goto EXIT;
+    return rc;
   }
 
   handle->stream_running = 1;
@@ -630,8 +633,6 @@ int victor_stop_preview(mm_camera_test_obj_t* test_obj)
   {
     CDBG_ERROR("%s:Stop Preview failed rc=%d\n", __func__, rc);
   }
-
-  handle->stream_running = 0;
 
   return rc;
 }
@@ -884,6 +885,7 @@ int stop_camera_capture()
     case ANKI_CAM_FORMAT_YUV:
     {
       rc = victor_stop_preview(&(camera->lib_handle.test_obj));
+      camera->lib_handle.stream_running = 0;
     }
     break;
   }
