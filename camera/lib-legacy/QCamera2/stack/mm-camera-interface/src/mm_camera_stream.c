@@ -941,7 +941,7 @@ int32_t mm_stream_release(mm_stream_t *my_obj)
     }
     else
     {
-      CBDG_ERROR("%s: buf_lock is locked", __func__);
+      CDBG_ERROR("%s: buf_lock is locked", __func__);
     }
 
     if(pthread_mutex_trylock(&my_obj->cb_lock) == 0)
@@ -950,7 +950,7 @@ int32_t mm_stream_release(mm_stream_t *my_obj)
     }
     else
     {
-      CBDG_ERROR("%s: cb_lock is locked", __func__);
+      CDBG_ERROR("%s: cb_lock is locked", __func__);
     }
 
     if(pthread_mutex_trylock(&my_obj->cmd_lock) == 0)
@@ -959,7 +959,7 @@ int32_t mm_stream_release(mm_stream_t *my_obj)
     }
     else
     {
-      CBDG_ERROR("%s: cmd_lock is locked", __func__);
+      CDBG_ERROR("%s: cmd_lock is locked", __func__);
     }
 
     /* destroy mutex */
