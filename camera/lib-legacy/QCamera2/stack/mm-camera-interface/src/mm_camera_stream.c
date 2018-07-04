@@ -935,6 +935,33 @@ int32_t mm_stream_release(mm_stream_t *my_obj)
         close(my_obj->fd);
     }
 
+    if(pthread_mutex_trylock(&my_obj->buf_lock) == 0)
+    {
+      pthread_mutex_unlock(&my_obj->buf_lock);
+    }
+    else
+    {
+      CBDG_ERROR("%s: buf_lock is locked", __func__);
+    }
+
+    if(pthread_mutex_trylock(&my_obj->cb_lock) == 0)
+    {
+      pthread_mutex_unlock(&my_obj->cb_lock);
+    }
+    else
+    {
+      CBDG_ERROR("%s: cb_lock is locked", __func__);
+    }
+
+    if(pthread_mutex_trylock(&my_obj->cmd_lock) == 0)
+    {
+      pthread_mutex_unlock(&my_obj->cmd_lock);
+    }
+    else
+    {
+      CBDG_ERROR("%s: cmd_lock is locked", __func__);
+    }
+
     /* destroy mutex */
     pthread_mutex_destroy(&my_obj->buf_lock);
     pthread_mutex_destroy(&my_obj->cb_lock);
