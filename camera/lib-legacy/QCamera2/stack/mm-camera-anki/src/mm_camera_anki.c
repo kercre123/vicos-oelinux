@@ -508,62 +508,6 @@ mm_camera_channel_t * anki_mm_app_add_preview_channel(mm_camera_test_obj_t *test
     return channel;
 }
 
-int setFocusMode(mm_camera_test_obj_t *test_obj, cam_focus_mode_type mode)
-{
-    int rc = MM_CAMERA_OK;
-
-    rc = initBatchUpdate(test_obj);
-    if (rc != MM_CAMERA_OK) {
-      CDBG_ERROR("%s: Batch camera parameter update failed\n", __func__);
-        goto ERROR;
-    }
-
-    uint32_t value = mode;
-    
-    rc = AddSetParmEntryToBatch(test_obj,
-				CAM_INTF_PARM_FOCUS_MODE,
-				sizeof(value),
-				&value);
-    if (rc != MM_CAMERA_OK) {
-      CDBG_ERROR("%s: Focus mode parameter not added to batch\n", __func__);
-      goto ERROR;
-    }
-
-    rc = commitSetBatch(test_obj);
-    if (rc != MM_CAMERA_OK) {
-      CDBG_ERROR("%s: Batch parameters commit failed\n", __func__);
-        goto ERROR;
-    }
-
-ERROR:
-    return rc;
-}
-
-int mm_camera_lib_get_caps(mm_camera_lib_handle *handle,
-                           cam_capability_t *caps)
-{
-  int rc = MM_CAMERA_OK;
-
-  if ( NULL == handle ) {
-    CDBG_ERROR(" %s : Invalid handle", __func__);
-    rc = MM_CAMERA_E_INVALID_INPUT;
-    goto EXIT;
-  }
-
-  if ( NULL == caps ) {
-    CDBG_ERROR(" %s : Invalid capabilities structure", __func__);
-    rc = MM_CAMERA_E_INVALID_INPUT;
-    goto EXIT;
-  }
-
-  *caps = *( (cam_capability_t *) handle->test_obj.cap_buf.mem_info.data );
-
-EXIT:
-
-  return rc;
-}
-
-
 int victor_start_preview(mm_camera_lib_handle *handle)
 {
   mm_camera_test_obj_t* test_obj = &(handle->test_obj);
@@ -592,28 +536,6 @@ int victor_start_preview(mm_camera_lib_handle *handle)
       }
       mm_app_del_channel(test_obj, p_ch);
       return rc;
-  }
-
-  cam_capability_t camera_cap;
-  // Maybe this will get rid of the "Set sensor configuration" errors
-  // Configure focus mode after stream starts
-  rc = mm_camera_lib_get_caps(handle, &camera_cap);
-  if ( MM_CAMERA_OK != rc ) {
-    CDBG_ERROR("%s:mm_camera_lib_get_caps() err=%d\n", __func__, rc);
-    return -1;
-  }
-  if (camera_cap.supported_focus_modes_cnt == 1 &&
-    camera_cap.supported_focus_modes[0] == CAM_FOCUS_MODE_FIXED) {
-    CDBG("focus not supported");
-    handle->test_obj.focus_supported = 0;
-    handle->current_params.af_mode = CAM_FOCUS_MODE_FIXED;
-  } else {
-    handle->test_obj.focus_supported = 1;
-  }
-  rc = setFocusMode(&handle->test_obj, handle->current_params.af_mode);
-  if (rc != MM_CAMERA_OK) {
-    CDBG_ERROR("%s:autofocus error\n", __func__);
-    return rc;
   }
 
   handle->stream_running = 1;
