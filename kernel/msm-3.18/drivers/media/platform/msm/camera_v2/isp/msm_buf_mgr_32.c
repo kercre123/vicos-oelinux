@@ -280,12 +280,16 @@ static int msm_isp_buf_unprepare(struct msm_isp_buf_mgr *buf_mgr,
 	int rc = -1, i;
 	struct msm_isp_bufq *bufq = NULL;
 	struct msm_isp_buffer *buf_info = NULL;
+	unsigned long flags;
 
 	bufq = msm_isp_get_bufq(buf_mgr, buf_handle);
 	if (!bufq) {
 		pr_err("%s: Invalid bufq\n", __func__);
 		return rc;
 	}
+
+	// Other places lock bufq_lock before accessing or modifying buf_info
+	spin_lock_irqsave(&bufq->bufq_lock, flags);
 
 	for (i = 0; i < bufq->num_bufs; i++) {
 		buf_info = msm_isp_get_buf_ptr(buf_mgr, buf_handle, i);
@@ -294,18 +298,25 @@ static int msm_isp_buf_unprepare(struct msm_isp_buf_mgr *buf_mgr,
 			return rc;
 		}
 		if (buf_info->state == MSM_ISP_BUFFER_STATE_UNUSED ||
-				buf_info->state ==
-					MSM_ISP_BUFFER_STATE_INITIALIZED)
+				buf_info->state == MSM_ISP_BUFFER_STATE_INITIALIZED)
+		{
+			pr_err("%s: skipping buf in state %u\n", buf_info->state);
 			continue;
+		}
 
 		if (MSM_ISP_BUFFER_SRC_HAL == BUF_SRC(bufq->stream_id)) {
 			if (buf_info->state == MSM_ISP_BUFFER_STATE_DEQUEUED ||
-			buf_info->state == MSM_ISP_BUFFER_STATE_DIVERTED)
+					buf_info->state == MSM_ISP_BUFFER_STATE_DIVERTED) {
+				pr_err("%s: unprepare put_buf %u\n", __func__, buf_info->state);
 				buf_mgr->vb2_ops->put_buf(buf_info->vb2_buf,
 					bufq->session_id, bufq->stream_id);
+			}
 		}
 		msm_isp_unprepare_v4l2_buf(buf_mgr, buf_info);
 	}
+
+	spin_unlock_irqrestore(&bufq->bufq_lock, flags);
+	
 	return 0;
 }
 
@@ -652,6 +663,7 @@ static int msm_isp_buf_done(struct msm_isp_buf_mgr *buf_mgr,
 		buf_info->state = MSM_ISP_BUFFER_STATE_DISPATCHED;
 		spin_unlock_irqrestore(&bufq->bufq_lock, flags);
 		if (MSM_ISP_BUFFER_SRC_HAL == BUF_SRC(bufq->stream_id)) {
+			pr_err("%s: calling buf_done\n", __func__);
 			buf_info->vb2_buf->v4l2_buf.timestamp = *tv;
 			buf_info->vb2_buf->v4l2_buf.sequence  = frame_id;
 			buf_info->vb2_buf->v4l2_buf.reserved  = output_format;

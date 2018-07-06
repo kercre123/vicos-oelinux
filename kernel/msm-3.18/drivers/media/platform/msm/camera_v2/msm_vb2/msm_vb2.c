@@ -445,8 +445,10 @@ static int msm_vb2_buf_done(struct vb2_buffer *vb, int session_id,
 			vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 			msm_vb2->in_freeq = 0;
 			rc = 0;
-		} else
+		} else {
+			pr_err("%s: buf_done but not in_freeq\n", __func__);
 			rc = -EINVAL;
+		}
 	} else {
 		pr_err(" VB buffer is NULL for ses_id=%d, str_id=%d\n",
 			    session_id, stream_id);
