@@ -215,7 +215,28 @@ static void EraseGattQueueItemsByConnId(const int conn_id) {
   }
 }
 
+static int sConnIdRegisterForNotification = 0;
 
+static void DeregisterForNotifications(const int conn_id, BluetoothGattConnection& connection) {
+  for (auto & service : connection.services) {
+    for (auto & characteristic : service.characteristics) {
+      if (characteristic.registered_for_notifications) {
+        bt_bdaddr_t bda = {0};
+        bt_bdaddr_t_from_string(connection.address, &bda);
+        sConnIdRegisterForNotification = conn_id;
+        bt_status_t bt_status =
+            sBtGattInterface->client->deregister_for_notification(sBtGattClientIf,
+                                                                  &bda,
+                                                                  characteristic.char_handle);
+        if (bt_status != BT_STATUS_SUCCESS) {
+          logw("deregister_for_notification(%d, %s, %d) failed with status = %s",
+               sBtGattClientIf, bt_bdaddr_t_to_string(&bda).c_str(),
+               characteristic.char_handle);
+        }
+      }
+    }
+  }
+}
 
 static bt_status_t DisconnectOutboundConnectionById(const int conn_id)
 {
@@ -226,6 +247,7 @@ static bt_status_t DisconnectOutboundConnectionById(const int conn_id)
   bt_bdaddr_t bda = {0};
   auto search = FindOutboundConnectionById(conn_id);
   if (search != sOutboundConnections.end()) {
+    DeregisterForNotifications(conn_id, search->second.connection);
     bt_bdaddr_t_from_string(search->second.connection.address, &bda);
   }
   bt_status_t status = sBtGattInterface->client->disconnect(sBtGattClientIf, &bda, conn_id);
@@ -811,6 +833,7 @@ void btgattc_close_cb(int conn_id, int status, int clientIf, bt_bdaddr_t* bda)
   auto search = sOutboundConnections.find(address);
   if (search != sOutboundConnections.end()) {
     search->second.connection.conn_id = conn_id;
+    DeregisterForNotifications(conn_id, search->second.connection);
     if (sCallbacks.outbound_connection_cb) {
       sCallbacks.outbound_connection_cb(address, 0, search->second.connection);
     }
@@ -844,7 +867,6 @@ void btgattc_search_complete_cb(int conn_id, int status)
 }
 
 
-static int sConnIdRegisterForNotification = 0;
 void btgattc_register_for_notification_cb(int conn_id, int registered,
                                           int status, uint16_t handle)
 {
@@ -857,22 +879,17 @@ void btgattc_register_for_notification_cb(int conn_id, int registered,
     conn_id = sConnIdRegisterForNotification;
   }
   auto search = FindOutboundConnectionById(conn_id);
-  if (search == sOutboundConnections.end()) {
+  if ((search == sOutboundConnections.end()) || (bt_status != BT_STATUS_SUCCESS)) {
     (void) DisconnectOutboundConnectionById(conn_id);
     return;
   }
 
   BluetoothGattConnection& connection = search->second.connection;
-  if ((bt_status != BT_STATUS_SUCCESS) || !registered) {
-    (void) DisconnectOutboundConnectionById(conn_id);
-    return;
-  }
-
   for (auto& service : connection.services) {
     if (service.start_handle <= handle && handle <= service.end_handle) {
       for (auto& characteristic : service.characteristics) {
         if (characteristic.char_handle == handle) {
-          characteristic.registered_for_notifications = true;
+          characteristic.registered_for_notifications = (bool) registered;
         }
       }
     }
@@ -2130,6 +2147,7 @@ bool DisconnectGattPeer(int conn_id)
 
   auto search = FindOutboundConnectionById(conn_id);
   if (search != sOutboundConnections.end()) {
+    DeregisterForNotifications(conn_id, search->second.connection);
     bt_bdaddr_t bda = {0};
     bt_bdaddr_t_from_string(search->second.connection.address, &bda);
     status = sBtGattInterface->client->disconnect(sBtGattClientIf,
@@ -2157,6 +2175,7 @@ void DisconnectGattPeerByAddress(const std::string& address)
   if (search != sOutboundConnections.end()) {
     BluetoothGattConnection& connection = search->second.connection;
     conn_id = connection.conn_id;
+    DeregisterForNotifications(conn_id, connection);
     EraseGattQueueItemsByConnId(conn_id);
   }
 
