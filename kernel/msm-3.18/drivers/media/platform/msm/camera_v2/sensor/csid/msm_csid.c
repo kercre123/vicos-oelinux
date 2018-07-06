@@ -639,11 +639,13 @@ top_vreg_config_failed:
 static int msm_csid_release(struct csid_device *csid_dev)
 {
 	uint32_t irq;
-
+	pr_err("%s: called\n", __func__);
 	if (csid_dev->csid_state != CSID_POWER_UP) {
 		pr_err("%s: csid invalid state %d\n", __func__,
 			csid_dev->csid_state);
-		return -EINVAL;
+		// Pretend like things are ok 
+		// ispif does this when it is in the wrong state on release
+		return 0;
 	}
 
 	CDBG("%s:%d, hw_version = 0x%x\n", __func__, __LINE__,

@@ -1278,7 +1278,7 @@ end:
 static void msm_ispif_release(struct ispif_device *ispif)
 {
 	BUG_ON(!ispif);
-	pr_err("%s: called", __func__);
+	pr_err("%s: called\n", __func__);
 
 	if (!ispif->base) {
 		pr_err("%s: ispif base is NULL\n", __func__);
