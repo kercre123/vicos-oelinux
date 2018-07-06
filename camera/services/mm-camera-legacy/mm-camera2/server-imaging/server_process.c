@@ -253,6 +253,9 @@ serv_proc_ret_t server_process_hal_event(struct v4l2_event *event)
       ret.new_session_info.session_idx = data->session_id;
       goto process_done;
     } else {
+      ALOGE("%s: failed to create mct controller\n", __func__);
+      CDBG_ERROR("%s: failed to create mct controller\n", __func__);
+      pr_err("%s: failed to create mct controller\n", __func__);
       close(pipe_fd[0]);
       close(pipe_fd[1]);
       ret.ret_to_hal.ret_type       = SERV_RET_TO_HAL_NOTIFY_ERROR;
@@ -523,6 +526,9 @@ serv_proc_ret_t server_process_mct_msg(const int fd, const unsigned int session)
   }
     break;
   case MCT_PROCESS_RET_ERROR_MSG: {
+      ALOGE("%s: error\n", __func__);
+      CDBG_ERROR("%s: error\n", __func__);
+      pr_err("%s: error\n", __func__);
     ret.ret_to_hal.ret_type       = SERV_RET_TO_HAL_NOTIFY_ERROR;
     ret_data->session_id          = mct_ret.u.bus_msg_ret.session;
   }

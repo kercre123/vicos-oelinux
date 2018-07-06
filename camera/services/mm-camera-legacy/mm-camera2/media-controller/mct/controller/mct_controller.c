@@ -400,6 +400,7 @@ static mct_process_ret_t mct_controller_proc_bus_msg_internal(
     return ret;
   }
   if (bus_msg->type == MCT_BUS_MSG_SEND_HW_ERROR) {
+    CDBG_ERROR("%s:hw error\n",__func__);
     ret.type = MCT_PROCESS_RET_ERROR_MSG;
     return ret;
   }

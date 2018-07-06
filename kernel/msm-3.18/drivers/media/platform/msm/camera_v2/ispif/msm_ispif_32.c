@@ -1346,6 +1346,7 @@ static long msm_ispif_cmd(struct v4l2_subdev *sd, void *arg)
 		msm_ispif_io_dump_reg(ispif);
 		break;
 	case ISPIF_RELEASE:
+		pr_err("%s: releasing\n", __func__);
 		msm_ispif_release(ispif);
 		break;
 	case ISPIF_SET_VFE_INFO:
@@ -1379,6 +1380,7 @@ static long msm_ispif_subdev_ioctl(struct v4l2_subdev *sd,
 			(struct ispif_device *)v4l2_get_subdevdata(sd);
 		if (ispif && ispif->base) {
 			mutex_lock(&ispif->mutex);
+			pr_err("%s: shutdown releasing\n", __func__);
 			msm_ispif_release(ispif);
 			mutex_unlock(&ispif->mutex);
 		}
@@ -1435,7 +1437,10 @@ static int ispif_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	}
 	ispif->open_cnt--;
 	if (ispif->open_cnt == 0)
+	{
+		pr_err("%s: close releasing\n", __func__);
 		msm_ispif_release(ispif);
+	}
 end:
 	mutex_unlock(&ispif->mutex);
 	return rc;

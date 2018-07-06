@@ -821,6 +821,7 @@ static long msm_private_ioctl(struct file *file, void *fh,
 
 	case MSM_CAM_V4L2_IOCTL_NOTIFY_ERROR:
 		/* send v4l2_event to HAL next*/
+		pr_err("%s: Notify error, destroying\n", __func__);
 		msm_queue_traverse_action(msm_session_q,
 			struct msm_session, list,
 			__msm_close_destry_session_notify_apps, NULL);
@@ -903,6 +904,7 @@ int msm_post_event(struct v4l2_event *event, int timeout)
 		spin_unlock_irqrestore(&msm_eventq_lock, flags);
 		pr_err("%s : msm event queue not available Line %d\n",
 				__func__, __LINE__);
+		msm_print_event_error(event);
 		return -ENODEV;
 	}
 	spin_unlock_irqrestore(&msm_eventq_lock, flags);
@@ -956,9 +958,7 @@ int msm_post_event(struct v4l2_event *event, int timeout)
 					__func__);
 			msm_print_event_error(event);
 			mutex_unlock(&session->lock);
-			
-			pr_err("%s: no no things are fine... nothing to see here\n", __func__);
-			return 0;
+			return -EINVAL;
 		}
 	}
 
@@ -995,6 +995,7 @@ EXPORT_SYMBOL(msm_post_event);
 
 static int msm_close(struct file *filep)
 {
+	pr_err("%s: closing and destroying things", __func__);
 	int rc = 0;
 	unsigned long flags;
 	struct msm_video_device *pvdev = video_drvdata(filep);
