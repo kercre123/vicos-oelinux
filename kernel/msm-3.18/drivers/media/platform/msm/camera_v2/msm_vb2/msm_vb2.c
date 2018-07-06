@@ -170,8 +170,8 @@ static void msm_vb2_stop_stream(struct vb2_queue *q)
 	list_for_each_entry_safe(msm_vb2, temp, &(stream->queued_list),
 		list) {
 			vb2_buf = &(msm_vb2->vb2_buf);
-			// if (vb2_buf->state == VB2_BUF_STATE_DONE)
-			// 	continue;
+			if (vb2_buf->state == VB2_BUF_STATE_DONE)
+				continue;
 			vb2_buffer_done(vb2_buf, VB2_BUF_STATE_DONE);
 			msm_vb2->in_freeq = 0;
 		}
@@ -441,10 +441,8 @@ static int msm_vb2_buf_done(struct vb2_buffer *vb, int session_id,
 			vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
 			msm_vb2->in_freeq = 0;
 			rc = 0;
-		} else {
-			vb2_buffer_done(vb, VB2_BUF_STATE_ERROR);
+		} else
 			rc = -EINVAL;
-		}
 	} else {
 		pr_err(" VB buffer is NULL for ses_id=%d, str_id=%d\n",
 			    session_id, stream_id);
