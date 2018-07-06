@@ -996,6 +996,8 @@ EXPORT_SYMBOL(msm_post_event);
 static int msm_close(struct file *filep)
 {
 	pr_err("%s: closing and destroying things", __func__);
+	dump_stack();
+	
 	int rc = 0;
 	unsigned long flags;
 	struct msm_video_device *pvdev = video_drvdata(filep);
