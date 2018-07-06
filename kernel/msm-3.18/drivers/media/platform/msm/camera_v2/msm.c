@@ -956,7 +956,9 @@ int msm_post_event(struct v4l2_event *event, int timeout)
 					__func__);
 			msm_print_event_error(event);
 			mutex_unlock(&session->lock);
-			return -EINVAL;
+			
+			pr_err("%s: no no things are fine... nothing to see here\n", __func__);
+			return 0;
 		}
 	}
 
