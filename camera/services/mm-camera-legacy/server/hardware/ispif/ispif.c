@@ -145,7 +145,7 @@ int ispif_process_release(ispif_client_t *ispif_client, ispif_t *ispif_obj)
 {
   int rc = 0;
   struct ispif_cfg_data cfg;
-  CDBG("%s called %d\n", __func__,ispif_obj->ref_count);
+  CDBG_ERROR("%s called %d\n", __func__,ispif_obj->ref_count);
   cfg.cfgtype = ISPIF_RELEASE;
   if (ispif_obj->ref_count)
     return rc;

@@ -1260,8 +1260,10 @@ static int msm_ispif_init(struct ispif_device *ispif,
 	rc = msm_ispif_reset(ispif);
 	if (rc == 0) {
 		ispif->ispif_state = ISPIF_POWER_UP;
-		CDBG("%s: power up done\n", __func__);
+		pr_err("%s: power up done\n", __func__);
 		goto end;
+	} else {
+		pr_err("%s: isp power up fail %d", __func__, rc);
 	}
 
 error_ahb:
@@ -1276,6 +1278,7 @@ end:
 static void msm_ispif_release(struct ispif_device *ispif)
 {
 	BUG_ON(!ispif);
+	pr_err("%s: called", __func__);
 
 	if (!ispif->base) {
 		pr_err("%s: ispif base is NULL\n", __func__);
@@ -1536,6 +1539,7 @@ static int ispif_probe(struct platform_device *pdev)
 #endif
 	ispif->msm_sd.sd.devnode->fops = &msm_ispif_v4l2_subdev_fops;
 	ispif->pdev = pdev;
+	pr_err("%s: ispif power down\n", __func__);
 	ispif->ispif_state = ISPIF_POWER_DOWN;
 	ispif->open_cnt = 0;
 	return 0;
