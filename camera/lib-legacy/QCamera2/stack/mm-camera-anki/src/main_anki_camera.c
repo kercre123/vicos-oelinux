@@ -31,6 +31,18 @@ static void handle_signal(int signum)
   stop_server(&s_camera_server);
 }
 
+static void handler(int signum)
+{
+  printf("Sigsegv\n");
+       void* callstack[128];
+     int i, frames = backtrace(callstack, 128);
+     char** strs = backtrace_symbols(callstack, frames);
+     for (i = 0; i < frames; ++i) {
+         printf("%s\n", strs[i]);
+     }
+     free(strs);
+}
+
 void usage(char* name)
 {
   printf("usage: %s\n", name);
@@ -69,6 +81,7 @@ static void setup_signal_handler()
 int main(int argc, char* argv[])
 {
   setup_signal_handler();
+  signal(SIGSEGV, handler);
 
   char* outdir = NULL;
   uint8_t autostart_camera = 0;
