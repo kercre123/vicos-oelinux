@@ -1534,12 +1534,16 @@ mm_camera_status_t mm_camera_deinit()
   }
 
   if (g_mm_camera_intf_obj.zoom_ratio_table.p_zoom_ratio) {
+    CDBG_ERROR("%s free zoom", __func__);
     free(g_mm_camera_intf_obj.zoom_ratio_table.p_zoom_ratio);
+    CDBG_ERROR("%s freed zoom", __func__);
     g_mm_camera_intf_obj.zoom_ratio_table.p_zoom_ratio = NULL;
   }
 
   if (g_mm_camera_intf_obj.p_cam_info) {
+    CDBG_ERROR("%s free info", __func__);
     free(g_mm_camera_intf_obj.p_cam_info);
+    CDBG_ERROR("%s freed info", __func__);
     g_mm_camera_intf_obj.p_cam_info = NULL;
   }
 

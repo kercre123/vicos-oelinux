@@ -230,7 +230,7 @@ void server_t_handler(union sigval val)
 
 static void handler(int signum)
 {
-  CDBG_ERROR("Sigsegv\n");
+  printf("Sigsegv\n");
   void* callstack[128];
   int i, frames = backtrace(callstack, 128);
   char** strs = backtrace_symbols(callstack, frames);

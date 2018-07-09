@@ -113,11 +113,12 @@ inline void flush_and_destroy_queue (struct fifo_queue* queue)
   while (queue->front) {
     struct fifo_node *node = dequeue (queue);
     if (node) {
-      CDBG("flush_queue: freing the node = %x\n",
+      CDBG_ERROR("flush_queue: freing the node = %x\n",
         (uint32_t)((struct msm_frame*)node->f)->buffer);
       if (node->f)
         free(node->f);
       free (node);
+      CDBG_ERROR("%s freed", __func__);
     }
   }
   pthread_mutex_unlock(&(queue->mut));

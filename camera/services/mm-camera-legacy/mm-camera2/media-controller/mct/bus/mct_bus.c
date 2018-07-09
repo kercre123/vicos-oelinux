@@ -25,10 +25,14 @@ static boolean mct_bus_queue_free(void *data, void *user_data)
 
   if (pdata) {
     if (pdata->msg) {
+      CDBG_ERROR("%s free pdata msg", __func__);
       free(pdata->msg);
+      CDBG_ERROR("%s freed pdata msg", __func__);
       pdata->msg = NULL;
     }
+    CDBG_ERROR("%s free pdata", __func__);
     free(pdata);
+    CDBG_ERROR("%s freed pdata", __func__);
     pdata = NULL;
   }
 
@@ -362,7 +366,9 @@ static boolean msg_bus_post_msg(mct_bus_t *bus, mct_bus_msg_t *bus_msg)
   return TRUE;
 
 error_1:
+  CDBG_ERROR("%s free local msg", __func__);
   free(local_msg);
+  CDBG_ERROR("%s freed local msg", __func__);
 error_2:
   return FALSE;
 }
@@ -397,7 +403,9 @@ busmsgq_error:
   pthread_cond_destroy(&new_bus->bus_sof_init_cond);
   pthread_mutex_destroy(&new_bus->bus_sof_init_lock);
   pthread_mutex_destroy(&new_bus->bus_msg_q_lock);
+  CDBG_ERROR("%s free new bus", __func__);
   free(new_bus);
+  CDBG_ERROR("%s freed new bus", __func__);
   return NULL;
 }
 
@@ -406,8 +414,11 @@ void mct_bus_destroy(mct_bus_t *bus)
   pthread_mutex_lock(&bus->bus_msg_q_lock);
   if (!MCT_QUEUE_IS_EMPTY(bus->bus_queue))
     mct_queue_free_all(bus->bus_queue, mct_bus_queue_free);
-  else
+  else {
+    CDBG_ERROR("%s free bus queue", __func__);
     free(bus->bus_queue);
+    CDBG_ERROR("%s freed bus queue", __func__);
+  }
   bus->bus_queue = NULL;
 
   pthread_mutex_unlock(&bus->bus_msg_q_lock);
@@ -415,7 +426,9 @@ void mct_bus_destroy(mct_bus_t *bus)
   pthread_cond_destroy(&bus->bus_sof_init_cond);
   pthread_mutex_destroy(&bus->bus_sof_init_lock);
   pthread_mutex_destroy(&bus->bus_msg_q_lock);
+  CDBG_ERROR("%s free bus", __func__);
   free(bus);
+  CDBG_ERROR("%s freed bus", __func__);
   bus = NULL;
   return;
 }

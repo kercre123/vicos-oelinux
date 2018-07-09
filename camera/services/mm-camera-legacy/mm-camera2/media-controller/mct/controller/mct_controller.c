@@ -146,9 +146,13 @@ bus_error:
 start_session_error:
 servmsgq_error:
   mct_pipeline_stop_session(mct->pipeline);
+  CDBG_ERROR("%s free mct pipeline", __func__);
   free(mct->pipeline);
+  CDBG_ERROR("%s freed mct pipeline", __func__);
 pipeline_error:
+  CDBG_ERROR("%s free mct", __func__);
   free(mct);
+  CDBG_ERROR("%s freed mct pipeline", __func__);
 mct_error:
   return FALSE;
 }
@@ -211,14 +215,19 @@ boolean mct_controller_destroy(unsigned int session_idx)
   pthread_mutex_destroy(&mct->serv_msg_q_lock);
   if (!MCT_QUEUE_IS_EMPTY(mct->serv_cmd_q)) {
     mct_queue_free(mct->serv_cmd_q);
-  }else
+  }else {
+    CDBG_ERROR("%s free mct serv cmd q", __func__);
     free(mct->serv_cmd_q);
+    CDBG_ERROR("%s freed mct serv cmd q", __func__);
+  }
   mct->serv_cmd_q = NULL;
 
   mct_pipeline_stop_session(mct->pipeline);
   mct_pipeline_destroy(mct->pipeline);
   mcts = mct_list_remove(mcts, mct);
+  CDBG_ERROR("%s free mct1", __func__);
   free(mct);
+  CDBG_ERROR("%s freed mct1", __func__);
   mct = NULL;
 
   return TRUE;
@@ -496,7 +505,9 @@ static void* mct_controller_thread_run(void *data)
       pthread_mutex_unlock(&mct_this->mctl_mutex);
 
       proc_ret = mct_controller_proc_serv_msg_internal(mct_this, msg);
+      CDBG_ERROR("%s free msg", __func__);
       free(msg);
+      CDBG_ERROR("%s freed msg", __func__);
 
       mct_in.it_value.tv_sec = 0; //stop timer
       mct_in.it_value.tv_nsec = 0;
@@ -538,11 +549,17 @@ static void* mct_controller_thread_run(void *data)
       }
       proc_ret = mct_controller_proc_bus_msg_internal(mct_this, bus_msg);
 
-      if (bus_msg->msg)
+      if (bus_msg->msg) {
+        CDBG_ERROR("%s free bus_msg msg", __func__);
         free(bus_msg->msg);
+        CDBG_ERROR("%s freed bus_msg msg", __func__);
+      }
 
-      if (bus_msg)
+      if (bus_msg) {
+        CDBG_ERROR("%s free bus_msg", __func__);
         free(bus_msg);
+        CDBG_ERROR("%s freed bus_msg", __func__);
+      }
 
       if (proc_ret.type == MCT_PROCESS_RET_ERROR_MSG ||
           proc_ret.type == MCT_PROCESS_DUMP_INFO ||

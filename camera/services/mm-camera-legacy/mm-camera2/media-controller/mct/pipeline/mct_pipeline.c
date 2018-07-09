@@ -2369,11 +2369,19 @@ mct_pipeline_t* mct_pipeline_new(void)
   pipeline->pending_set_parm = malloc (ONE_MB_OF_PARAMS);
   pipeline->pending_get_parm = malloc (ONE_MB_OF_PARAMS);
   if (!pipeline->pending_set_parm || !pipeline->pending_get_parm) {
-    if (pipeline->pending_set_parm)
+    if (pipeline->pending_set_parm){
+      CDBG_ERROR("%s free pending_set_parm", __func__);
       free(pipeline->pending_set_parm);
-    if (pipeline->pending_get_parm)
+      CDBG_ERROR("%s freed pending_set_parm", __func__);
+    }
+    if (pipeline->pending_get_parm) {
+      CDBG_ERROR("%s free pending_get_parm", __func__);
       free(pipeline->pending_get_parm);
+      CDBG_ERROR("%s freed pending_get_parm", __func__);
+    }
+    CDBG_ERROR("%s free pipeline", __func__);
     free(pipeline);
+    CDBG_ERROR("%s freed pipeline", __func__);
     CDBG_ERROR("%s:mct_pipeline_new failed ",__func__);
     return NULL;
   }
@@ -2434,10 +2442,12 @@ void mct_pipeline_destroy(mct_pipeline_t *pipeline)
     close(pipeline->query_buf_fd);
   }
 
+  CDBG_ERROR("%s free mct_pipeline", __func__);
   free(pipeline->pending_set_parm);
   free(pipeline->pending_get_parm);
   MCT_OBJECT_UNLOCK(pipeline);
   free(pipeline);
+  CDBG_ERROR("%s freed mct_pipeline", __func__);
   pipeline = NULL;
   return;
 }
