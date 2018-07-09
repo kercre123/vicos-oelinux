@@ -689,6 +689,11 @@ static boolean mct_stream_find_stream_buf(void *data, void *user_data)
 {
   boolean check_index;
 
+  if(data == NULL || user_data == NULL)
+  {
+    return FALSE;
+  }
+
   check_index = (((mct_stream_map_buf_t *)data)->buf_index ==
     ((mct_serv_ds_msg_t *)user_data)->index) &&
     (((mct_stream_map_buf_t *)data)->buf_type ==
