@@ -473,7 +473,9 @@ void mct_module_remove_type(mct_module_t *module, unsigned int identity)
   if (holder && holder->data) {
     data = (mct_module_type_identity_t *)holder->data;
     module->type_list = mct_list_remove(module->type_list, data);
+    CDBG_ERROR("%s free data", __func__);
     free(data);
+    CDBG_ERROR("%s freed data", __func__);
   }
 }
 
@@ -860,7 +862,11 @@ mct_module_t* mct_module_create(const char *name)
 void mct_module_destroy(mct_module_t *module)
 {
   pthread_mutex_destroy(MCT_OBJECT_GET_LOCK(module));
+  CDBG_ERROR("%s free module name", __func__);
   free(MCT_MODULE_NAME(module));
+  CDBG_ERROR("%s freed module name", __func__);
+  CDBG_ERROR("%s free module", __func__);
   free(module);
+  CDBG_ERROR("%s freed module", __func__);
   return;
 }

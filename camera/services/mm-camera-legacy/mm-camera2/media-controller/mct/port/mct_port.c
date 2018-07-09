@@ -427,7 +427,9 @@ void mct_port_remove_child(unsigned int identity, mct_port_t *port)
   MCT_PORT_CHILDREN(port) = mct_list_remove(
     MCT_PORT_CHILDREN(port), p_identity);
   MCT_OBJECT_UNLOCK(port);
+  CDBG_ERROR("%s free p_identity", __func__);
   free(p_identity);
+  CDBG_ERROR("%s freed p_identity", __func__);
 }
 
 /** Name:
@@ -565,7 +567,9 @@ mct_port_t *mct_port_create(const char *name)
 void mct_port_destroy(mct_port_t *port)
 {
   pthread_mutex_destroy(MCT_OBJECT_GET_LOCK(port));
+  CDBG_ERROR("%s free port", __func__);
   free(MCT_PORT_NAME(port));
   free(port);
+  CDBG_ERROR("%s freed port", __func__);
   return;
 }

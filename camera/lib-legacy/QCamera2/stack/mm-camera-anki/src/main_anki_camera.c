@@ -34,13 +34,13 @@ static void handle_signal(int signum)
 static void handler(int signum)
 {
   printf("Sigsegv\n");
-       void* callstack[128];
-     int i, frames = backtrace(callstack, 128);
-     char** strs = backtrace_symbols(callstack, frames);
-     for (i = 0; i < frames; ++i) {
-         printf("%s\n", strs[i]);
-     }
-     free(strs);
+  void* callstack[128];
+  int i, frames = backtrace(callstack, 128);
+  char** strs = backtrace_symbols(callstack, frames);
+  for (i = 0; i < frames; ++i) {
+    printf("%s\n", strs[i]);
+  }
+  free(strs);
 }
 
 void usage(char* name)
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
   }
 
   if (rc == 0) {
-    rc = start_server(&s_camera_server);
+    start_server(&s_camera_server);
   }
 
   // Server runs until stop, error or timeout

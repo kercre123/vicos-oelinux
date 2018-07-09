@@ -1464,7 +1464,9 @@ unsigned int mct_stream_get_frame_number(mct_stream_t *stream,
     }
     stream->frame_num_idx_list =
       mct_list_remove(stream->frame_num_idx_list, data);
+    CDBG_ERROR("%s free data", __func__);
     free(data);
+    CDBG_ERROR("%s freed data", __func__);
   } while (1);
   return frame_number_found;
 }
@@ -1919,7 +1921,9 @@ static mct_stream_map_buf_t *mct_stream_create_buffers(
 finish:
   return buf_holder;
 error1:
+  CDBG_ERROR("%s free buf_holder", __func__);
   free(buf_holder);
+  CDBG_ERROR("%s freed buf_holder", __func__);
 error:
   return NULL;
 }
@@ -1939,7 +1943,9 @@ static boolean mct_stream_free_list_data(void *data, void *user_data)
 {
   mct_stream_frame_num_idx_map_t *entry =
     (mct_stream_frame_num_idx_map_t *)data;
+  CDBG_ERROR("%s free entry", __func__);
   free(entry);
+  CDBG_ERROR("%s freed entry", __func__);
   return TRUE;
 }
 
@@ -1979,7 +1985,9 @@ static boolean mct_stream_destroy_buffers(void *data, void *user_data)
     }
   }
 
+  CDBG_ERROR("%s free mbuf", __func__);
   free(mbuf);
+  CDBG_ERROR("%s freed mbuf", __func__);
   mbuf = NULL;
   return TRUE;
 }
@@ -2332,5 +2340,7 @@ void mct_stream_destroy(mct_stream_t *stream)
   pipeline = MCT_PIPELINE_CAST((MCT_STREAM_PARENT(stream))->data);
   mct_object_unparent(MCT_OBJECT_CAST(stream), MCT_OBJECT_CAST(pipeline));
 
+  CDBG_ERROR("%s free stream", __func__);
   free(stream);
+  CDBG_ERROR("%s freed stream", __func__);
 }

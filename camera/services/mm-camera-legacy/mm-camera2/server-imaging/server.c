@@ -228,11 +228,26 @@ void server_t_handler(union sigval val)
   sleep(1);
 }
 
+
+static void handler(int signum)
+{
+  printf("Sigsegv\n");
+  void* callstack[128];
+  int i, frames = backtrace(callstack, 128);
+  char** strs = backtrace_symbols(callstack, frames);
+  for (i = 0; i < frames; ++i) {
+    printf("%s\n", strs[i]);
+  }
+  free(strs);
+}
+
 /** main:
  *
  **/
 int main(int argc, char *argv[])
 {
+  signal(SIGSEGV, handler);
+  
   struct v4l2_event_subscription subscribe;
   struct v4l2_event              event;
 
