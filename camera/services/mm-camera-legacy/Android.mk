@@ -167,7 +167,7 @@ else
   endif
 endif
 
-#MM_DEBUG:=true
+MM_DEBUG:=true
 ifeq ($(call is-android-codename-in-list,JELLY_BEAN),true)
   mmcamera_debug_defines += -DLOGE=ALOGE
 endif
