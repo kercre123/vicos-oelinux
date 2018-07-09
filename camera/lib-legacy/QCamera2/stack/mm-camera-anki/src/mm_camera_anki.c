@@ -407,7 +407,7 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
           goto EXIT;
         }
 
-        uint8_t* inbuf = (uint8_t *)m_frame->buffer;
+        uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;;
         uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
 	
         rc = user_frame_callback_preview(inbuf,
@@ -807,6 +807,7 @@ int stop_camera_capture()
     case ANKI_CAM_FORMAT_YUV:
     {
       rc = victor_stop_preview(&(camera->lib_handle.test_obj));
+      camera->lib_handle.stream_running = 0;
     }
     break;
   }
