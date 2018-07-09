@@ -43,16 +43,16 @@ Qualcomm Technologies Proprietary and Confidential.
 #define ISP_UV_SUB_SWITCH_CNT       6
 
 #define ISP_PADDING(width, pad_bytes) (((width)+pad_bytes-1)&~(pad_bytes-1))
-/*#define ISPIF_DEBUG */
-/*#define ISPIF_UTIL_DEBUG */
-/*#define MODULE_ISPIF_DEBUG */
-/*#define PORT_ISPIF_DEBUG */
+#define ISPIF_DEBUG 
+#define ISPIF_UTIL_DEBUG 
+#define MODULE_ISPIF_DEBUG 
+#define PORT_ISPIF_DEBUG 
 
 /*Macros to enable logging */
-/*#define MODULE_ISP_DEBUG 1 */
-/*#define PORT_ISP_DEBUG 1 */
-/*#define ISP_DEBUG 1 */
-/*#define ISP_UTIL_DEBUG 1 */
+#define MODULE_ISP_DEBUG 1 
+#define PORT_ISP_DEBUG 1 
+#define ISP_DEBUG 1 
+#define ISP_UTIL_DEBUG 1 
 
 typedef enum {
   MARGIN_P_4 = 4,

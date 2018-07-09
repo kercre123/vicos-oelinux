@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
   }
 
   if (rc == 0) {
-    rc = start_server(&s_camera_server);
+    start_server(&s_camera_server);
   }
 
   // Server runs until stop, error or timeout
