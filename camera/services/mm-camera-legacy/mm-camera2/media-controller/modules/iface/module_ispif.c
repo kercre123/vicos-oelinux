@@ -237,9 +237,7 @@ error_cap:
   ispif_destroy (ispif);
 error:
   if (ispif) {
-    CDBG_ERROR("%s free ispif", __func__);
     free (ispif);
-    CDBG_ERROR("%s freed ispif", __func__);
   }
   mct_module_destroy(module_ispif);
   return NULL;
