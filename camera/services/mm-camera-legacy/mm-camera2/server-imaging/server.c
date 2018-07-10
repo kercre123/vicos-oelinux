@@ -18,7 +18,7 @@ static void my_init_hook(void);
 //static void *my_malloc_hook(size_t, const void *);
 static void my_free_hook(void*, const void*);
 
-//static void* old_free_hook;
+static void (*old_free_hook)(void *, const void*);
 
 static void my_init(void)
 {
@@ -281,7 +281,12 @@ static void handler(int signum)
  **/
 int main(int argc, char *argv[])
 {
-  my_init();
+  int res = mallopt(M_CHECK_ACTION, 3);
+  if(res == 0)
+  {
+    CDBG_ERROR("%s: mallopt failed", __func__);
+  }
+  //my_init();
 
   //signal(SIGSEGV, handler);
   //signal(SIGABRT, handler);

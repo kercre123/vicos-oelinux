@@ -69,6 +69,9 @@ CFLAGS += "-include sys/ioctl.h"
 CFLAGS += "-include time.h"
 CFLAGS += "-include sys/time.h"
 
+CFLAGS += "-g"
+CFLAGS += "-O0"
+
 LDFLAGS += "-lcutils"
 LDFLAGS += "-lglib-2.0"
 LDFLAGS += "-llog"

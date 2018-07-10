@@ -16,7 +16,7 @@ INHERIT += "recipe_sanity"
 # TOOLCHAIN
 PREFERRED_VERSION_autoconf = "2.68"
 ARM_INSTRUCTION_SET       ?= "arm"
-FULL_OPTIMIZATION          = "-O2 -fexpensive-optimizations -frename-registers -fomit-frame-pointer -ftree-vectorize "
+FULL_OPTIMIZATION          = "-fexpensive-optimizations -frename-registers -fomit-frame-pointer -ftree-vectorize "
 FULL_OPTIMIZATION          += " -Wno-error=maybe-uninitialized -finline-functions -finline-limit=64 "
 
 # These flags are taken from android build tree and can be used by recipes if needed.
