@@ -32,3 +32,6 @@ IMAGE_INSTALL += "rng-tools"
 IMAGE_INSTALL += "anki-update-engine"
 #
 IMAGE_INSTALL += "early-anim"
+#
+IMAGE_INSTALL += "lvm2"
+IMAGE_INSTALL += "securemsm"
