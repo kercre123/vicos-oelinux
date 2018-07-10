@@ -9,6 +9,8 @@ LOCAL_CFLAGS := \
   -DAMSS_VERSION=$(AMSS_VERSION) \
   $(mmcamera_debug_defines) \
   $(mmcamera_debug_cflags) \
+  -g \
+  -O0 \
   -rdynamic \
   -DMSM_CAMERA_BIONIC
 

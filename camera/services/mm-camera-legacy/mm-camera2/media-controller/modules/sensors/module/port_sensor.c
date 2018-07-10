@@ -1208,7 +1208,7 @@ boolean port_sensor_create(void *data, void *user_data)
     return FALSE;
   }
 
-  SERR1("open");
+  SERR1("open\n");
   rc = csid_module_params->func_tbl.open(
     &csid_module_params->sub_module_private,
     s_bundle->sensor_sd_name[SUB_MODULE_CSID]);
@@ -1217,7 +1217,7 @@ boolean port_sensor_create(void *data, void *user_data)
     return FALSE;
   }
 
-  SERR1("process");
+  SERR1("process\n");
   rc = csid_module_params->func_tbl.process(
     csid_module_params->sub_module_private,
     CSID_GET_VERSION, &csid_version);
@@ -1226,14 +1226,14 @@ boolean port_sensor_create(void *data, void *user_data)
     return FALSE;
   }
 
-  SERR1("close");
+  SERR1("close\n");
   csid_module_params->func_tbl.close(
     csid_module_params->sub_module_private);
 
   module_ctrl = (module_sensor_ctrl_t *)s_module->module_private;
   sensor_lib_params = s_bundle->sensor_lib_params;
 
-  SERR1("load library");
+  SERR1("load library\n");
   rc = sensor_load_library(s_bundle->sensor_info->sensor_name,
     sensor_lib_params);
   if (rc < 0) {
@@ -1241,7 +1241,7 @@ boolean port_sensor_create(void *data, void *user_data)
     return FALSE;
   }
 
-  SERR1("process2");
+  SERR1("process2\n");
   rc = module_sensor_params->func_tbl.process(s_bundle->sensor_lib_params,
     SENSOR_GET_SENSOR_PORT_INFO, &sensor_stream_info_array);
   if (rc < 0) {
@@ -1259,14 +1259,14 @@ boolean port_sensor_create(void *data, void *user_data)
     snprintf(port_name, sizeof(port_name), "%s%d",
       s_bundle->sensor_info->sensor_name, j);
 
-    SERR1("port create");
+    SERR1("port create\n");
     s_port = mct_port_create(port_name);
     if (!s_port) {
       SERR("failed");
       goto ERROR1;
     }
 
-    SERR1("malloc");
+    SERR1("malloc\n");
     sensor_src_port_cap = malloc(sizeof(sensor_src_port_cap_t));
     if (!sensor_src_port_cap) {
       SERR("failed");
@@ -1401,7 +1401,7 @@ boolean port_sensor_create(void *data, void *user_data)
     SLOW("s_port=%p event_func=%p", s_port, s_port->event_func);
     s_port->caps.u.data = (void *)sensor_src_port_cap;
 
-    SERR1("malloc2");
+    SERR1("malloc2\n");
     s_port->port_private = (module_sensor_port_data_t *)
       malloc(sizeof(module_sensor_port_data_t));
     if (!s_port->port_private) {
@@ -1410,7 +1410,7 @@ boolean port_sensor_create(void *data, void *user_data)
     }
     memset(s_port->port_private, 0, sizeof(module_sensor_port_data_t));
 
-    SERR1("add port");
+    SERR1("add port\n");
     ret = mct_module_add_port(s_module, s_port);
     if (ret == FALSE) {
       SERR("failed");
@@ -1418,17 +1418,17 @@ boolean port_sensor_create(void *data, void *user_data)
     }
   }
 
-  SERR1("unload");
+  SERR1("unload\n");
   sensor_unload_library(s_bundle->sensor_lib_params);
   SLOW("Exit");
-  SERR1("exit");
+  SERR1("exit\n");
   return TRUE;
 ERROR2:
-  SERR1("port destroy");
+  SERR1("port destroy\n");
   mct_port_destroy(s_port);
 ERROR1:
-  SERR1("unload2");
+  SERR1("unload2\n");
   sensor_unload_library(s_bundle->sensor_lib_params);
-  SERR1("failed");
+  SERR1("failed\n");
   return FALSE;
 }
