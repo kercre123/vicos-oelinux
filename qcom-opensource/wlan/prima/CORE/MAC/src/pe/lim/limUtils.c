@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1137,6 +1137,9 @@ limCleanupMlm(tpAniSirGlobal pMac)
 
         tx_timer_deactivate(&pMac->lim.limTimers.gLimActiveToPassiveChannelTimer);
         tx_timer_delete(&pMac->lim.limTimers.gLimActiveToPassiveChannelTimer);
+
+        tx_timer_deactivate(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
+        tx_timer_delete(&pMac->lim.limTimers.g_lim_ap_ecsa_timer);
 
         pMac->lim.gLimTimersCreated = 0;
     }
@@ -2733,6 +2736,42 @@ void limProcessChannelSwitchTimeout(tpAniSirGlobal pMac)
 }
 
 /**
+ * lim_process_ecsa_ie()- Process ECSA IE in beacon/ probe resp
+ * @mac_ctx: pointer to global mac structure
+ * @ecsa_ie: ecsa ie
+ * @session: Session entry.
+ *
+ * This function is called when ECSA IE is received on STA interface.
+ *
+ * Return: void
+ */
+static void
+lim_process_ecsa_ie(tpAniSirGlobal mac_ctx,
+     tDot11fIEext_chan_switch_ann *ecsa_ie, tpPESession session)
+{
+    struct ecsa_frame_params ecsa_req;
+
+    limLog(mac_ctx, LOG1, FL("Received ECSA IE in beacon/probe resp"));
+
+    if (session->currentOperChannel == ecsa_ie->new_channel) {
+        limLog(mac_ctx, LOGE, FL("New channel %d is same as old channel ignore req"),
+               ecsa_ie->new_channel);
+        return;
+    }
+
+    ecsa_req.new_channel = ecsa_ie->new_channel;
+    ecsa_req.op_class = ecsa_ie->new_reg_class;
+    ecsa_req.switch_mode = ecsa_ie->switch_mode;
+    ecsa_req.switch_count = ecsa_ie->switch_count;
+    limLog(mac_ctx, LOG1, FL("New channel %d op class %d switch mode %d switch count %d"),
+           ecsa_req.new_channel, ecsa_req.op_class,
+           ecsa_req.switch_mode, ecsa_req.switch_count);
+
+    lim_handle_ecsa_req(mac_ctx, &ecsa_req, session);
+}
+
+
+/**
  * limUpdateChannelSwitch()
  *
  *FUNCTION:
@@ -2755,6 +2794,9 @@ limUpdateChannelSwitch(struct sAniSirGlobal *pMac,  tpSirProbeRespBeacon pBeacon
 #ifdef WLAN_FEATURE_11AC
     tDot11fIEWiderBWChanSwitchAnn    *pWiderChnlSwitch;
 #endif
+   if (pBeacon->ecsa_present)
+       return lim_process_ecsa_ie(pMac,
+                                  &pBeacon->ext_chan_switch_ann, psessionEntry);
 
     beaconPeriod = psessionEntry->beaconParams.beaconInterval;
 
@@ -2802,28 +2844,28 @@ limUpdateChannelSwitch(struct sAniSirGlobal *pMac,  tpSirProbeRespBeacon pBeacon
          */
         if (psessionEntry->htSupportedChannelWidthSet)
         {
-            if (pBeacon->extChannelSwitchPresent)
+            if (pBeacon->sec_chan_offset_present)
             {
-                if ((pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) || 
-                    (pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
+                if ((pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) ||
+                    (pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
                 {
                     psessionEntry->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
-                    psessionEntry->gLimChannelSwitch.secondarySubBand = pBeacon->extChannelSwitchIE.secondaryChannelOffset;
+                    psessionEntry->gLimChannelSwitch.secondarySubBand = pBeacon->sec_chan_offset.secondaryChannelOffset;
                 }
 #ifdef WLAN_FEATURE_11AC
                 if(psessionEntry->vhtCapability && pBeacon->WiderBWChanSwitchAnnPresent)
                 {
                     if (pWiderChnlSwitch->newChanWidth == WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ)
                     {
-                        if(pBeacon->extChannelSwitchPresent)
+                        if(pBeacon->sec_chan_offset_present)
                         {
-                            if ((pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) ||
-                                (pBeacon->extChannelSwitchIE.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
+                            if ((pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_LOW_PRIMARY) ||
+                                (pBeacon->sec_chan_offset.secondaryChannelOffset == PHY_DOUBLE_CHANNEL_HIGH_PRIMARY))
                             {
                                 psessionEntry->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
                                 psessionEntry->gLimChannelSwitch.secondarySubBand = limGet11ACPhyCBState(pMac, 
                                                                                                          psessionEntry->gLimChannelSwitch.primaryChannel,
-                                                                                                         pBeacon->extChannelSwitchIE.secondaryChannelOffset,
+                                                                                                         pBeacon->sec_chan_offset.secondaryChannelOffset,
                                                                                                          pWiderChnlSwitch->newCenterChanFreq0,
                                                                                                          psessionEntry);
                             }
@@ -2849,6 +2891,118 @@ limUpdateChannelSwitch(struct sAniSirGlobal *pMac,  tpSirProbeRespBeacon pBeacon
         psessionEntry->gLimChannelSwitch.switchCount,
         psessionEntry->gLimChannelSwitch.switchTimeoutValue);
     return;
+}
+
+/**
+ * lim_select_cbmode()- select cb mode for the channel and BW
+ * @sta_ds: peer sta
+ * @channel: channel
+ * @chan_bw: BW
+ *
+ * Return: cb mode for a channel and BW
+ */
+static inline int lim_select_cbmode(tDphHashNode *sta_ds, uint8_t channel,
+       uint8_t chan_bw)
+{
+    if (sta_ds->mlmStaContext.vhtCapability && chan_bw) {
+        if (channel== 36 || channel == 52 || channel == 100 ||
+            channel == 116 || channel == 149)
+           return PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_LOW;
+        else if (channel == 40 || channel == 56 || channel == 104 ||
+             channel == 120 || channel == 153)
+           return PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_LOW;
+        else if (channel == 44 || channel == 60 || channel == 108 ||
+                 channel == 124 || channel == 157)
+           return PHY_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_HIGH;
+        else if (channel == 48 || channel == 64 || channel == 112 ||
+             channel == 128 || channel == 161)
+            return PHY_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_HIGH;
+        else if (channel == 165)
+            return PHY_SINGLE_CHANNEL_CENTERED;
+    } else if (sta_ds->mlmStaContext.htCapability) {
+        if (channel== 40 || channel == 48 || channel == 56 ||
+             channel == 64 || channel == 104 || channel == 112 ||
+             channel == 120 || channel == 128 || channel == 136 ||
+             channel == 144 || channel == 153 || channel == 161)
+           return PHY_DOUBLE_CHANNEL_HIGH_PRIMARY;
+        else if (channel== 36 || channel == 44 || channel == 52 ||
+             channel == 60 || channel == 100 || channel == 108 ||
+             channel == 116 || channel == 124 || channel == 132 ||
+             channel == 140 || channel == 149 || channel == 157)
+           return PHY_DOUBLE_CHANNEL_LOW_PRIMARY;
+        else if (channel == 165)
+           return PHY_SINGLE_CHANNEL_CENTERED;
+    }
+    return PHY_SINGLE_CHANNEL_CENTERED;
+}
+
+void lim_handle_ecsa_req(tpAniSirGlobal mac_ctx, struct ecsa_frame_params *ecsa_req,
+              tpPESession session)
+{
+   offset_t ch_offset;
+   tpDphHashNode sta_ds = NULL ;
+   uint16_t aid = 0;
+
+   if (!LIM_IS_STA_ROLE(session)) {
+       limLog(mac_ctx, LOGE, FL("Session not in sta role"));
+       return;
+   }
+
+   sta_ds = dphLookupHashEntry(mac_ctx, session->bssId, &aid,
+                               &session->dph.dphHashTable);
+   if (!sta_ds) {
+       limLog(mac_ctx, LOGE, FL("pStaDs does not exist for given sessionID"));
+       return;
+   }
+
+   session->gLimChannelSwitch.primaryChannel = ecsa_req->new_channel;
+   session->gLimChannelSwitch.switchCount = ecsa_req->switch_count;
+   session->gLimChannelSwitch.switchTimeoutValue =
+            SYS_MS_TO_TICKS(session->beaconParams.beaconInterval) *
+            ecsa_req->switch_count;
+   session->gLimChannelSwitch.switchMode = ecsa_req->switch_mode;
+
+   /* Only primary channel switch element is present */
+   session->gLimChannelSwitch.state = eLIM_CHANNEL_SWITCH_PRIMARY_ONLY;
+   session->gLimChannelSwitch.secondarySubBand = PHY_SINGLE_CHANNEL_CENTERED;
+   session->gLimWiderBWChannelSwitch.newChanWidth = 0;
+
+   ch_offset = limGetOffChMaxBwOffsetFromChannel(
+                       mac_ctx->scan.countryCodeCurrent,
+                       ecsa_req->new_channel,
+                       sta_ds->mlmStaContext.vhtCapability);
+   if (ch_offset == BW80) {
+       session->gLimWiderBWChannelSwitch.newChanWidth =
+                                  WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ;
+   } else {
+       session->gLimWiderBWChannelSwitch.newChanWidth =
+                                   WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ;
+   }
+
+   /*
+    * Do not bother to look and operate on extended channel switch element
+    * if our own channel-bonding state is not enabled
+    */
+   if (session->htSupportedChannelWidthSet) {
+       session->gLimChannelSwitch.secondarySubBand = lim_select_cbmode(sta_ds,
+                                ecsa_req->new_channel,
+                                session->gLimWiderBWChannelSwitch.newChanWidth);
+       if (session->gLimChannelSwitch.secondarySubBand > 0)
+              session->gLimChannelSwitch.state =
+                                     eLIM_CHANNEL_SWITCH_PRIMARY_AND_SECONDARY;
+   }
+
+   if (eSIR_SUCCESS != limStartChannelSwitch(mac_ctx, session)) {
+       limLog(mac_ctx, LOGW, FL("Could not start Channel Switch"));
+   }
+
+   limLog(mac_ctx, LOG1,
+        FL("session %d primary chl %d, subband %d, count  %d (%d ticks) "),
+        session->peSessionId,
+        session->gLimChannelSwitch.primaryChannel,
+        session->gLimChannelSwitch.secondarySubBand,
+        session->gLimChannelSwitch.switchCount,
+        session->gLimChannelSwitch.switchTimeoutValue);
 }
 
 /**
@@ -3462,15 +3616,16 @@ void limSwitchPrimarySecondaryChannel(tpAniSirGlobal pMac, tpPESession psessionE
             psessionEntry->currentOperChannel, newChannel);
         psessionEntry->currentOperChannel = newChannel;
     }
-    if (psessionEntry->htSecondaryChannelOffset != subband)
+    if (psessionEntry->htSecondaryChannelOffset != limGetHTCBState(subband))
     {
         limLog(pMac, LOGW,
             FL("switch old sec chnl %d --> new sec chnl %d "),
-            psessionEntry->htSecondaryChannelOffset, subband);
-        psessionEntry->htSecondaryChannelOffset = subband;
+            psessionEntry->htSecondaryChannelOffset, limGetHTCBState(subband));
+        psessionEntry->htSecondaryChannelOffset = limGetHTCBState(subband);
         if (psessionEntry->htSecondaryChannelOffset == PHY_SINGLE_CHANNEL_CENTERED)
         {
             psessionEntry->htSupportedChannelWidthSet = WNI_CFG_CHANNEL_BONDING_MODE_DISABLE;
+            psessionEntry->apCenterChan = 0;
         }
         else
         {
@@ -3478,6 +3633,18 @@ void limSwitchPrimarySecondaryChannel(tpAniSirGlobal pMac, tpPESession psessionE
         }
         psessionEntry->htRecommendedTxWidthSet = psessionEntry->htSupportedChannelWidthSet;
     }
+
+    if (psessionEntry->htSecondaryChannelOffset == PHY_SINGLE_CHANNEL_CENTERED)
+        return;
+
+    if (subband > PHY_DOUBLE_CHANNEL_HIGH_PRIMARY)
+        psessionEntry->apCenterChan =
+               limGetCenterChannel(pMac, newChannel,
+                                   subband, WNI_CFG_VHT_CHANNEL_WIDTH_80MHZ);
+    else
+        psessionEntry->apCenterChan =
+               limGetCenterChannel(pMac, newChannel,
+                                   subband, WNI_CFG_VHT_CHANNEL_WIDTH_20_40MHZ);
 
     return;
 }
@@ -5871,29 +6038,6 @@ void limDelAllBASessions(tpAniSirGlobal pMac)
             limDeleteBASessions(pMac, pSessionEntry, BA_BOTH_DIRECTIONS,
                                 eSIR_MAC_UNSPEC_FAILURE_REASON);
         }
-    }
-}
-
-/** -------------------------------------------------------------
-\fn     limDelAllBASessionsBtc
-\brief  Deletes all the exisitng BA receipent sessions in 2.4GHz
-        band.
-\param  tpAniSirGlobal pMac
-\return None
--------------------------------------------------------------*/
-
-void limDelPerBssBASessionsBtc(tpAniSirGlobal pMac)
-{
-    tANI_U8 sessionId;
-    tpPESession pSessionEntry;
-    pSessionEntry = peFindSessionByBssid(pMac,pMac->btc.btcBssfordisableaggr,
-                                                                &sessionId);
-    if (pSessionEntry)
-    {
-        PELOGW(limLog(pMac, LOGW,
-        "Deleting the BA for session %d as host got BTC event", sessionId);)
-        limDeleteBASessions(pMac, pSessionEntry, BA_BOTH_DIRECTIONS,
-                            eSIR_MAC_PEER_TIMEDOUT_REASON);
     }
 }
 
@@ -8577,6 +8721,7 @@ eHalStatus limAssocRspTxCompleteCnf(tpAniSirGlobal pMac, void *pData)
                 pNode, &pNext );
         pNode = pNext;
         pNext = NULL;
+        tmp_tx_context = NULL;
       }
       else
       {
@@ -8586,7 +8731,7 @@ eHalStatus limAssocRspTxCompleteCnf(tpAniSirGlobal pMac, void *pData)
       }
     }
 
-    if (!tmp_tx_context) {
+    if (!pNode) {
         limLog(pMac, LOGE, FL("context is NULL"));
         return eHAL_STATUS_SUCCESS;
     }
@@ -8735,6 +8880,7 @@ _sap_offload_parse_assoc_req(tpAniSirGlobal pmac,
     tSirRetStatus status;
     tpDphHashNode sta_ds = NULL;
     uint8_t *frame_body = NULL;
+    uint32_t data_len;
 
     tpPESession session_entry = limIsApSessionActive(pmac);
 
@@ -8744,16 +8890,31 @@ _sap_offload_parse_assoc_req(tpAniSirGlobal pmac,
             return NULL;
     }
 
+    if (add_sta_req->data_len <= sizeof(tSirMacMgmtHdr))
+    {
+        limLog(pmac, LOGE, FL("insufficient length of assoc request"));
+        return NULL;
+    }
+
     /* Update Attribute and Remove IE for
      * Software AP Authentication Offload
      */
     frame_body = (tANI_U8 *)add_sta_req->bufp;
+
+    /*
+     * strip MAC mgmt header before passing buf to
+     * sirConvertAssocReqFrame2Struct() as this API
+     * expects buf starting from fixed parameters only.
+     */
+    frame_body += sizeof(tSirMacMgmtHdr);
+    data_len = add_sta_req->data_len - sizeof(tSirMacMgmtHdr);
+
     mac_assoc_req = (tpSirMacAssocReqFrame)frame_body;
     mac_assoc_req->capabilityInfo.privacy = 0;
 
     status = sirConvertAssocReqFrame2Struct(pmac,
             frame_body,
-            add_sta_req->data_len,
+            data_len,
             assoc_req);
     if (status != eSIR_SUCCESS)
     {
@@ -8884,6 +9045,11 @@ _sap_offload_parse_sta_vht(tpAniSirGlobal pmac,
         tpSirAssocReq assoc_req)
 {
     tpPESession session_entry = limIsApSessionActive(pmac);
+    if (session_entry == NULL)
+    {
+        limLog(pmac, LOGE, FL("Invalid Session Entry"));
+        goto error;
+    }
 
     if (IS_DOT11_MODE_HT(session_entry->dot11mode) &&
             assoc_req->HTCaps.present && assoc_req->wmeInfoPresent)
@@ -9008,7 +9174,11 @@ static void
     tHalBitVal qos_mode;
     tHalBitVal wsm_mode, wme_mode;
     tpPESession session_entry = limIsApSessionActive(pmac);
-
+    if (session_entry == NULL)
+    {
+        limLog(pmac, LOGE, FL("Invalid Session Entry"));
+        return;
+    }
     limGetQosMode(session_entry, &qos_mode);
     sta_ds->qosMode    = eANI_BOOLEAN_FALSE;
     sta_ds->lleEnabled = eANI_BOOLEAN_FALSE;
@@ -9250,4 +9420,20 @@ int peFindBssIdxFromSmeSessionId(tpAniSirGlobal pMac, tANI_U8 sme_sessionId)
 
     limLog(pMac, LOG4, FL("Session lookup fails for sme_sessionId: "));
     return(0xFF);
+}
+void limStaDelBASession(tpAniSirGlobal pMac)
+{
+    tANI_U32 i;
+    tpPESession pSessionEntry;
+
+    for (i = 0; i < pMac->lim.maxBssId; i++)
+    {
+        pSessionEntry = peFindSessionBySessionId(pMac, i);
+        if (pSessionEntry &&
+            pSessionEntry->limSystemRole == eLIM_STA_ROLE)
+        {
+            limDeleteBASessions(pMac, pSessionEntry, BA_BOTH_DIRECTIONS,
+                                eSIR_MAC_UNSPEC_FAILURE_REASON);
+        }
+    }
 }

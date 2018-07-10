@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -230,6 +230,9 @@ sme_SetLinkLayerStatsIndCB
 
 
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
+
+void sme_set_vowifi_mode(tpAniSirGlobal pMac, bool enable);
+void sme_set_qpower(tpAniSirGlobal pMac, uint8_t enable);
 
 #ifdef WLAN_FEATURE_EXTSCAN
 /* ---------------------------------------------------------------------------
@@ -762,6 +765,9 @@ tCsrScanResultInfo *sme_ScanResultGetNext(tHalHandle,
     \return eHalStatus     
   ---------------------------------------------------------------------------*/
 eHalStatus sme_ScanResultPurge(tHalHandle hHal, tScanResultHandle hScanResult);
+
+VOS_STATUS sme_update_channel_list(tpAniSirGlobal pMac);
+
 
 /* ---------------------------------------------------------------------------
     \fn sme_ScanGetPMKIDCandidateList
@@ -3566,7 +3572,8 @@ eCsrPhyMode sme_GetPhyMode(tHalHandle hHal);
 /*
  * SME API to determine the channel bonding mode
  */
-VOS_STATUS sme_SelectCBMode(tHalHandle hHal, eCsrPhyMode eCsrPhyMode, tANI_U8 channel);
+VOS_STATUS sme_SelectCBMode(tHalHandle hHal, eCsrPhyMode eCsrPhyMode,
+                            tANI_U8 channel, enum eSirMacHTChannelWidth max_bw);
 
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
 /*--------------------------------------------------------------------------
@@ -4009,4 +4016,64 @@ eHalStatus sme_get_nud_debug_stats(tHalHandle hHal,
                                pgetArpStatsParams pGetStatsParam);
 eHalStatus sme_del_sta_ba_session_req(tHalHandle hHal,
                                       tDelBaParams sta_del_params);
+/**
+ * sme_roam_csa_ie_request() - request CSA IE transmission from PE
+ * @hal: handle returned by mac_open
+ * @bssid: SAP bssid
+ * @new_chan: target channel information
+ * @phy_mode: SAP phymode
+ * @sme_session_id: sme session id
+ *
+ * Return: VOS_STATUS
+ */
+VOS_STATUS sme_roam_csa_ie_request(tHalHandle hal, tCsrBssid bssid,
+                                   uint8_t new_chan, uint32_t phy_mode,
+                                   uint8_t sme_session_id);
+
+/**
+ * sme_roam_channel_change_req() - Channel change to new target channel
+ * @hal: handle returned by mac_open
+ * @bssid: SAP bssid
+ * @new_chan: target channel information
+ * @profile: roam profile
+ * @sme_session_id: sme session id
+ *
+ * API to Indicate Channel change to new target channel
+ *
+ * Return: VOS_STATUS
+ */
+VOS_STATUS sme_roam_channel_change_req(tHalHandle hal, tCsrBssid bssid,
+                                   uint8_t new_chan, tCsrRoamProfile *profile,
+                                   uint8_t sme_session_id);
+/**
+ * sme_get_connect_strt_time() - get the connection start time
+ * @hal: hal context
+ * @session_id: session id
+ *
+ * Return: void.
+ */
+v_TIME_t sme_get_connect_strt_time(tHalHandle hal,
+                                              uint8_t session_id);
+
+
+/**
+ * sme_get_cb_phy_mode_from_cb_ini_mode() - convert ini CB value to Phy CB val
+ * @cb_ini_value: ini value of cb mode
+ *
+ * Return: phy CB val
+ */
+static inline ePhyChanBondState
+sme_get_cb_phy_mode_from_cb_ini_mode(uint32_t cb_ini_value)
+{
+   return csrConvertCBIniValueToPhyCBState(cb_ini_value);
+}
+
+/**
+ * sme_request_imps() - Send IMPS request
+ * @hal: hal context
+ *
+ * Return: void
+ */
+void sme_request_imps(tHalHandle hal);
+
 #endif //#if !defined( __SME_API_H )

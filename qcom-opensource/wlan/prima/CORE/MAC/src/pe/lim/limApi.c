@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -712,6 +712,16 @@ limInitAssocRspCompletiontionList(tpAniSirGlobal pMac)
 static void
 limDestroyAssocRspCompletiontionList(tpAniSirGlobal pMac)
 {
+    assoc_rsp_tx_context *pAssocRspCtx;
+
+    while(vos_list_remove_front(&pMac->assoc_rsp_completion_list,
+           (vos_list_node_t**)&pAssocRspCtx) == VOS_STATUS_SUCCESS)
+    {
+        VOS_TRACE(VOS_MODULE_ID_PE, VOS_TRACE_LEVEL_INFO,
+                  FL("Fixing leak! Deallocating pAssocRspCtx node %lu"),
+                      (unsigned long)pAssocRspCtx);
+        vos_mem_free(pAssocRspCtx);
+    }
     vos_list_destroy(&pMac->assoc_rsp_completion_list);
 }
 
@@ -1396,6 +1406,7 @@ VOS_STATUS peHandleMgmtFrame( v_PVOID_t pvosGCtx, v_PVOID_t vosBuff)
     vos_pkt_t      *pVosPkt;
     VOS_STATUS      vosStatus;
     v_U8_t         *pRxPacketInfo;
+    tANI_U16        frameLen;
 
     pVosPkt = (vos_pkt_t *)vosBuff;
     if (NULL == pVosPkt)
@@ -1419,6 +1430,12 @@ VOS_STATUS peHandleMgmtFrame( v_PVOID_t pvosGCtx, v_PVOID_t vosBuff)
         return VOS_STATUS_E_FAILURE;
     }
 
+    frameLen = WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo);
+    if (frameLen > WDA_MAX_MGMT_MPDU_LEN) {
+        PELOG1(limLog(pMac, LOG1, FL("Dropping frame of len %d"), frameLen));
+        vos_pkt_return_packet(pVosPkt);
+        return VOS_STATUS_E_FAILURE;
+    }
 
     //
     //  The MPDU header is now present at a certain "offset" in
@@ -1428,7 +1445,7 @@ VOS_STATUS peHandleMgmtFrame( v_PVOID_t pvosGCtx, v_PVOID_t vosBuff)
     if(mHdr->fc.type == SIR_MAC_MGMT_FRAME) 
     {
     PELOG1(limLog( pMac, LOG1,
-       FL ( "RxBd=%p mHdr=%p Type: %d Subtype: %d  Sizes:FC%d Mgmt%d"),
+       FL ( "RxBd=%pK mHdr=%pK Type: %d Subtype: %d  Sizes:FC%d Mgmt%d"),
        pRxPacketInfo, mHdr, mHdr->fc.type, mHdr->fc.subType, sizeof(tSirMacFrameCtl), sizeof(tSirMacMgmtHdr) );)
 
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD

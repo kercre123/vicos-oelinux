@@ -320,6 +320,8 @@ typedef struct sPESession           // Added to Support BT-AMP
     /* *********************11H related*****************************/
     //tANI_U32           gLim11hEnable;
     tLimSpecMgmtInfo   gLimSpecMgmt;
+    bool include_ecsa_ie;
+    bool include_wide_ch_bw_ie;
     // CB Primary/Secondary Channel Switch Info
     tLimChannelSwitchInfo  gLimChannelSwitch;
     /* *********************End 11H related*****************************/
@@ -369,6 +371,7 @@ typedef struct sPESession           // Added to Support BT-AMP
     tDot11fIEHTInfo ht_operation;
     tDot11fIEVHTOperation vht_operation;
     bool force_24ghz_in_ht20;
+    int8_t def_max_tx_pwr;
 }tPESession, *tpPESession;
 
 #define LIM_MAX_ACTIVE_SESSIONS 4

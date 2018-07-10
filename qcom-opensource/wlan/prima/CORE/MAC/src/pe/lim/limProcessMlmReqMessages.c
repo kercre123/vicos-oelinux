@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -176,6 +176,7 @@ limProcessMlmReqMessages(tpAniSirGlobal pMac, tpSirMsgQ Msg)
                                             break;
         case SIR_LIM_DISASSOC_ACK_TIMEOUT:  limProcessDisassocAckTimeout(pMac); break;
         case SIR_LIM_DEAUTH_ACK_TIMEOUT:    limProcessDeauthAckTimeout(pMac); break;
+        case SIR_LIM_SAP_ECSA_TIMEOUT:      lim_process_ap_ecsa_timeout(pMac);break;
         case LIM_MLM_ADDBA_REQ:             limProcessMlmAddBAReq( pMac, Msg->bodyptr ); break;
         case LIM_MLM_ADDBA_RSP:             limProcessMlmAddBARsp( pMac, Msg->bodyptr ); break;
         case LIM_MLM_DELBA_REQ:             limProcessMlmDelBAReq( pMac, Msg->bodyptr ); break;
@@ -285,7 +286,7 @@ limSuspendLink(tpAniSirGlobal pMac, tSirLinkTrafficCheck trafficCheck,  SUSPEND_
    if( pMac->lim.gpLimSuspendCallback ||
        pMac->lim.gLimSystemInScanLearnMode )
    {
-      limLog( pMac, LOGE, FL("Something is wrong, SuspendLinkCbk:%p "
+      limLog( pMac, LOGE, FL("Something is wrong, SuspendLinkCbk:%pK "
               "IsSystemInScanLearnMode:%d"), pMac->lim.gpLimSuspendCallback,
                pMac->lim.gLimSystemInScanLearnMode );
       callback( pMac, eHAL_STATUS_FAILURE, data ); 
@@ -523,6 +524,16 @@ void limContinuePostChannelScan(tpAniSirGlobal pMac)
 
             // Initialize max timer too
             limDeactivateAndChangeTimer(pMac, eLIM_MAX_CHANNEL_TIMER);
+            if (tx_timer_activate(&pMac->lim.limTimers.gLimMaxChannelTimer) !=
+                                                                     TX_SUCCESS)
+            {
+                limLog(pMac, LOGE, FL("could not start max channel timer"));
+                limDeactivateAndChangeTimer(pMac, eLIM_MIN_CHANNEL_TIMER);
+                limDeactivateAndChangeTimer(pMac, eLIM_MAX_CHANNEL_TIMER);
+                limSendHalEndScanReq(pMac, channelNum,
+                                     eLIM_HAL_END_SCAN_WAIT_STATE);
+                return;
+            }
 #if defined WLAN_FEATURE_VOWIFI
         }
            else
@@ -3517,6 +3528,96 @@ void limProcessDeauthAckTimeout(tpAniSirGlobal pMac)
     limSendDeauthCnf(pMac);
 }
 
+void lim_process_ap_ecsa_timeout(tpAniSirGlobal mac_ctx)
+{
+    tSirMsgQ msg = {0};
+    struct sir_ecsa_ie_complete_ind *ecsa_ie_cmp_ind;
+    tpPESession session;
+
+    session = peFindSessionBySessionId(mac_ctx,
+                        mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId);
+
+    if(!session)
+    {
+      limLog(mac_ctx, LOGE, FL("session does not exist for given sessionId %d"),
+             mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId);
+      return;
+    }
+    limLog(mac_ctx, LOG1, FL("session id %d switch count %d"),
+           mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId,
+           session->gLimChannelSwitch.switchCount);
+    /*
+     * For each beacon interval decrement switch count to use proper value
+     * in probe resp sent by host. Once it becomes 0 send tx complete
+     * indication to SME.
+     */
+    if (session->gLimChannelSwitch.switchCount > 0) {
+        session->gLimChannelSwitch.switchCount--;
+        lim_send_chan_switch_action_frame(mac_ctx,
+                 session->gLimChannelSwitch.primaryChannel, session);
+        mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer.sessionId =
+                                             session->peSessionId;
+        limDeactivateAndChangeTimer(mac_ctx, eLIM_AP_ECSA_TIMER);
+
+        if (tx_timer_activate(&mac_ctx->lim.limTimers.g_lim_ap_ecsa_timer) !=
+            TX_SUCCESS)
+        {
+           limLog(mac_ctx, LOGE, FL("Couldn't activate g_lim_ap_ecsa_timer"));
+           lim_process_ap_ecsa_timeout(mac_ctx);
+        }
+        return;
+    }
+
+    session->include_ecsa_ie = false;
+    session->include_wide_ch_bw_ie = false;
+
+    ecsa_ie_cmp_ind = vos_mem_malloc(sizeof(*ecsa_ie_cmp_ind));
+    if(!ecsa_ie_cmp_ind)
+    {
+      limLog(mac_ctx, LOGE, FL("failed to allocate ecsa_ie_cmp_ind"));
+      return;
+    }
+    ecsa_ie_cmp_ind->session_id = session->smeSessionId;
+
+    msg.type = eWNI_SME_ECSA_IE_BEACON_COMP_IND;
+    msg.bodyptr = ecsa_ie_cmp_ind;
+    limSysProcessMmhMsgApi(mac_ctx, &msg, ePROT);
+    return;
+}
+
+void lim_send_sme_ap_channel_switch_resp(tpAniSirGlobal mac_ctx,
+          tpPESession session, tpSwitchChannelParams chan_params)
+{
+   tSirMsgQ msg = {0};
+   struct sir_channel_chanege_rsp *params;
+
+   params = vos_mem_malloc(sizeof(*params));
+   if (!params) {
+       limLog(mac_ctx, LOGE, FL("AllocateMemory failed for pSmeSwithChnlParams"));
+       return;
+   }
+
+   params->sme_session_id = session->smeSessionId;
+   params->new_channel = chan_params->channelNumber;
+   params->status = chan_params->status;
+
+   msg.type = eWNI_SME_ECSA_CHAN_CHANGE_RSP;
+   msg.bodyptr = params;
+   msg.bodyval = 0;
+   limSysProcessMmhMsgApi(mac_ctx, &msg, ePROT);
+
+   if (chan_params->channelNumber == session->currentOperChannel) {
+       limApplyConfiguration(mac_ctx, session);
+       limSendBeaconInd(mac_ctx, session);
+   } else {
+       limLog(mac_ctx, LOGE, FL("channel switch resp chan %d and session channel doesnt match %d"),
+              chan_params->channelNumber, session->currentOperChannel);
+   }
+
+   return;
+}
+
+
 /**
  * limProcessMlmDeauthReq()
  *
@@ -3949,6 +4050,11 @@ limProcessMinChannelTimeout(tpAniSirGlobal pMac)
         pMac->lim.limTimers.gLimPeriodicProbeReqTimer.sessionId = 0xff;
         limDeactivateAndChangeTimer(pMac, eLIM_MIN_CHANNEL_TIMER);
         limDeactivateAndChangeTimer(pMac, eLIM_PERIODIC_PROBE_REQ_TIMER);
+        /*
+         * Deactivate Max Channel timer as well since no probe resp/beacons
+         * are received.
+         */
+        limDeactivateAndChangeTimer(pMac, eLIM_MAX_CHANNEL_TIMER);
         pMac->lim.probeCounter = 0;
         if (pMac->lim.gLimCurrentScanChannelId <=
                 (tANI_U32)(pMac->lim.gpLimMlmScanReq->channelList.numChannels - 1))

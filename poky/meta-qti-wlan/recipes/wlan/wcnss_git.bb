@@ -37,17 +37,12 @@ do_install() {
 
     mkdir -p ${D}/lib/firmware/wlan/prima
     cp -pP ${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_qcom_cfg.ini ${D}/lib/firmware/wlan/prima
+    install -d ${D}/lib/firmware/wlan/prima
+    install -m 0644 ${WORKDIR}/qcom-opensource/wlan/firmware_bin/WCNSS_qcom_wlan_nv.bin ${D}/lib/firmware/wlan/prima
 }
 do_install_append() {
-   install -d ${D}/lib/firmware/wlan/prima
-   if [ -e "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_qcom_wlan_nv.bin" ];then
-       cp -rf "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_qcom_wlan_nv.bin" ${D}/lib/firmware/wlan/prima
-   fi
-
    if [ -e "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_wlan_dictionary.dat" ]; then
        cp -rf "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}/WCNSS_wlan_dictionary.dat" ${D}/lib/firmware/wlan/prima
-   elif [ -e "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}_32/WCNSS_wlan_dictionary.dat" ]; then
-       cp -rf "${WORKSPACE}/android_compat/device/qcom/${SOC_FAMILY}_32/WCNSS_wlan_dictionary.dat" ${D}/lib/firmware/wlan/prima
    fi
 }
 INITSCRIPT_NAME = "set_wcnss_mode"
