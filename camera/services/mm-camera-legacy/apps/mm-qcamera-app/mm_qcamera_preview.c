@@ -128,10 +128,11 @@ static int mm_app_prepare_preview_buf(int cam_id, int num_preview_buf)
 		CDBG("%s:reg preview buf err=%d\n", __func__, rc);
 	}
 end1:
-    if (reg_buf.def.buf.mp)
+    if (reg_buf.def.buf.mp) {
     	CDBG_ERROR("%s free mp", __func__);
       free(reg_buf.def.buf.mp);
       CDBG_ERROR("%s freed mp", __func__);
+    }
 end:
 	CDBG("%s: END, num_preview_buf = %d, rc=%d\n", __func__, pme->preview_buf.num, rc);
 	return rc;

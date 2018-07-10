@@ -12,6 +12,42 @@
 #include "camera_dbg.h"
 #include <sys/sysinfo.h>
 #include <media/msm_cam_sensor.h>
+#include <malloc.h>
+
+static void my_init_hook(void);
+//static void *my_malloc_hook(size_t, const void *);
+static void my_free_hook(void*, const void*);
+
+//static void* old_free_hook;
+
+static void my_init(void)
+{
+  old_free_hook = __free_hook;
+  __free_hook = my_free_hook;
+}
+
+static void my_free_hook(void *ptr, const void* caller)
+{
+    /* Restore all old hooks */
+  __free_hook = old_free_hook;
+
+  printf ("freed pointer %p\n", ptr);
+  void* callstack[128];
+  int i, frames = backtrace(callstack, 128);
+  char** strs = backtrace_symbols(callstack, frames);
+  for (i = 0; i < frames; ++i) {
+    printf("%s\n", strs[i]);
+  }
+  free(strs);
+
+  /* Call recursively */
+  free (ptr);
+  /* Save underlying hooks */
+  old_free_hook = __free_hook;
+  /* printf might call free, so protect it too. */
+  /* Restore our own hooks */
+  __free_hook = my_free_hook;
+}
 
 #if 0
 #undef CDBG
@@ -245,6 +281,8 @@ static void handler(int signum)
  **/
 int main(int argc, char *argv[])
 {
+  my_init();
+
   //signal(SIGSEGV, handler);
   //signal(SIGABRT, handler);
 
