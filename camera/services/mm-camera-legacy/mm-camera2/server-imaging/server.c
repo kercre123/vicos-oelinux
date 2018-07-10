@@ -283,7 +283,7 @@ static void handler(int signum)
  **/
 int main(int argc, char *argv[])
 {
-
+  fprintf(stderr, "*********STARTING\n");
   int res = mallopt(M_CHECK_ACTION, 3);
   if(res == 0)
   {
