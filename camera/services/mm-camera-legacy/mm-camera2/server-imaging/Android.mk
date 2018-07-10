@@ -1,3 +1,4 @@
+$(warning here)
 ifeq ($(call is-vendor-board-platform,QCOM),true)
 #
 # mm-qcamera-daemon
@@ -8,9 +9,11 @@ LOCAL_CFLAGS := \
   -DAMSS_VERSION=$(AMSS_VERSION) \
   $(mmcamera_debug_defines) \
   $(mmcamera_debug_cflags) \
+  -rdynamic \
   -DMSM_CAMERA_BIONIC
 
-LOCAL_CFLAGS  += -D_ANDROID_
+LOCAL_CFLAGS += -D_ANDROID_
+
 
 ifneq ($(call is-platform-sdk-version-at-least,17),true)
   LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/types.h
@@ -18,6 +21,9 @@ ifneq ($(call is-platform-sdk-version-at-least,17),true)
   LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/in.h
   LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/un.h
 endif
+
+$(warning LOOKFORME)
+$(info $(LOCAL_CFLAGS))
 
 LOCAL_SRC_FILES:= server.c \
   server_process.c
@@ -51,6 +57,9 @@ LOCAL_SHARED_LIBRARIES:= libcutils liblog libdl liboemcamera \
 LOCAL_MODULE:= mm-qcamera-daemon
 LOCAL_32_BIT_ONLY := true
 LOCAL_MODULE_TAGS := optional
+
+LOCAL_CFLAGS := $(filter-out -s,$(LOCAL_CFLAGS))
+LOCAL_CFLAGS := $(filter-out -O2,$(LOCAL_CFLAGS))
 
 include $(BUILD_EXECUTABLE)
 endif

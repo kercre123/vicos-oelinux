@@ -41,9 +41,9 @@ boolean mct_object_set_name(mct_object_t *object, const char *name)
     return FALSE;
 
   if (object->name != NULL) {
-    CDBG_ERROR("%s free object name", __func__);
+    //    CDBG_ERROR("%s free object name", __func__);
     free(object->name);
-    CDBG_ERROR("%s freed object name", __func__);
+    //CDBG_ERROR("%s freed object name", __func__);
   }
 
   object->name = mct_strdup(name);

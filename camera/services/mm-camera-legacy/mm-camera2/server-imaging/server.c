@@ -245,8 +245,8 @@ static void handler(int signum)
  **/
 int main(int argc, char *argv[])
 {
-  signal(SIGSEGV, handler);
-  signal(SIGABRT, handler);
+  //signal(SIGSEGV, handler);
+  //signal(SIGABRT, handler);
 
   struct v4l2_event_subscription subscribe;
   struct v4l2_event              event;

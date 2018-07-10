@@ -25,9 +25,9 @@ void mct_queue_free(mct_queue_t *q)
     return;
 
   mct_list_free_list(q->head);
-  CDBG_ERROR("%s free q", __func__);
+  //  CDBG_ERROR("%s free q", __func__);
   free(q);
-  CDBG_ERROR("%s freed q", __func__);
+  //CDBG_ERROR("%s freed q", __func__);
   q = NULL;
 }
 
@@ -37,9 +37,9 @@ void mct_queue_free_all(mct_queue_t *q, mct_queue_traverse_func traverse)
     return;
 
   mct_list_free_all(q->head, traverse);
-  CDBG_ERROR("%s free q", __func__);
+  //CDBG_ERROR("%s free q", __func__);
   free(q);
-  CDBG_ERROR("%s freed q", __func__);
+  //CDBG_ERROR("%s freed q", __func__);
   q = NULL;
 }
 
@@ -86,9 +86,9 @@ void *mct_queue_pop_head(mct_queue_t *q)
 
     if (node->next) {
       q->head = node->next[0];
-      CDBG_ERROR("%s free next", __func__);
+      //CDBG_ERROR("%s free next", __func__);
       free(node->next);
-      CDBG_ERROR("%s freed next", __func__);
+      //CDBG_ERROR("%s freed next", __func__);
       node->next = NULL;
     } else {
       q->head = NULL;
@@ -99,9 +99,9 @@ void *mct_queue_pop_head(mct_queue_t *q)
       q->tail = NULL;
     }
 
-    CDBG_ERROR("%s free node", __func__);
+    //CDBG_ERROR("%s free node", __func__);
     free(node);
-    CDBG_ERROR("%s freed node", __func__);
+    //CDBG_ERROR("%s freed node", __func__);
     q->length--;
 
     return data;
