@@ -264,6 +264,7 @@ void server_t_handler(union sigval val)
   sleep(1);
 }
 
+
 static void handler(int signum)
 {
   printf("Sigsegv\n");
@@ -276,11 +277,13 @@ static void handler(int signum)
   free(strs);
 }
 
+
 /** main:
  *
  **/
 int main(int argc, char *argv[])
 {
+
   int res = mallopt(M_CHECK_ACTION, 3);
   if(res == 0)
   {

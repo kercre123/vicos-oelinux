@@ -405,13 +405,9 @@ static void* isp_thread_session_task(void *data)
 
     if (cmd->cmd_id != ISP_ASYNC_COMMAND_EXIT) {
       (void)isp_proc_async_command(isp, session, cmd);
-      CDBG_ERROR("%s free cmd", __func__);
       free(cmd);
-      CDBG_ERROR("%s freed cmd", __func__);
     } else {
-      CDBG_ERROR("%s freed cmd", __func__);
       free(cmd); /* free mem */
-      CDBG_ERROR("%s freed cmd", __func__);
       break;     /* break out the thread main loop */
     }
   }
@@ -464,11 +460,8 @@ int isp_thread_async_task_stop(isp_t *isp, isp_session_t *session)
 
     pthread_mutex_lock(&session->async_task.task_q_mutex);
     /* flush all pending command and then queue the 'exit' command */
-    while ((cmd = mct_queue_pop_head(&session->async_task.task_q))) {
-      CDBG_ERROR("%s free cmd", __func__);
+    while ((cmd = mct_queue_pop_head(&session->async_task.task_q)))
       free(cmd);
-      CDBG_ERROR("%s freed cmd", __func__);
-    }
 
     exit_cmd = malloc(sizeof(isp_async_cmd_t));
     if (exit_cmd) {

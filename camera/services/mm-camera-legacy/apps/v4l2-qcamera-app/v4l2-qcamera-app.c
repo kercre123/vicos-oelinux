@@ -1944,9 +1944,7 @@ void v4l2_free_buffers(int fd, int mem_type, struct v4l2_frame_buffer *in_frames
               __func__, fd, cnt,strerror(errno), errno);
           }
         }
-        CDBG_ERROR("%s free planes1", __func__);
         free(in_frames[cnt].buffer.m.planes);
-        CDBG_ERROR("%s freed planes1", __func__);
       } else {
         rc = munmap((void *)in_frames[cnt].addr[0], in_frames[cnt].buffer.length);
         if(rc < 0) {
@@ -1971,9 +1969,7 @@ void v4l2_free_buffers(int fd, int mem_type, struct v4l2_frame_buffer *in_frames
             CDBG("do_munmap() failed: %s %d\n", strerror(errno), errno);
           }
         }
-        CDBG_ERROR("%s free planes2", __func__);
         free(in_frames[cnt].buffer.m.planes);
-        CDBG_ERROR("%s freed planes2", __func__);
       } else {
 #ifdef USE_ION
         rc = do_munmap_ion(ionfd, &(in_frames[cnt].fd_data[0]), (void *)in_frames[cnt].addr[0],

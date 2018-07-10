@@ -29,9 +29,7 @@ static mct_list_t *mct_list_new(void *data)
 static void mct_list_free(mct_list_t *mct_list)
 {
   if (mct_list) {
-    CDBG_ERROR("%s free mct_list", __func__);
     free(mct_list);
-    CDBG_ERROR("%s freed mct_list", __func__);
     mct_list = NULL;
   }
 }
@@ -229,9 +227,7 @@ mct_list_t* mct_list_remove(mct_list_t *mct_list, const void *data)
     if (temp->prev) {
       if (temp->prev->next_num == 1) {
         temp->prev->next_num = 0;
-        CDBG_ERROR("%s free prev next", __func__);
         free(temp->prev->next);
-        CDBG_ERROR("%s freed prev next", __func__);
         if (num > 0) {
           temp->prev->next = calloc(num, sizeof(mct_list_t*));
           if (!temp->prev->next) {
@@ -246,9 +242,7 @@ mct_list_t* mct_list_remove(mct_list_t *mct_list, const void *data)
             temp->prev->next_num++;
             i++;
           }
-          CDBG_ERROR("%s free next", __func__);
           free(temp->next);
-          CDBG_ERROR("%s freed next", __func__);
           temp->next  = NULL;
         } else {
           temp->prev->next = NULL;
@@ -326,9 +320,7 @@ mct_list_t* mct_list_remove(mct_list_t *mct_list, const void *data)
       if (temp->next_num == 1) {
         temp->next[0]->prev = NULL;
         mct_list = temp->next[0];
-        CDBG_ERROR("%s free next2", __func__);
         free(temp->next);
-        CDBG_ERROR("%s freed next2", __func__);
         temp->next = NULL;
         mct_list_free(temp);
       } else if (temp->next_num == 0) {
