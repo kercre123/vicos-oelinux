@@ -31,13 +31,13 @@ UNBRICK_KEY="anki.unbrick"
 WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
 CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
-
+USER_DATA_DEV=/dev/mapper/userdata
 
 make_userdata() {
   if $1; then
     echo "Remaking /data" > /dev/kmsg
-    mkfs.ext4 /dev/block/bootdevice/by-name/userdata
-    mount /data
+    mkfs.ext4 $USER_DATA_DEV
+    mount $USER_DATA_DEV /data
   fi
   # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
   # determine that /data is mounted and it isn't well integrated into systemd so making it here is the easiest way
@@ -52,7 +52,6 @@ make_userdata() {
   fi
 }
 
-
 case "$1" in
   start )
     if grep $UNBRICK_KEY /proc/cmdline > /dev/null; then
@@ -60,9 +59,12 @@ case "$1" in
       mount -o size=64M -t tmpfs none /data/
       make_userdata false
     else
-      if ! mount /data; then
+      if ! mount $USER_DATA_DEV /data >/dev/kmsg; then
+        echo "#### RESET /data  ####" >/dev/kmsg
         make_userdata true
         sync
+      else
+        echo "#### MOUNTED $USER_DATA_DEV as /data ####" >/dev/kmsg
       fi
     fi
     ;;
@@ -72,7 +74,7 @@ case "$1" in
     sync
     umount /data
     if test -e $WIPE_COOKIE; then
-      blkdiscard -s /dev/block/bootdevice/by-name/userdata
+      blkdiscard -s $USER_DATA_DEV
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
     fi
     ;;

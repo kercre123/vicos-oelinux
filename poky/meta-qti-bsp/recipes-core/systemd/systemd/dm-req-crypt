@@ -1,0 +1,26 @@
+#! /bin/sh
+
+DEV=/dev/block/bootdevice/by-name/userdata
+SIZE=$(blockdev --getsz $DEV)
+TARGET=req-crypt
+MODE=ignored
+KEY=ignored
+NAME=userdata
+
+case "$1" in
+  start )
+    echo "#### SETTING UP DEVICE-MAPPER ####" >/dev/kmsg
+    dmsetup -v create "$NAME" --table "0 $SIZE $TARGET $MODE $KEY 0 $DEV 0"
+    sync
+    ;;
+
+  stop )
+    dmsetup -v remove "$NAME"
+    ;;
+
+  * )
+    echo "Usage: mount-data { start | stop }"
+    ;;
+esac
+
+exit 

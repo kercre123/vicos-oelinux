@@ -6,8 +6,10 @@ SRC_URI += "file://mountpartitions.rules"
 SRC_URI += "file://systemd-udevd.service"
 SRC_URI += "file://ffbm.target"
 SRC_URI += "file://mount-data"
+SRC_URI += "file://dm-req-crypt"
 SRC_URI += "file://mount-factory-data"
 SRC_URI += "file://mount-data.service"
+SRC_URI += "file://dm-req-crypt.service"
 SRC_URI += "file://mtpserver.rules"
 SRC_URI += "file://setup_localtime_link"
 SRC_URI += "file://setup_localtime_link.service"
@@ -38,10 +40,22 @@ do_install_append () {
        install -m 0750 ${WORKDIR}/mount-factory-data \
                     -D ${D}${sysconfdir}/initscripts/mount-data
    else
-   install -m 0750 ${WORKDIR}/mount-data \
-                -D ${D}${sysconfdir}/initscripts/mount-data
+       install -m 0750 ${WORKDIR}/mount-data \
+                    -D ${D}${sysconfdir}/initscripts/mount-data
+       install -m 0750 ${WORKDIR}/dm-req-crypt \
+                    -D ${D}${sysconfdir}/initscripts/dm-req-crypt
    fi
    install -d ${D}${systemd_unitdir}/system/
+
+   install -m 0644 ${WORKDIR}/dm-req-crypt.service \
+                -D ${D}${systemd_unitdir}/system/dm-req-crypt.service
+   install -d ${D}${systemd_unitdir}/system/connman.service.requires/
+   install -d ${D}${systemd_unitdir}/system/chronyd.service.requires/
+   install -d ${D}${systemd_unitdir}/system/mount-data.service.requires/
+   ln -sf ${systemd_unitdir}/system/dm-req-crypt.service ${D}${systemd_unitdir}/system/connman.service.requires/dm-req-crypt.service
+   ln -sf ${systemd_unitdir}/system/dm-req-crypt.service ${D}${systemd_unitdir}/system/chronyd.service.requires/dm-req-crypt.service
+   ln -sf ${systemd_unitdir}/system/dm-req-crypt.service ${D}${systemd_unitdir}/system/mount-data.service.requires/dm-req-crypt.service
+
    install -m 0644 ${WORKDIR}/mount-data.service \
                 -D ${D}${systemd_unitdir}/system/mount-data.service
    install -d ${D}${systemd_unitdir}/system/local-fs.target.requires/

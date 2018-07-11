@@ -27,18 +27,16 @@
 
 
 [Unit]
-Description=mount-data
-SourcePath=/etc/initscripts/mount-data
-Before=connman.service chronyd.service
-Wants=dev-mapper-userdata.device
-After=dev-mapper-userdata.device dm-req-crypt.service
+Description=dm-req-crypt
+SourcePath=/etc/initscripts/dm-req-crypt
+Before=connman.service chronyd.service mount-data.service
 
 [Service]
 Restart=no
 RemainAfterExit=yes
 Type=oneshot
-ExecStart=/etc/initscripts/mount-data start
-ExecStop=/etc/initscripts/mount-data stop
+ExecStart=/etc/initscripts/dm-req-crypt start
+ExecStop=/etc/initscripts/dm-req-crypt stop
 
 [Install]
-RequiredBy=connman.service chronyd.service
+RequiredBy=connman.service chronyd.service mount-data.service
