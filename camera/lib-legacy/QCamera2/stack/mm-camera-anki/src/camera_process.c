@@ -54,6 +54,12 @@ void debug_dump_frame(uint8_t *frame, int num_bytes, char* prefix)
 int get_next_buffer_slot(anki_camera_buf_header_t* header, uint32_t* out_slot)
 {
   int slot_found = -1;
+    
+  if(header == NULL)
+  {
+    return slot_found;
+  }
+
   uint32_t slot = atomic_load(&header->locks.write_idx);
 
   for (uint32_t i = 0; i < header->frame_count; ++i) {
