@@ -43,6 +43,7 @@ typedef struct {
 typedef struct cameraobj_t {
   mm_camera_lib_handle lib_handle;
   void* callback_ctx;
+  pthread_mutex callback_lock;
   struct anki_camera_params params;
   int is_running;
   anki_camera_pixel_format_t pixel_format;
@@ -410,12 +411,16 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
         uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;;
         uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
 	
-        rc = user_frame_callback_preview(inbuf,
-                                         timestamp,
-                                         frameid,
-                                         raw_frame_width,
-                                         raw_frame_height,
-                                         gTheCamera.callback_ctx);
+        if(pthread_mutex_trylock(&gTheCamera.callback_lock) == 0)
+        {
+          rc = user_frame_callback_preview(inbuf,
+                                           timestamp,
+                                           frameid,
+                                           raw_frame_width,
+                                           raw_frame_height,
+                                           gTheCamera.callback_ctx);
+          pthread_mutex_unlock(&gTheCamera.callback_lock);
+        }
         break;
       }
     }
@@ -625,12 +630,17 @@ static void mm_app_snapshot_notify_cb_raw(mm_camera_super_buf_t *bufs,
 
         uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;
         uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
-        rc = user_frame_callback(inbuf,
-                                 timestamp,
-                                 frameid,
-                                 raw_frame_width,
-                                 raw_frame_height,
-                                 gTheCamera.callback_ctx);
+
+        if(pthread_mutex_trylock(&gTheCamera.callback_lock) == 0)
+        {
+          rc = user_frame_callback(inbuf,
+                                   timestamp,
+                                   frameid,
+                                   raw_frame_width,
+                                   raw_frame_height,
+                                   gTheCamera.callback_ctx);
+          pthread_mutex_unlock(&gTheCamera.callback_lock);
+        }
         break;
       }
     }
@@ -833,9 +843,15 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
     return -1;
   }
 
+  // `capture` is the same as `gTheCamera.callback_ctx` both set from
+  // `&ctx->camera` in camera_server.c
+  // so we need to guard with callback_lock
+  pthread_mutex_lock(&gTheCamera.callback_lock);
+
   // Reallocate memory for the new format
   rc = realloc_with_format(capture, format);
   if (rc != MM_CAMERA_OK) {
+    pthread_mutex_unlock(&gTheCamera.callback_lock);
     CDBG_ERROR("%s:camera_set_capture_format() realloc_with_format err=%d format %d->%d\n", 
                __func__, 
                rc,
@@ -843,6 +859,8 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
                format);
     return -1;
   }
+  
+  pthread_mutex_unlock(&gTheCamera.callback_lock);
 
   // Update format
   gTheCamera.pixel_format = format;
@@ -867,6 +885,8 @@ int camera_init()
   /* memset(&test_obj, 0, sizeof(mm_camera_test_obj_t)); */
 
   memset(&gTheCamera, 0, sizeof(gTheCamera));
+
+  pthread_mutex_init(&gTheCamera.callback_lock, NULL);
 
   //open camera lib
   rc = mm_camera_lib_open(&gTheCamera.lib_handle, 0);
@@ -945,7 +965,27 @@ int camera_stop()
   }
 
   gTheCamera.is_running = 0;
+  
+  pthread_mutex_lock(&gTheCamera.callback_lock);
   gTheCamera.callback_ctx = NULL;
+  pthread_mutex_unlock(&gTheCamera.callback_lock);
+
+  // Not sure how safe this is...
+  // This mutex is guarding against `callback_ctx` changing
+  // while in a frame callback. 
+  // There are a couple of cases...
+  //  - Not in a frame callback when stop_camera_capture is called so
+  //    no more frame callbacks should get called (this is an assumption)
+  //  - In a callback when calling `stop_camera_capture()`
+  //    and the function returns before the callback does, the above lock should
+  //    block until the callback is finished at which point we should not get
+  //    any more callbacks (same assumption as previous point)
+  //  - In a callback when calling stop_camera_capture() and the callback finishes
+  //    first. Will aquire the above lock without blocking and again no more callbacks
+  //    should be called.
+  // Assuming that all frame callbacks will stop being called after
+  // the call to stop_camera_capture() then this should be fine
+  pthread_mutex_destroy(&gTheCamera.callback_lock);
 
   return rc;
 }
