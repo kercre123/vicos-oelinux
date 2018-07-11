@@ -283,8 +283,9 @@ static void handler(int signum)
  **/
 int main(int argc, char *argv[])
 {
+    int res = mallopt(M_CHECK_ACTION, 3);
   fprintf(stderr, "*********STARTING\n");
-  int res = mallopt(M_CHECK_ACTION, 3);
+
   if(res == 0)
   {
     CDBG_ERROR("%s: mallopt failed", __func__);

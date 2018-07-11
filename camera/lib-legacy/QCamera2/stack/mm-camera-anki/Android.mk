@@ -9,6 +9,8 @@ LOCAL_CFLAGS:= \
         -DAMSS_VERSION=$(AMSS_VERSION) \
         $(mmcamera_debug_defines) \
         $(mmcamera_debug_cflags) \
+	-g \
+	-O0 \
         $(USE_SERVER_TREE)
 
 ifeq ($(strip $(TARGET_USES_ION)),true)
@@ -61,7 +63,9 @@ LOCAL_CFLAGS:= \
         -DAMSS_VERSION=$(AMSS_VERSION) \
         $(mmcamera_debug_defines) \
         $(mmcamera_debug_cflags) \
-        $(USE_SERVER_TREE)
+	-g \
+	-O0 \
+	$(USE_SERVER_TREE)
 
 ifeq ($(strip $(TARGET_USES_ION)),true)
 LOCAL_CFLAGS += -DUSE_ION
