@@ -52,9 +52,13 @@ else
 	fi
 	if grep -qw $SERIAL unlock.list; then
 		# Run user confirmation check for non verity devices
-		rampost orange
+        echo "skipping rampost orange"
+		#rampost orange
+		rampost
 	else
-		rampost x
+        echo "skipping rampost x"
+		# rampost x
+		rampost
 		exit 1;
 	fi
 fi
