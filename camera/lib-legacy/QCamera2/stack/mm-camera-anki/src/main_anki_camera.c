@@ -81,7 +81,7 @@ static void setup_signal_handler()
 int main(int argc, char* argv[])
 {
   setup_signal_handler();
-  signal(SIGSEGV, handler);
+  //  signal(SIGSEGV, handler);
 
   char* outdir = NULL;
   uint8_t autostart_camera = 0;

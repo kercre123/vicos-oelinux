@@ -43,7 +43,7 @@ typedef struct {
 typedef struct cameraobj_t {
   mm_camera_lib_handle lib_handle;
   void* callback_ctx;
-  pthread_mutex callback_lock;
+  pthread_mutex_t callback_lock;
   struct anki_camera_params params;
   int is_running;
   anki_camera_pixel_format_t pixel_format;
@@ -833,8 +833,6 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
                                  anki_camera_pixel_format_t format))
 {
   int rc;
-
-  format = ANKI_CAM_FORMAT_YUV;
   
   // Stop current camera capture
   rc = stop_camera_capture();
