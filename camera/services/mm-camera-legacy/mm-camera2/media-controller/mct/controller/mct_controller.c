@@ -224,6 +224,21 @@ boolean mct_controller_destroy(unsigned int session_idx)
   return TRUE;
 }
 
+boolean traversal_func(void *data, void *user_data)
+{
+  mct_serv_msg_t* msg = (mct_serv_msg_t*)data;
+  if(msg->msg_type == SERV_MSG_HAL)
+  {
+    struct v4l2_event *hal_msg = (struct v4l2_event *)msg->u.hal_msg;
+    if(hal_msg->id == MSM_CAMERA_SET_PARM)
+    {
+      fprintf(stderr, "FOUND SET_PARM MESSAGE\n");
+      free(data);
+      data = NULL;
+    }
+  }
+}
+
 /** mct_controller_proc_servmsg:
  *    @servMsg: the message to be posted
  *
@@ -248,10 +263,12 @@ boolean mct_controller_proc_serv_msg(mct_serv_msg_t *serv_msg)
        serv_msg->u.ds_msg.operation == CAM_MAPPING_TYPE_FD_UNMAPPING)
     {
       pthread_mutex_lock(&mct->serv_msg_q_lock);
-      CDBG_ERROR("%s: Got message to map/unmap %u, flushing command queue %u",
+      fprintf(stderr, "%s: Got message to map/unmap %u, removing SET_PARM %u",
                  serv_msg->u.ds_msg.operation,
                  mct->serv_cmd_q->length);
-      mct_queue_free(mct->serv_cmd_q);
+      //mct_queue_free(mct->serv_cmd_q);
+
+      mct_queue_traverse(mct->serv_cmd_q, traversal_func)
       pthread_mutex_unlock(&mct->serv_msg_q_lock);
 
       pthread_mutex_lock(&mct->mctl_mutex);
