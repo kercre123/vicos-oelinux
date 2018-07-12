@@ -242,6 +242,23 @@ boolean mct_controller_proc_serv_msg(mct_serv_msg_t *serv_msg)
   switch (serv_msg->msg_type) {
   case SERV_MSG_DS:
     session = serv_msg->u.ds_msg.session;
+
+
+    if(serv_msg->u.ds_msg.operation == CAM_MAPPING_TYPE_FD_MAPPING ||
+       serv_msg->u.ds_msg.operation == CAM_MAPPING_TYPE_FD_UNMAPPING)
+    {
+      pthread_mutex_lock(&mct->serv_msg_q_lock);
+      CDBG_ERROR("%s: Got message to map/unmap %u, flushing command queue %u",
+                 serv_msg->u.ds_msg.operation,
+                 mct->serv_cmd_q->length);
+      mct_queue_free(mct->serv_cmd_q);
+      pthread_mutex_unlock(&mct->serv_msg_q_lock);
+
+      pthread_mutex_lock(&mct->mctl_mutex);
+      mct->serv_cmd_q_counter = 0;
+      pthread_mutex_unlock(&mct->mctl_mutex);
+    }
+
     break;
 
   case SERV_MSG_HAL: {
