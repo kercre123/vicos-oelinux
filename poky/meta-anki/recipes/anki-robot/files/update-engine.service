@@ -11,6 +11,7 @@ ConditionFileNotEmpty=!/run/vic-switchboard/disable-update-engine
 
 [Service]
 Type=simple
+Environment=TERM=dumb
 Environment=UPDATE_ENGINE_MAX_SLEEP=1800
 Environment=UPDATE_ENGINE_ENABLED=False
 EnvironmentFile=-/anki/etc/update-engine.env
@@ -21,5 +22,5 @@ ExecStartPre=/bin/mkdir -p /run/update-engine /run/vic-switchboard
 ExecStartPre=/bin/test $UPDATE_ENGINE_ENABLED = "True"
 ExecStartPre=/bin/bash -c 'sleep $(( RANDOM % $UPDATE_ENGINE_MAX_SLEEP ))'
 ExecStartPre=/bin/bash -c 'echo Unclean exit > /run/update-engine/error'
-ExecStart=/anki/bin/update-engine
+ExecStart=/usr/bin/logwrapper /anki/bin/update-engine
 ExecStopPost=/bin/rm -rf /run/vic-switchboard/update-engine.env
