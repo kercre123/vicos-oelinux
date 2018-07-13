@@ -6,6 +6,8 @@ PartOf=anki-robot.target
 Wants=vic-engine.service
 After=vic-engine.service
 
+OnFailure=vic-on-failure.service
+
 [Service]
 EnvironmentFile=/anki/etc/vic-neuralnets.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-neuralnets $VIC_VISION_CONFIG $VIC_DNN_MODELS $VIC_DNN_CACHE

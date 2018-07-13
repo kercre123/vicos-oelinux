@@ -1,0 +1,35 @@
+#
+# vic-on-failure-animfail.service
+#
+# Service definition for animation failure recovery service
+#
+# This is a special service invoked as an "OnFailure" handler when vic-anim service quits unexpectedly.
+#
+# This service invokes /anki/bin/vic-on-failure as a "first chance" error handler. 
+# If vic-on-failure can't run, execution continues with "last chance" error handler
+# to put a graphic on the screen.
+#
+[Unit]
+Description=Victor failure recovery service
+SourcePath=/anki/bin/vic-on-failure
+DefaultDependencies=no
+
+OnFailure=animfail.service
+
+[Service]
+Type=simple
+EnvironmentFile=/anki/etc/vic-on-failure-animfail.env
+ExecStart=/usr/bin/logwrapper /anki/bin/vic-on-failure $VIC_ONFAILURE_OPTS
+
+#
+# DO NOT remain active after exit.  If service is considered active, it will not be restarted 
+# for repeat service failures. 
+#
+RemainAfterExit=no
+
+#
+# DO NOT restart automatically.
+# Service will be restarted "on demand" after each service failure.
+#
+Restart=no
+

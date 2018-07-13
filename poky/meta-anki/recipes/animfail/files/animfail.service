@@ -6,5 +6,5 @@ DefaultDependencies=no
 [Service]
 Type=simple
 Restart=no
-RemainAfterExit=yes
+RemainAfterExit=no
 ExecStart=/bin/animfail

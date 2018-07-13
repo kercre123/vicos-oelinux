@@ -7,7 +7,7 @@ Wants=vic-robot.service
 Requires=anki-audio-init.service
 After=vic-robot.service anki-audio-init.service
 
-OnFailure=animfail.service
+OnFailure=vic-on-failure-animfail.service
 
 [Service]
 EnvironmentFile=/anki/etc/vic-anim.env

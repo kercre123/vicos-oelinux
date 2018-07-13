@@ -6,6 +6,8 @@ PartOf=anki-robot.target
 Wants=vic-engine.service
 After=vic-engine.service
 
+OnFailure=vic-on-failure.service
+
 [Service]
 EnvironmentFile=/anki/etc/vic-gateway.env
 ExecStart=/anki/bin/vic-gateway $VIC_GATEWAY_OPTS
