@@ -20,6 +20,8 @@ endif
 LOCAL_CFLAGS += -D_ANDROID_
 
 LOCAL_SRC_FILES:= \
+        src/mm_camera_stream_rdi.c \
+        src/mm_camera_stream_preview.c \
         src/mm_camera_anki.c
 
 LOCAL_C_INCLUDES:=$(LOCAL_PATH)/src
