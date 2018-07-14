@@ -229,14 +229,19 @@ boolean traversal_func(void *data, void *user_data)
   mct_serv_msg_t* msg = (mct_serv_msg_t*)data;
   if(msg->msg_type == SERV_MSG_HAL)
   {
-    struct v4l2_event *hal_msg = (struct v4l2_event *)msg->u.hal_msg;
-    if(hal_msg->id == MSM_CAMERA_SET_PARM)
+    if(msg->u.hal_msg.id == MSM_CAMERA_SET_PARM)
     {
-      fprintf(stderr, "FOUND SET_PARM MESSAGE\n");
-      free(data);
-      data = NULL;
+      struct msm_v4l2_event_data *event_data =
+	(struct msm_v4l2_event_data *)(msg->u.hal_msg.u.data);
+      if(event_data->command == CAM_PRIV_PARM)
+      {
+	fprintf(stderr, "FOUND SET_PARM MESSAGE\n");
+	free(data);
+	data = NULL;
+      }
     }
   }
+  return TRUE;
 }
 
 /** mct_controller_proc_servmsg:
@@ -257,25 +262,6 @@ boolean mct_controller_proc_serv_msg(mct_serv_msg_t *serv_msg)
   switch (serv_msg->msg_type) {
   case SERV_MSG_DS:
     session = serv_msg->u.ds_msg.session;
-
-
-    if(serv_msg->u.ds_msg.operation == CAM_MAPPING_TYPE_FD_MAPPING ||
-       serv_msg->u.ds_msg.operation == CAM_MAPPING_TYPE_FD_UNMAPPING)
-    {
-      pthread_mutex_lock(&mct->serv_msg_q_lock);
-      fprintf(stderr, "%s: Got message to map/unmap %u, removing SET_PARM %u",
-                 serv_msg->u.ds_msg.operation,
-                 mct->serv_cmd_q->length);
-      //mct_queue_free(mct->serv_cmd_q);
-
-      mct_queue_traverse(mct->serv_cmd_q, traversal_func)
-      pthread_mutex_unlock(&mct->serv_msg_q_lock);
-
-      pthread_mutex_lock(&mct->mctl_mutex);
-      mct->serv_cmd_q_counter = 0;
-      pthread_mutex_unlock(&mct->mctl_mutex);
-    }
-
     break;
 
   case SERV_MSG_HAL: {
@@ -297,6 +283,26 @@ boolean mct_controller_proc_serv_msg(mct_serv_msg_t *serv_msg)
 
   mct = (mct_controller_t *)mct_list->data;
 
+  if(serv_msg->msg_type == SERV_MSG_DS)
+    {
+      if(serv_msg->u.ds_msg.operation == CAM_MAPPING_TYPE_FD_MAPPING ||
+	 serv_msg->u.ds_msg.operation == CAM_MAPPING_TYPE_FD_UNMAPPING)
+	{
+	  pthread_mutex_lock(&mct->serv_msg_q_lock);
+	  //fprintf(stderr, "%s: Got message to map/unmap %u, removing SET_PARM %u",
+	  //	  serv_msg->u.ds_msg.operation,
+	  //	  mct->serv_cmd_q->length);
+	  //mct_queue_free(mct->serv_cmd_q);
+
+	  mct_queue_traverse(mct->serv_cmd_q, traversal_func, NULL);
+	    pthread_mutex_unlock(&mct->serv_msg_q_lock);
+
+	  pthread_mutex_lock(&mct->mctl_mutex);
+	  mct->serv_cmd_q_counter = 0;
+	  pthread_mutex_unlock(&mct->mctl_mutex);
+	}
+    }
+  
   msg = malloc(sizeof(mct_serv_msg_t));
   if (!msg)
     return FALSE;
