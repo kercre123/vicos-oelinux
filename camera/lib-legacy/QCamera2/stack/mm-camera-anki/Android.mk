@@ -83,7 +83,7 @@ LOCAL_SRC_FILES:= \
         src/camera_server.c \
         src/camera_process.c \
         src/camera_memory.c \
-	src/main_anki_camera.c
+	    src/main_anki_camera.c
 
 LOCAL_C_INCLUDES:=$(LOCAL_PATH)/src
 LOCAL_C_INCLUDES+=$(LOCAL_PATH)/inc

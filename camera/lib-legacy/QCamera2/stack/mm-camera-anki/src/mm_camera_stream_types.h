@@ -17,9 +17,8 @@
 
 #include "camera_format.h"
 #include "camera_params.h"
-#include "mm_qcamera_app.h"
 
-#include <pthread>
+#include <pthread.h>
 
 // Camera callback: called with captured `image` of `width` by `height`, with specified bits per pixel
 // (called from separate thread)
@@ -36,15 +35,6 @@ struct anki_camera_params {
   camera_cb frame_callback_preview;
   struct anki_camera_capture_params capture_params;
 };
-
-typedef struct cameraobj_t {
-  mm_camera_lib_handle lib_handle;
-  void* callback_ctx;
-  pthread_mutex_t callback_lock;
-  struct anki_camera_params params;
-  int is_running;
-  anki_camera_pixel_format_t pixel_format;
-} CameraObj;
 
 
 #endif // __mm_camera_stream_types_h__
