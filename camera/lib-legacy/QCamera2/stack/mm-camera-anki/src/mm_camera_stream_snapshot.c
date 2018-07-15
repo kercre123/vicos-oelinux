@@ -29,7 +29,7 @@ void camera_install_callback_snapshot(camera_cb cb, CameraObj* camera)
 static void mm_anki_app_snapshot_notify_cb(mm_camera_super_buf_t *bufs,
                                            void *user_data)
 {
-
+    static int frameid = 0;
     int rc = 0;
     uint32_t i = 0;
     mm_camera_test_obj_t *pme = (mm_camera_test_obj_t *)user_data;
@@ -91,7 +91,7 @@ static void mm_anki_app_snapshot_notify_cb(mm_camera_super_buf_t *bufs,
     uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;
     uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
 
-    if(pthread_mutex_trylock(&_camera->callback_lock) == 0)
+    if(pthread_mutex_trylock(&_camera_snapshot->callback_lock) == 0)
     {
       rc = user_frame_callback_snapshot(inbuf,
                                         timestamp,
@@ -99,8 +99,8 @@ static void mm_anki_app_snapshot_notify_cb(mm_camera_super_buf_t *bufs,
                                         raw_frame_width,
                                         raw_frame_height,
                                         ANKI_CAM_FORMAT_YUV,
-                                        _camera->callback_ctx);
-      pthread_mutex_unlock(&_camera->callback_lock);
+                                        _camera_snapshot->callback_ctx);
+      pthread_mutex_unlock(&_camera_snapshot->callback_lock);
     }
 
     mm_app_cache_ops((mm_camera_app_meminfo_t *)m_frame->mem_info,
@@ -121,6 +121,8 @@ error:
     }
 
     CDBG("%s: END\n", __func__);
+
+    ++frameid;
 }
 
 int mm_anki_app_start_snapshot(mm_camera_test_obj_t *test_obj,
