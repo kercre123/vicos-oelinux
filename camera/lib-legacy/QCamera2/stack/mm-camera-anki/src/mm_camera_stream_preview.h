@@ -14,7 +14,6 @@
 #define __mm_camera_stream_preview_h__
 
 #include "mm_camera_stream_types.h"
-#include "mm_qcamera_app.h"
 #include "camera_process.h"
 
 void camera_install_callback_preview(camera_cb cb, CameraObj* camera);

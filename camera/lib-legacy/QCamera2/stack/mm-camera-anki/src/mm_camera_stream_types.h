@@ -13,6 +13,14 @@
 #ifndef __mm_camera_stream_types_h__
 #define __mm_camera_stream_types_h__
 
+#include <stdint.h>
+
+#include "camera_format.h"
+#include "camera_params.h"
+#include "mm_qcamera_app.h"
+
+#include <pthread>
+
 // Camera callback: called with captured `image` of `width` by `height`, with specified bits per pixel
 // (called from separate thread)
 //typedef int(*camera_cb)(uint8_t* image, int width, int height, int bpp);
@@ -22,6 +30,12 @@ typedef int(*camera_cb)(const uint8_t* image,
                         int width,
                         int height,
                         void* cb_ctx);
+
+struct anki_camera_params {
+  camera_cb frame_callback_raw;
+  camera_cb frame_callback_preview;
+  struct anki_camera_capture_params capture_params;
+};
 
 typedef struct cameraobj_t {
   mm_camera_lib_handle lib_handle;

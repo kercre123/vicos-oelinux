@@ -19,17 +19,10 @@ extern "C" {
 
 #include <stdint.h>
 
-#include "camera_format.h"
-#include "camera_params.h"
 #include "camera_process.h"
+#include "mm_camera_stream_types.h"
   
 #define ANKI_CAMERA_FPS_MAX 30
-
-struct anki_camera_params {
-  camera_cb frame_callback_raw;
-  camera_cb frame_callback_preview;
-  struct anki_camera_capture_params capture_params;
-};
 
 // Initializes the camera
 int camera_init();
