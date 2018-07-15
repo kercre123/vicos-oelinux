@@ -28,11 +28,13 @@ typedef int(*camera_cb)(const uint8_t* image,
                         uint32_t frame_id,
                         int width,
                         int height,
+                        anki_camera_pixel_format_t format,
                         void* cb_ctx);
 
 struct anki_camera_params {
   camera_cb frame_callback_raw;
   camera_cb frame_callback_preview;
+  camera_cb frame_callback_snapshot;
   struct anki_camera_capture_params capture_params;
 };
 

@@ -49,6 +49,10 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
                                 (struct anki_camera_capture* capture,
                                  anki_camera_pixel_format_t format));
 
+int camera_start_snapshot();
+
+int camera_stop_snapshot();
+
 #ifdef __cplusplus
 }
 #endif

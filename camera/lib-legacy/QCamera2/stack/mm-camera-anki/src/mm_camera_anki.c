@@ -23,6 +23,7 @@
 #include "camera_process.h"
 #include "mm_camera_stream_rdi.h"
 #include "mm_camera_stream_preview.h"
+#include "mm_camera_stream_snapshot.h"
 
 typedef struct {
   float r_gain;
@@ -292,6 +293,50 @@ int stop_camera_capture()
   return rc;
 }
 
+int camera_start_snapshot()
+{
+  if(gTheCamera.pixel_format != ANKI_CAMERA_FORMAT_YUV)
+  {
+    CDBG_ERROR("%s: can't take snapshot when not in yuv/preview mode");
+    return -1;
+  }
+
+  int rc = stop_camera_capture();
+  if(rc != 0)
+  {
+    CDBG_ERROR("%s: failed to stop camera capture");
+    return rc;
+  }
+
+  rc = mm_anki_app_start_snapshot(&(camera->lib_handle.test_obj));
+  if(rc != 0)
+  {
+    CDBG_ERROR("%s: failed to start snapshot");
+    return rc;
+  }
+
+  return rc;
+}
+
+int camera_stop_snapshot()
+{
+  int rc = mm_anki_app_stop_snapshot();
+  if(rc != 0)
+  {
+    CDBG_ERROR("%s: failed to stop snapshot");
+    return -1;
+  }
+
+  rc = start_camera_capture();
+  if(rc != 0)
+  {
+    CDBG_ERROR("%s: failed to restart capture");
+    return -1;
+  }
+
+  return rc;
+}
+
 int camera_set_capture_format(struct anki_camera_capture* capture,
                               anki_camera_pixel_format_t format,
                               int(*realloc_with_format)
@@ -400,6 +445,10 @@ int camera_set_params(struct anki_camera_params* params)
 
   if (params->frame_callback_preview != NULL) {
     camera_install_callback_preview(params->frame_callback_preview, &gTheCamera);
+  }
+
+  if (params->frame_callback_snapshot != NULL) {
+    camera_install_callback_snapshot(params->frame_callback_snapshot, &gTheCamera);
   }
 
   const uint8_t fps_reduction = params->capture_params.fps_reduction;

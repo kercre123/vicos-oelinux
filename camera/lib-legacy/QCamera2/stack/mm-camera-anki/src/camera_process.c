@@ -51,7 +51,9 @@ void debug_dump_frame(uint8_t *frame, int num_bytes, char* prefix)
   logd("dump %s", file_name);
 }
 
-int get_next_buffer_slot(anki_camera_buf_header_t* header, uint32_t* out_slot)
+int get_next_buffer_slot(anki_camera_buf_header_t* header, 
+                         anki_camera_pixel_format_t format,
+                         uint32_t* out_slot)
 {
   int slot_found = -1;
     
@@ -62,8 +64,15 @@ int get_next_buffer_slot(anki_camera_buf_header_t* header, uint32_t* out_slot)
 
   uint32_t slot = atomic_load(&header->locks.write_idx);
 
-  for (uint32_t i = 0; i < header->frame_count; ++i) {
-    slot = (slot + 1) % header->frame_count;
+  uint32_t frame_count = header->frame_count;
+  // In yuv/preview mode subtract 1 frame for reserved snapshot
+  if(format == ANKI_CAM_FORMAT_YUV)
+  {
+    frame_count -= 1;
+  }
+
+  for (uint32_t i = 0; i < frame_count; ++i) {
+    slot = (slot + 1) % frame_count;
     uint32_t v = atomic_load(&(header->locks.frame_locks[slot]));
     if (v == 0) {
       slot_found = 1;
@@ -78,6 +87,84 @@ int get_next_buffer_slot(anki_camera_buf_header_t* header, uint32_t* out_slot)
   return (slot_found) ? 0 : -1;
 }
 
+int anki_camera_snapshot_frame_callback(const uint8_t* image,
+                                        uint64_t timestamp,
+                                        uint32_t frame_id,
+                                        int width,
+                                        int height,
+                                        anki_camera_pixel_format_t format,
+                                        void* cb_ctx)
+{
+struct anki_camera_capture* capture = (struct anki_camera_capture*)cb_ctx;
+  uint8_t* data = (uint8_t*)capture->buffer.data;
+  anki_camera_buf_header_t* header = (anki_camera_buf_header_t*)data;
+
+  // get the snapshot slot for writing
+  // last frame is reserved for snapshot
+  uint32_t slot = header->frame_count - 1;
+
+  // lock slot for writing
+  uint32_t lock_status = 0;
+  _Atomic uint32_t *slot_lock = &(header->locks.frame_locks[slot]);
+  if (!atomic_compare_exchange_strong(slot_lock, &lock_status, 1)) {
+    log("%s: could not lock frame for writing (slot %u)", __FUNCTION__, slot);
+    return -1;
+  }
+
+  // Process frame
+  const uint32_t frame_offset = header->frame_offsets[slot];
+  anki_camera_frame_t* frame = (anki_camera_frame_t*)&data[frame_offset];
+  const size_t frame_data_len = frame->bytes_per_row * frame->height;
+
+  frame->frame_id = frame_id;
+  frame->timestamp = timestamp;
+
+  if(frame->format != format)
+  {
+    loge("%s: callback's format %u and frame's format %u do not match",
+         __FUNCTION__
+         format,
+         frame->format);
+    return -1;
+  }
+
+  if (frame->format == ANKI_CAM_FORMAT_YUV) {
+    // no downsample, just copy
+    memcpy(frame->data, image, frame_data_len);
+  }
+  else {
+    loge("%s: snapshot callback expecting yuv format");
+    return -1;
+  }
+
+  if(s_dump_images)
+  {
+    char* s = "yuv";
+    debug_dump_frame(frame->data, frame_data_len, s);
+  }
+
+  // unlock frame
+  // Do this in a loop?  It must succeed...
+  lock_status = 1;
+  if (!atomic_compare_exchange_strong(slot_lock, &lock_status, 0)) {
+    loge("%s: could not unlock frame: %u", __FUNCTION__, slot);
+    return -1;
+  }
+
+  // update write_idx
+  uint32_t current_write_idx = atomic_load(&(header->locks.write_idx));
+  if (!atomic_compare_exchange_strong(&(header->locks.write_idx), &current_write_idx, slot)) {
+    loge("%s: could not update write_idx (%u -> %u)", __FUNCTION__, current_write_idx, slot);
+    return -1;
+  }
+
+  logd("%s: FRAME frame_id=%u slot=%u ts=%lld",
+       __func__, frame_id, slot, timestamp);
+
+  return 0;
+}
+
+
 // Callback is received on a separate thread.
 // Lock shared buffer data before modifying data
 int anki_camera_frame_callback(const uint8_t* image,
@@ -85,6 +172,7 @@ int anki_camera_frame_callback(const uint8_t* image,
                                uint32_t frame_id,
                                int width,
                                int height,
+                               anki_camera_pixel_format_t format,
                                void* cb_ctx)
 {
   struct anki_camera_capture* capture = (struct anki_camera_capture*)cb_ctx;
@@ -93,7 +181,7 @@ int anki_camera_frame_callback(const uint8_t* image,
 
   // get the next slot for writing
   uint32_t slot;
-  int rc = get_next_buffer_slot(header, &slot);
+  int rc = get_next_buffer_slot(header, format, &slot);
   if (rc == -1) {
     loge("%s: No buffer space available", __FUNCTION__);
     return -1;
@@ -114,6 +202,15 @@ int anki_camera_frame_callback(const uint8_t* image,
 
   frame->frame_id = frame_id;
   frame->timestamp = timestamp;
+
+  if(frame->format != format)
+  {
+    loge("%s: callback's format %u and frame's format %u do not match",
+         __FUNCTION__
+         format,
+         frame->format);
+    return -1;
+  }
 
   if (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10 ||
       frame->format == ANKI_CAM_FORMAT_YUV) {
@@ -350,6 +447,7 @@ int camera_capture_start(struct anki_camera_capture* capture,
     .capture_params = *capture_params,
     .frame_callback_raw = anki_camera_frame_callback,
     .frame_callback_preview = anki_camera_frame_callback,
+    .frame_callback_snapshot = anki_camera_snapshot_frame_callback
   };
 
   rc = camera_start(&params, capture);
@@ -406,4 +504,14 @@ int camera_capture_set_format(struct anki_camera_capture* capture,
                               anki_camera_pixel_format_t format)
 {
   return camera_set_capture_format(capture, format, anki_camera_reallocate_ion_memory);
+}
+
+int camera_capture_start_snapshot()
+{
+  return camera_start_snapshot();
+}
+
+int camera_capture_stop_snapshot()
+{
+  return camera_stop_snapshot();
 }

@@ -18,7 +18,8 @@
 #include "camera_format.h"
 #include "camera_params.h"
 
-#define ANKI_CAMERA_MAX_FRAME_COUNT 6
+// In preview/yuv mode, the last frame is reserved for snapshots
+#define ANKI_CAMERA_MAX_FRAME_COUNT (6 + 1) 
 
 // capture buffer memory
 typedef struct {
@@ -83,5 +84,7 @@ int camera_capture_set_exposure(anki_camera_exposure_t exposure);
 int camera_capture_set_awb(anki_camera_awb_t awb);
 int camera_capture_set_format(struct anki_camera_capture* capture,
                               anki_camera_pixel_format_t format);
+int camera_capture_start_snapshot();
+int camera_capture_stop_snapshot();
 
 #endif // __mm_anki_camera_process_h__

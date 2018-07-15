@@ -296,6 +296,7 @@ static void mm_app_snapshot_notify_cb_raw(mm_camera_super_buf_t *bufs,
                                    frameid,
                                    raw_frame_width,
                                    raw_frame_height,
+                                   ANKI_CAM_FORMAT_RGB888,
                                    _rdi_camera->callback_ctx);
           pthread_mutex_unlock(&_rdi_camera->callback_lock);
         }

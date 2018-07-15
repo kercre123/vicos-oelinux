@@ -101,6 +101,7 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
                                            frameid,
                                            raw_frame_width,
                                            raw_frame_height,
+                                           ANKI_CAM_FORMAT_YUV,
                                            _camera->callback_ctx);
           pthread_mutex_unlock(&_camera->callback_lock);
         }
