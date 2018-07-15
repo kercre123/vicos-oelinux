@@ -297,7 +297,7 @@ static void mm_app_snapshot_notify_cb_raw(mm_camera_super_buf_t *bufs,
                                    raw_frame_width,
                                    raw_frame_height,
                                    _rdi_camera->callback_ctx);
-          pthread_mutex_unlock(&_camera->callback_lock);
+          pthread_mutex_unlock(&_rdi_camera->callback_lock);
         }
         break;
       }
