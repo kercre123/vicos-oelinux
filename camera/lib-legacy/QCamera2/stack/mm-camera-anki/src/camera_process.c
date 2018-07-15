@@ -122,7 +122,7 @@ struct anki_camera_capture* capture = (struct anki_camera_capture*)cb_ctx;
   if(frame->format != format)
   {
     loge("%s: callback's format %u and frame's format %u do not match",
-         __FUNCTION__
+         __FUNCTION__,
          format,
          frame->format);
     return -1;
@@ -133,7 +133,7 @@ struct anki_camera_capture* capture = (struct anki_camera_capture*)cb_ctx;
     memcpy(frame->data, image, frame_data_len);
   }
   else {
-    loge("%s: snapshot callback expecting yuv format");
+    loge("%s: snapshot callback expecting yuv format", __FUNCTION__);
     return -1;
   }
 
@@ -206,7 +206,7 @@ int anki_camera_frame_callback(const uint8_t* image,
   if(frame->format != format)
   {
     loge("%s: callback's format %u and frame's format %u do not match",
-         __FUNCTION__
+         __FUNCTION__,
          format,
          frame->format);
     return -1;
