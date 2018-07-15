@@ -1,0 +1,36 @@
+/**
+ * File: mm_camera_stream_types.h 
+ *
+ * Author: chapados
+ * Created: 1/29/2018
+ *
+ * Description: mm-camera-interface adapter for camera capture from internal qcom stack             
+ *
+ * Copyright: Anki, Inc. 2018
+ *
+ **/
+
+#ifndef __mm_camera_stream_types_h__
+#define __mm_camera_stream_types_h__
+
+// Camera callback: called with captured `image` of `width` by `height`, with specified bits per pixel
+// (called from separate thread)
+//typedef int(*camera_cb)(uint8_t* image, int width, int height, int bpp);
+typedef int(*camera_cb)(const uint8_t* image,
+                        uint64_t timestamp,
+                        uint32_t frame_id,
+                        int width,
+                        int height,
+                        void* cb_ctx);
+
+typedef struct cameraobj_t {
+  mm_camera_lib_handle lib_handle;
+  void* callback_ctx;
+  pthread_mutex_t callback_lock;
+  struct anki_camera_params params;
+  int is_running;
+  anki_camera_pixel_format_t pixel_format;
+} CameraObj;
+
+
+#endif // __mm_camera_stream_types_h__

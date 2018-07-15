@@ -13,10 +13,11 @@
 #ifndef __mm_camera_stream_preview_h__
 #define __mm_camera_stream_preview_h__
 
+#include "mm_camera_stream_types.h"
 #include "mm_qcamera_app.h"
 #include "camera_process.h"
 
-void camera_install_callback_preview(camera_cb cb);
+void camera_install_callback_preview(camera_cb cb, CameraObj* camera);
 
 mm_camera_channel_t * anki_mm_app_add_preview_channel(mm_camera_test_obj_t *test_obj);
 

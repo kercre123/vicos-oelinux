@@ -41,14 +41,7 @@ typedef struct {
 } awb_update_t;
 
 
-typedef struct cameraobj_t {
-  mm_camera_lib_handle lib_handle;
-  void* callback_ctx;
-  pthread_mutex_t callback_lock;
-  struct anki_camera_params params;
-  int is_running;
-  anki_camera_pixel_format_t pixel_format;
-} CameraObj;
+
 
 static CameraObj gTheCamera;
 
@@ -402,11 +395,11 @@ int camera_start(struct anki_camera_params* params, void* callback_ctx)
 int camera_set_params(struct anki_camera_params* params)
 {
   if (params->frame_callback_raw != NULL) {
-    camera_install_callback(params->frame_callback_raw);
+    camera_install_callback(params->frame_callback_raw, &gTheCamera);
   }
 
   if (params->frame_callback_preview != NULL) {
-    camera_install_callback_preview(params->frame_callback_preview);
+    camera_install_callback_preview(params->frame_callback_preview, &gTheCamera);
   }
 
   const uint8_t fps_reduction = params->capture_params.fps_reduction;

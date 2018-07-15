@@ -23,16 +23,6 @@ extern "C" {
 #include "camera_params.h"
 #include "camera_process.h"
   
-// Camera callback: called with captured `image` of `width` by `height`, with specified bits per pixel
-// (called from separate thread)
-//typedef int(*camera_cb)(uint8_t* image, int width, int height, int bpp);
-typedef int(*camera_cb)(const uint8_t* image,
-                        uint64_t timestamp,
-                        uint32_t frame_id,
-                        int width,
-                        int height,
-                        void* cb_ctx);
-
 #define ANKI_CAMERA_FPS_MAX 30
 
 struct anki_camera_params {

@@ -20,10 +20,11 @@
 
 /*************************************/
 
-
+CameraObj* _camera = NULL;
 camera_cb  user_frame_callback_preview = NULL;
-void camera_install_callback_preview(camera_cb cb)
+void camera_install_callback_preview(camera_cb cb, CameraObj* camera)
 {
+  _camera = camera;
   user_frame_callback_preview = cb;
 }
 
@@ -39,7 +40,7 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
   mm_camera_stream_t *m_stream = NULL;
   mm_camera_buf_def_t *m_frame = NULL;
 
-  if ((frameid % gTheCamera.params.capture_params.fps_reduction) != 0) {
+  if ((frameid % _camera->params.capture_params.fps_reduction) != 0) {
     goto EXIT;
   }
 
@@ -90,10 +91,10 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
           goto EXIT;
         }
 
-        uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;;
+        uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;
         uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
   
-        if(pthread_mutex_trylock(&gTheCamera.callback_lock) == 0)
+        if(pthread_mutex_trylock(&_camera->callback_lock) == 0)
         {
           rc = user_frame_callback_preview(inbuf,
                                            timestamp,
@@ -101,7 +102,7 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
                                            raw_frame_width,
                                            raw_frame_height,
                                            gTheCamera.callback_ctx);
-          pthread_mutex_unlock(&gTheCamera.callback_lock);
+          pthread_mutex_unlock(&_camera->callback_lock);
         }
         break;
       }
