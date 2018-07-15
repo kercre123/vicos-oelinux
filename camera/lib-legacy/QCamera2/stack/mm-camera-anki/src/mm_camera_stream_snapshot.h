@@ -18,8 +18,8 @@
 
 void camera_install_callback_snapshot(camera_cb cb, CameraObj* camera);
 
-void anki_mm_app_start_snapshot(mm_camera_test_obj_t *test_obj,
-                               uint8_t num_snapshots);
+void mm_anki_app_start_snapshot(mm_camera_test_obj_t *test_obj,
+                                uint8_t num_snapshots);
 
 int mm_anki_app_stop_snapshot(mm_camera_test_obj_t *test_obj);
 

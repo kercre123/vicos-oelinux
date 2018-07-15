@@ -295,20 +295,22 @@ int stop_camera_capture()
 
 int camera_start_snapshot()
 {
-  if(gTheCamera.pixel_format != ANKI_CAMERA_FORMAT_YUV)
+  if(gTheCamera.pixel_format != ANKI_CAM_FORMAT_YUV)
   {
-    CDBG_ERROR("%s: can't take snapshot when not in yuv/preview mode");
+    CDBG_ERROR("%s: can't take snapshot when not in yuv/preview mode",
+               __func__);
     return -1;
   }
 
   int rc = stop_camera_capture();
   if(rc != 0)
   {
-    CDBG_ERROR("%s: failed to stop camera capture");
+    CDBG_ERROR("%s: failed to stop camera capture",
+               __func__);
     return rc;
   }
 
-  rc = mm_anki_app_start_snapshot(&(camera->lib_handle.test_obj));
+  rc = mm_anki_app_start_snapshot(&(gTheCamera.lib_handle.test_obj), 1);
   if(rc != 0)
   {
     CDBG_ERROR("%s: failed to start snapshot");
@@ -320,17 +322,19 @@ int camera_start_snapshot()
 
 int camera_stop_snapshot()
 {
-  int rc = mm_anki_app_stop_snapshot();
+  int rc = mm_anki_app_stop_snapshot(&(gTheCamera.lib_handle.test_obj));
   if(rc != 0)
   {
-    CDBG_ERROR("%s: failed to stop snapshot");
+    CDBG_ERROR("%s: failed to stop snapshot",
+               __func__);
     return -1;
   }
 
   rc = start_camera_capture();
   if(rc != 0)
   {
-    CDBG_ERROR("%s: failed to restart capture");
+    CDBG_ERROR("%s: failed to restart capture",
+               __func__);
     return -1;
   }
 
