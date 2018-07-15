@@ -19,7 +19,7 @@
 #include "camera_params.h"
 #include "mm_qcamera_app.h"
 
-#include <pthread>
+#include <pthread.h>
 
 // Camera callback: called with captured `image` of `width` by `height`, with specified bits per pixel
 // (called from separate thread)
