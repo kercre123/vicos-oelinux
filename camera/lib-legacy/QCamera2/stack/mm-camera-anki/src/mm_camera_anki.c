@@ -313,7 +313,8 @@ int camera_start_snapshot()
   rc = mm_anki_app_start_snapshot(&(gTheCamera.lib_handle.test_obj), 1);
   if(rc != 0)
   {
-    CDBG_ERROR("%s: failed to start snapshot");
+    CDBG_ERROR("%s: failed to start snapshot",
+               __func__);
     return rc;
   }
 

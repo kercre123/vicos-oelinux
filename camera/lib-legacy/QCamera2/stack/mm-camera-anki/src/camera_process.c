@@ -107,7 +107,7 @@ struct anki_camera_capture* capture = (struct anki_camera_capture*)cb_ctx;
   uint32_t lock_status = 0;
   _Atomic uint32_t *slot_lock = &(header->locks.frame_locks[slot]);
   if (!atomic_compare_exchange_strong(slot_lock, &lock_status, 1)) {
-    log("%s: could not lock frame for writing (slot %u)", __FUNCTION__, slot);
+    loge("%s: could not lock frame for writing (slot %u)", __FUNCTION__, slot);
     return -1;
   }
 
