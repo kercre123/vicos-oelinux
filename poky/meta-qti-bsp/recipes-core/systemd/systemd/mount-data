@@ -31,6 +31,7 @@ UNBRICK_KEY="anki.unbrick"
 WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
 CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
+ROBOT_KEY=/data/etc/robot.pem
 
 
 make_userdata() {
@@ -49,6 +50,11 @@ make_userdata() {
     mkdir -p /data/lib/connman/
     cp -rf /var/lib/connman/* /data/lib/connman
     touch $CONNMAN_DONE_TOKEN
+  fi
+  if [ ! -f $ROBOT_KEY ]; then
+    mkdir -p /data/etc
+    openssl genrsa -out $ROBOT_KEY 2048
+    chmod 440 $ROBOT_KEY
   fi
 }
 
