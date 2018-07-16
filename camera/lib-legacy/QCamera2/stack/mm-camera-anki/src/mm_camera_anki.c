@@ -215,7 +215,7 @@ int camera_set_exposure(uint16_t exposure_ms, float gain)
   int rc;
   CameraObj* camera = &gTheCamera;
 
-  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV)
+  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV && false)
   {
     CDBG("%s: Not setting exposure while pixel_format is YUV", __func__);
     return -1;
@@ -231,7 +231,7 @@ int camera_set_awb(float r_gain, float g_gain, float b_gain)
   int rc;
   CameraObj* camera = &gTheCamera;
 
-  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV)
+  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV && false)
   {
     CDBG("%s: Not setting awb while pixel_format is YUV", __func__);
     return -1;
@@ -302,6 +302,7 @@ int camera_start_snapshot()
     return -1;
   }
 
+  CDBG_ERROR("%s: stopping current capture", __func__);
   int rc = stop_camera_capture();
   if(rc != 0)
   {
@@ -310,6 +311,7 @@ int camera_start_snapshot()
     return rc;
   }
 
+  CDBG_ERROR("%s: starting snapshot", __func__);
   rc = mm_anki_app_start_snapshot(&(gTheCamera.lib_handle.test_obj), 1);
   if(rc != 0)
   {
@@ -350,6 +352,7 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
 {
   int rc;
   
+  CDBG_ERROR("%s: stopping current capture", __func__);
   // Stop current camera capture
   rc = stop_camera_capture();
   if (rc != MM_CAMERA_OK) {
@@ -366,6 +369,7 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
   // so we need to guard with callback_lock
   pthread_mutex_lock(&gTheCamera.callback_lock);
 
+  CDBG_ERROR("%s: reallocating", __func__);
   // Reallocate memory for the new format
   rc = realloc_with_format(capture, format);
   if (rc != MM_CAMERA_OK) {
@@ -383,6 +387,7 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
   // Update format
   gTheCamera.pixel_format = format;
   
+  CDBG_ERROR("%s: starting new capture", __func__);
   // Start camera capture using the new format
   rc = start_camera_capture();
   if (rc != MM_CAMERA_OK) {
