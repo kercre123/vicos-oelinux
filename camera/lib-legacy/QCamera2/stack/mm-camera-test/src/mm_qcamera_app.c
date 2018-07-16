@@ -1793,8 +1793,8 @@ int tuneserver_capture(mm_camera_lib_handle *lib_handle,
             }
 
             if ( NULL != dim ) {
-                lib_handle->test_obj.buffer_width = dim->width;
-                lib_handle->test_obj.buffer_height = dim->height;
+                lib_handle->test_obj.buffer_width = 1280;
+                lib_handle->test_obj.buffer_height = 720;
             }
             rc = mm_app_start_capture(&lib_handle->test_obj, 1);
             if (rc != MM_CAMERA_OK) {

@@ -265,10 +265,12 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
       case ANKI_CAMERA_MSG_C2S_PARAMS_ID_SNAPSHOT: {
         if(payload->data[0])
         {
+          loge("%s: starting snapshot", __FUNCTION__);
           rc = camera_capture_start_snapshot();
         }
         else
         {
+          loge("%s: stopping snapshot", __FUNCTION__);
           rc = camera_capture_stop_snapshot();
         }
       }

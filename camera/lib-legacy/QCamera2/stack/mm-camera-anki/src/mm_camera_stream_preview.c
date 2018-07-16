@@ -34,6 +34,8 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
   int rc;
   static int frameid = 0;
 
+  pthread_mutex_lock(&_camera->callback_lock);
+
   uint32_t i = 0;
   mm_camera_test_obj_t *pme = (mm_camera_test_obj_t *)user_data;
   mm_camera_channel_t *channel = NULL;
@@ -94,17 +96,14 @@ static void mm_app_snapshot_notify_cb_preview(mm_camera_super_buf_t *bufs,
         uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;
         uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
   
-        if(pthread_mutex_trylock(&_camera->callback_lock) == 0)
-        {
-          rc = user_frame_callback_preview(inbuf,
-                                           timestamp,
-                                           frameid,
-                                           raw_frame_width,
-                                           raw_frame_height,
-                                           ANKI_CAM_FORMAT_YUV,
-                                           _camera->callback_ctx);
-          pthread_mutex_unlock(&_camera->callback_lock);
-        }
+        rc = user_frame_callback_preview(inbuf,
+                                         timestamp,
+                                         frameid,
+                                         raw_frame_width,
+                                         raw_frame_height,
+                                         ANKI_CAM_FORMAT_YUV,
+                                         _camera->callback_ctx);
+
         break;
       }
     }
@@ -120,6 +119,8 @@ EXIT:
   }
 
   ++frameid;
+
+  pthread_mutex_unlock(&_camera->callback_lock);
 }
 
 mm_camera_stream_t * anki_mm_app_add_preview_stream(mm_camera_test_obj_t *test_obj,

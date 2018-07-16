@@ -228,6 +228,8 @@ static void mm_app_snapshot_notify_cb_raw(mm_camera_super_buf_t *bufs,
   int rc;
   static int frameid = 0;
 
+  pthread_mutex_lock(&_rdi_camera->callback_lock);
+
   uint32_t i = 0;
   mm_camera_test_obj_t *pme = (mm_camera_test_obj_t *)user_data;
   mm_camera_channel_t *channel = NULL;
@@ -315,6 +317,8 @@ EXIT:
   }
 
   ++frameid;
+
+  pthread_mutex_unlock(&_rdi_camera->callback_lock);
 }
 
 int anki_mm_camera_start_rdi_capture(mm_camera_lib_handle *handle)

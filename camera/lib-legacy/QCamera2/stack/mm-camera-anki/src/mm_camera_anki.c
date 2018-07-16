@@ -215,7 +215,7 @@ int camera_set_exposure(uint16_t exposure_ms, float gain)
   int rc;
   CameraObj* camera = &gTheCamera;
 
-  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV && false)
+  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV)
   {
     CDBG("%s: Not setting exposure while pixel_format is YUV", __func__);
     return -1;
@@ -231,7 +231,7 @@ int camera_set_awb(float r_gain, float g_gain, float b_gain)
   int rc;
   CameraObj* camera = &gTheCamera;
 
-  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV && false)
+  if(camera->pixel_format == ANKI_CAM_FORMAT_YUV)
   {
     CDBG("%s: Not setting awb while pixel_format is YUV", __func__);
     return -1;
@@ -352,6 +352,11 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
 {
   int rc;
   
+  // `capture` is the same as `gTheCamera.callback_ctx` both set from
+  // `&ctx->camera` in camera_server.c
+  // so we need to guard with callback_lock
+  pthread_mutex_lock(&gTheCamera.callback_lock);
+
   CDBG_ERROR("%s: stopping current capture", __func__);
   // Stop current camera capture
   rc = stop_camera_capture();
@@ -361,15 +366,11 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
                rc,
                gTheCamera.pixel_format,
                format);
+    pthread_mutex_unlock(&gTheCamera.callback_lock);
     return -1;
   }
 
-  // `capture` is the same as `gTheCamera.callback_ctx` both set from
-  // `&ctx->camera` in camera_server.c
-  // so we need to guard with callback_lock
-  pthread_mutex_lock(&gTheCamera.callback_lock);
-
-  CDBG_ERROR("%s: reallocating", __func__);
+  CDBG_ERROR("%s: stopping current capture", __func__);
   // Reallocate memory for the new format
   rc = realloc_with_format(capture, format);
   if (rc != MM_CAMERA_OK) {
@@ -379,15 +380,13 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
                rc,
                gTheCamera.pixel_format,
                format);
+    pthread_mutex_unlock(&gTheCamera.callback_lock);
     return -1;
   }
-  
-  pthread_mutex_unlock(&gTheCamera.callback_lock);
 
   // Update format
   gTheCamera.pixel_format = format;
   
-  CDBG_ERROR("%s: starting new capture", __func__);
   // Start camera capture using the new format
   rc = start_camera_capture();
   if (rc != MM_CAMERA_OK) {
@@ -395,8 +394,11 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
                __func__, 
                rc,
                format);
+    pthread_mutex_unlock(&gTheCamera.callback_lock);
     return -1;
   }
+
+  pthread_mutex_unlock(&gTheCamera.callback_lock);
 
   return rc;
 }
@@ -484,6 +486,8 @@ int camera_stop()
   int rc;
   CameraObj* camera = &gTheCamera;
 
+  pthread_mutex_lock(&camera->callback_lock);
+
   rc = stop_camera_capture();
 
   if (rc != MM_CAMERA_OK) {
@@ -492,8 +496,6 @@ int camera_stop()
   }
 
   gTheCamera.is_running = 0;
-  
-  pthread_mutex_lock(&gTheCamera.callback_lock);
   gTheCamera.callback_ctx = NULL;
   pthread_mutex_unlock(&gTheCamera.callback_lock);
 

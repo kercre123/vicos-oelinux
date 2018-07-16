@@ -664,8 +664,6 @@ static boolean port_sensor_handle_aec_update(
   uint32_t sensor_pipeline_delay = bundle_info->s_bundle->
     frame_ctrl.max_pipeline_frame_delay;
 
-  return TRUE;
-
   if (!stats_update || !module_sensor_params) {
     SERR("failed");
     return FALSE;
