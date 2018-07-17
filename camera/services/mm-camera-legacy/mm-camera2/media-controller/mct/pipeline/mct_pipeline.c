@@ -435,6 +435,7 @@ error:
 static boolean mct_pipeline_send_event(mct_pipeline_t *pipeline,
   uint32_t stream_id, mct_event_t *event)
 {
+  CDBG_ERROR("%s: begin", __func__);
   boolean ret = TRUE;
   mct_stream_t *stream = NULL;
   mct_pipeline_get_stream_info_t info;
@@ -666,6 +667,7 @@ mct_event_t mct_pipeline_pack_event(mct_event_type type, uint32_t identity,
 boolean mct_pipeline_send_ctrl_events(mct_pipeline_t *pipeline,
   uint32_t stream_id, mct_event_control_type_t event_type)
 {
+
   uint32_t i = 0, j = 0;
   uint32_t num_entry = 0;
   boolean ret = TRUE;
@@ -682,9 +684,10 @@ boolean mct_pipeline_send_ctrl_events(mct_pipeline_t *pipeline,
   /*
   ** <anki> VIC-602: Don't report normal operation as error </anki>
   */
-  CDBG("%s: Send Set Parm events", __func__);
+  CDBG_ERROR("%s: Send Set Parm events", __func__);
 
   if (event_type == MCT_EVENT_CONTROL_SET_PARM) {
+    CDBG_ERROR("%s: set parm", __func__);
     p_table = pipeline->pending_set_parm;
   } else if (event_type == MCT_EVENT_CONTROL_GET_PARM) {
     p_table = h_table;
@@ -742,6 +745,7 @@ boolean mct_pipeline_send_ctrl_events(mct_pipeline_t *pipeline,
     }
 
     if (pipeline->send_event) {
+      CDBG_ERROR("%s: send_event", __func__);
       ret = pipeline->send_event(pipeline, stream_id, &cmd_event);
       if (ret == FALSE)
         break;
