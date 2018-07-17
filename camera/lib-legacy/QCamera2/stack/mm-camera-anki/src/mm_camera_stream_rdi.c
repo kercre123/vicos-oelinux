@@ -291,17 +291,14 @@ static void mm_app_snapshot_notify_cb_raw(mm_camera_super_buf_t *bufs,
         uint8_t* inbuf = (uint8_t *)m_frame->buffer + m_frame->planes[i].data_offset;
         uint64_t timestamp = (m_frame->ts.tv_nsec + m_frame->ts.tv_sec * 1000000000LL);
 
-        if(pthread_mutex_trylock(&_rdi_camera->callback_lock) == 0)
-        {
-          rc = user_frame_callback(inbuf,
-                                   timestamp,
-                                   frameid,
-                                   raw_frame_width,
-                                   raw_frame_height,
-                                   ANKI_CAM_FORMAT_RGB888,
-                                   _rdi_camera->callback_ctx);
-          pthread_mutex_unlock(&_rdi_camera->callback_lock);
-        }
+        rc = user_frame_callback(inbuf,
+                                 timestamp,
+                                 frameid,
+                                 raw_frame_width,
+                                 raw_frame_height,
+                                 ANKI_CAM_FORMAT_RGB888,
+                                 _rdi_camera->callback_ctx);
+
         break;
       }
     }
