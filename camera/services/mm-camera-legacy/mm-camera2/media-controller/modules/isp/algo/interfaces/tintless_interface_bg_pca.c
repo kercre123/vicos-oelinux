@@ -449,7 +449,7 @@ isp_tintless_config(tintless_lib_t * const tintless_lib, const tintless_update_r
             cfg->stat_elem_h        = stats_cfg->stat_elem_h;
             CDBG_ERROR("%s: cfg: camif %dx%d, elem sz %dx%d,", __func__,stats_cfg->camif_win_w, stats_cfg->camif_win_h, stats_cfg->stat_elem_w, stats_cfg->stat_elem_h);
         } else {
-            printf("same cfg as current\n");
+            //printf("same cfg as current\n");
             return TINTLESS_SUCCESS;
         }
         break;
