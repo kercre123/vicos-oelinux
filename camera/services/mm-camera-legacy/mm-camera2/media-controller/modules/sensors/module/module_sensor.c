@@ -3319,7 +3319,7 @@ static boolean module_sensor_event_control_set_parm(
       ret = FALSE;
       break;
     }
-
+    fprintf(stderr,"manual exposure\n");
     rc = module_sensor_params->func_tbl.process(
            module_sensor_params->sub_module_private,
            SENSOR_SET_RAW_MANUAL_EXPOSURE, event_control->parm_data);

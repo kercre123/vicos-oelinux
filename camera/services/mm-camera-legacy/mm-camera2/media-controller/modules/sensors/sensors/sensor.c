@@ -922,8 +922,15 @@ static int8_t sensor_set_awb_video_hdr_update(void *sctrl, void *data)
     SERR("failed");
     return SENSOR_FAILURE;
   }
+
   int32_t rc = SENSOR_SUCCESS;
   sensor_ctrl_t *ctrl = (sensor_ctrl_t *)sctrl;
+
+  if (ctrl->s_data->cur_stream_mask & (1 << CAM_STREAM_TYPE_PREVIEW)) {
+    fprintf("%s: preview awb update\n");
+  }
+
+
   awb_update_t* awb_hdr_update = (awb_update_t*) data;
   sensor_lib_params_t *lib = (sensor_lib_params_t *)ctrl->lib_params;
   struct sensorb_cfg_data cfg;
@@ -2094,9 +2101,11 @@ static int32_t sensor_set_raw_manual_exposure(void * sctrl , void *data)
       exposure.real_gain, exposure.linecount);
     sensor_set_exposure(sctrl, exposure);
     sensor_apply_exposure(sctrl); /* apply exposure */
+
+    return SENSOR_SUCCESS;    
   }
 
-  return SENSOR_SUCCESS;
+  return SENSOR_FAILURE;
 }
 
 /*==========================================================

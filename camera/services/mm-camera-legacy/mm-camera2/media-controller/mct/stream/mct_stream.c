@@ -1802,6 +1802,7 @@ static boolean mct_stream_send_event(mct_stream_t *stream, mct_event_t *event)
       if ((mct_module_find_type(src_module, event->identity)
            == MCT_MODULE_FLAG_SOURCE) &&
            src_module->process_event) {
+        CDBG_ERROR("%s: process_event", __func__);
         ret = src_module->process_event(src_module, event);
       }
     }
