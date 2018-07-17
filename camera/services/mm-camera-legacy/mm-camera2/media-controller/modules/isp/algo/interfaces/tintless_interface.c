@@ -507,7 +507,7 @@ isp_tintless_config(tintless_lib_t * const tintless_lib, const tintless_update_r
             cfg->b_post_stats       = (stats_cfg->stats_type == STATS_TYPE_BG) ? 1 : 0;
             CDBG_ERROR("%s: cfg: camif %dx%d, elem sz %dx%d, elems %dx%d", __func__,stats_cfg->camif_win_w, stats_cfg->camif_win_h, stats_cfg->stat_elem_w, stats_cfg->stat_elem_h, stats_cfg->num_stat_elem_rows, stats_cfg->num_stat_elem_cols);
         } else {
-            printf("same cfg as current\n");
+            //printf("same cfg as current\n");
             return TINTLESS_SUCCESS;
         }
         break;

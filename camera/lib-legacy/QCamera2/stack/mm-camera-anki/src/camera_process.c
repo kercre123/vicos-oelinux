@@ -203,15 +203,6 @@ int anki_camera_frame_callback(const uint8_t* image,
   frame->frame_id = frame_id;
   frame->timestamp = timestamp;
 
-  if(frame->format != format)
-  {
-    loge("%s: callback's format %u and frame's format %u do not match",
-         __FUNCTION__,
-         format,
-         frame->format);
-    return -1;
-  }
-
   if (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10 ||
       frame->format == ANKI_CAM_FORMAT_YUV) {
     // no downsample, just copy
