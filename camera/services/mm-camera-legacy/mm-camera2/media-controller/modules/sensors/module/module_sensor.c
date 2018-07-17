@@ -2826,13 +2826,6 @@ static boolean module_sensor_hal_set_parm(
       }
     }
       break;
-
-
-    case CAM_INTF_PARM_AEC_ENABLE: {
-      
-    }
-    break;
-
        default:
        break;
       }
