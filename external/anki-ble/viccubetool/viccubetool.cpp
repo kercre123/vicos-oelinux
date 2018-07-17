@@ -59,7 +59,7 @@ void show_cube_rssi(const char* cube_id, int rssi) {
 }
 
 /***************************************/
-
+static bool busy_ = false;
 
 VicCubeTool::~VicCubeTool() {
   delete connect_retry_timer_; connect_retry_timer_ = nullptr;
@@ -147,6 +147,7 @@ void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
   if (cube_test_mode_) {
       std::cerr << "No cubes found. Restarting Scan..." << std::endl;
       CheckCubeLimit();
+busy_ = false;
       ScanForCubes();
   }
   else {
@@ -159,8 +160,13 @@ void VicCubeTool::ScanTimerCallback(ev::timer& w, int revents) {
 
 void VicCubeTool::ScanForCubes() {
   std::cout << "Scanning for cubes...." << std::endl;
-  if (cube_test_mode_) {
-    show_text("WAIT", lcd_BLUE);
+  if (cube_test_mode_ ) {
+    if ( busy_) {
+//      return;
+    }
+    if (!scanning_) {
+      show_text("WAIT", lcd_BLUE);
+    }
   }
   scanning_ = true;
   StartScan(Anki::kCubeService_128_BIT_UUID);
@@ -169,13 +175,15 @@ void VicCubeTool::ScanForCubes() {
   }
   stop_scan_timer_->stop();
   stop_scan_timer_->set <VicCubeTool, &VicCubeTool::ScanTimerCallback> (this);
-  stop_scan_timer_->start(cube_test_mode_ ? 8 : 2.0);
+  stop_scan_timer_->start(cube_test_mode_ ? 8.0 : 2.0);
 }
 
-#define MAX_SEQUENTIAL_CUBES 8
+#define MAX_SEQUENTIAL_CUBES 12
 void VicCubeTool::CheckCubeLimit() {
   if (found_cube_count_++ > MAX_SEQUENTIAL_CUBES) {
       std::cout << "Exiting after " << MAX_SEQUENTIAL_CUBES << " cubes" << std::endl;
+      show_text("",lcd_BLUE);
+      show_cube_rssi(NULL,0);
        _exit(0);
   }
 }
@@ -216,11 +224,15 @@ void VicCubeTool::OnScanResults(int error,
 }
 
 void VicCubeTool::CubeConnectRetryTimerCallback(ev::timer& w, int revents) {
+  std::cout << "CubeConnectRetry " << retries_ << std::endl;
   DisconnectByAddress(address_);
+//  if (address_ == active_) { active_.clear(); }
   if (--retries_ > 0) {
     w.again();
     connection_start_time_ = Anki::Util::CodeTimer::Start();
     ConnectToPeripheral(address_);
+//    active_ = address;
+
   } else {
     w.stop();
     std::cout << "Failed to connect to " << address_ << std::endl;
@@ -232,6 +244,7 @@ void VicCubeTool::IdleCubeConnectionTimerCallback(ev::timer& w, int revents) {
   std::cout << "Cube connection has gone idle.  Disconnecting...." << std::endl;
   w.stop();
   DisconnectByAddress(address_);
+//  if (address_ == active_) { active_.clear(); }
 }
 
 void VicCubeTool::ConnectToCube() {
@@ -281,8 +294,9 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
   idle_cube_connection_timer_->set <VicCubeTool, &VicCubeTool::IdleCubeConnectionTimerCallback> (this);
   idle_cube_connection_timer_->set(0., 10.);
   idle_cube_connection_timer_->again();
-
+	
   connection_id_ = connection_id;
+  busy_ = true;
   ReadCharacteristic(connection_id_, Anki::kModelNumberString_128_BIT_UUID);
 }
 
@@ -290,6 +304,7 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
                                    const std::string& characteristic_uuid,
                                    const std::vector<uint8_t>& value)
 {
+  std::cout << "message rvcd" << std::endl;
   logv("OnReceiveMessage(id = %d, char_uuid = '%s', value.size = %d)",
        connection_id, characteristic_uuid.c_str(), value.size());
   if (connection_id == -1 || connection_id != connection_id_) {
@@ -308,8 +323,11 @@ void VicCubeTool::OnReceiveMessage(const int connection_id,
         std::cout << "Firmware upload complete" << std::endl;
         if (cube_test_mode_) {
           show_text("TEST", lcd_GREEN);
+          ScanForCubes();
         }
       }
+busy_ = false;
+
       if (!cube_test_mode_) {
         task_executor_->WakeAfter(std::bind(&IPCClient::Disconnect, this, connection_id_),
                                 std::chrono::steady_clock::now() + std::chrono::milliseconds(1000 * 5));

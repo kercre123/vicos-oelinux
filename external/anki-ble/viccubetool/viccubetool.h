@@ -87,4 +87,5 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   std::string cube_model_number_;
   std::string new_firmware_version_;
   Anki::TaskExecutor* task_executor_;
+  std::string active_;
 };
