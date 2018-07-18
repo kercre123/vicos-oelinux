@@ -8,6 +8,7 @@ IMAGE_INSTALL += "anki-version"
 #
 # Victor stuff
 IMAGE_INSTALL += "vic-anim"
+IMAGE_INSTALL += "vic-christen"
 IMAGE_INSTALL += "vic-cloud"
 IMAGE_INSTALL += "vic-crashuploader"
 IMAGE_INSTALL += "vic-dasmgr"
