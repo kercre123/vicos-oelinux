@@ -927,7 +927,7 @@ static int8_t sensor_set_awb_video_hdr_update(void *sctrl, void *data)
   sensor_ctrl_t *ctrl = (sensor_ctrl_t *)sctrl;
 
   if (ctrl->s_data->cur_stream_mask & (1 << CAM_STREAM_TYPE_PREVIEW)) {
-    fprintf("%s: preview awb update\n");
+    fprintf(stderr,"%s: preview awb update\n",__func__);
   }
 
 

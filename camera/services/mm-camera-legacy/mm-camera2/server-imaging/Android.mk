@@ -24,9 +24,6 @@ ifneq ($(call is-platform-sdk-version-at-least,17),true)
   LOCAL_CFLAGS += -include bionic/libc/kernel/common/linux/un.h
 endif
 
-$(warning LOOKFORME)
-$(info $(LOCAL_CFLAGS))
-
 LOCAL_SRC_FILES:= server.c \
   server_process.c
 
