@@ -10,6 +10,7 @@
  *
  **/
 
+#include "codeTimer.h"
 #include "ipc-client.h"
 
 class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
@@ -21,10 +22,17 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
       , address_(address)
       , args_(args)
       , connection_id_(-1)
+      , retries_(3)
       , task_executor_(new Anki::TaskExecutor(loop))
+      , rssi_min_(-40)
+      , found_cube_count_(0)
   {}
   ~VicCubeTool();
   void Execute();
+
+  void SetMinRssi(int min) {
+    rssi_min_ = min;
+  }
 
  protected:
   virtual void OnScanResults(int error,
@@ -54,20 +62,29 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   void FlashCubeDVT1(const std::string& pathToFirmware);
   void ConnectRetryTimerCallback(ev::timer& w, int revents);
   void ScanTimerCallback(ev::timer& w, int revents);
+  void CubeConnectRetryTimerCallback(ev::timer& w, int revents);
+  void IdleCubeConnectionTimerCallback(ev::timer& w, int revents);
+  void CheckCubeLimit(void);
 
   std::string address_;
   std::vector<std::string> args_;
   ev::timer* connect_retry_timer_ = nullptr;
   ev::timer* stop_scan_timer_ = nullptr;
+  ev::timer* cube_connect_retry_timer_ = nullptr;
+  ev::timer* idle_cube_connection_timer_ = nullptr;
   std::map<std::string, Anki::BluetoothDaemon::ScanResultRecord> scan_records_;
   bool scanning_;
   bool connect_to_first_cube_found_;
   bool flash_cube_after_connect_;
   bool use_dvt1_flasher_;
+  bool cube_test_mode_;
   int connection_id_;
+  int rssi_min_;
+  int retries_;
+  int found_cube_count_;
+  Anki::Util::CodeTimer::TimePoint connection_start_time_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
   std::string new_firmware_version_;
   Anki::TaskExecutor* task_executor_;
 };
-

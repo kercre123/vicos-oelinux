@@ -58,6 +58,7 @@ class Agent : public IPCServer {
                                                 int latency,
                                                 int timeout);
   virtual void SetAdapterName(const std::string& name);
+  virtual void DisconnectByAddress(const std::string& address);
 
 
  private:
