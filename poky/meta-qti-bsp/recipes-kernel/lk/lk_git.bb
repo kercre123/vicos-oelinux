@@ -48,7 +48,14 @@ EXTRA_OEMAKE_append = " ${@base_contains('DISTRO_FEATURES', 'systemd', 'USE_LE_S
 
 EXTRA_OEMAKE_append = " ${@base_contains('DISTRO_FEATURES', 'vble', 'VERIFIED_BOOT_LE=1', '', d)}"
 
-EXTRA_OEMAKE_append = "${@base_conditional('USER_BUILD', '1', ' TARGET_BUILD_VARIANT=user', '', d)}"
+EXTRA_OEMAKE_append = " ${@base_conditional('USER_BUILD', '1', 'TARGET_BUILD_VARIANT=user', '', d)}"
+
+python () {
+    qsn = os.environ.get('QSN', False)
+    bb.note("LK QSN_LOCK={}".format(qsn))
+    if qsn:
+        d.appendVar('EXTRA_OEMAKE', ' QSN_LOCK=' + qsn)
+}
 
 #enable hardfloat
 EXTRA_OEMAKE_append = " ${@base_conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)}"

@@ -12,7 +12,7 @@ mkdir -p /sys
 mkdir -p /dev
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
-mount -t devtmpfs none /dev
+mount -t devtmpfs -o noexec none /dev
 mount -t debugfs nodev /sys/kernel/debug
 
 mkdir -p /var
@@ -30,32 +30,40 @@ echo 1 > /sys/kernel/debug/regulator/8916_l8/enable
 echo 1 > /sys/kernel/debug/regulator/8916_l17/enable
 echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
 
+# Power on hardware test and led states
+if [ -z "${CMDLINE##*anki.dev*}" ]; then
+	is_dev_device = true
+	rampost dev
+else
+	is_dev_device = false
+	rampost
+fi
+
 if [ -z "${CMDLINE##*dm=*}" ]; then
 	DM="${CMDLINE##*dm=\"}"
 	DM="${DM%\" *}"
 	DM_TABLE="${DM##*,}"
 	ROOTFS_OPTS="-o ro,noatime,noload,exec"
 
-	# Power on hardware test and led states
-	rampost
-
 	echo "Setting up DM Verity device: $DM"
 	dmsetup create system -r --table "$DM_TABLE" || fatal "ERROR: dmsetup failed"
 else
 	set -e
 	ROOTFS_OPTS="-o ro,noatime,exec"
-	# Confirm the serial number is on the white list or die
-	SERIAL=`cat /sys/devices/soc0/serial_number`
-	if test -z $SERIAL; then
-		echo "Unable to get serial number"
-		exit 1;
-	fi
-	if grep -qw $SERIAL unlock.list; then
-		# Run user confirmation check for non verity devices
-		rampost orange
-	else
-		rampost x
-		exit 1;
+	if ! $is_dev_device; then
+		# Confirm the serial number is on the white list or die
+		SERIAL=`cat /sys/devices/soc0/serial_number`
+		if test -z $SERIAL; then
+			echo "Unable to get serial number"
+			exit 1;
+		fi
+		if grep -qw $SERIAL unlock.list; then
+			# Run user confirmation check for non verity devices
+			rampost orange
+		else
+			rampost x
+			exit 1;
+		fi
 	fi
 fi
 

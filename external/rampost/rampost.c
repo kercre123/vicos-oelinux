@@ -119,6 +119,7 @@ int error_exit(RampostErr err) {
 
 #include "warning_orange.h"
 #include "locked_qsn.h"
+#include "anki_dev_unit.h"
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define FRAME_WAIT_MS 200
 #define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
@@ -130,6 +131,10 @@ void show_orange_icon(void) {
 
 void show_locked_qsn_icon(void) {
   lcd_draw_frame2((uint16_t*)locked_qsn, locked_qsn_len);
+}
+
+void show_dev_unit(void) {
+  lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
 }
 
 bool imu_is_inverted(void) {
@@ -226,6 +231,10 @@ int main(int argc, const char* argv[]) {
     if (argv[1][0] == 'x') {
       show_locked_qsn_icon();
       while (1);
+    }
+    else if (argv[1][0] == 'd') {
+      show_dev_unit();
+      return 0; // Exit without blanking the display.
     }
     else { // Else orange
       show_orange_icon();

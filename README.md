@@ -54,3 +54,20 @@ Because user builds are basically not debugable, there are non-user versions of 
 Factory builds are intended as the out of box / recovery firmware programmed into the F slots of robots.
 The primary difference for factory builds is that `/data` is always mounted as a tmpfs in factory builds so it is
 erased every power cycles meaning the robot does not remember wifi configuration etc.
+
+
+-------------------------------------------------------------------------------
+
+## Making Unlock OTA files
+
+To unlock production robots for development builds, a special OTA file including an ABOOT unlocked to that QSN must be
+generated. Doing so requires a few steps but can be largely automated:
+
+1. Build a robot-perf-image flavor build.
+2. Download a copy of the MP firmware apq8009-robot-boot.img and apq8009-robot-sysfs.img into `_build/`
+3. `cd ota`
+4. Resign the boot image with the dev key: `make resign-dev`
+5. `python3 mk_unlock.py -q<qsn> -sm` or `python3 mk_unlock.py -l <file with one QSN per line> -sm`
+
+Note that signing the LK (`-s`) with cause the script to prompt for the signing password and making the OTA file (`-m`)
+will cause it to prompt for the OTA signing key password.
