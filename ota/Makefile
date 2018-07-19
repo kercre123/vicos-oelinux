@@ -27,11 +27,17 @@ endif
 OTAKEY ?= ota_test.key
 OTAPASS ?= file:ota_test.pass
 OTAENC ?= 1
+ANKIDEV ?= 1
+
+ifeq ($(ANKIDEV), 0)
+ MANIFEST_VERSION = 0.9.2
+else
+ MANIFEST_VERSION = 1.0.0
+endif
 
 UPDATE_VERSION ?= $(shell cat $(OS_VERSION_FILE))
 
 OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).ota
-ENC_OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).enc.ota
 
 all: $(BUILD) $(OTA_FILE)
 
@@ -65,25 +71,26 @@ $(BUILD)/%.img: $(IMG_DIR)/%.ext4
 	echo "sha256=`shasum -a256 -b $< | awk '{ print $$1 }'`" >> $@
 
 %.sha256: %.ini
-	openssl dgst -sha256 -sign $(OTAKEY) -out $@ $<
+	openssl dgst -sha256 -sign $(OTAKEY) -passin env:OTA_KEY_PASS -out $@ $<
 
 $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
-	echo "[META]"                           > $@
-	echo "manifest_version=0.9.2"           >> $@
-	echo "update_version=$(UPDATE_VERSION)" >> $@
-	echo "num_images=2"                     >> $@
-	echo "[BOOT]"                           >> $@
-	echo "encryption=$(OTAENC)"             >> $@
-	echo "delta=0"                          >> $@
-	echo "compression=gz"                   >> $@
-	echo "wbits=$(GZIP_WBITS)"              >> $@
-	cat $(BOOT_STATS)                       >> $@
-	echo "[SYSTEM]"                         >> $@
-	echo "encryption=$(OTAENC)"             >> $@
-	echo "delta=0"                          >> $@
-	echo "compression=gz"                   >> $@
-	echo "wbits=$(GZIP_WBITS)"              >> $@
-	cat $(SYS_STATS)                        >> $@
+	echo "[META]"                                > $@
+	echo "manifest_version=$(MANIFEST_VERSION)" >> $@
+	echo "update_version=$(UPDATE_VERSION)"     >> $@
+	echo "ankidev=$(ANKIDEV)"                   >> $@
+	echo "num_images=2"                         >> $@
+	echo "[BOOT]"                               >> $@
+	echo "encryption=$(OTAENC)"                 >> $@
+	echo "delta=0"                              >> $@
+	echo "compression=gz"                       >> $@
+	echo "wbits=$(GZIP_WBITS)"                  >> $@
+	cat $(BOOT_STATS)                           >> $@
+	echo "[SYSTEM]"                             >> $@
+	echo "encryption=$(OTAENC)"                 >> $@
+	echo "delta=0"                              >> $@
+	echo "compression=gz"                       >> $@
+	echo "wbits=$(GZIP_WBITS)"                  >> $@
+	cat $(SYS_STATS)                            >> $@
 
 PERMS="0400"
 OWNER="root:0"
@@ -126,3 +133,14 @@ devsign:
 	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
 	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
 	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
+
+
+resign-dev: $(BUILD)/$(BOOT_STEM).img
+	truncate --size=-2048 $<
+	openssl dgst -sha256 -binary $< > $<.sha256
+	openssl pkeyutl -sign -in $<.sha256 -inkey $(DEV_BOOT_KEY) -out $<.sig -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1
+	dd if=/dev/zero of=$<.sig.padded bs=2048 count=1
+	dd if=$<.sig of=$<.sig.padded conv=notrunc
+	cat $< $<.sig.padded > $<.signed
+	mv $<.signed $<
+	rm -rf $<.sha256 $<.sig $<.sig.padded

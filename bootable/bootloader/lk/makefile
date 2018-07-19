@@ -76,6 +76,7 @@ ifeq ($(ENABLE_EARLY_ETHERNET),1)
   CFLAGS += -DENABLE_EARLY_ETHERNET=1
 endif
 
+
 # setup toolchain prefix
 TOOLCHAIN_PREFIX ?= arm-eabi-
 CFLAGS += -fstack-protector-all
@@ -122,6 +123,10 @@ ifeq ($(VERIFIED_BOOT_LE),1)
   ifeq ($(DEFAULT_UNLOCK),true)
     DEFINES += DEFAULT_UNLOCK=1
   endif
+endif
+
+ifdef QSN_LOCK
+  DEFINES += QSN_LOCK=$(QSN_LOCK)
 endif
 
 ifeq ($(OSVERSION_IN_BOOTIMAGE),1)

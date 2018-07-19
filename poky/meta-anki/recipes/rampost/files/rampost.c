@@ -14,6 +14,7 @@
 #include "messages.h"
 #include "spine_hal.h"
 #include "rampost.h"
+#include "anki_dev_unit.h"
 
 enum {
   app_DEVICE_OPEN_ERROR = 1,
@@ -101,12 +102,6 @@ int recovery_mode_check(void) {
   return 0; //fault mode
 }
 
-void exit_cleanup(void)
-{
-  lcd_device_sleep();
-  lcd_gpio_teardown();
-}
-
 int error_exit(RampostErr err) {
 set_body_leds(0, 0);
 exit_cleanup();
@@ -114,7 +109,9 @@ exit(err);
 
 }
 
-
+void show_dev_unit(void) {
+  lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
+}
 
 int main(int argc, const char* argv[]) {
   bool success = false;
@@ -126,8 +123,8 @@ int main(int argc, const char* argv[]) {
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
   set_body_leds(success, recovery_mode_check());
-
-  exit_cleanup();
-
+  show_dev_unit();
+  lcd_gpio_teardown();
+  
   return 0;
 }
