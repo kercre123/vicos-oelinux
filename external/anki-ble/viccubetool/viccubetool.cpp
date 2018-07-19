@@ -58,6 +58,13 @@ void show_cube_rssi(const char* cube_id, int rssi) {
   display_render(rendermask);
 }
 
+void show_version(int color) {
+  uint8_t rendermask =  (1<<DISPLAY_LAYER_LARGE) | (1<<DISPLAY_LAYER_SMALL);
+  display_clear_layer(DISPLAY_LAYER_SMALL, color, lcd_BLACK);
+  display_draw_text(DISPLAY_LAYER_SMALL, 6, color, lcd_BLACK, __DATE__, strlen(__DATE__), 0);
+  display_render(rendermask);
+}
+
 /***************************************/
 
 VicCubeTool::~VicCubeTool() {
@@ -161,6 +168,7 @@ void VicCubeTool::ScanForCubes() {
   if (cube_test_mode_ ) {
     if (!scanning_) {
       show_text("WAIT", lcd_BLUE);
+      show_version(lcd_BLUE);
     }
   }
   scanning_ = true;
@@ -284,7 +292,7 @@ void VicCubeTool::OnOutboundConnectionChange(const std::string& address,
     idle_cube_connection_timer_ = new ev::timer(loop_);
   }
   idle_cube_connection_timer_->set <VicCubeTool, &VicCubeTool::IdleCubeConnectionTimerCallback> (this);
-  idle_cube_connection_timer_->set(0., 10.);
+  idle_cube_connection_timer_->set(0., 30.);
   idle_cube_connection_timer_->again();
 
   connection_id_ = connection_id;
