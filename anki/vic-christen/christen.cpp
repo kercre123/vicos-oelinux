@@ -118,8 +118,8 @@ writen(int fd, const void *vptr, size_t n)
 }
 
 /// Check sBlockBuffer for valid switchboard magic bytes.
-/// @return 0 if data in sBlockBuffer is valid switchboard data, otherwise return -1
-static int IsSwitchboardDataValid()
+/// @return true if data in sBlockBuffer is valid switchboard data, otherwise return false
+static bool IsSwitchboardDataValid()
 {
   // check magic
   struct RtsHeader *header = reinterpret_cast<struct RtsHeader*>(sBlockBuffer);
@@ -128,10 +128,10 @@ static int IsSwitchboardDataValid()
   if (m[0] == 'A' && m[1] == 'N' && m[2] == 'K' && m[3] == 'I' &&
       m[4] == 'B' && m[5] == 'I' && m[6] == 'T' && m[7] == 'S') {
     // data is valid
-    return 0;
+    return true;
   } else {
     // invalid data (not written by an Anki process)
-    return -1;
+    return false;
   }
 }
 
@@ -160,7 +160,7 @@ static int ReadSwitchboardData()
     return -1;
   }
 
-  return IsSwitchboardDataValid();
+  return IsSwitchboardDataValid() ? 0 : -1;
 }
 
 /// Write switchboard data to disk with the specified robit name
@@ -172,9 +172,10 @@ static int WriteSwitchboardData(const std::string robotName)
     return -1;
   }
 
+  struct RtsHeader* header = reinterpret_cast<struct RtsHeader*>(sBlockBuffer);
+
   if (!IsSwitchboardDataValid()) {
     // Fill out enough valid data to write name
-    struct RtsHeader* header = reinterpret_cast<struct RtsHeader*>(sBlockBuffer);
     header->magic[0] = 'A';
     header->magic[1] = 'N';
     header->magic[2] = 'K';
@@ -184,9 +185,10 @@ static int WriteSwitchboardData(const std::string robotName)
     header->magic[6] = 'T';
     header->magic[7] = 'S';
     header->version = 2; // Always set format version = 2 (factory compatability)
-    header->hasName = true;
-    (void) robotName.copy(header->name, sizeof(header->name) - 1);
   }
+  
+  header->hasName = true;
+  (void) robotName.copy(header->name, sizeof(header->name) - 1);
 
   ssize_t bytesWritten = writen(fd, sBlockBuffer, sizeof(sBlockBuffer));
 
