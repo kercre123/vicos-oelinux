@@ -16,6 +16,7 @@
 #include "rampost.h"
 #include "lcd.h"
 #include "imu.h"
+#include "dfu.h"
 
 enum {
   app_DEVICE_OPEN_ERROR = 1,

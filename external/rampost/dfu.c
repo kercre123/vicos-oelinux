@@ -7,6 +7,7 @@
 
 #include "messages.h"
 #include "spine_hal.h"
+#include "rampost.h"
 
 extern const struct SpineMessageHeader* hal_read_frame();
 
@@ -124,7 +125,7 @@ void SendData(FILE* imgfile, int start_addr)
 
     if (itemcount < 256) {
       if (ferror(imgfile)) {
-        show_error(err_DFU_FILER_READ);
+        show_error(err_DFU_FILE_READ);
       }
     }
 
@@ -145,7 +146,7 @@ void SendData(FILE* imgfile, int start_addr)
 }
 
 
-int dfu_if_needed(const char* dfu_file])
+int dfu_if_needed(const char* dfu_file)
 {
   dprint("requesting installed version\n");
 
