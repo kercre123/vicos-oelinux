@@ -16,6 +16,7 @@
 #include "rampost.h"
 #include "lcd.h"
 #include "imu.h"
+#include "dfu.h"
 
 enum {
   app_DEVICE_OPEN_ERROR = 1,
@@ -72,11 +73,6 @@ void set_body_leds(int success, int inRecovery) {
     }
   }
 
-  int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
-  if (errCode) {
-    error_exit(errCode);
-  }
-
   hal_send_frame(PAYLOAD_LIGHT_STATE, &ledPayload, sizeof(ledPayload));
 }
 
@@ -98,21 +94,19 @@ int recovery_mode_check(void) {
   return 0; //fault mode
 }
 
-void exit_cleanup(void)
+void cleanup(bool blank_display)
 {
-  lcd_device_sleep();
+  if( blank_display) {
+    lcd_set_brightness(0);
+    lcd_device_sleep();
+  }
   lcd_gpio_teardown();
 }
 
 int error_exit(RampostErr err) {
-  static bool exiting = false;
-  if (!exiting) {  //prevent endless loop on led failure
-     exiting = true;
-     set_body_leds(0, 0);
-  }
-  exit_cleanup();
+  set_body_leds(0, 0);
+  cleanup(true);
   exit(err);
-
 }
 
 
@@ -212,44 +206,73 @@ void send_shutdown_message(void) {
   }
 }
 
+
+
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
+  bool in_recovery_mode = false;
+  bool blank_on_exit = true;
+  static const char* dfu_filename =DFU_FILE_PATH;
 
   lcd_gpio_setup();
   lcd_spi_init();
 
-  lcd_set_brightness(5);
-
   lcd_device_reset();
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
-  set_body_leds(success, recovery_mode_check());
 
-  if (argc > 1) { // Displaying something
-    lcd_device_init();
-    if (argv[1][0] == 'x') {
-      show_locked_qsn_icon();
-      while (1);
-    }
-    else if (argv[1][0] == 'd') {
-      show_dev_unit();
-      return 0; // Exit without blanking the display.
-    }
-    else { // Else orange
-      show_orange_icon();
-      imu_open();
-      imu_init();
+  in_recovery_mode = recovery_mode_check();
 
-      if (wait_for_unlock() != unlock_SUCCESS) {
-        while (1) {
-          send_shutdown_message();
+  int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
+  if (errCode) {
+    error_exit(errCode);
+  }
+  set_body_leds(success, in_recovery_mode);
+
+  // Handle arguments:
+  int argn = 1;
+
+  if (argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
+    if (dfu_if_needed(argc[1])) {
+      set_body_leds(success, in_recovery_mode);
+    }
+    argn++;
+  }
+
+  for (; argn < argc; argn++) {
+    if (argv[argn][0] == '-') {
+      lcd_set_brightness(5); // We'll be displaying something
+      switch (argv[argn][1]) {
+        case 'x':
+        {
+          show_locked_qsn_icon();
+          while (1);
+          return 1;
+        }
+        case 'd':
+        {
+          show_dev_unit();
+          blank_on_exit = false; // Exit without blanking the display
+          break
+        }
+        case 'o':
+        {
+          show_orange_icon();
+          imu_open();
+          imu_init();
+          if (wait_for_unlock() != unlock_SUCCESS) {
+            while (1) {
+              send_shutdown_message();
+            }
+          }
+          break;
         }
       }
     }
   }
 
-  exit_cleanup();
+  cleanup(blank_on_exit);
 
   return 0;
 }
