@@ -51,6 +51,7 @@ void microwait(long microsec)
 #define SPINE_TTY "/dev/ttyHS0"
 #define SPINE_BAUD B3000000
 
+static bool gHalIsActive = false;
 /*********** RAMPOST IMPLEMENTATION **************/
 
 enum {LED_BACKPACK_FRONT, LED_BACKPACK_MIDDLE, LED_BACKPACK_BACK};
@@ -58,6 +59,7 @@ enum {LED_BACKPACK_FRONT, LED_BACKPACK_MIDDLE, LED_BACKPACK_BACK};
 void set_body_leds(int success, int inRecovery) {
   struct LightState ledPayload;
 
+  if (!gHalIsActive) { return; } //can't send any lights
   if (!success) {
     ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
   }
@@ -70,11 +72,6 @@ void set_body_leds(int success, int inRecovery) {
       ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_RED] = 0xFF;
       ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_GREEN] = 0xFF;
     }
-  }
-
-  int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
-  if (errCode) {
-    error_exit(errCode);
   }
 
   hal_send_frame(PAYLOAD_LIGHT_STATE, &ledPayload, sizeof(ledPayload));
@@ -102,14 +99,11 @@ void exit_cleanup(void)
 {
   lcd_device_sleep();
   lcd_gpio_teardown();
+//  if (gHalIsActive) hal_shutdown();
 }
 
 int error_exit(RampostErr err) {
-  static bool exiting = false;
-  if (!exiting) {  //prevent endless loop on led failure
-     exiting = true;
-     set_body_leds(0, 0);
-  }
+  set_body_leds(0, 0);
   exit_cleanup();
   exit(err);
 
@@ -215,6 +209,7 @@ void send_shutdown_message(void) {
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
+  bool in_recovery_mode = false;
 
   lcd_gpio_setup();
   lcd_spi_init();
@@ -224,7 +219,16 @@ int main(int argc, const char* argv[]) {
   lcd_device_reset();
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
-  set_body_leds(success, recovery_mode_check());
+
+
+  in_recovery_mode = recovery_mode_check();
+
+  int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
+  if (errCode) {
+    error_exit(errCode);
+  }
+  gHalIsActive = true;
+  set_body_leds(success, in_recovery_mode);
 
   if (argc > 1) { // Displaying something
     lcd_device_init();
@@ -248,6 +252,10 @@ int main(int argc, const char* argv[]) {
       }
     }
   }
+  if (dfu_if_needed(DFU_FILE_PATH)) { //reset leds
+    set_body_leds(success, in_recovery_mode);
+  }
+
 
   exit_cleanup();
 
