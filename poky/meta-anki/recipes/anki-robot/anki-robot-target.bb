@@ -14,6 +14,7 @@ DEPENDS += "vic-engine"
 DEPENDS += "vic-cloud"
 DEPENDS += "vic-webserver"
 DEPENDS += "anki-audio-init"
+DEPENDS += "vic-christen"
 
 inherit systemd
 
@@ -24,7 +25,7 @@ do_install_append () {
         install -d ${D}${systemd_unitdir}/system/anki-robot.target.wants/
 
         # create a symlink named victor.target for cli alias
-        ln -sf ${systemd_unitdir}/system/${SERVICE_FILE} \
+        ln -sf ${systemd_unitdir}/system/${SERVICE_FILE} \                                           
             ${D}${systemd_unitdir}/system/victor.target
    fi
 }

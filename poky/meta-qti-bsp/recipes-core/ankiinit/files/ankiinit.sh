@@ -43,4 +43,10 @@ if [ $HAVE_EMR -eq 0 ]; then
   echo $SERIALNO > /sys/class/android_usb/android0/iSerial
 fi
 
+if [ -x /usr/bin/vic-christen ]; then
+    /usr/bin/vic-christen
+fi
+
+/bin/hostname `getprop anki.robot.name | tr ' ' '-'`
+
 exit 0

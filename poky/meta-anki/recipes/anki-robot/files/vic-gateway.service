@@ -3,8 +3,9 @@ Description=Victor gateway daemon
 SourcePath=/anki/bin/vic-gateway
 PartOf=anki-robot.target
 
+Requires=vic-gateway-cert.service
 Wants=vic-engine.service
-After=vic-engine.service
+After=vic-gateway-cert.service vic-engine.service
 
 OnFailure=vic-on-failure.service
 

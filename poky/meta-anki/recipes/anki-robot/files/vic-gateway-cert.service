@@ -1,0 +1,15 @@
+# Service to generate a CA cert for vic-gateway
+
+[Unit]
+Description=Generate x509 cert for vic-gateway
+After=vic-switchboard.service
+Requires=vic-switchboard.service
+PartOf=anki-robot.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/vic-gateway-cert
+RemainAfterExit=true
+
+[Install]
+WantedBy=anki-robot.target
