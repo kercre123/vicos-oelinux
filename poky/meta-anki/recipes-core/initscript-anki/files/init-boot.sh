@@ -30,14 +30,27 @@ echo 1 > /sys/kernel/debug/regulator/8916_l8/enable
 echo 1 > /sys/kernel/debug/regulator/8916_l17/enable
 echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
 
+# Demo builds always require a white-listed robot
+SERIAL=`cat /sys/devices/soc0/serial_number`
+
 if [ -z "${CMDLINE##*dm=*}" ]; then
 	DM="${CMDLINE##*dm=\"}"
 	DM="${DM%\" *}"
 	DM_TABLE="${DM##*,}"
 	ROOTFS_OPTS="-o ro,noatime,noload,exec"
 
-	# Power on hardware test and led states
-	rampost
+	# Confirm the serial number is on the white list or die
+	if test -z $SERIAL; then
+		echo "Unable to get serial number"
+		exit 1;
+	fi
+	if grep -qw $SERIAL unlock.list; then
+	        # Power on hardware test and led states
+	        rampost
+	else
+		rampost x
+		exit 1;
+	fi
 
 	echo "Setting up DM Verity device: $DM"
 	dmsetup create system -r --table "$DM_TABLE" || fatal "ERROR: dmsetup failed"
@@ -45,7 +58,6 @@ else
 	set -e
 	ROOTFS_OPTS="-o ro,noatime,exec"
 	# Confirm the serial number is on the white list or die
-	SERIAL=`cat /sys/devices/soc0/serial_number`
 	if test -z $SERIAL; then
 		echo "Unable to get serial number"
 		exit 1;
