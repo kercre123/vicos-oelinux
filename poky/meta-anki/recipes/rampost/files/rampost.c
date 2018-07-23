@@ -104,13 +104,15 @@ int recovery_mode_check(void) {
 
 int error_exit(RampostErr err) {
 set_body_leds(0, 0);
-exit_cleanup();
+lcd_gpio_teardown();
 exit(err);
 
 }
 
 void show_dev_unit(void) {
+  lcd_device_init();
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
+  lcd_set_brightness(10);
 }
 
 int main(int argc, const char* argv[]) {

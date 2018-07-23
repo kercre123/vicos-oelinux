@@ -15,6 +15,7 @@ SRC_URI = "file://rampost.service \
            file://messages.h \
            file://animfail.c \
            file://error_565.h \
+	   file://anki_dev_unit.h \
            file://animfail.service \
            "
 

@@ -70,11 +70,15 @@ erased every power cycles meaning the robot does not remember wifi configuration
 To unlock production robots for development builds, a special OTA file including an ABOOT unlocked to that QSN must be
 generated. Doing so requires a few steps but can be largely automated:
 
-1. Build a robot-perf-image flavor build.
-2. Download a copy of the MP firmware apq8009-robot-boot.img and apq8009-robot-sysfs.img into `_build/`
-3. `cd ota`
-4. Resign the boot image with the dev key: `make resign-dev`
-5. `python3 mk_unlock.py -q<qsn> -sm` or `python3 mk_unlock.py -l <file with one QSN per line> -sm`
+1. You need to have vicos-oelinux checked out as apps_proc inside an APQ8009 non-HLOS repository for the script to
+   work without additional configuration.
+1. Checkout the release/mp-unlock branch
+2. Build robot-factory-image target
+3. Make an OTA file: `make -C ota`
+4. Start a robot-perf-image build but cancel when it starts the task queue. This is just to change the build flavor
+   parameters for the next step.
+5. Make the unlock file: `cd ota` and `python3 mk_unlock.py -q<qsn> -sm` or
+   `python3 mk_unlock.py -l <file with one QSN per line> -sm`
 
 Note that signing the LK (`-s`) with cause the script to prompt for the signing password and making the OTA file (`-m`)
 will cause it to prompt for the OTA signing key password.

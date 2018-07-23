@@ -45,7 +45,7 @@ clean:
 	rm -rf $(BUILD)
 
 deepclean: clean
-	rm -f $(IMG_DIR)/*
+	rm -rf $(IMG_DIR)/*
 
 .PHONY: clean deepclean
 
