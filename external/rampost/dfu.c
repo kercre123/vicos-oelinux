@@ -62,8 +62,8 @@ void dfu_cleanup(void)
 }
 
 void show_error(RampostErr err) {
-  printf("Dfu Error %d\n", RampostErr err);
-  dfu_cleanup();
+  printf("Dfu Error %d\n", err);
+//  dfu_cleanup();
 }
 
 
@@ -85,8 +85,13 @@ enum VersionStatus  CheckVersion(uint8_t desiredVersion[], const uint8_t firmwar
   ShowVersion("Installed", firmwareVersion);
   ShowVersion("Provided", desiredVersion);
 
-  // TODO: THIS ISN'T ACTUALLY CHECKING
-  return version_OLDER;  // for now, always assume older than desired
+  uint8_t i;
+  for (i=0;i<16;i++) {
+    if (desiredVersion[i] != firmwareVersion[i]) {
+       return (desiredVersion[i] < firmwareVersion[i]) ? version_NEWER : version_OLDER;
+    }
+  }
+  return version_OK;  // all digits same
 }
 
 
@@ -104,9 +109,13 @@ const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, i
   do {
     hal_send_frame(ctype, data, size);
 
-    const struct SpineMessageHeader* hdr = hal_wait_for_frame(PAYLOAD_ACK);
-    if (IsGoodAck((struct AckMessage*)(hdr + 1))) {
+//    const struct SpineMessageHeader* hdr = hal_wait_for_frame(PAYLOAD_ACK);
+    const struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_ACK,500);
+    if (hdr && IsGoodAck((struct AckMessage*)(hdr + 1))) {
       return hdr;
+    }
+    if (!hdr) {
+      printf("Retrying, %d left\n", retries);
     }
   }
   while (retries-- > 0);
@@ -116,12 +125,17 @@ const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, i
 
 void SendData(FILE* imgfile, int start_addr)
 {
+  int retry = 0;
+  struct WriteDFU packet = {0};
+  size_t databytes;
+  size_t itemcount;
   while (!feof(imgfile)) {
-
-    struct WriteDFU packet = {0};
-    size_t itemcount = fread(&(packet.data[0]), sizeof(uint32_t), 256, imgfile);
-    size_t databytes = itemcount * sizeof(uint32_t);
-    dprint("read %zd words (%zd bytes)\n", itemcount, databytes);
+    if (!retry) { 
+      itemcount = fread(&(packet.data[0]), sizeof(uint32_t), 256, imgfile);
+      databytes = itemcount * sizeof(uint32_t);
+      dprint("read %zd words (%zd bytes)\n", itemcount, databytes);
+    }
+    else { dprint("resending last packet\n"); }
 
     if (itemcount < 256) {
       if (ferror(imgfile)) {
@@ -134,17 +148,25 @@ void SendData(FILE* imgfile, int start_addr)
       packet.wordCount = itemcount;
 
       dprint("writing %d words (%zd bytes) for @%x\n", packet.wordCount, databytes, packet.address);
-      dprint("\t[%x ...  %x]\n", packet.data[0], packet.data[packet.wordCount - 1]);
+//      dprint("\t[%x ...  %x]\n", packet.data[0], packet.data[packet.wordCount - 1]);
 
-      if (SendCommand(PAYLOAD_DFU_PACKET, &packet, sizeof(packet), 1) == NULL) {
+      if (SendCommand(PAYLOAD_DFU_PACKET, &packet, sizeof(packet), 5) == NULL) {
         show_error(err_DFU_SEND);
+        return;
+//        if (++retry > 3) {printf("giving up dfu\n"); return; }
+	//try again?
       }
-      start_addr += databytes;
+      else {
+         start_addr += databytes;
+
+      }
+
     }
   }
   return;
 }
 
+static const char* const ERASED_INDICATOR = "-----Erased-----";
 
 int dfu_if_needed(const char* dfu_file)
 {
@@ -154,15 +176,22 @@ int dfu_if_needed(const char* dfu_file)
 
   const uint8_t* version_ptr = NULL;
   const struct SpineMessageHeader* hdr;
+  int version_retries = 3;
   do {
      hdr = hal_read_frame();
      if (hdr && hdr->payload_type == PAYLOAD_ACK) {
         if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
-          version_ptr = (const uint8_t*)"-----Erased-----";
+          version_ptr = (const uint8_t*)ERASED_INDICATOR;
         }
      }
      else if (hdr && hdr->payload_type == PAYLOAD_VERSION) {
        version_ptr = ((struct VersionInfo*)(hdr + 1))->app_version;
+     }
+     else if (hdr && hdr->payload_type == PAYLOAD_BOOT_FRAME) {
+       if (version_retries--<=0)  {
+         show_error(err_SYSCON_READ);
+         return 0;
+       }
      }
   } while (!version_ptr);
 
@@ -170,6 +199,7 @@ int dfu_if_needed(const char* dfu_file)
   gImgFilep = fopen(dfu_file, "rb");
   if (!gImgFilep) {
     show_error(err_DFU_FILE_OPEN);
+    return 0;
   }
 
   dprint("reading image version\n");
@@ -177,6 +207,7 @@ int dfu_if_needed(const char* dfu_file)
   size_t nchars = fread(versionString, sizeof(uint8_t), VERSTRING_LEN, gImgFilep);
   if (nchars != VERSTRING_LEN) {
     show_error(err_DFU_FILE_READ);
+    return 0;
   }
 
   if (CheckVersion(versionString, version_ptr) >= version_OK) {
@@ -184,9 +215,12 @@ int dfu_if_needed(const char* dfu_file)
   }
   //else needs update
 
-  dprint("erasing installed image\n");
-  if (SendCommand(PAYLOAD_ERASE, NULL, 0, 3) == NULL) {
-    show_error(err_SYSCON_ERASE);
+  if ((const char*)version_ptr != ERASED_INDICATOR) {
+    dprint("erasing installed image\n");
+    if (SendCommand(PAYLOAD_ERASE, NULL, 0, 3) == NULL) {
+      show_error(err_SYSCON_ERASE);
+      return 0;
+    }
   }
 
   SendData(gImgFilep, 0);
@@ -194,6 +228,7 @@ int dfu_if_needed(const char* dfu_file)
   dprint("requesting validation\n");
   if (SendCommand(PAYLOAD_VALIDATE, NULL, 0, 3) == NULL) {
     show_error(err_SYSCON_VALIDATE);
+    return 0;
   }
 
   printf("Success!\n");

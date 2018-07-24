@@ -14,6 +14,7 @@ typedef enum rampost_err_t {
   err_DFU_FILE_OPEN,
   err_DFU_FILE_READ,
   err_DFU_SEND,
+  err_SYSCON_READ,
   err_SYSCON_ERASE,
   err_SYSCON_VALIDATE,
 

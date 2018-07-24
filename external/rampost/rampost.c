@@ -96,16 +96,18 @@ int recovery_mode_check(void) {
   return 0; //fault mode
 }
 
-void exit_cleanup(void)
+void exit_cleanup(bool blank_display)
 {
-  lcd_device_sleep();
+  if( blank_display) {
+    lcd_device_sleep();
+  }
   lcd_gpio_teardown();
 //  if (gHalIsActive) hal_shutdown();
 }
 
 int error_exit(RampostErr err) {
   set_body_leds(0, 0);
-  exit_cleanup();
+  exit_cleanup(true);
   exit(err);
 
 }
@@ -207,10 +209,14 @@ void send_shutdown_message(void) {
   }
 }
 
+
+
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
   bool in_recovery_mode = false;
+  bool blank_on_exit = true;
+  static const char* dfu_filename =DFU_FILE_PATH;
 
   lcd_gpio_setup();
   lcd_spi_init();
@@ -231,15 +237,24 @@ int main(int argc, const char* argv[]) {
   gHalIsActive = true;
   set_body_leds(success, in_recovery_mode);
 
-  if (argc > 1) { // Displaying something
+  int argn = 1;
+  if (argc > argn) { // Some arguments
+    if (argv[argn][0]=='-' && argv[argn][1] == 'i') {
+      argn++;
+      if (argc > argn) { 
+        dfu_filename = argv[argn++];
+      }
+    }
+  }
+  if (argc > argn) { //displaying something
     lcd_device_init();
-    if (argv[1][0] == 'x') {
+    if (argv[argn][0] == 'x') {
       show_locked_qsn_icon();
       while (1);
     }
-    else if (argv[1][0] == 'd') {
+    else if (argv[argn][0] == 'd') {
       show_dev_unit();
-      return 0; // Exit without blanking the display.
+      blank_on_exit = false; // Exit without blanking the display.
     }
     else { // Else orange
       show_orange_icon();
@@ -253,12 +268,12 @@ int main(int argc, const char* argv[]) {
       }
     }
   }
-  if (dfu_if_needed(DFU_FILE_PATH)) { //reset leds
+  if (dfu_if_needed(dfu_filename)) { //reset leds
     set_body_leds(success, in_recovery_mode);
   }
 
 
-  exit_cleanup();
+  exit_cleanup(blank_on_exit);
 
   return 0;
 }

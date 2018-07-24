@@ -102,7 +102,7 @@ static struct HalGlobals {
 #define spine_debug(fmt, args...)  (LOGD( fmt, ##args))
 #endif
 
-#define EXTENDED_SPINE_DEBUG 0
+#define EXTENDED_SPINE_DEBUG 1
 #if EXTENDED_SPINE_DEBUG
 #define spine_debug_x spine_debug
 #else
@@ -370,7 +370,7 @@ const struct SpineMessageHeader* hal_read_frame()
   unsigned int payload_length = hdr->bytes_to_follow;
   unsigned int total_message_length = SPINE_HEADER_LEN + payload_length + SPINE_CRC_LEN;
 
-  spine_debug_x("%d byte payload\n", payload_length);
+//  spine_debug_x("%d byte payload\n", payload_length);
 
   while (index < total_message_length) {
     int rslt = hal_serial_read(gHal.inbuffer + index, total_message_length - index);
@@ -388,7 +388,7 @@ const struct SpineMessageHeader* hal_read_frame()
     }
   }
 
-  spine_debug_x("%d bytes rcvd\n", index);
+//  spine_debug_x("%d bytes rcvd\n", index);
 
   //now we just have to validate CRC;
   crc_t expected_crc = *((crc_t*)(gHal.inbuffer + SPINE_HEADER_LEN + payload_length));
@@ -403,8 +403,8 @@ const struct SpineMessageHeader* hal_read_frame()
     return NULL;
   }
 
-  spine_debug_x("found frame %04x!\r", ((struct SpineMessageHeader*)gHal.inbuffer)->payload_type);
-  spine_debug_x("payload start: %08x!\r", *(uint32_t*)(((struct SpineMessageHeader*)gHal.inbuffer)+1));
+  spine_debug_x("found frame %04x!\n", ((struct SpineMessageHeader*)gHal.inbuffer)->payload_type);
+//  spine_debug_x("payload start: %08x!\n", *(uint32_t*)(((struct SpineMessageHeader*)gHal.inbuffer)+1));
   index = 0; //get ready for next one
   return ((struct SpineMessageHeader*)gHal.inbuffer);
 }
@@ -432,6 +432,8 @@ const void* hal_get_frame(uint16_t type, int32_t timeout_ms)
     if (!hdr || hdr->payload_type == type) {
       return hdr;
     }
+    spine_debug_x("no frame after %d ms\n", timeout_ms);
+    return NULL;
   }
   return NULL;
 }
