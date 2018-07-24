@@ -2,6 +2,7 @@
 Description=Victor animator daemon
 SourcePath=/anki/bin/vic-anim
 PartOf=anki-robot.target
+Conflicts=early-anim.service
 
 Wants=vic-robot.service
 Requires=anki-audio-init.service
