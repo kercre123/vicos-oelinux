@@ -54,6 +54,11 @@ def sign(aboot_path, sectools_path, password=None):
     return aboot_path
 
 
+def get_ota_file_name(qsn):
+    "Returns the OTA file name of a given QSN"
+    return "vicos-unlock-{}.ota".format(qsn)
+
+
 def make_ota(qsn, aboot_path, ota_dir, ota_key_pass, out_dir):
     "Make OTA file packaged with new OTA file"
     ota_build_dir = os.path.join(ota_dir, *OTA_BUILD_DIR)
@@ -63,10 +68,22 @@ def make_ota(qsn, aboot_path, ota_dir, ota_key_pass, out_dir):
                              'OTA_KEY_PASS={}'.format(ota_key_pass)],
                             cwd=ota_dir)
     assert proc.wait() == 0
-    ota_file_name = "vicos-unlock-{}.ota".format(qsn)
+    ota_file_name = get_ota_file_name(qsn)
     ota_path_name = os.path.join(out_dir, ota_file_name)
     os.rename(os.path.join(ota_build_dir, ota_file_name), ota_path_name)
     return ota_path_name
+
+
+def already_generated(qsn, out_dir):
+    "Returns true if the OTA file for the given QSN has already been generated"
+    ota_file_name = os.path.join(out_dir, get_ota_file_name(qsn))
+    try:
+        stats = os.stat(ota_file_name)
+        if stats.st_size < 1e8: # File too small, must have been a problem generating it
+            return False
+    except FileNotFoundError:
+        return False
+    return True
 
 
 def main():
@@ -76,6 +93,8 @@ def main():
                         help="Build for a specific QSN")
     parser.add_argument("-l", "--list", type=argparse.FileType("rt"),
                         help="Build aboots for a list of QSNs.")
+    parser.add_argument("-k", "--skip", action="store_true",
+                        help="When building a list of OTA files, skip if file already exists")
     parser.add_argument('-C', '--bitbake_build', default=os.path.join(*BITBAKE_DEFAULT),
                         help="Bitbake build folder")
     parser.add_argument('--sectools', default=os.path.join(*SECTOOLS_DEFAULT))
@@ -112,6 +131,9 @@ def main():
     if args.list:
         for qsn in parse_list(args.list):
             print(qsn, "...")
+            if args.skip:
+                if already_generated(qsn, out_dir):
+                    continue
             aboot = make_aboot(qsn, args.bitbake_build, out_dir)
             if args.sign:
                 sign(aboot, args.sectools, sign_password)
