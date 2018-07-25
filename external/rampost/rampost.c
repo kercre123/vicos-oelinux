@@ -57,7 +57,7 @@ void microwait(long microsec)
 enum {LED_BACKPACK_FRONT, LED_BACKPACK_MIDDLE, LED_BACKPACK_BACK};
 
 void set_body_leds(int success, int inRecovery) {
-  struct LightState ledPayload;
+  struct LightState ledPayload = {0};
 
   if (!success) {
     ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
@@ -114,7 +114,9 @@ int error_exit(RampostErr err) {
 #include "warning_orange.h"
 #include "locked_qsn.h"
 #include "anki_dev_unit.h"
+#include "lowbattery.h"
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
+#define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
 #define FRAME_WAIT_MS 200
 #define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
@@ -129,6 +131,10 @@ void show_locked_qsn_icon(void) {
 
 void show_dev_unit(void) {
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
+}
+
+void show_low_battery(void) {
+  lcd_draw_frame2((uint16_t*)low_battery, low_battery_len);
 }
 
 bool imu_is_inverted(void) {
@@ -175,6 +181,7 @@ UnlockState wait_for_unlock(void) {
   for (now = steady_clock_now(); now-start < REACTION_TIME; now=steady_clock_now()) {
     uint16_t buttonState = 0;
     const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
+    if (hdr == NULL) continue;
     if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
       buttonState = ((struct BodyToHead*)(hdr+1))->touchLevel[1];
     }
@@ -195,6 +202,33 @@ printf("Press %d!\n", buttonCount);
   return unlock_TIMEOUT;
 }
 
+
+typedef enum {
+  battery_LEVEL_GOOD,
+  battery_LEVEL_TOOLOW,
+  battery_BOOTLOADER,
+  battery_TIMEOUT
+} BatteryState;
+
+
+BatteryState confirm_battery_level(void) {
+  int i;
+  for (i=0; i<10; i++) {
+    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
+    if (hdr == NULL) continue;
+    else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) return battery_BOOTLOADER;
+    else if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
+      static const float kBatteryScale = 2.8f / 2048.f;
+      const int16_t counts = ((struct BodyToHead*)(hdr+1))->battery.main_voltage;
+      const float volts = counts*kBatteryScale;
+      if (volts > 3.45f) return battery_LEVEL_GOOD;
+      else return battery_LEVEL_TOOLOW;
+    }
+  }
+  return battery_TIMEOUT;
+}
+
+
 void send_shutdown_message(void) {
   static uint64_t lastMsgTime = 0;
   uint64_t now = steady_clock_now();
@@ -207,13 +241,22 @@ void send_shutdown_message(void) {
 }
 
 
+void show_lowbat_and_shutdown(void) {
+  uint64_t start = steady_clock_now();
+  uint64_t now;
+  lcd_set_brightness(5);
+  show_low_battery();
+  for (now = steady_clock_now(); now-start < LOW_BATTERY_TIME; now=steady_clock_now()) continue;
+  while (true) send_shutdown_message();
+}
+
 
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
   bool in_recovery_mode = false;
   bool blank_on_exit = true;
-  static const char* dfu_filename =DFU_FILE_PATH;
+  bool skip_dfu = false;
 
   lcd_gpio_setup();
   lcd_spi_init();
@@ -230,11 +273,27 @@ int main(int argc, const char* argv[]) {
   }
   set_body_leds(success, in_recovery_mode);
 
+  switch (confirm_battery_level()) {
+    case battery_LEVEL_GOOD:
+      printf("Battery good\n");
+      break;
+    case battery_LEVEL_TOOLOW:
+      show_lowbat_and_shutdown();
+      return 1;
+    case battery_BOOTLOADER:
+      printf("Battery check saw bootloader!\n");
+      break;
+    case battery_TIMEOUT:
+      printf("Battery timeout\n");
+      skip_dfu = true; // Don't try DFU if we can't communicate well enough to get a battery level
+      break; // But do continue boot in case this is because something needs recovering etc.
+  }
+
   // Handle arguments:
   int argn = 1;
 
-  if (argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
-    if (dfu_if_needed(argc[1])) {
+  if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
+    if (dfu_if_needed(argv[1])) {
       set_body_leds(success, in_recovery_mode);
     }
     argn++;
@@ -242,7 +301,8 @@ int main(int argc, const char* argv[]) {
 
   for (; argn < argc; argn++) {
     if (argv[argn][0] == '-') {
-      lcd_set_brightness(5); // We'll be displaying something
+      lcd_device_init(); // We'll be displaying something
+      lcd_set_brightness(5);
       switch (argv[argn][1]) {
         case 'x':
         {
@@ -254,7 +314,7 @@ int main(int argc, const char* argv[]) {
         {
           show_dev_unit();
           blank_on_exit = false; // Exit without blanking the display
-          break
+          break;
         }
         case 'o':
         {
