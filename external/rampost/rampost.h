@@ -1,5 +1,9 @@
+#ifndef __RAMPOST_H
+#define __RAMPOST_H
 
+#include <stdint.h>
 
+uint64_t steady_clock_now(void);
 
 typedef enum rampost_err_t {
   err_OK,
@@ -21,3 +25,5 @@ typedef enum rampost_err_t {
 } RampostErr;
 
 int error_exit(RampostErr err);
+
+#endif

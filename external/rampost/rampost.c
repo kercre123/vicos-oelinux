@@ -117,6 +117,7 @@ int error_exit(RampostErr err) {
 #include "lowbattery.h"
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
+#define DFU_TIMEOUT ((uint64_t)(30 * NSEC_PER_SEC)) // Per VIC-4663
 #define FRAME_WAIT_MS 200
 #define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
@@ -221,6 +222,7 @@ BatteryState confirm_battery_level(void) {
       static const float kBatteryScale = 2.8f / 2048.f;
       const int16_t counts = ((struct BodyToHead*)(hdr+1))->battery.main_voltage;
       const float volts = counts*kBatteryScale;
+      printf("Battery: %f V\n", volts);
       if (volts > 3.45f) return battery_LEVEL_GOOD;
       else return battery_LEVEL_TOOLOW;
     }
@@ -275,7 +277,6 @@ int main(int argc, const char* argv[]) {
 
   switch (confirm_battery_level()) {
     case battery_LEVEL_GOOD:
-      printf("Battery good\n");
       break;
     case battery_LEVEL_TOOLOW:
       show_lowbat_and_shutdown();
@@ -293,7 +294,7 @@ int main(int argc, const char* argv[]) {
   int argn = 1;
 
   if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
-    if (dfu_if_needed(argv[1])) {
+    if (dfu_if_needed(argv[1], DFU_TIMEOUT)) {
       set_body_leds(success, in_recovery_mode);
     }
     argn++;

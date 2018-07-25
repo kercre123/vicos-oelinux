@@ -123,14 +123,14 @@ const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, i
 }
 
 
-void SendData(FILE* imgfile, int start_addr)
+void SendData(FILE* imgfile, int start_addr, const uint64_t expire_time)
 {
   int retry = 0;
   struct WriteDFU packet = {0};
   size_t databytes;
   size_t itemcount;
-  while (!feof(imgfile)) {
-    if (!retry) { 
+  while (!feof(imgfile) && steady_clock_now() < expire_time) {
+    if (!retry) {
       itemcount = fread(&(packet.data[0]), sizeof(uint32_t), 256, imgfile);
       databytes = itemcount * sizeof(uint32_t);
       dprint("read %zd words (%zd bytes)\n", itemcount, databytes);
@@ -168,8 +168,9 @@ void SendData(FILE* imgfile, int start_addr)
 
 static const char* const ERASED_INDICATOR = "-----Erased-----";
 
-int dfu_if_needed(const char* dfu_file)
+int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
 {
+  const uint64_t expire_time = steady_clock_now() + timeout;
   dprint("requesting installed version\n");
 
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
@@ -193,6 +194,7 @@ int dfu_if_needed(const char* dfu_file)
          return 0;
        }
      }
+     if (steady_clock_now() > expire_time) return 0;
   } while (!version_ptr);
 
   dprint("opening file\n");
@@ -223,7 +225,7 @@ int dfu_if_needed(const char* dfu_file)
     }
   }
 
-  SendData(gImgFilep, 0);
+  SendData(gImgFilep, 0, expire_time);
 
   dprint("requesting validation\n");
   if (SendCommand(PAYLOAD_VALIDATE, NULL, 0, 3) == NULL) {
