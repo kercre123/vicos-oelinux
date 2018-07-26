@@ -33,10 +33,10 @@ echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
 # Power on hardware test and led states
 if [ -z "${CMDLINE##*anki.dev*}" ]; then
 	is_dev_device = true
-	rampost dev
+	rampost syscon.dfu -d
 else
 	is_dev_device = false
-	rampost
+	rampost syscon.dfu
 fi
 
 if [ -z "${CMDLINE##*dm=*}" ]; then
@@ -59,9 +59,9 @@ else
 		fi
 		if grep -qw $SERIAL unlock.list; then
 			# Run user confirmation check for non verity devices
-			rampost orange
+			rampost -o
 		else
-			rampost x
+			rampost -x
 			exit 1;
 		fi
 	fi
