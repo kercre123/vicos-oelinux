@@ -11,11 +11,12 @@ S = "${WORKDIR}"
 do_install() {
         install -m 0755 ${WORKDIR}/init-boot.sh ${D}/init
         install -m 0644 ${WORKDIR}/unlock.list ${D}
+        install -m 0644 ${WORKDIR}/syscon.dfu ${D}
         install -d ${D}/dev
         mknod -m 622 ${D}/dev/console c 5 1
 }
 
-FILES_${PN} += " /init /dev unlock.list"
+FILES_${PN} += " /init /dev unlock.list syscon.dfu"
 
 # Due to kernel dependency
 PACKAGE_ARCH = "${MACHINE_ARCH}"
