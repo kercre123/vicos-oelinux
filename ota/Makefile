@@ -1,4 +1,4 @@
-IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf
+IMG_DIR ?= ../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf
 OS_VERSION_FILE=../poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/machine-robot-image/1.0-r0/rootfs/etc/os-version
 BUILD=../_build
 BOOT_STEM=apq8009-robot-boot
@@ -119,8 +119,8 @@ serve: $(OTA_FILE)
 
 ###############################################################################
 
-NON_SECURE_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img.nonsecure
-PROD_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img
+NON_SECURE_KERNEL=$(IMG_DIR)/apq8009-robot-boot.img.nonsecure
+PROD_KERNEL=$(IMG_DIR)/apq8009-robot-boot.img
 BOOT_KEY ?= qtipri.encrypted.key
 DEV_BOOT_KEY = ../poky/meta-qti-bsp-prop/recipes-products/images/kernel/vble-qti.key
 
