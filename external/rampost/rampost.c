@@ -223,7 +223,7 @@ BatteryState confirm_battery_level(void) {
       const int16_t counts = ((struct BodyToHead*)(hdr+1))->battery.main_voltage;
       const float volts = counts*kBatteryScale;
       printf("Battery: %f V\n", volts);
-      if (volts > 3.45f) return battery_LEVEL_GOOD;
+      if (volts > 3.55f) return battery_LEVEL_GOOD;
       else return battery_LEVEL_TOOLOW;
     }
   }
