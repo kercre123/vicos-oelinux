@@ -29,7 +29,7 @@
 [Unit]
 Description=mount-data
 SourcePath=/etc/initscripts/mount-data
-Before=connman.service chronyd.service
+Before=NetworkManager.service chronyd.service
 
 [Service]
 Restart=no
@@ -39,4 +39,4 @@ ExecStart=/etc/initscripts/mount-data start
 ExecStop=/etc/initscripts/mount-data stop
 
 [Install]
-RequiredBy=connman.service chronyd.service
+RequiredBy=NetworkManager.service chronyd.service

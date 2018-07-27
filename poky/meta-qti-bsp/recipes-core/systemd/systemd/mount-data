@@ -30,9 +30,8 @@
 UNBRICK_KEY="anki.unbrick"
 WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
-CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 ROBOT_KEY=/data/etc/robot.pem
-
+NETWORKMANAGER_CONFIG="/data/etc/NetworkManager/system-connections"
 
 make_userdata() {
   if $1; then
@@ -46,11 +45,6 @@ make_userdata() {
   mkdir -p /data/usb
   mkdir -p /data/misc/camera
   mkdir -p /data/misc/bluetooth
-  if [ ! -e $CONNMAN_DONE_TOKEN ]; then
-    mkdir -p /data/lib/connman/
-    cp -rf /var/lib/connman/* /data/lib/connman
-    touch $CONNMAN_DONE_TOKEN
-  fi
   if [ ! -f $ROBOT_KEY ]; then
     mkdir -p /data/etc
     openssl genrsa -out $ROBOT_KEY 2048
@@ -70,6 +64,7 @@ case "$1" in
         make_userdata true
         sync
       fi
+      mkdir -p $NETWORKMANAGER_CONFIG
     fi
     ;;
 

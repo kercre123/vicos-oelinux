@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Bringing up $CONNECTION_ID" >> /var/log/messages
+
+case $CONNECTION_ID in
+    hotspot*)
+        iw dev wlan0 set txpower limit 1
+        touch /tmp/udhcpd.leases
+        /sbin/udhcpd -S /etc/NetworkManager/udhcpd.d/udhcpd.conf
+        ;;
+    *)
+esac

@@ -76,5 +76,6 @@ do_install_append(){
     ln -s /mnt/sdcard ${D}/sdcard
     rmdir ${D}/tmp
     ln -s /var/tmp ${D}/tmp
-    ln -s /var/run/resolv.conf ${D}/etc/resolv.conf
+    install -d ${D}${sysconfdir}/NetworkManager/system-connections
+    ln -s /var/run/NetworkManager/resolv.conf ${D}/etc/resolv.conf
 }

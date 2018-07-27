@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Bringing down $CONNECTION_ID" >> /var/log/messages
+
+case $CONNECTION_ID in
+    hotspot*)
+        iw dev wlan0 set txpower limit 30
+        killall udhcpd
+        rm /tmp/udhcpd.leases
+        ;;
+    *)
+esac

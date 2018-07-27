@@ -30,8 +30,6 @@
 UNBRICK_KEY="anki.unbrick"
 WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
-CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
-
 
 make_userdata() {
   # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
@@ -40,11 +38,7 @@ make_userdata() {
   mkdir -p /data/usb
   mkdir -p /data/misc/camera
   mkdir -p /data/misc/bluetooth
-  if [ ! -e $CONNMAN_DONE_TOKEN ]; then
-    mkdir -p /data/lib/connman/
-    cp -rf /var/lib/connman/* /data/lib/connman
-    touch $CONNMAN_DONE_TOKEN
-  fi
+  mkdir -p /data/etc/NetworkManager/system-connections
 }
 
 
