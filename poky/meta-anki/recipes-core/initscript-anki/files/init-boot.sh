@@ -36,7 +36,7 @@ if [ -z "${CMDLINE##*anki.dev*}" ]; then
 	rampost dev
 else
 	is_dev_device=false
-	rampost
+	rampost orange
 fi
 
 if [ -z "${CMDLINE##*dm=*}" ]; then
