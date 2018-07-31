@@ -7,5 +7,5 @@ Requires=fake-hwclock.service
 
 [Service]
 Type=simple
-ExecStart=/sbin/rebooter.py
+ExecStart=/usr/bin/logwrapper /sbin/rebooter.py
 

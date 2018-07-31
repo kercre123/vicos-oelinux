@@ -25,11 +25,28 @@ minimum_uptime = int(os.getenv("REBOOTER_MINIMUM_UPTIME", 4 * 60 * 60))  # 4 hr
 inhibitor_delay = int(os.getenv("REBOOTER_INHIBITOR_DELAY", 17))  # 17 seconds
 verbose_logging = os.getenv("REBOOTER_VERBOSE_LOGGING", False)
 
+def das_event(name, s1 = "", s2 = "", s3 = "", s4 = "", i1 = "", i2 = "", i3 = "", i4 = ""):
+    fmt = "\n@{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\n"
+    s1 = s1.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    s2 = s2.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    s3 = s3.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    s4 = s4.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    i1 = i1.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    i2 = i2.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    i3 = i3.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    i4 = i4.rstrip().replace('\r', '\\r').replace('\n', '\\n')
+    sys.stdout.write(fmt.format(name, s1, s2, s3, s4, i1, i2, i3, i4))
+    sys.stdout.flush()
+
+def log_das_event_for_failure(reason):
+    das_event("robot.maintenance_reboot", s1="fail", s2=reason)
+
 
 def reboot():
     if verbose_logging:
         print("Reboot time has arrived.  See you on the other side....")
         sys.stdout.flush()
+    das_event("robot.maintenance_reboot", s1="success")
     os.system("/sbin/reboot")
 
 
@@ -44,9 +61,10 @@ def now():
     return now
 
 
-def exit_if_too_late():
+def exit_if_too_late(reason="late"):
     if now() > latest:
         print("Too late. Exiting.")
+        log_das_event_for_failure(reason)
         sys.exit()
 
 
@@ -90,7 +108,7 @@ def inhibitors():
         pass
 
     if not powersave:
-        inhibitors.append("not in powersave mode")
+        inhibitors.append("powersave")
 
     if UPDATER_PROCESS in processes():
         inhibitors.append(UPDATER_PROCESS)
@@ -101,11 +119,13 @@ def inhibitors():
 if not os.path.exists(LOCALTIME_FILE):
     print("{0} does not exist.  Exiting.".format(LOCALTIME_FILE))
     sys.stdout.flush()
+    log_das_event_for_failure("no_timezone")
     sys.exit()
 
 if os.path.realpath(LOCALTIME_FILE) == DEFAULT_TIMEZONE:
     print("Local timezone has not been set.  Exiting.")
     sys.stdout.flush()
+    log_das_event_for_failure("default_timezone")
     sys.exit()
 
 exit_if_too_late()
@@ -124,6 +144,7 @@ if uptime() < minimum_uptime:
     max_sleep = latest - now()
     if sleep_needed > max_sleep:
         print("Uptime not met.  Exiting...")
+        log_das_event_for_failure("uptime")
         sys.exit()
     print_and_sleep("Uptime not met", sleep_needed)
 
@@ -138,7 +159,7 @@ exit_if_too_late()
 
 # Wait until all the inhibitors are cleared
 while len(inhibitors()) > 0:
-    exit_if_too_late()
+    exit_if_too_late(reason = str(inhibitors()))
     print_and_sleep("{0} exists".format(inhibitors()), inhibitor_delay)
 
 reboot()
