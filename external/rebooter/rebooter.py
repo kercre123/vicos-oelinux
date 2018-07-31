@@ -84,7 +84,8 @@ def inhibitors():
     powersave = False
     try:
         governor = '/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor'
-        powersave = open(governor, 'rb').read().startswith("powersave")
+        setting = open(governor, 'rb').read()
+        powersave = setting.startswith("powersave") or setting.startswith("userspace")
     except IOError:
         pass
 
