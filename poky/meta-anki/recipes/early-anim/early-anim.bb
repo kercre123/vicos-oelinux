@@ -23,3 +23,5 @@ do_install() {
 
 FILES_${PN} += "/bin/early-anim"
 FILES_${PN} += "/lib/systemd/system"
+
+SYSTEMD_SERVICE_${PN} = "early-anim.service"
