@@ -50,6 +50,7 @@ def die(code, text):
 def get_manifest(fileobj):
     "Returns config parsed from INI file in filelike object"
     config = configparser.ConfigParser()
+    config['META'] = {'ankidev': 0}
     config['BOOT'] = {'encryption': 0}
     config['SYSTEM'] = {'encryption': 0}
     config.readfp(fileobj)
@@ -199,6 +200,8 @@ private_pass = os.getenv('OTAPASS',
 
 old_manifest_ver = extract_full_ota(args.old, "old", private_pass)
 new_manifest_ver = extract_full_ota(args.new, "new", private_pass)
+new_manifest = get_manifest(open(os.path.join("new", "manifest.ini"), "r"))
+ankidev = new_manifest.get("META", "ankidev")
 
 delta_ota_name = "vicos-{0}_to_{1}.ota".format(old_manifest_ver,
                                                new_manifest_ver)
@@ -241,8 +244,9 @@ if not encrypt_status[0]:
                 encrypt_status[3].decode("utf-8")))
 
 delta_manifest = configparser.ConfigParser()
-delta_manifest['META'] = {'manifest_version': '0.9.5',
+delta_manifest['META'] = {'manifest_version': '1.0.0',
                           'update_version': new_manifest_ver,
+                          'ankidev': ankidev,
                           'num_images': '1'}
 delta_manifest['DELTA'] = {'base_version': old_manifest_ver,
                            'compression': 'gz',
