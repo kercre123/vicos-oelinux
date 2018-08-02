@@ -104,11 +104,17 @@ int IsGoodAck(struct AckMessage* msg)
 const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, int size, int retries)
  {
   do {
+    printf("Sending command %x\n", ctype);
     hal_send_frame(ctype, data, size);
 
     const struct SpineMessageHeader* hdr = hal_wait_for_frame(PAYLOAD_ACK,500);
-    if (hdr && IsGoodAck((struct AckMessage*)(hdr + 1))) {
-      return hdr;
+    if (hdr) {
+	if (IsGoodAck((struct AckMessage*)(hdr + 1))) {
+           return hdr;
+        }
+        else {
+           return NULL; //got a nack
+       }
     }
     else {
       printf("Retrying, %d left\n", retries);

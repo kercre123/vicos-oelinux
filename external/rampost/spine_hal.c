@@ -85,6 +85,7 @@ static const SpineSync SyncKey = SYNC_BODY_TO_HEAD;
 
 static struct HalGlobals {
   uint8_t framebuffer[SPINE_MAX_BYTES]; //for whole frames
+//  uint8_t framebuffer[SPINE_B2H_FRAME_LEN]; //for whole frames
   struct SpineMessageHeader outheader;
   int fd;
   uint8_t buf_rx[SPINE_BUFFER_MAX_LEN]; //for incoming bytes
@@ -102,7 +103,7 @@ static struct HalGlobals {
 #define spine_debug(fmt, args...)  (LOGD( fmt, ##args))
 #endif
 
-#define EXTENDED_SPINE_DEBUG 0
+#define EXTENDED_SPINE_DEBUG 1
 #if EXTENDED_SPINE_DEBUG
 #define spine_debug_x spine_debug
 #else
@@ -172,7 +173,7 @@ ssize_t hal_select() {
   static fd_set fdSet;
   FD_ZERO(&fdSet);
   FD_SET(gHal.fd, &fdSet);
-  static timeval timeout;
+  static struct timeval timeout;
   timeout.tv_sec = 1;
   timeout.tv_usec = 0;
   ssize_t s = select(FD_SETSIZE, &fdSet, NULL, NULL, &timeout);
@@ -195,7 +196,7 @@ static ssize_t hal_receive_data(const uint8_t* bytes, size_t len)
     size_t remaining = rx_buffer_space();
 
     if (len > remaining) {
-      spine_error(err_SYSCON_READ, "spine_receive_data.overflow :: %lu", len - remaining);
+      spine_debug("spine_receive_data.overflow :: %u", len - remaining);
       gHal.rx_cursor = 0;
         // BRC: add a flag to indicate a reset (for using in parsing?)
     }
@@ -258,8 +259,7 @@ int hal_serial_send(const uint8_t* buffer, int len)
   while (len>0) {
     ssize_t wrote = write(gHal.fd, buffer, len);
     if (wrote<=0) {
-      spine_error(err_SYSCON_WRITE, "Serial Write Error");
-      return wrote;
+      return spine_error(wrote, "Serial Write Error");
     }
     buffer+=wrote;
     written+=wrote;
@@ -378,7 +378,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   // Is there at least a header worth of data to process?
   if (rx_len < SPINE_HEADER_LEN) {
     // indicate that we are waiting
-    spine_debug_x("not enough data\n");
+    //spine_debug_x("not enough data\n");
     return 0;
   }
 
@@ -392,7 +392,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
         BODY_TAG_PREFIX[1] == test_bytes[1] &&
         BODY_TAG_PREFIX[2] == test_bytes[2] &&
         BODY_TAG_PREFIX[3] == test_bytes[3]) {
-      spine_debug_x("found header\n");
+      //spine_debug_x("found header\n");
       break;
     }
   }
@@ -452,7 +452,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   }
 
   // At this point we have a valid frame.
-  spine_debug_x("found frame %04x!\r", header->payload_type);
+  spine_debug_x("found frame %04x!\n", header->payload_type);
 
   // Copy data to output buffer
   size_t frame_len = SPINE_HEADER_LEN + payload_len + SPINE_CRC_LEN;
@@ -475,7 +475,7 @@ const void* hal_get_a_frame(uint8_t* frame_buffer, int buffer_len) {
   ssize_t r = 0;
 
   do {
-    r = hal_parse_frame(frame_buffer, sizeof(frame_buffer));
+    r = hal_parse_frame(frame_buffer, buffer_len);
 
     if (r < 0)  //no sync found, some data discarded
     {

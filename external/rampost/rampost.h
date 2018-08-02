@@ -21,7 +21,7 @@ typedef enum rampost_err_t {
   err_SYSCON_READ,
   err_SYSCON_ERASE,
   err_SYSCON_VALIDATE,
-  err_SYSCON_WRITE,
+  err_SYSCON_WRITE
 
 } RampostErr;
 
