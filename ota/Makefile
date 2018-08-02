@@ -56,6 +56,8 @@ $(BUILD):
 
 $(BUILD)/%.img: $(IMG_DIR)/%.img
 	cp $< $@
+	# Pad image to a multiple of 4096 bytes.  Needed for later delta updates
+	dd if=/dev/zero of=$@ bs=1 count=$(shell echo $$(( 4096 - `stat -c %s $<` % 4096 ))) conv=notrunc oflag=append
 
 %.img.gz: %.img
 	gzip $(GZIP_MODE) --force --keep $<
