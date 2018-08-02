@@ -9,9 +9,6 @@
 #include "spine_hal.h"
 #include "rampost.h"
 
-extern const struct SpineMessageHeader* hal_read_frame();
-
-
 #define VERSTRING_LEN 16
 
 #define DEBUG_DFU
@@ -109,12 +106,11 @@ const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, i
   do {
     hal_send_frame(ctype, data, size);
 
-//    const struct SpineMessageHeader* hdr = hal_wait_for_frame(PAYLOAD_ACK);
-    const struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_ACK,500);
+    const struct SpineMessageHeader* hdr = hal_wait_for_frame(PAYLOAD_ACK,500);
     if (hdr && IsGoodAck((struct AckMessage*)(hdr + 1))) {
       return hdr;
     }
-    if (!hdr) {
+    else {
       printf("Retrying, %d left\n", retries);
     }
   }
@@ -125,17 +121,17 @@ const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, i
 
 void SendData(FILE* imgfile, int start_addr, const uint64_t expire_time)
 {
-  int retry = 0;
+//  int retry = 0;
   struct WriteDFU packet = {0};
   size_t databytes;
   size_t itemcount;
   while (!feof(imgfile) && steady_clock_now() < expire_time) {
-    if (!retry) {
+//    if (!retry) {
       itemcount = fread(&(packet.data[0]), sizeof(uint32_t), 256, imgfile);
       databytes = itemcount * sizeof(uint32_t);
       dprint("read %zd words (%zd bytes)\n", itemcount, databytes);
-    }
-    else { dprint("resending last packet\n"); }
+//    }
+//    else { dprint("resending last packet\n"); }
 
     if (itemcount < 256) {
       if (ferror(imgfile)) {
@@ -179,22 +175,22 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
   const struct SpineMessageHeader* hdr;
   int version_retries = 3;
   do {
-     hdr = hal_read_frame();
-     if (hdr && hdr->payload_type == PAYLOAD_ACK) {
-        if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
-          version_ptr = (const uint8_t*)ERASED_INDICATOR;
-        }
-     }
-     else if (hdr && hdr->payload_type == PAYLOAD_VERSION) {
-       version_ptr = ((struct VersionInfo*)(hdr + 1))->app_version;
-     }
-     else if (hdr && hdr->payload_type == PAYLOAD_BOOT_FRAME) {
-       if (version_retries--<=0)  {
-         show_error(err_SYSCON_READ);
-         return 0;
-       }
-     }
-     if (steady_clock_now() > expire_time) return 0;
+    hdr = hal_get_next_frame(timeout/1000000);
+    if (hdr && hdr->payload_type == PAYLOAD_ACK) {
+      if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
+        version_ptr = (const uint8_t*)ERASED_INDICATOR;
+      }
+    }
+    else if (hdr && hdr->payload_type == PAYLOAD_VERSION) {
+      version_ptr = ((struct VersionInfo*)(hdr + 1))->app_version;
+    }
+    else if (hdr && hdr->payload_type == PAYLOAD_BOOT_FRAME) {
+      if (version_retries--<=0)  {
+        show_error(err_SYSCON_READ);
+        return 0;
+      }
+    }
+    if (steady_clock_now() > expire_time) return 0;
   } while (!version_ptr);
 
   dprint("opening file\n");

@@ -118,7 +118,7 @@ int error_exit(RampostErr err) {
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
 #define DFU_TIMEOUT ((uint64_t)(30 * NSEC_PER_SEC)) // Per VIC-4663
-#define FRAME_WAIT_MS 200
+#define FRAME_WAIT_MS 500
 #define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
 
@@ -214,7 +214,7 @@ typedef enum {
 
 BatteryState confirm_battery_level(void) {
   int i;
-  for (i=0; i<10; i++) {
+  for (i=0; i<5; i++) {
     const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
     if (hdr == NULL) continue;
     else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) return battery_BOOTLOADER;
@@ -246,7 +246,6 @@ void send_shutdown_message(void) {
 void show_lowbat_and_shutdown(void) {
   uint64_t start = steady_clock_now();
   uint64_t now;
-  lcd_set_brightness(5);
   show_low_battery();
   for (now = steady_clock_now(); now-start < LOW_BATTERY_TIME; now=steady_clock_now()) continue;
   while (true) send_shutdown_message();
@@ -279,6 +278,8 @@ int main(int argc, const char* argv[]) {
     case battery_LEVEL_GOOD:
       break;
     case battery_LEVEL_TOOLOW:
+      lcd_device_init(); // We'll be displaying something
+      lcd_set_brightness(5);
       show_lowbat_and_shutdown();
       return 1;
     case battery_BOOTLOADER:

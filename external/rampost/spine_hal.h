@@ -33,8 +33,8 @@ const void* hal_get_frame(uint16_t type, int32_t timeout_ms);
   //Spins until any valid frame is recieved, or `timeout_ms` elapses. returns whole frame
 const void* hal_get_next_frame(int32_t timeout_ms);
 
-//Spins until valid frame of `type` is recieved. returns whole frame
-const void* hal_wait_for_frame(uint16_t type);
+//Spins until valid frame of `type` is recieved, or timeout returns whole frame
+const void* hal_wait_for_frame(uint16_t type, int32_t timeout_ms);
 
 //Sends given frame
 void hal_send_frame(uint16_t type, const void* data, int len);
