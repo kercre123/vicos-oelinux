@@ -49,4 +49,10 @@ fi
 
 /bin/hostname `getprop anki.robot.name | tr ' ' '-'`
 
+bootctl f set_unbootable a  # Can safely say this slot is F regardless for set_unbootable command because it doesn't
+bootctl f set_unbootable b  # use the this_slot argument.
+blkdiscard -s /dev/block/bootdevice/by-name/boot_a  # Securely erase the boot slots
+blkdiscard -s /dev/block/bootdevice/by-name/boot_b
+touch /run/wipe-data  # Make sure we wipe pairing and any other data on shutdown.
+
 exit 0
