@@ -271,7 +271,6 @@ int main(int argc, const char* argv[]) {
   bool success = false;
   bool in_recovery_mode = false;
   bool blank_on_exit = true;
-  bool skip_dfu = false;
   bool show_801 = false;
 
   lcd_gpio_setup();
@@ -294,7 +293,19 @@ int main(int argc, const char* argv[]) {
   } while (hdr);
 
 
-/*  switch (confirm_battery_level()) {
+  // Handle arguments:
+  int argn = 1;
+
+  if (argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
+    if (!dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
+      show_801 = true;
+    }
+    argn++;
+  }
+
+  set_body_leds(success, in_recovery_mode);
+
+  switch (confirm_battery_level()) {
     case battery_LEVEL_GOOD:
       break;
     case battery_LEVEL_TOOLOW:
@@ -307,23 +318,8 @@ int main(int argc, const char* argv[]) {
       break;
     case battery_TIMEOUT:
       printf("Battery timeout\n");
-      skip_dfu = true; // Don't try DFU if we can't communicate well enough to get a battery level
       break; // But do continue boot in case this is because something needs recovering etc.
   }
-*/
-
-  // Handle arguments:
-  int argn = 1;
-
-  if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
-    if (!dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
-      show_801 = true;
-    }
-    argn++;
-  }
-
-  set_body_leds(success, in_recovery_mode);
-
 
 
   for (; argn < argc; argn++) {
