@@ -82,7 +82,7 @@ void set_body_leds(int success, int inRecovery) {
 
   hal_send_frame(PAYLOAD_LIGHT_STATE, &ledPayload, sizeof(ledPayload));
   hal_get_next_frame(FRAME_WAIT_MS); //need response, don't worry about what it says
-  
+
 
 }
 
@@ -125,6 +125,7 @@ int error_exit(RampostErr err) {
 #include "locked_qsn.h"
 #include "anki_dev_unit.h"
 #include "lowbattery.h"
+#include "error_801.h"
 
 
 void show_orange_icon(void) {
@@ -143,12 +144,16 @@ void show_low_battery(void) {
   lcd_draw_frame2((uint16_t*)low_battery, low_battery_len);
 }
 
+void show_error_801(void) {
+  lcd_draw_frame2((uint16_t*)error_801, error_801_len);
+}
+
 bool imu_is_inverted(void) {
 
   static int imu_print_freq =  20;
   IMURawData rawData[IMU_MAX_SAMPLES_PER_READ];
   int imuerr = imu_manage(rawData);
-  printf ("imu %d\n",imuerr); 
+  printf ("imu %d\n",imuerr);
   if (!--imu_print_freq) {
     imu_print_freq = 20;
     printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
@@ -188,6 +193,7 @@ UnlockState wait_for_unlock(void) {
   for (now = steady_clock_now(); now-start < REACTION_TIME; now=steady_clock_now()) {
     uint16_t buttonState = 0;
     const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
+    int inverted = imu_is_inverted();
     if (hdr == NULL) continue;
     if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
       buttonState = ((struct BodyToHead*)(hdr+1))->touchLevel[1];
@@ -196,8 +202,8 @@ UnlockState wait_for_unlock(void) {
       //extract button data from stub packet and put in fake full packet
       buttonState = ((struct MicroBodyToHead*)(hdr+1))->buttonPressed;
     }
-    printf(":%d ^%d\n", buttonState, imu_is_inverted());
-    if ( imu_is_inverted() ) {
+    printf(":%d ^%d\n", buttonState, inverted);
+    if ( inverted ) {
       if (button_was_released(buttonState)) {
         buttonCount++;
 printf("Press %d!\n", buttonCount);
@@ -309,8 +315,8 @@ int main(int argc, const char* argv[]) {
   int argn = 1;
 
   if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
-    if (dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
-//      set_body_leds(success, in_recovery_mode);
+    if (!dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
+      error_801 = true;
     }
     argn++;
   }
@@ -350,6 +356,10 @@ int main(int argc, const char* argv[]) {
         }
       }
     }
+  }
+  if (error_801) {
+    show_error_801();
+    blank_on_exit = false;
   }
 
   cleanup(blank_on_exit);
