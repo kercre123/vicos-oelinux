@@ -272,6 +272,7 @@ int main(int argc, const char* argv[]) {
   bool in_recovery_mode = false;
   bool blank_on_exit = true;
   bool skip_dfu = false;
+  bool show_801 = false;
 
   lcd_gpio_setup();
   lcd_spi_init();
@@ -316,7 +317,7 @@ int main(int argc, const char* argv[]) {
 
   if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
     if (!dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
-      error_801 = true;
+      show_801 = true;
     }
     argn++;
   }
@@ -342,22 +343,22 @@ int main(int argc, const char* argv[]) {
           blank_on_exit = false; // Exit without blanking the display
           break;
         }
-        case 'o':
-        {
-          show_orange_icon();
-          imu_open();
-          imu_init();
-          if (wait_for_unlock() != unlock_SUCCESS) {
-            while (1) {
-              send_shutdown_message();
-            }
-          }
-          break;
-        }
+//        case 'o':
+//        {
+//          show_orange_icon();
+//          imu_open();
+//          imu_init();
+//          if (wait_for_unlock() != unlock_SUCCESS) {
+//            while (1) {
+//              send_shutdown_message();
+//            }
+//          }
+//          break;
+//       }
       }
     }
   }
-  if (error_801) {
+  if (show_801) {
     show_error_801();
     blank_on_exit = false;
   }

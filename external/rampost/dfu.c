@@ -222,7 +222,7 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
   }
 
   if (CheckVersion(versionString, version_ptr) >= version_OK) {
-    return 0; //no update needed
+    return 1; //no error
   }
   //else needs update
 
