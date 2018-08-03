@@ -152,7 +152,7 @@ void SendData(FILE* imgfile, int start_addr, const uint64_t expire_time)
       dprint("writing %d words (%zd bytes) for @%x\n", packet.wordCount, databytes, packet.address);
 //      dprint("\t[%x ...  %x]\n", packet.data[0], packet.data[packet.wordCount - 1]);
 
-      if (SendCommand(PAYLOAD_DFU_PACKET, &packet, sizeof(packet), 5) == NULL) {
+      if (SendCommand(PAYLOAD_DFU_PACKET, &packet, sizeof(packet), 1) == NULL) {
         show_error(err_DFU_SEND);
         return;
 //        if (++retry > 3) {printf("giving up dfu\n"); return; }
@@ -179,7 +179,8 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
 
   const uint8_t* version_ptr = NULL;
   const struct SpineMessageHeader* hdr;
-  int version_retries = 3;
+  int version_retries = 10;
+  int version_resends = 3;
   do {
     hdr = hal_get_next_frame(timeout/1000000);
     if (hdr && hdr->payload_type == PAYLOAD_ACK) {
@@ -190,10 +191,16 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
     else if (hdr && hdr->payload_type == PAYLOAD_VERSION) {
       version_ptr = ((struct VersionInfo*)(hdr + 1))->app_version;
     }
-    else if (hdr && hdr->payload_type == PAYLOAD_BOOT_FRAME) {
+    else { //if (hdr && hdr->payload_type == PAYLOAD_BOOT_FRAME) {
       if (version_retries--<=0)  {
-        show_error(err_SYSCON_READ);
-        return 0;
+         if (version_resends-->0) {
+           hal_send_frame(PAYLOAD_VERSION, NULL, 0);
+           version_retries = 10;
+          }
+          else {
+             show_error(err_SYSCON_READ);
+              return 0;
+          }
       }
     }
     if (steady_clock_now() > expire_time) return 0;
@@ -219,20 +226,23 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
   }
   //else needs update
 
-  if ((const char*)version_ptr != ERASED_INDICATOR) {
     dprint("erasing installed image\n");
-    if (SendCommand(PAYLOAD_ERASE, NULL, 0, 3) == NULL) {
+    if (SendCommand(PAYLOAD_ERASE, NULL, 0, 1) == NULL) {
       show_error(err_SYSCON_ERASE);
       return 0;
     }
-  }
 
   SendData(gImgFilep, 0, expire_time);
 
+  uint64_t reboot_time = steady_clock_now() + 1000000; //one sec
+  while (steady_clock_now() < reboot_time) {
+    hdr = hal_get_next_frame(0);
+  }
+
   dprint("requesting validation\n");
-  if (SendCommand(PAYLOAD_VALIDATE, NULL, 0, 3) == NULL) {
+  if (SendCommand(PAYLOAD_VALIDATE, NULL, 0, 1) == NULL) {
     show_error(err_SYSCON_VALIDATE);
-    return 0;
+    return 1; //keep going
   }
 
   printf("Success!\n");

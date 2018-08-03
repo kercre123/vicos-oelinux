@@ -18,6 +18,13 @@
 #include "imu.h"
 #include "dfu.h"
 
+
+#define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
+#define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
+#define DFU_TIMEOUT ((uint64_t)(30 * NSEC_PER_SEC)) // Per VIC-4663
+#define FRAME_WAIT_MS 500
+#define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
+
 enum {
   app_DEVICE_OPEN_ERROR = 1,
   app_IO_ERROR,
@@ -74,6 +81,9 @@ void set_body_leds(int success, int inRecovery) {
   }
 
   hal_send_frame(PAYLOAD_LIGHT_STATE, &ledPayload, sizeof(ledPayload));
+  hal_get_next_frame(FRAME_WAIT_MS); //need response, don't worry about what it says
+  
+
 }
 
 #define CMDLINE_FILE "/proc/cmdline"
@@ -115,11 +125,6 @@ int error_exit(RampostErr err) {
 #include "locked_qsn.h"
 #include "anki_dev_unit.h"
 #include "lowbattery.h"
-#define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
-#define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
-#define DFU_TIMEOUT ((uint64_t)(30 * NSEC_PER_SEC)) // Per VIC-4663
-#define FRAME_WAIT_MS 500
-#define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
 
 void show_orange_icon(void) {
@@ -140,14 +145,15 @@ void show_low_battery(void) {
 
 bool imu_is_inverted(void) {
 
-//  static int imu_print_freq =  20;
+  static int imu_print_freq =  20;
   IMURawData rawData[IMU_MAX_SAMPLES_PER_READ];
-  imu_manage(rawData);
-//  if (!--imu_print_freq) {
-//    imu_print_freq = 20;
-//    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
-//                                      (rawData->acc[2] < -MIN_INVERTED_G));
-//  }
+  int imuerr = imu_manage(rawData);
+  printf ("imu %d\n",imuerr); 
+  if (!--imu_print_freq) {
+    imu_print_freq = 20;
+    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
+                                      (rawData->acc[2] < -MIN_INVERTED_G));
+  }
   if (rawData[0].acc[2] < -MIN_INVERTED_G) {
     return true;
   }
@@ -190,6 +196,7 @@ UnlockState wait_for_unlock(void) {
       //extract button data from stub packet and put in fake full packet
       buttonState = ((struct MicroBodyToHead*)(hdr+1))->buttonPressed;
     }
+    printf(":%d ^%d\n", buttonState, imu_is_inverted());
     if ( imu_is_inverted() ) {
       if (button_was_released(buttonState)) {
         buttonCount++;
@@ -239,6 +246,7 @@ void send_shutdown_message(void) {
     printf("Shutting Down\n");
     hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);
     lastMsgTime = now;
+    hal_get_next_frame(FRAME_WAIT_MS);
   }
 }
 
@@ -272,9 +280,14 @@ int main(int argc, const char* argv[]) {
   if (errCode) {
     error_exit(errCode);
   }
-  set_body_leds(success, in_recovery_mode);
+  //clear buffer
+  const struct SpineMessageHeader* hdr;
+  do {
+    hdr= hal_get_next_frame(0);
+  } while (hdr);
 
-  switch (confirm_battery_level()) {
+
+/*  switch (confirm_battery_level()) {
     case battery_LEVEL_GOOD:
       break;
     case battery_LEVEL_TOOLOW:
@@ -290,16 +303,21 @@ int main(int argc, const char* argv[]) {
       skip_dfu = true; // Don't try DFU if we can't communicate well enough to get a battery level
       break; // But do continue boot in case this is because something needs recovering etc.
   }
+*/
 
   // Handle arguments:
   int argn = 1;
 
   if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
-    if (dfu_if_needed(argv[1], DFU_TIMEOUT)) {
-      set_body_leds(success, in_recovery_mode);
+    if (dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
+//      set_body_leds(success, in_recovery_mode);
     }
     argn++;
   }
+
+  set_body_leds(success, in_recovery_mode);
+
+
 
   for (; argn < argc; argn++) {
     if (argv[argn][0] == '-') {
