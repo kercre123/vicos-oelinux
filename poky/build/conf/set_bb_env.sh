@@ -161,7 +161,8 @@ buildclean() {
   rm -rf bitbake.lock pseudodone sstate-cache tmp-glibc/* cache && cd - || cd -
 
   pushd ${WS}/anki/victor
-  git clean -xdff
+  git clean -xdff .
+  git submodule foreach --recursive 'git clean -dffx .'
   popd
 
   set +x
