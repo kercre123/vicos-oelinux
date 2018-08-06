@@ -159,6 +159,11 @@ buildclean() {
   cd ${WS}/poky/build
 
   rm -rf bitbake.lock pseudodone sstate-cache tmp-glibc/* cache && cd - || cd -
+
+  pushd ${WS}/anki/victor
+  git clean -xdff
+  popd
+
   set +x
 }
 
