@@ -5,6 +5,7 @@ __author__ = "Daniel Casner <daniel@anki.com>"
 import os
 import argparse
 import subprocess
+import re
 from getpass import getpass
 try:
     import pexpect
@@ -17,6 +18,7 @@ ABOOT_BUILD_PATH = ('tmp-glibc', 'deploy', 'images', 'apq8009-robot-robot-perf',
 SECTOOLS_OUTPUT = ('secimage_output', '8909', 'appsbl')
 OUTPUT_DEFAULT = ('..', '_build', 'unlock')
 OTA_BUILD_DIR = ('..', '_build')
+LIST_RE = re.compile(r"QSN=([0-9a-f]+).+ESN=([0-9a-f]+)")
 
 def make_aboot(qsn, build_dir, out_dir):
     """Use bitbake to make an aboot image for a given QSN"""
@@ -34,7 +36,9 @@ def make_aboot(qsn, build_dir, out_dir):
 def parse_list(qsn_list_fh):
     "Yields QSNs from a file assuming first word of each line is the QSN"
     for line in qsn_list_fh:
-        yield line.split()[0]
+        match = LIST_RE.match(line)
+        if match:
+            yield match.groups()
 
 
 def sign(aboot_path, sectools_path, password=None):
@@ -54,12 +58,14 @@ def sign(aboot_path, sectools_path, password=None):
     return aboot_path
 
 
-def get_ota_file_name(qsn):
+def get_ota_file_name(qsn, esn=None):
     "Returns the OTA file name of a given QSN"
+    if esn is not None:
+        return "{}.ota".format(esn)
     return "vicos-unlock-{}.ota".format(qsn)
 
 
-def make_ota(qsn, aboot_path, ota_dir, ota_key_pass, out_dir):
+def make_ota(qsn, esn, aboot_path, ota_dir, ota_key_pass, out_dir):
     "Make OTA file packaged with new OTA file"
     ota_build_dir = os.path.join(ota_dir, *OTA_BUILD_DIR)
     os.rename(aboot_path, os.path.join(ota_build_dir, 'emmc_appsboot.img'))
@@ -68,15 +74,15 @@ def make_ota(qsn, aboot_path, ota_dir, ota_key_pass, out_dir):
                              'OTA_KEY_PASS={}'.format(ota_key_pass)],
                             cwd=ota_dir)
     assert proc.wait() == 0
-    ota_file_name = get_ota_file_name(qsn)
+    ota_file_name = get_ota_file_name(qsn, esn)
     ota_path_name = os.path.join(out_dir, ota_file_name)
     os.rename(os.path.join(ota_build_dir, ota_file_name), ota_path_name)
     return ota_path_name
 
 
-def already_generated(qsn, out_dir):
+def already_generated(esn, out_dir):
     "Returns true if the OTA file for the given QSN has already been generated"
-    ota_file_name = os.path.join(out_dir, get_ota_file_name(qsn))
+    ota_file_name = os.path.join(out_dir, get_ota_file_name(None, esn))
     try:
         stats = os.stat(ota_file_name)
         if stats.st_size < 1e8: # File too small, must have been a problem generating it
@@ -91,6 +97,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-q", "--qsn",
                         help="Build for a specific QSN")
+    parser.add_argument("-e", "--esn",
+                        help="ESN to name file after when using -q")
     parser.add_argument("-l", "--list", type=argparse.FileType("rt"),
                         help="Build aboots for a list of QSNs.")
     parser.add_argument("-k", "--skip", action="store_true",
@@ -126,19 +134,19 @@ def main():
         if args.sign:
             sign(aboot, args.sectools, sign_password)
         if args.make_ota:
-            make_ota(args.qsn, aboot, args.ota_dir, ota_key_pass, out_dir)
+            make_ota(args.qsn, args.esn, aboot, args.ota_dir, ota_key_pass, out_dir)
 
     if args.list:
-        for qsn in parse_list(args.list):
-            print(qsn, "...")
+        for qsn, esn in parse_list(args.list):
+            print(qsn, esn, "...")
             if args.skip:
-                if already_generated(qsn, out_dir):
+                if already_generated(esn, out_dir):
                     continue
             aboot = make_aboot(qsn, args.bitbake_build, out_dir)
             if args.sign:
                 sign(aboot, args.sectools, sign_password)
             if args.make_ota:
-                ota = make_ota(qsn, aboot, args.ota_dir, ota_key_pass, out_dir)
+                ota = make_ota(qsn, esn, aboot, args.ota_dir, ota_key_pass, out_dir)
                 print("\t", ota)
 
 
