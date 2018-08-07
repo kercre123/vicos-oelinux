@@ -16,6 +16,14 @@
 #include "rampost.h"
 #include "lcd.h"
 #include "imu.h"
+#include "dfu.h"
+
+
+#define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
+#define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
+#define DFU_TIMEOUT ((uint64_t)(30 * NSEC_PER_SEC)) // Per VIC-4663
+#define FRAME_WAIT_MS 500
+#define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
 enum {
   app_DEVICE_OPEN_ERROR = 1,
@@ -56,7 +64,7 @@ void microwait(long microsec)
 enum {LED_BACKPACK_FRONT, LED_BACKPACK_MIDDLE, LED_BACKPACK_BACK};
 
 void set_body_leds(int success, int inRecovery) {
-  struct LightState ledPayload;
+  struct LightState ledPayload = {0};
 
   if (!success) {
     ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
@@ -72,12 +80,10 @@ void set_body_leds(int success, int inRecovery) {
     }
   }
 
-  int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
-  if (errCode) {
-    error_exit(errCode);
-  }
-
   hal_send_frame(PAYLOAD_LIGHT_STATE, &ledPayload, sizeof(ledPayload));
+  hal_get_next_frame(FRAME_WAIT_MS); //need response, don't worry about what it says
+
+
 }
 
 #define CMDLINE_FILE "/proc/cmdline"
@@ -98,21 +104,19 @@ int recovery_mode_check(void) {
   return 0; //fault mode
 }
 
-void exit_cleanup(void)
+void cleanup(bool blank_display)
 {
-  lcd_device_sleep();
+  if( blank_display) {
+    lcd_set_brightness(0);
+    lcd_device_sleep();
+  }
   lcd_gpio_teardown();
 }
 
 int error_exit(RampostErr err) {
-  static bool exiting = false;
-  if (!exiting) {  //prevent endless loop on led failure
-     exiting = true;
-     set_body_leds(0, 0);
-  }
-  exit_cleanup();
+  set_body_leds(0, 0);
+  cleanup(true);
   exit(err);
-
 }
 
 
@@ -120,9 +124,8 @@ int error_exit(RampostErr err) {
 #include "warning_orange.h"
 #include "locked_qsn.h"
 #include "anki_dev_unit.h"
-#define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
-#define FRAME_WAIT_MS 200
-#define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
+#include "lowbattery.h"
+#include "error_801.h"
 
 
 void show_orange_icon(void) {
@@ -137,16 +140,25 @@ void show_dev_unit(void) {
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
 }
 
+void show_low_battery(void) {
+  lcd_draw_frame2((uint16_t*)low_battery, low_battery_len);
+}
+
+void show_error_801(void) {
+  lcd_draw_frame2((uint16_t*)error_801, error_801_len);
+}
+
 bool imu_is_inverted(void) {
 
-//  static int imu_print_freq =  20;
+  static int imu_print_freq =  20;
   IMURawData rawData[IMU_MAX_SAMPLES_PER_READ];
-  imu_manage(rawData);
-//  if (!--imu_print_freq) {
-//    imu_print_freq = 20;
-//    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
-//                                      (rawData->acc[2] < -MIN_INVERTED_G));
-//  }
+  int imuerr = imu_manage(rawData);
+  printf ("imu %d\n",imuerr);
+  if (!--imu_print_freq) {
+    imu_print_freq = 20;
+    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
+                                      (rawData->acc[2] < -MIN_INVERTED_G));
+  }
   if (rawData[0].acc[2] < -MIN_INVERTED_G) {
     return true;
   }
@@ -181,6 +193,8 @@ UnlockState wait_for_unlock(void) {
   for (now = steady_clock_now(); now-start < REACTION_TIME; now=steady_clock_now()) {
     uint16_t buttonState = 0;
     const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
+    int inverted = imu_is_inverted();
+    if (hdr == NULL) continue;
     if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
       buttonState = ((struct BodyToHead*)(hdr+1))->touchLevel[1];
     }
@@ -188,7 +202,8 @@ UnlockState wait_for_unlock(void) {
       //extract button data from stub packet and put in fake full packet
       buttonState = ((struct MicroBodyToHead*)(hdr+1))->buttonPressed;
     }
-    if ( imu_is_inverted() ) {
+    printf(":%d ^%d\n", buttonState, inverted);
+    if ( inverted ) {
       if (button_was_released(buttonState)) {
         buttonCount++;
 printf("Press %d!\n", buttonCount);
@@ -201,6 +216,34 @@ printf("Press %d!\n", buttonCount);
   return unlock_TIMEOUT;
 }
 
+
+typedef enum {
+  battery_LEVEL_GOOD,
+  battery_LEVEL_TOOLOW,
+  battery_BOOTLOADER,
+  battery_TIMEOUT
+} BatteryState;
+
+
+BatteryState confirm_battery_level(void) {
+  int i;
+  for (i=0; i<5; i++) {
+    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
+    if (hdr == NULL) continue;
+    else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) return battery_BOOTLOADER;
+    else if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
+      static const float kBatteryScale = 2.8f / 2048.f;
+      const int16_t counts = ((struct BodyToHead*)(hdr+1))->battery.main_voltage;
+      const float volts = counts*kBatteryScale;
+      printf("Battery: %f V\n", volts);
+      if (volts > 3.55f) return battery_LEVEL_GOOD;
+      else return battery_LEVEL_TOOLOW;
+    }
+  }
+  return battery_TIMEOUT;
+}
+
+
 void send_shutdown_message(void) {
   static uint64_t lastMsgTime = 0;
   uint64_t now = steady_clock_now();
@@ -209,47 +252,102 @@ void send_shutdown_message(void) {
     printf("Shutting Down\n");
     hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);
     lastMsgTime = now;
+    hal_get_next_frame(FRAME_WAIT_MS);
   }
 }
+
+
+void show_lowbat_and_shutdown(void) {
+  uint64_t start = steady_clock_now();
+  uint64_t now;
+  show_low_battery();
+  for (now = steady_clock_now(); now-start < LOW_BATTERY_TIME; now=steady_clock_now()) continue;
+  while (true) send_shutdown_message();
+}
+
 
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
+  bool in_recovery_mode = false;
+  bool blank_on_exit = true;
+  bool show_801 = false;
 
   lcd_gpio_setup();
   lcd_spi_init();
 
-  lcd_set_brightness(5);
-
   lcd_device_reset();
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
-  set_body_leds(success, recovery_mode_check());
 
-  if (argc > 1) { // Displaying something
-    lcd_device_init();
-    if (argv[1][0] == 'x') {
-      show_locked_qsn_icon();
-      while (1);
-    }
-    else if (argv[1][0] == 'd') {
-      show_dev_unit();
-      return 0; // Exit without blanking the display.
-    }
-    else { // Else orange
-      show_orange_icon();
-      imu_open();
-      imu_init();
+  in_recovery_mode = recovery_mode_check();
 
-      if (wait_for_unlock() != unlock_SUCCESS) {
-        while (1) {
-          send_shutdown_message();
+  int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
+  if (errCode) {
+    error_exit(errCode);
+  }
+  //clear buffer
+  const struct SpineMessageHeader* hdr;
+  do {
+    hdr= hal_get_next_frame(0);
+  } while (hdr);
+
+
+  // Handle arguments:
+  int argn = 1;
+
+  if (argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
+    if (!dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
+      show_801 = true;
+    }
+    argn++;
+  }
+
+  set_body_leds(success, in_recovery_mode);
+
+  switch (confirm_battery_level()) {
+    case battery_LEVEL_GOOD:
+      break;
+    case battery_LEVEL_TOOLOW:
+      lcd_device_init(); // We'll be displaying something
+      lcd_set_brightness(5);
+      show_lowbat_and_shutdown();
+      return 1;
+    case battery_BOOTLOADER:
+      printf("Battery check saw bootloader!\n");
+      break;
+    case battery_TIMEOUT:
+      printf("Battery timeout\n");
+      break; // But do continue boot in case this is because something needs recovering etc.
+  }
+
+
+  for (; argn < argc; argn++) {
+    if (argv[argn][0] == '-') {
+      lcd_device_init(); // We'll be displaying something
+      lcd_set_brightness(5);
+      switch (argv[argn][1]) {
+        case 'x':
+        {
+          show_locked_qsn_icon();
+          while (1);
+          return 1;
+        }
+        case 'd':
+        {
+          show_dev_unit();
+          blank_on_exit = false; // Exit without blanking the display
+          break;
         }
       }
     }
   }
+  if (show_801) {
+    show_error_801();
+    blank_on_exit = false;
+  }
 
-  exit_cleanup();
+  cleanup(blank_on_exit);
 
   return 0;
 }
