@@ -11,6 +11,7 @@ ConditionFileNotEmpty=!/run/vic-switchboard/disable-update-engine
 
 [Service]
 Type=simple
+TimeoutStartSec=1830
 Environment=TERM=dumb
 Environment=UPDATE_ENGINE_MAX_SLEEP=1800
 Environment=UPDATE_ENGINE_ENABLED=False
