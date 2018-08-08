@@ -74,10 +74,10 @@ def make_ota(qsn, esn, aboot_path, ota_dir, ota_key_pass, out_dir):
                              'OTA_KEY_PASS={}'.format(ota_key_pass)],
                             cwd=ota_dir)
     assert proc.wait() == 0
-    ota_file_name = get_ota_file_name(qsn, esn)
-    ota_path_name = os.path.join(out_dir, ota_file_name)
-    os.rename(os.path.join(ota_build_dir, ota_file_name), ota_path_name)
-    return ota_path_name
+    ota_src_name = os.path.join(ota_build_dir, get_ota_file_name(qsn, None))
+    ota_dst_name = os.path.join(out_dir, get_ota_file_name(qsn, esn))
+    os.rename(ota_src_name, ota_dst_name)
+    return ota_dst_name
 
 
 def already_generated(esn, out_dir):
