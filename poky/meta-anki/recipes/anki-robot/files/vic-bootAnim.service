@@ -1,13 +1,13 @@
 [Unit]
-Description=Early animation
-SourcePath=/bin/early-anim
+Description=Victor Boot Animator
+SourcePath=/anki/bin/vic-bootAnim
 DefaultDependencies=no
 
 [Service]
 Type=simple
 Restart=no
 RemainAfterExit=no
-ExecStart=/bin/early-anim
+ExecStart=/anki/bin/vic-bootAnim
 
 [Install]
 WantedBy=sysinit.target

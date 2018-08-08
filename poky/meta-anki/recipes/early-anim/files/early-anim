@@ -1,8 +1,0 @@
-#!/bin/bash
-
-echo "####### EARLY ANIM #########"
-
-while true; do
-    sleep 1;
-    # imageine an animation here
-done
