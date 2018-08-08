@@ -30,5 +30,6 @@ IMAGE_INSTALL += "fake-hwclock"
 IMAGE_INSTALL += "rebooter"
 IMAGE_INSTALL += "rng-tools"
 IMAGE_INSTALL += "anki-update-engine"
+IMAGE_INSTALL += "alsa-utils"
 #
 IMAGE_INSTALL += "early-anim"
