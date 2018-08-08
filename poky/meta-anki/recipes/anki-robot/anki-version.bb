@@ -31,6 +31,9 @@ do_install_append () {
     if [[ ${USER_BUILD} != "1" ]]; then
         # set to "d" for dev builds
         ANKI_BUILD_TYPE="d"
+    elif [[ ${DEV} = "1" ]]; then
+	# set to "ud" for userdev builds
+	ANKI_BUILD_TYPE="ud"
     else
         # empty for user (release) builds
         ANKI_BUILD_TYPE=""
