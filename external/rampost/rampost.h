@@ -6,7 +6,8 @@
 uint64_t steady_clock_now(void);
 
 typedef enum rampost_err_t {
-  err_OK,
+  err_SYSCON_VERSION_GOOD = -1,
+  err_OK = 0,
   err_GPIOCHIP_BASE = 1,
   err_GPIO_DIRECTION,
   err_MEMORY_ERROR,
@@ -21,8 +22,11 @@ typedef enum rampost_err_t {
   err_SYSCON_READ,
   err_SYSCON_ERASE,
   err_SYSCON_VALIDATE,
-  err_SYSCON_WRITE
-
+  err_SYSCON_WRITE,
+  err_DFU_NO_VERSION,
+  err_DFU_ERASE_ERROR,
+  err_DFU_INSTALL_ERROR,
+  err_DFU_VALIDATE_ERROR,
 } RampostErr;
 
 int error_exit(RampostErr err);

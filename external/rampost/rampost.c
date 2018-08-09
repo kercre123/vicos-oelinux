@@ -266,6 +266,16 @@ void show_lowbat_and_shutdown(void) {
 }
 
 
+void force_syscon_resync(void) {
+  uint8_t ALL_EFFS[256];
+  memset(ALL_EFFS, 0xFF, sizeof(ALL_EFFS));
+  int bytes_to_send = 2048;
+  while (bytes_to_send) {
+    hal_serial_send(ALL_EFFS, sizeof(ALL_EFFS));
+    bytes_to_send-= sizeof(ALL_EFFS);
+  }
+}
+
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
@@ -314,6 +324,9 @@ int main(int argc, const char* argv[]) {
   // Handle arguments:
   int argn = 1;
 
+
+  force_syscon_resync();
+
   if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
     if (!dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
       error_801 = true;
@@ -321,8 +334,14 @@ int main(int argc, const char* argv[]) {
     argn++;
   }
 
-  set_body_leds(success, in_recovery_mode);
+  set_body_leds(success, in_recovery_mode); //TODO: (success&&!error_801) ?
 
+  if (error_801) {
+    show_error_801();
+    blank_on_exit = false;
+    cleanup(blank_on_exit);
+    return 1;
+  }
 
 
   for (; argn < argc; argn++) {
@@ -356,10 +375,6 @@ int main(int argc, const char* argv[]) {
         }
       }
     }
-  }
-  if (error_801) {
-    show_error_801();
-    blank_on_exit = false;
   }
 
   cleanup(blank_on_exit);
