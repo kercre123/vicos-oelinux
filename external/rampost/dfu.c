@@ -18,7 +18,10 @@
 #define dprint(s, ...)
 #endif
 
-
+#define FRAME_WAIT_MS 500 //todo hoist to rampost.h
+#define ERASE_WAIT_MS  1000 //up to 1 sec for erase
+#define DFU_PACKET_WAIT_MS 1000 //up to 1 sec for write
+#define VALIDATE_WAIT_MS  5000 //up to 5 sec for validate
 
 static void printhex(const uint8_t* bytes, int len)
 {
@@ -83,7 +86,7 @@ enum VersionStatus  CheckVersion(const uint8_t desiredVersion[], const uint8_t f
   ShowVersion("Provided", desiredVersion);
 
   uint8_t i;
-  for (i=0;i<16;i++) {
+  for (i=0;i<VERSTRING_LEN;i++) {
     if (desiredVersion[i] != firmwareVersion[i]) {
        return (desiredVersion[i] < firmwareVersion[i]) ? version_NEWER : version_OLDER;
     }
@@ -168,45 +171,37 @@ void SendData(FILE* imgfile, int start_addr, const uint64_t expire_time)
   return;
 }
 
-#define FRAME_WAIT_MS 500 //todo hoist to rampost.h
 
-bool SendData2(const struct WriteDFU* packet, uint64_t expire_time) {
-  bool acked = false;
+bool SendData2(const struct WriteDFU* packet) {
+
+  const struct SpineMessageHeader* hdr;
+
+  //wait for boot frame to be sure we are ready to continue
+  hdr = hal_wait_for_frame(PAYLOAD_BOOT_FRAME, FRAME_WAIT_MS);
+  if (!hdr) {
+    //No boot frames means something wrong
+    dprint("SendData not seeing boot frames\n");
+    return false;
+  }
+
   hal_send_frame(PAYLOAD_DFU_PACKET, packet, sizeof(struct WriteDFU));
 
-  do {
-    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
-    if (hdr) {
-      switch (hdr->payload_type) {
-        case PAYLOAD_ACK:
-          if (IsGoodAck((struct AckMessage*)(hdr + 1))) {
-            acked = true;
-          }
-          else {  //Noone should send NACK
-            dprint("Got NACK in response to DFU PACKET\n");
-            return false;
-          }
-          break;
-
-        case PAYLOAD_BOOT_FRAME:
-          if (acked) {
-            return true; //Confirmed in bootloader
-          }
-          break;
-
-        default:
-          dprint("Got %04x in response to Payload message\n", hdr->payload_type);
-          return false;
-          break;
-      }
-    }
-  } while (steady_clock_now() < expire_time);
-
-  dprint("Send Data expired\n");
-  return false;
+  hdr = hal_wait_for_frame(PAYLOAD_ACK, DFU_PACKET_WAIT_MS);
+  if (!hdr) {
+    dprint("Send Data did not get response\n");
+    return false;
+  }
+  else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
+    //Noone should send NACK
+    dprint("Got NACK in response to DFU PACKET\n");
+    return false;
+  }
+  return true;
 }
 
+
 static const char* const ERASED_INDICATOR = "-----Erased-----";
+static uint8_t gInstalledVersion[VERSTRING_LEN] = {0};
 
 int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
 {
@@ -293,18 +288,18 @@ const uint8_t* dfu_get_version(uint64_t expire_time)
 
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
 
-  const uint8_t* version_ptr = NULL;
+  uint8_t* version_ptr = gInstalledVersion;
   const struct SpineMessageHeader* hdr;
 
   do {
-    hdr = hal_get_next_frame(0);
+    hdr = hal_get_next_frame(FRAME_WAIT_MS);
     if (hdr) {
       switch (hdr->payload_type) {
         case PAYLOAD_ACK:
           //bootloader sends NAK
           if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
-            version_ptr = (const uint8_t*)ERASED_INDICATOR;
-            return version_ptr;
+            memcpy(gInstalledVersion, ERASED_INDICATOR, VERSTRING_LEN);
+            return gInstalledVersion;
           }
           else {  //Noone shold send ACK
             dprint("Got ACK in response to version request\n");
@@ -313,14 +308,14 @@ const uint8_t* dfu_get_version(uint64_t expire_time)
           break;
 
         case PAYLOAD_VERSION:
-          version_ptr = ((struct VersionInfo*)(hdr + 1))->app_version;
-          return version_ptr;
+          memcpy(gInstalledVersion, ((struct VersionInfo*)(hdr + 1))->app_version, VERSTRING_LEN);
+          return gInstalledVersion;
           break;
 
         case PAYLOAD_DATA_FRAME:
         case PAYLOAD_BOOT_FRAME:
-          //we will get some of these if it is running normally
-	   break;
+          //we can get some of these if it is running normally
+          break;
 
         default:
           dprint("Got %04x in response to version request\n", hdr->payload_type);
@@ -334,6 +329,7 @@ const uint8_t* dfu_get_version(uint64_t expire_time)
 }
 
 uint8_t versionString[VERSTRING_LEN];
+
 const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
   dprint("opening file %s\n",filename);
   *fpOut = fopen(filename, "rb");
@@ -351,47 +347,27 @@ const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
   return versionString;
 }
 
-bool dfu_erase_image(const uint64_t expire_time) {
+bool dfu_erase_image(void) {
+  const struct SpineMessageHeader* hdr;
+
   dprint("erasing installed image\n");
 
-  const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
-  if (!hdr) {
-    //we should have heard something...
-    return false;
-  }
   hal_send_frame(PAYLOAD_ERASE, NULL, 0);
 
-  bool acked = false;
-
-  do {
-    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
-    if (hdr) {
-      switch (hdr->payload_type) {
-        case PAYLOAD_ACK:
-          if (IsGoodAck((struct AckMessage*)(hdr + 1))) {
-            acked = true;
-          }
-          else {  //Noone shold send NACK
-            dprint("Got NACK in response to erase\n");
-            return false;
-          }
-          break;
-
-        case PAYLOAD_BOOT_FRAME:
-          if (acked) {
-            return true; //Confirmed in bootloader
-          }
-          break;
-
-        default:
-          dprint("Got %04x in response to Erase message\n", hdr->payload_type);
-          return false;
-          break;
-      }
+  hdr = hal_wait_for_frame(PAYLOAD_ACK, ERASE_WAIT_MS);
+  if (!hdr) {
+    //No ack means something wrong
+    dprint("Erase timeout\n");
+    return false;
+  }
+  if (hdr) {
+    if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
+      //Should not fail
+      dprint("Got NACK in response to erase\n");
+      return false;
     }
-  } while (steady_clock_now() < expire_time);
-  dprint("Erase timeout\n");
-  return false;
+  }
+  return true;
 }
 
 bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
@@ -420,7 +396,7 @@ bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
 
       dprint("writing %d words (%zd bytes) for @%x\n", packet.wordCount, databytes, packet.address);
 
-      if (!SendData2(&packet, expire_time)) {
+      if (!SendData2(&packet)) {
         show_error(err_DFU_SEND);
         return false;
       }
@@ -435,50 +411,38 @@ bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
   return true;
 }
 
-bool dfu_validate_image(uint64_t expire_time) {
+bool dfu_validate_image(void) {
   dprint("validating installed image\n");
 
-  const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
+  const struct SpineMessageHeader* hdr;
+
+  //wait for boot frame to be sure we are ready to continue
+  hdr = hal_wait_for_frame(PAYLOAD_BOOT_FRAME, FRAME_WAIT_MS);
   if (!hdr) {
-    //we should have heard something...
+    //No boot frames means something wrong
+    dprint("validate_image not seeing boot frames\n");
     return false;
   }
+
   hal_send_frame(PAYLOAD_VALIDATE, NULL, 0);
 
-  bool acked = false;
-
-  do {
-    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
-    if (hdr) {
-      switch (hdr->payload_type) {
-        case PAYLOAD_ACK:
-          if (IsGoodAck((struct AckMessage*)(hdr + 1))) {
-            acked = true;
-          }
-          else {  //Noone should send NACK
-            dprint("Got NACK in response to validate\n");
-            return false;
-          }
-          break;
-
-        case PAYLOAD_DATA_FRAME:
-          dprint("Application started %s validation ack\n",acked?"after":"without");
-          return true;
-          break;
-
-        case PAYLOAD_BOOT_FRAME:
-          //ignore any that occur before reboot.
-          break;
-
-        default:
-          dprint("Got %04x in response to Validate message\n", hdr->payload_type);
-          return false;
-          break;
-      }
-    }
-  } while (steady_clock_now() < expire_time);
-  dprint("Validate timeout\n");
-  return false;
+  hdr = hal_wait_for_frame(PAYLOAD_ACK, VALIDATE_WAIT_MS);
+  if (!hdr) {
+    dprint("Validate did not get ACK response\n");
+  }
+  else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
+    //Noone should send NACK
+    dprint("Got NACK in response to PAYLOAD_ACK\n");
+    return false;
+  }
+  //else good ack, but let's wait for a app data frame to be sure
+  hdr = hal_wait_for_frame(PAYLOAD_DATA_FRAME, FRAME_WAIT_MS);
+  if (!hdr) {
+    dprint("Validate did not get app DATA_FRAME response\n");
+    return false;
+  }
+  //else we are up and running
+  return true;
 
 }
 
@@ -498,7 +462,7 @@ RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout)
   }
   //else needs update
 
-  if (!dfu_erase_image(expire_time)) {
+  if (!dfu_erase_image()) {
     return err_DFU_ERASE_ERROR;
   }
 
@@ -507,7 +471,7 @@ RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout)
     return err_DFU_INSTALL_ERROR;
   }
 
-  if (!dfu_validate_image(expire_time))
+  if (!dfu_validate_image())
   {
     return err_DFU_VALIDATE_ERROR;
   }
