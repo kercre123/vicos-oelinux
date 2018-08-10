@@ -8,25 +8,9 @@
 #include "messages.h"
 #include "spine_hal.h"
 #include "rampost.h"
+#include "das.h"
 
 #define VERSTRING_LEN 16
-
-#define DEBUG_DFU
-#ifdef DEBUG_DFU
-#define dprint printf
-#else
-#define dprint(s, ...)
-#endif
-
-
-
-static void printhex(const uint8_t* bytes, int len)
-{
-  while (len-- > 0) {
-    printf("%02x", *bytes++);
-  }
-}
-
 
 enum DfuAppErrorCode {
   app_SUCCESS = 0,
@@ -59,28 +43,24 @@ void dfu_cleanup(void)
 }
 
 void show_error(RampostErr err) {
-  printf("Dfu Error %d\n", err);
-//  dfu_cleanup();
+  DAS_LOG(DAS_ERROR, "dfu.error", "%d", err);
 }
 
 
-
-void ShowVersion(const char* typename, const uint8_t version[])
+static void DAS_PRINTHEX(const int level, const char* event, const uint8_t* bytes, int len)
 {
-  int i;
-  printf("%s Version = ", typename);
-  printhex(version, VERSTRING_LEN);
-  printf(" [");
-  for (i = 0; i < VERSTRING_LEN; i++) {
-    putchar(isprint(version[i]) ? version[i] : '*');
+  printf("@rampost.%s\t", event);
+  while (len-- > 0) {
+    printf("%02x", *bytes++);
   }
-  printf("]\n");
+  printf("\n");
 }
+
 
 enum VersionStatus  CheckVersion(uint8_t desiredVersion[], const uint8_t firmwareVersion[])
 {
-  ShowVersion("Installed", firmwareVersion);
-  ShowVersion("Provided", desiredVersion);
+  DAS_PRINTHEX(DAS_EVENT, "dfu.installed_version", firmwareVersion, VERSTRING_LEN);
+  DAS_PRINTHEX(DAS_EVENT, "dfu.desired_version  ", desiredVersion, VERSTRING_LEN);
 
   uint8_t i;
   for (i=0;i<16;i++) {
@@ -94,17 +74,17 @@ enum VersionStatus  CheckVersion(uint8_t desiredVersion[], const uint8_t firmwar
 
 int IsGoodAck(struct AckMessage* msg)
 {
-   if (msg->status <= 0) {
-    dprint("NACK = %d\n", msg->status);
+  if (msg->status <= 0) {
+    DAS_LOG(DAS_DEBUG, "dfu.nack", "%d", msg->status);
     return 0;
-   }
-   return 1;
+  }
+  return 1;
 }
 
 const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, int size, int retries)
  {
   do {
-    printf("Sending command %x\n", ctype);
+    DAS_LOG(DAS_DEBUG, "dfu.send_command", "%x", ctype);
     hal_send_frame(ctype, data, size);
 
     const struct SpineMessageHeader* hdr = hal_wait_for_frame(PAYLOAD_ACK,500);
@@ -117,7 +97,7 @@ const struct SpineMessageHeader* SendCommand(uint16_t ctype, const void* data, i
        }
     }
     else {
-      printf("Retrying, %d left\n", retries);
+      DAS_LOG(DAS_DEBUG, "dfu.send_command_retry", "Retrying, %d left\n", retries);
     }
   }
   while (retries-- > 0);
@@ -132,12 +112,9 @@ void SendData(FILE* imgfile, int start_addr, const uint64_t expire_time)
   size_t databytes;
   size_t itemcount;
   while (!feof(imgfile) && steady_clock_now() < expire_time) {
-//    if (!retry) {
-      itemcount = fread(&(packet.data[0]), sizeof(uint32_t), 256, imgfile);
-      databytes = itemcount * sizeof(uint32_t);
-      dprint("read %zd words (%zd bytes)\n", itemcount, databytes);
-//    }
-//    else { dprint("resending last packet\n"); }
+    itemcount = fread(&(packet.data[0]), sizeof(uint32_t), 256, imgfile);
+    databytes = itemcount * sizeof(uint32_t);
+    DAS_LOG(DAS_DEBUG, "dfu.send_data_read", "read %zd words (%zd bytes)", itemcount, databytes);
 
     if (itemcount < 256) {
       if (ferror(imgfile)) {
@@ -149,14 +126,11 @@ void SendData(FILE* imgfile, int start_addr, const uint64_t expire_time)
       packet.address = start_addr;
       packet.wordCount = itemcount;
 
-      dprint("writing %d words (%zd bytes) for @%x\n", packet.wordCount, databytes, packet.address);
-//      dprint("\t[%x ...  %x]\n", packet.data[0], packet.data[packet.wordCount - 1]);
+      DAS_LOG(DAS_DEBUG, "dfu.send_data_write", "writing %d words (%zd bytes) for @%x", packet.wordCount, databytes, packet.address);
 
       if (SendCommand(PAYLOAD_DFU_PACKET, &packet, sizeof(packet), 1) == NULL) {
         show_error(err_DFU_SEND);
         return;
-//        if (++retry > 3) {printf("giving up dfu\n"); return; }
-	//try again?
       }
       else {
          start_addr += databytes;
@@ -173,7 +147,7 @@ static const char* const ERASED_INDICATOR = "-----Erased-----";
 int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
 {
   const uint64_t expire_time = steady_clock_now() + timeout;
-  dprint("requesting installed version\n");
+  DAS_LOG(DAS_INFO, "dfu.if_needed_check", "requesting installed version");
 
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
 
@@ -206,14 +180,14 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
     if (steady_clock_now() > expire_time) return 0;
   } while (!version_ptr);
 
-  dprint("opening file\n");
+  DAS_LOG(DAS_DEBUG, "dfu.open_file", "Opened \"%s\"", dfu_file);
   gImgFilep = fopen(dfu_file, "rb");
   if (!gImgFilep) {
     show_error(err_DFU_FILE_OPEN);
     return 0;
   }
 
-  dprint("reading image version\n");
+  DAS_LOG(DAS_DEBUG, "dfu.reading_image_version", "...");
   uint8_t versionString[VERSTRING_LEN];
   size_t nchars = fread(versionString, sizeof(uint8_t), VERSTRING_LEN, gImgFilep);
   if (nchars != VERSTRING_LEN) {
@@ -224,13 +198,12 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
   if (CheckVersion(versionString, version_ptr) >= version_OK) {
     return 1; //no error
   }
-  //else needs update
 
-    dprint("erasing installed image\n");
-    if (SendCommand(PAYLOAD_ERASE, NULL, 0, 1) == NULL) {
-      show_error(err_SYSCON_ERASE);
-      return 0;
-    }
+  DAS_LOG(DAS_EVENT, "dfu.erase_installed_image", "erasing installed image");
+  if (SendCommand(PAYLOAD_ERASE, NULL, 0, 1) == NULL) {
+    show_error(err_SYSCON_ERASE);
+    return 0;
+  }
 
   SendData(gImgFilep, 0, expire_time);
 
@@ -239,12 +212,12 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
     hdr = hal_get_next_frame(0);
   }
 
-  dprint("requesting validation\n");
+  DAS_LOG(DAS_DEBUG, "dfu.requesing_validation", "...");
   if (SendCommand(PAYLOAD_VALIDATE, NULL, 0, 1) == NULL) {
     show_error(err_SYSCON_VALIDATE);
     return 1; //keep going
   }
 
-  printf("Success!\n");
+  DAS_LOG(DAS_EVENT, "dfu.success", "Success");
   return 1; //Updated
 }

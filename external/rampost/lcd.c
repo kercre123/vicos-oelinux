@@ -12,6 +12,7 @@
 #include "gpio.h"
 #include "rampost.h"
 #include "lcd.h"
+#include "das.h"
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))

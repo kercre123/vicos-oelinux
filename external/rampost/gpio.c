@@ -77,7 +77,6 @@ void gpio_set_direction(GPIO gp, enum Gpio_Dir direction)
 {
   assert(gp != NULL);
    char ioname[40];
-//   printf("settting direction of %d  to %s\n", gp->pin, direction  ? "out": "in");
    snprintf(ioname, 40, "/sys/class/gpio/gpio%d/direction", gp->pin+gpio_get_base_offset());
    int fd =  open(ioname, O_WRONLY );
    if (fd <  0) {

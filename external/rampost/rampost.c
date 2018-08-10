@@ -15,9 +15,8 @@
 #include "spine_hal.h"
 #include "rampost.h"
 #include "lcd.h"
-#include "imu.h"
 #include "dfu.h"
-
+#include "das.h"
 
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
@@ -96,9 +95,9 @@ int recovery_mode_check(void) {
   int result = read(fd, buffer, sizeof(buffer)-1);
   if  (result > 0) {
     buffer[result] = '\0'; //null terminate
-    printf("scanning [%s] for [%s]\n", buffer, RECOVERY_MODE_INDICATOR);
+    DAS_LOG(DAS_DEBUG, "recovery_mode_check.scan", "scanning [%s] for [%s]", buffer, RECOVERY_MODE_INDICATOR);
     char* pos = strstr(buffer, RECOVERY_MODE_INDICATOR);
-    printf("%s\n", pos?"found":"nope");
+    DAS_LOG(DAS_DEBUG, "recovery_mode_check.result", "%s", pos?"found":"nope");
     return (pos!=NULL);
   }
   return 0; //fault mode
@@ -147,22 +146,6 @@ void show_error_801(void) {
   lcd_draw_frame2((uint16_t*)error_801, error_801_len);
 }
 
-bool imu_is_inverted(void) {
-
-  static int imu_print_freq =  20;
-  IMURawData rawData[IMU_MAX_SAMPLES_PER_READ];
-  int imuerr = imu_manage(rawData);
-  printf ("imu %d\n",imuerr);
-  if (!--imu_print_freq) {
-    imu_print_freq = 20;
-    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
-                                      (rawData->acc[2] < -MIN_INVERTED_G));
-  }
-  if (rawData[0].acc[2] < -MIN_INVERTED_G) {
-    return true;
-  }
-  return false;
-}
 
 bool button_was_released(uint16_t buttonState) {
   static bool buttonPressed = false;
@@ -180,41 +163,6 @@ typedef enum {
   unlock_SUCCESS,
   unlock_TIMEOUT,
 } UnlockState;
-
-
-UnlockState wait_for_unlock(void) {
-  int buttonCount = 0;
-  uint64_t start = steady_clock_now();
-  uint64_t now;
-
-  printf("Waiting %lld ns for UNLOCK!\n", REACTION_TIME);
-
-  for (now = steady_clock_now(); now-start < REACTION_TIME; now=steady_clock_now()) {
-    uint16_t buttonState = 0;
-    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
-    int inverted = imu_is_inverted();
-    if (hdr == NULL) continue;
-    if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
-      buttonState = ((struct BodyToHead*)(hdr+1))->touchLevel[1];
-    }
-    else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) {
-      //extract button data from stub packet and put in fake full packet
-      buttonState = ((struct MicroBodyToHead*)(hdr+1))->buttonPressed;
-    }
-    printf(":%d ^%d\n", buttonState, inverted);
-    if ( inverted ) {
-      if (button_was_released(buttonState)) {
-        buttonCount++;
-printf("Press %d!\n", buttonCount);
-        if (buttonCount >= 3 ) {
-          return unlock_SUCCESS;
-        }
-      }
-    }
-  }
-  return unlock_TIMEOUT;
-}
-
 
 typedef enum {
   battery_LEVEL_GOOD,
@@ -234,7 +182,7 @@ BatteryState confirm_battery_level(void) {
       static const float kBatteryScale = 2.8f / 2048.f;
       const int16_t counts = ((struct BodyToHead*)(hdr+1))->battery.main_voltage;
       const float volts = counts*kBatteryScale;
-      printf("Battery: %f V\n", volts);
+      DAS_LOG(DAS_EVENT, "battery_level", "%0.3f", volts);
       if (volts > 3.55f) return battery_LEVEL_GOOD;
       else return battery_LEVEL_TOOLOW;
     }
@@ -248,7 +196,7 @@ void send_shutdown_message(void) {
   uint64_t now = steady_clock_now();
 
   if (now - lastMsgTime > SHUTDOWN_FRAME_INTERVAL) {
-    printf("Shutting Down\n");
+    DAS_LOG(DAS_INFO, "send_shutdown_message", "PAYLOAD_SHUT_DOWN");
     hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);
     lastMsgTime = now;
     hal_get_next_frame(FRAME_WAIT_MS);
@@ -276,7 +224,7 @@ int main(int argc, const char* argv[]) {
 
   lcd_device_reset();
   success = lcd_device_read_status();
-  printf("lcd check = %d\n",success);
+  DAS_LOG(DAS_INFO, "lcd_check", "%d",success);
 
   in_recovery_mode = recovery_mode_check();
 
@@ -311,10 +259,10 @@ int main(int argc, const char* argv[]) {
       show_lowbat_and_shutdown();
       return 1;
     case battery_BOOTLOADER:
-      printf("Battery check saw bootloader!\n");
+      DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
       break;
     case battery_TIMEOUT:
-      printf("Battery timeout\n");
+      DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check timed out!");
       break; // But do continue boot in case this is because something needs recovering etc.
   }
 
