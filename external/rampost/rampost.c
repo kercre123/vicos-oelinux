@@ -281,7 +281,7 @@ int main(int argc, const char* argv[]) {
   bool success = false;
   bool in_recovery_mode = false;
   bool blank_on_exit = true;
-  bool skip_dfu = false;
+  bool show_801 = false;
 
   lcd_gpio_setup();
   lcd_spi_init();
@@ -296,6 +296,8 @@ int main(int argc, const char* argv[]) {
   if (errCode) {
     error_exit(errCode);
   }
+
+  force_syscon_resync();
   //clear buffer
   const struct SpineMessageHeader* hdr;
   do {
@@ -303,7 +305,34 @@ int main(int argc, const char* argv[]) {
   } while (hdr);
 
 
-/*  switch (confirm_battery_level()) {
+  // Handle arguments:
+  int argn = 1;
+
+  if (argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
+    rampost_err_t result = dfu_sequence(argv[argn], DFU_TIMEOUT);
+    if (result == err_SYSCON_VERSION_GOOD) {
+      //hooray!
+    }
+    else if (result != err_OK ) {
+      printf("DFU Error %d\n", result);
+      show_801 = true;
+    }
+    argn++;
+  }
+
+
+  //Skip everything else on syscon error!
+  //TODO: is this right? What about case 'X'
+  if (error_801) {
+    show_error_801();
+    blank_on_exit = false;
+    cleanup(blank_on_exit);
+    return 1;
+  }
+
+  set_body_leds(success, in_recovery_mode);
+
+  switch (confirm_battery_level()) {
     case battery_LEVEL_GOOD:
       break;
     case battery_LEVEL_TOOLOW:
@@ -313,36 +342,12 @@ int main(int argc, const char* argv[]) {
       return 1;
     case battery_BOOTLOADER:
       printf("Battery check saw bootloader!\n");
+      //TODO: This should be an error?
       break;
     case battery_TIMEOUT:
       printf("Battery timeout\n");
-      skip_dfu = true; // Don't try DFU if we can't communicate well enough to get a battery level
       break; // But do continue boot in case this is because something needs recovering etc.
   }
-*/
-
-  // Handle arguments:
-  int argn = 1;
-
-
-  force_syscon_resync();
-
-  if (skip_dfu == false && argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
-    if (!dfu_if_needed(argv[argn], DFU_TIMEOUT)) {
-      error_801 = true;
-    }
-    argn++;
-  }
-
-  set_body_leds(success, in_recovery_mode); //TODO: (success&&!error_801) ?
-
-  if (error_801) {
-    show_error_801();
-    blank_on_exit = false;
-    cleanup(blank_on_exit);
-    return 1;
-  }
-
 
   for (; argn < argc; argn++) {
     if (argv[argn][0] == '-') {
@@ -359,18 +364,6 @@ int main(int argc, const char* argv[]) {
         {
           show_dev_unit();
           blank_on_exit = false; // Exit without blanking the display
-          break;
-        }
-        case 'o':
-        {
-          show_orange_icon();
-          imu_open();
-          imu_init();
-          if (wait_for_unlock() != unlock_SUCCESS) {
-            while (1) {
-              send_shutdown_message();
-            }
-          }
           break;
         }
       }
