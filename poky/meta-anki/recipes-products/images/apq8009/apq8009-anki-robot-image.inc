@@ -22,6 +22,7 @@ IMAGE_INSTALL += "vic-on-failure-animfail"
 IMAGE_INSTALL += "vic-robot"
 IMAGE_INSTALL += "vic-switchboard"
 IMAGE_INSTALL += "vic-webserver"
+IMAGE_INSTALL += "vic-bootanim"
 IMAGE_INSTALL += "victor"
 #
 # Other stuff
@@ -32,4 +33,3 @@ IMAGE_INSTALL += "rng-tools"
 IMAGE_INSTALL += "anki-update-engine"
 IMAGE_INSTALL += "alsa-utils"
 #
-IMAGE_INSTALL += "early-anim"
