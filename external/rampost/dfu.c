@@ -282,50 +282,25 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
   return 1; //Updated
 }
 
-const uint8_t* dfu_get_version(uint64_t expire_time)
+const uint8_t* dfu_get_version()
 {
   dprint("requesting installed version\n");
+  const struct SpineMessageHeader* hdr;
 
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
 
-  uint8_t* version_ptr = gInstalledVersion;
-  const struct SpineMessageHeader* hdr;
 
-  do {
-    hdr = hal_get_next_frame(FRAME_WAIT_MS);
-    if (hdr) {
-      switch (hdr->payload_type) {
-        case PAYLOAD_ACK:
-          //bootloader sends NAK
-          if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
-            memcpy(gInstalledVersion, ERASED_INDICATOR, VERSTRING_LEN);
-            return gInstalledVersion;
-          }
-          else {  //Noone shold send ACK
-            dprint("Got ACK in response to version request\n");
-            return NULL;
-          }
-          break;
+  hdr = hal_wait_for_frame(PAYLOAD_VERSION, FRAME_WAIT_MS);
+  if (hdr) {
+    memcpy(gInstalledVersion, ((struct VersionInfo*)(hdr + 1))->app_version, VERSTRING_LEN);
+    return gInstalledVersion;
+  }
 
-        case PAYLOAD_VERSION:
-          memcpy(gInstalledVersion, ((struct VersionInfo*)(hdr + 1))->app_version, VERSTRING_LEN);
-          return gInstalledVersion;
-          break;
+  //Any other response, including NAK from bootloader, we assume erased and continue.
+  //If it was not really ready, the next steps will fail.
 
-        case PAYLOAD_DATA_FRAME:
-        case PAYLOAD_BOOT_FRAME:
-          //we can get some of these if it is running normally
-          break;
-
-        default:
-          dprint("Got %04x in response to version request\n", hdr->payload_type);
-          return NULL;
-          break;
-      }
-    }
-  } while (steady_clock_now() < expire_time);
-  dprint("Get Version never responded");
-  return NULL;
+  memcpy(gInstalledVersion, ERASED_INDICATOR, VERSTRING_LEN);
+  return gInstalledVersion;
 }
 
 uint8_t versionString[VERSTRING_LEN];
@@ -450,7 +425,7 @@ RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout)
 {
   const uint64_t expire_time = steady_clock_now() + timeout;
 
-  const uint8_t* installed_version = dfu_get_version(expire_time);
+  const uint8_t* installed_version = dfu_get_version();
   if (!installed_version) {
     return err_DFU_NO_VERSION;
   }
@@ -462,7 +437,8 @@ RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout)
   }
   //else needs update
 
-  if (!dfu_erase_image()) {
+  if (!dfu_erase_image())
+  {
     return err_DFU_ERASE_ERROR;
   }
 
