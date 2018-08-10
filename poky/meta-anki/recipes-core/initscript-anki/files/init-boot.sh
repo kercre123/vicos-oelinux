@@ -32,10 +32,10 @@ echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
 
 # Power on hardware test and led states
 if [ -z "${CMDLINE##*anki.dev*}" ]; then
-	is_dev_device = true
+	is_dev_device=true
 	rampost syscon.dfu -d
 else
-	is_dev_device = false
+	is_dev_device=false
 	rampost syscon.dfu
 fi
 
@@ -51,19 +51,8 @@ else
 	set -e
 	ROOTFS_OPTS="-o ro,noatime,exec"
 	if ! $is_dev_device; then
-		# Confirm the serial number is on the white list or die
-		SERIAL=`cat /sys/devices/soc0/serial_number`
-		if test -z $SERIAL; then
-			echo "Unable to get serial number"
-			exit 1;
-		fi
-		if grep -qw $SERIAL unlock.list; then
-			# Run user confirmation check for non verity devices
-			rampost -o
-		else
-			rampost -x
-			exit 1;
-		fi
+		rampost -x
+		exit 1;
 	fi
 fi
 

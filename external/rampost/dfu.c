@@ -271,7 +271,6 @@ int dfu_if_needed(const char* dfu_file, const uint64_t timeout)
 
   SendData(gImgFilep, 0, expire_time);
 
-
   uint64_t reboot_time = steady_clock_now() + 1000000; //one sec
   while (steady_clock_now() < reboot_time) {
     hdr = hal_get_next_frame(0);

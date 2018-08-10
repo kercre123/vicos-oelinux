@@ -26,7 +26,7 @@ typedef enum rampost_err_t {
   err_DFU_NO_VERSION,
   err_DFU_ERASE_ERROR,
   err_DFU_INSTALL_ERROR,
-  err_DFU_VALIDATE_ERROR,
+  err_DFU_VALIDATE_ERROR
 } RampostErr;
 
 int error_exit(RampostErr err);

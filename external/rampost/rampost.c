@@ -276,6 +276,8 @@ void force_syscon_resync(void) {
   }
 }
 
+
+
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
@@ -319,7 +321,6 @@ int main(int argc, const char* argv[]) {
     }
     argn++;
   }
-
 
   //Skip everything else on syscon error!
   //TODO: is this right? What about case 'X'
@@ -368,6 +369,10 @@ int main(int argc, const char* argv[]) {
         }
       }
     }
+  }
+  if (show_801) {
+    show_error_801();
+    blank_on_exit = false;
   }
 
   cleanup(blank_on_exit);

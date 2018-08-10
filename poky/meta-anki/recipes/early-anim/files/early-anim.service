@@ -1,0 +1,13 @@
+[Unit]
+Description=Early animation
+SourcePath=/bin/early-anim
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Restart=no
+RemainAfterExit=no
+ExecStart=/bin/early-anim
+
+[Install]
+WantedBy=sysinit.target

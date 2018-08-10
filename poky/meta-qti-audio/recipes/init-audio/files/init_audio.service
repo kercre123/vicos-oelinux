@@ -31,6 +31,8 @@ Description=Init-audio Service
 SourcePath=/etc/initscripts/init_qcom_audio
 
 [Service]
+Type=oneshot
+RemainAfterExit=yes
 Restart=no
 ExecStart=/etc/initscripts/init_qcom_audio start
 ExecStop=/etc/initscripts/init_qcom_audio stop
