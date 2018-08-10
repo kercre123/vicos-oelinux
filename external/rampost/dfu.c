@@ -77,7 +77,7 @@ void ShowVersion(const char* typename, const uint8_t version[])
   printf("]\n");
 }
 
-enum VersionStatus  CheckVersion(uint8_t desiredVersion[], const uint8_t firmwareVersion[])
+enum VersionStatus  CheckVersion(const uint8_t desiredVersion[], const uint8_t firmwareVersion[])
 {
   ShowVersion("Installed", firmwareVersion);
   ShowVersion("Provided", desiredVersion);
@@ -168,8 +168,9 @@ void SendData(FILE* imgfile, int start_addr, const uint64_t expire_time)
   return;
 }
 
-void SendData2(const struct WriteDFU* packet_p) {
-{
+#define FRAME_WAIT_MS 500 //todo hoist to rampost.h
+
+bool SendData2(const struct WriteDFU* packet, uint64_t expire_time) {
   bool acked = false;
   hal_send_frame(PAYLOAD_DFU_PACKET, packet, sizeof(struct WriteDFU));
 
@@ -316,6 +317,11 @@ const uint8_t* dfu_get_version(uint64_t expire_time)
           return version_ptr;
           break;
 
+        case PAYLOAD_DATA_FRAME:
+        case PAYLOAD_BOOT_FRAME:
+          //we will get some of these if it is running normally
+	   break;
+
         default:
           dprint("Got %04x in response to version request\n", hdr->payload_type);
           return NULL;
@@ -327,6 +333,7 @@ const uint8_t* dfu_get_version(uint64_t expire_time)
   return NULL;
 }
 
+uint8_t versionString[VERSTRING_LEN];
 const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
   dprint("opening file %s\n",filename);
   *fpOut = fopen(filename, "rb");
@@ -334,6 +341,14 @@ const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
     show_error(err_DFU_FILE_OPEN);
     return NULL;
   }
+  dprint("reading image version\n");
+  size_t nchars = fread(versionString, sizeof(uint8_t), VERSTRING_LEN, *fpOut);
+  if (nchars != VERSTRING_LEN) {
+    show_error(err_DFU_FILE_READ);
+    return NULL;
+  }
+
+  return versionString;
 }
 
 bool dfu_erase_image(const uint64_t expire_time) {
@@ -379,7 +394,7 @@ bool dfu_erase_image(const uint64_t expire_time) {
   return false;
 }
 
-bool dfu_send_image(FILE* fp, uint64_t expire_time) {
+bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
   struct WriteDFU packet = {0};
   size_t databytes;
   size_t itemcount;
@@ -405,7 +420,7 @@ bool dfu_send_image(FILE* fp, uint64_t expire_time) {
 
       dprint("writing %d words (%zd bytes) for @%x\n", packet.wordCount, databytes, packet.address);
 
-      if (!SendData2(&packet)) {
+      if (!SendData2(&packet, expire_time)) {
         show_error(err_DFU_SEND);
         return false;
       }
@@ -467,13 +482,12 @@ bool dfu_validate_image(uint64_t expire_time) {
 
 }
 
-rampost_err_t dfu_sequence(const char* dfu_file, const uint64_t timeout)
+RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout)
 {
   const uint64_t expire_time = steady_clock_now() + timeout;
 
-
   const uint8_t* installed_version = dfu_get_version(expire_time);
-  if (!version_ptr) {
+  if (!installed_version) {
     return err_DFU_NO_VERSION;
   }
 
@@ -497,6 +511,7 @@ rampost_err_t dfu_sequence(const char* dfu_file, const uint64_t timeout)
   {
     return err_DFU_VALIDATE_ERROR;
   }
+
 
   printf("Success!\n");
   return err_OK; //Updated

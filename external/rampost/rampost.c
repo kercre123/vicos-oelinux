@@ -311,7 +311,7 @@ int main(int argc, const char* argv[]) {
   int argn = 1;
 
   if (argc > argn && argv[argn][0] != '-') { // A DFU file has been specified
-    rampost_err_t result = dfu_sequence(argv[argn], DFU_TIMEOUT);
+    RampostErr result = dfu_sequence(argv[argn], DFU_TIMEOUT);
     if (result == err_SYSCON_VERSION_GOOD) {
       //hooray!
     }
@@ -324,7 +324,7 @@ int main(int argc, const char* argv[]) {
 
   //Skip everything else on syscon error!
   //TODO: is this right? What about case 'X'
-  if (error_801) {
+  if (show_801) {
     show_error_801();
     blank_on_exit = false;
     cleanup(blank_on_exit);
