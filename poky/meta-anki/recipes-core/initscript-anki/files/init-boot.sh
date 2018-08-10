@@ -10,10 +10,10 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 mkdir -p /proc
 mkdir -p /sys
 mkdir -p /dev
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
+mount -t proc -o nodev,noexec,nosuid proc /proc
+mount -t sysfs -o nodev,noexec,nosuid sysfs /sys
 mount -t devtmpfs -o noexec none /dev
-mount -t debugfs nodev /sys/kernel/debug
+mount -t debugfs -o nodev,noexec,nosuid nodev /sys/kernel/debug
 
 mkdir -p /var
 mkdir -p /var/run
