@@ -52,24 +52,18 @@ do_compile () {
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
 
-   if [ -x ./project/victor/scripts/victor_build_shipping.sh ]; then
-
-       if [[ "${USER_BUILD}" == "1" && "${DEV}" != "1" ]]; then
-	        ./project/victor/scripts/victor_build_shipping.sh
+   if [[ "${USER_BUILD}" == "1" ]]; then
+     if [[ "${DEV}" == "1" ]]; then
+       if [ -x ./project/victor/scripts/victor_build_userdev.sh ]; then
+         ./project/victor/scripts/victor_build_userdev.sh
        else
-	        ./project/victor/scripts/victor_build_release.sh
+         ./project/victor/scripts/victor_build_release.sh
        fi
-
+     else
+       ./project/victor/scripts/victor_build_shipping.sh
+     fi
    else
-       BUILD_FLAVOR_FLAGS=""
-       if [[ "${USER_BUILD}" == "1" && "${DEV}" != "1" ]]; then
-           BUILD_FLAVOR_FLAGS="-DANKI_NO_WEBSERVER_ENABLED=1 \
-               -DANKI_DEV_CHEATS=0 \
-               -DANKI_PROFILING_ENABLED=0 \
-               -DREMOTE_CONSOLE_ENABLED=0 \
-               -a -DAUDIO_RELEASE=ON"
-       fi
-       ./project/victor/build-victor.sh -p vicos -c Release -v $BUILD_FLAVOR_FLAGS
+     ./project/victor/scripts/victor_build_release.sh
    fi
 }
 
