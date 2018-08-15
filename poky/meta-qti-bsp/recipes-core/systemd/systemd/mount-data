@@ -33,11 +33,13 @@ TOM_LOG="/factory/log1"
 CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 ROBOT_KEY=/data/etc/robot.pem
 
-
+PASSWORD_FILE=/sys/devices/soc0/serial_number
 make_userdata() {
   if $1; then
     echo "Remaking /data" > /dev/kmsg
-    mkfs.ext4 /dev/block/bootdevice/by-name/userdata
+    cryptsetup -q --key-file "${PASSWORD_FILE}" luksFormat /dev/block/bootdevice/by-name/userdata
+    cryptsetup -q --key-file "${PASSWORD_FILE}" luksOpen /dev/block/bootdevice/by-name/userdata userdata
+    mkfs.ext4 /dev/mapper/userdata
     mount /data
   fi
   # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
@@ -78,6 +80,7 @@ case "$1" in
     sync
     umount /data
     if test -e $WIPE_COOKIE; then
+      cryptsetup luksClose /dev/block/bootdevice/by-name/userdata
       blkdiscard -s /dev/block/bootdevice/by-name/userdata
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
     fi
