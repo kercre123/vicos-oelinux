@@ -51,9 +51,17 @@ void debug_dump_frame(uint8_t *frame, int num_bytes, char* prefix)
   logd("dump %s", file_name);
 }
 
-int get_next_buffer_slot(anki_camera_buf_header_t* header, uint32_t* out_slot)
+int get_next_buffer_slot(anki_camera_buf_header_t* header, 
+                         anki_camera_pixel_format_t format,
+                         uint32_t* out_slot)
 {
   int slot_found = -1;
+    
+  if(header == NULL)
+  {
+    return slot_found;
+  }
+
   uint32_t slot = atomic_load(&header->locks.write_idx);
 
   for (uint32_t i = 0; i < header->frame_count; ++i) {
@@ -79,6 +87,7 @@ int anki_camera_frame_callback(const uint8_t* image,
                                uint32_t frame_id,
                                int width,
                                int height,
+                               anki_camera_pixel_format_t format,
                                void* cb_ctx)
 {
   struct anki_camera_capture* capture = (struct anki_camera_capture*)cb_ctx;
@@ -87,7 +96,7 @@ int anki_camera_frame_callback(const uint8_t* image,
 
   // get the next slot for writing
   uint32_t slot;
-  int rc = get_next_buffer_slot(header, &slot);
+  int rc = get_next_buffer_slot(header, format, &slot);
   if (rc == -1) {
     loge("%s: No buffer space available", __FUNCTION__);
     return -1;
@@ -344,6 +353,7 @@ int camera_capture_start(struct anki_camera_capture* capture,
     .capture_params = *capture_params,
     .frame_callback_raw = anki_camera_frame_callback,
     .frame_callback_preview = anki_camera_frame_callback,
+    .frame_callback_snapshot = anki_camera_frame_callback
   };
 
   rc = camera_start(&params, capture);
@@ -400,4 +410,14 @@ int camera_capture_set_format(struct anki_camera_capture* capture,
                               anki_camera_pixel_format_t format)
 {
   return camera_set_capture_format(capture, format, anki_camera_reallocate_ion_memory);
+}
+
+int camera_capture_start_snapshot()
+{
+  return camera_start_snapshot();
+}
+
+int camera_capture_stop_snapshot()
+{
+  return camera_stop_snapshot();
 }

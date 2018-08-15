@@ -262,6 +262,17 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
         memcpy(buf_msg->payload, &ctx->camera.buffer.size, sizeof(ctx->camera.buffer.size));
       }
       break;
+      case ANKI_CAMERA_MSG_C2S_PARAMS_ID_SNAPSHOT: {
+        if(payload->data[0])
+        {
+          rc = camera_capture_start_snapshot();
+        }
+        else
+        {
+          rc = camera_capture_stop_snapshot();
+        }
+      }
+      break;
     }
   }
   break;

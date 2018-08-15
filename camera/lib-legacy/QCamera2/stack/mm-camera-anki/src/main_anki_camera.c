@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
   s_camera_server.params.exit_on_disconnect = slave_mode;
   s_camera_server.params.debug_dump_images = debug_dump_images;
   s_camera_server.capture_params.fps_reduction = (fps_reduction) >= 1 ? fps_reduction : 1;
-  s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RGB888;
+  s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RAW;
 
   if(format != NULL)
   {

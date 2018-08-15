@@ -83,5 +83,7 @@ int camera_capture_set_exposure(anki_camera_exposure_t exposure);
 int camera_capture_set_awb(anki_camera_awb_t awb);
 int camera_capture_set_format(struct anki_camera_capture* capture,
                               anki_camera_pixel_format_t format);
+int camera_capture_start_snapshot();
+int camera_capture_stop_snapshot();
 
 #endif // __mm_anki_camera_process_h__
