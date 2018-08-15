@@ -106,7 +106,7 @@ static struct HalGlobals {
 #define spine_debug(fmt, args...)  (LOGD( fmt, ##args))
 #endif
 
-#define EXTENDED_SPINE_DEBUG 1
+#define EXTENDED_SPINE_DEBUG 0
 #if EXTENDED_SPINE_DEBUG
 #define spine_debug_x spine_debug
 #else
@@ -385,7 +385,6 @@ static const uint8_t* spine_construct_header(PayloadId payload_type,  uint16_t p
 {
 #ifndef NDEBUG
   int expected_len = get_payload_len(payload_type, dir_SEND);
-  printf("%d %d\n", expected_len, payload_len);
   assert(expected_len >= 0); //valid type
   assert(expected_len == payload_len);
   assert(payload_len <= (SPINE_MAX_BYTES - SPINE_HEADER_LEN - SPINE_CRC_LEN));
@@ -517,7 +516,13 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   }
 
   // At this point we have a valid frame.
-  spine_debug_x("found frame %04x!\n", header->payload_type);
+  if (header->payload_type == PAYLOAD_DATA_FRAME) {
+  spine_debug_x("found frame %c%c! %d\n", header->payload_type&0xff, header->payload_type>>8,
+     ((struct BodyToHead*)(header+1))->framecounter);
+  }
+  else {
+  spine_debug_x("found frame %c%c!\n", header->payload_type&0xff, header->payload_type>>8);
+  }
 
   // Copy data to output buffer
   size_t frame_len = SPINE_HEADER_LEN + payload_len + SPINE_CRC_LEN;
@@ -592,7 +597,7 @@ void hal_send_frame(PayloadId type, const void* data, int len)
   const uint8_t* hdr = spine_construct_header(type, len);
   crc_t crc = calc_crc(data, len);
   if (hdr) {
-    spine_debug_x("sending %x packet (%d bytes) CRC=%08x\n", type, len, crc);
+    spine_debug_x("sending %c%c packet (%d bytes) CRC=%08x\n", type&0xFF, type>>8, len, crc);
     hal_serial_send(hdr, SPINE_HEADER_LEN);
     hal_serial_send(data, len);
     hal_serial_send((uint8_t*)&crc, sizeof(crc));
@@ -601,7 +606,7 @@ void hal_send_frame(PayloadId type, const void* data, int len)
 
 void hal_set_mode(int new_mode)
 {
-  printf("Sending Mode Change %x\n", PAYLOAD_MODE_CHANGE);
+  spine_debug("Sending Mode Change %x\n", PAYLOAD_MODE_CHANGE);
   hal_send_frame(PAYLOAD_MODE_CHANGE, NULL, 0);
 }
 
