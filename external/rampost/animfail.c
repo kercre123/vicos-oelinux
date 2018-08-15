@@ -29,7 +29,13 @@ void microwait(long microsec)
 
 /*********** ANIMFAIL IMPLEMENTATION **************/
 
+void exit_cleanup(void)
+{
+  lcd_gpio_teardown();
+}
+
 int error_exit(RampostErr err) {
+  exit_cleanup();
   exit(err);
 }
 
@@ -37,11 +43,15 @@ int error_exit(RampostErr err) {
 int main(int argc, const char* argv[]) {
   lcd_set_brightness(5);
 
-  lcd_init();
+  lcd_gpio_setup();
+  lcd_spi_init();
 
   lcd_device_reset();
+  lcd_device_init();
 
   lcd_draw_frame2((uint16_t*)error_565, error_565_len);
+
+  exit_cleanup();
 
   return 0;
 }
