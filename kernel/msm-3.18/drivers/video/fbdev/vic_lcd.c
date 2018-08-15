@@ -48,6 +48,7 @@ struct vicspi_device {
 	u32 pseudo_palette[256];
 };
 
+static DEFINE_MUTEX(vicspi_write_mutex);
 static int vicspi_write(struct vicspi_device *vic, int cmd, const u8 *wbuf,
 			   int wlen)
 {
@@ -56,6 +57,7 @@ static int vicspi_write(struct vicspi_device *vic, int cmd, const u8 *wbuf,
 	int			i, num_xfers, ret = 0;
 	u8			*pbuf = wbuf;
 
+	mutex_lock(&vicspi_write_mutex);
 	/*
 	 * We should be able to do this in one message.
 	 * But as the controller driver appears to be totally unaware of
@@ -95,6 +97,7 @@ static int vicspi_write(struct vicspi_device *vic, int cmd, const u8 *wbuf,
 	kfree(x);
 
 out:
+	mutex_unlock(&vicspi_write_mutex);
 	return ret;
 }
 
