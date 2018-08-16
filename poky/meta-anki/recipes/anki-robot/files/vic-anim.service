@@ -2,7 +2,6 @@
 Description=Victor animator daemon
 SourcePath=/anki/bin/vic-anim
 PartOf=anki-robot.target
-Conflicts=early-anim.service
 
 Wants=vic-robot.service
 Requires=anki-audio-init.service
@@ -13,6 +12,7 @@ OnFailure=vic-on-failure-animfail.service
 [Service]
 EnvironmentFile=/anki/etc/vic-anim.env
 Restart=no
+ExecStartPre=-/bin/systemctl stop vic-bootAnim.service
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-anim $VIC_ANIM_OPTS
 Nice=-2
 

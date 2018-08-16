@@ -8,39 +8,14 @@
 #include "messages.h"
 #include "spine_hal.h"
 #include "rampost.h"
+#include "das.h"
 
 #define VERSTRING_LEN 16
-
-#define DEBUG_DFU
-#ifdef DEBUG_DFU
-#define dprint printf
-#else
-#define dprint(s, ...)
-#endif
 
 #define FRAME_WAIT_MS 500 //todo hoist to rampost.h
 #define ERASE_WAIT_MS  1000 //up to 1 sec for erase
 #define DFU_PACKET_WAIT_MS 1000 //up to 1 sec for write
 #define VALIDATE_WAIT_MS  5000 //up to 5 sec for validate
-
-static void printhex(const uint8_t* bytes, int len)
-{
-  while (len-- > 0) {
-    printf("%02x", *bytes++);
-  }
-}
-
-
-enum DfuAppErrorCode {
-  app_SUCCESS = 0,
-  app_USAGE = -1,
-  app_FILE_OPEN_ERROR = -2,
-  app_FILE_READ_ERROR = -3,
-  app_SEND_DATA_ERROR = -4,
-  app_HAL_INIT_ERROR = -5,
-  app_FLASH_ERASE_ERROR = -6,
-  app_VALIDATION_ERROR = -7,
-};
 
 enum VersionStatus {
   version_UNKNOWN,
@@ -62,28 +37,30 @@ void dfu_cleanup(void)
 }
 
 void show_error(RampostErr err) {
-  printf("Dfu Error %d\n", err);
-//  dfu_cleanup();
+  DAS_LOG(DAS_ERROR, "dfu.error", "%d", err);
 }
 
 
-
-void ShowVersion(const char* typename, const uint8_t version[])
+static void DAS_PRINTHEX(const int level, const char* event, const uint8_t* bytes, int len)
 {
-  int i;
-  printf("%s Version = ", typename);
-  printhex(version, VERSTRING_LEN);
-  printf(" [");
-  for (i = 0; i < VERSTRING_LEN; i++) {
-    putchar(isprint(version[i]) ? version[i] : '*');
+  if (level >= DEBUG_LEVEL) {
+    int i;
+    printf("@rampost.%s\t", event);
+    for (i = 0; i < len; i++) {
+      printf("%02x", bytes[i]);
+    }
+    printf(" [");
+    for (i = 0; i < len; i++) {
+      printf("%c", isprint(bytes[i]) ? bytes[i] : '*');
+    }
+    printf("]\n");
   }
-  printf("]\n");
 }
 
 enum VersionStatus  CheckVersion(const uint8_t desiredVersion[], const uint8_t firmwareVersion[])
 {
-  ShowVersion("Installed", firmwareVersion);
-  ShowVersion("Provided", desiredVersion);
+  DAS_PRINTHEX(DAS_EVENT, "dfu.installed_version", firmwareVersion, VERSTRING_LEN);
+  DAS_PRINTHEX(DAS_EVENT, "dfu.desired_version  ", desiredVersion, VERSTRING_LEN);
 
   uint8_t i;
   for (i=0;i<VERSTRING_LEN;i++) {
@@ -97,11 +74,11 @@ enum VersionStatus  CheckVersion(const uint8_t desiredVersion[], const uint8_t f
 
 int IsGoodAck(struct AckMessage* msg)
 {
-   if (msg->status <= 0) {
-    dprint("NACK = %d\n", msg->status);
+  if (msg->status <= 0) {
+    DAS_LOG(DAS_DEBUG, "dfu.nack", "%d", msg->status);
     return 0;
-   }
-   return 1;
+  }
+  return 1;
 }
 
 
@@ -113,7 +90,7 @@ bool SendData(const struct WriteDFU* packet) {
   hdr = hal_wait_for_frame(PAYLOAD_BOOT_FRAME, FRAME_WAIT_MS);
   if (!hdr) {
     //No boot frames means something wrong
-    dprint("SendData not seeing boot frames\n");
+    DAS_LOG(DAS_ERROR, "dfu.send_data_noframe", "Not seeing boot frames");
     return false;
   }
 
@@ -121,12 +98,12 @@ bool SendData(const struct WriteDFU* packet) {
 
   hdr = hal_wait_for_frame(PAYLOAD_ACK, DFU_PACKET_WAIT_MS);
   if (!hdr) {
-    dprint("Send Data did not get response\n");
+    DAS_LOG(DAS_ERROR, "dfu.send_data_timeout", "No response to DFU_PACKET");
     return false;
-  }
+
   else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
     //Noone should send NACK
-    dprint("Got NACK in response to DFU PACKET\n");
+    DAS_LOG(DAS_ERROR, "dfu.send_data_nak", "Got NACK in response");
     return false;
   }
   return true;
@@ -138,7 +115,8 @@ static uint8_t gInstalledVersion[VERSTRING_LEN] = {0};
 
 const uint8_t* dfu_get_version()
 {
-  dprint("requesting installed version\n");
+
+  DAS_LOG(DAS_EVENT, "dfu.request_version", "...");
   const struct SpineMessageHeader* hdr;
 
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
@@ -159,13 +137,12 @@ const uint8_t* dfu_get_version()
 uint8_t versionString[VERSTRING_LEN];
 
 const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
-  dprint("opening file %s\n",filename);
+  DAS_LOG(DAS_EVENT, "dfu.open_file", "opening \"%s\"",filename);
   *fpOut = fopen(filename, "rb");
   if (!*fpOut) {
     show_error(err_DFU_FILE_OPEN);
     return NULL;
   }
-  dprint("reading image version\n");
   size_t nchars = fread(versionString, sizeof(uint8_t), VERSTRING_LEN, *fpOut);
   if (nchars != VERSTRING_LEN) {
     show_error(err_DFU_FILE_READ);
@@ -178,20 +155,20 @@ const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
 bool dfu_erase_image(void) {
   const struct SpineMessageHeader* hdr;
 
-  dprint("erasing installed image\n");
+  DAS_LOG(DAS_EVENT, "dfu.erase_image", "erasing installed image");
 
   hal_send_frame(PAYLOAD_ERASE, NULL, 0);
 
   hdr = hal_wait_for_frame(PAYLOAD_ACK, ERASE_WAIT_MS*5);
   if (!hdr) {
     //No ack means something wrong
-    dprint("Erase timeout\n");
+    DAS_LOG(DAS_ERROR, "dfu.erase_timeout", "Erase timeout");
     return false;
   }
   if (hdr) {
     if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
       //Should not fail
-      dprint("Got NACK in response to erase\n");
+      DAS_LOG(DAS_ERROR, "dfu.erase_nak", "Got NACK in response");
       return false;
     }
   }
@@ -207,7 +184,7 @@ bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
   while (!feof(imgfile)) {
     itemcount = fread(&(packet.data[0]), sizeof(uint32_t), 256, imgfile);
     databytes = itemcount * sizeof(uint32_t);
-    dprint("read %zd words (%zd bytes)\n", itemcount, databytes);
+    DAS_LOG(DAS_DEBUG, "dfu.send_image_read", "read %zd words (%zd bytes)", itemcount, databytes);
 
     if (itemcount < 256 && ferror(imgfile)) {
       show_error(err_DFU_FILE_READ);
@@ -218,7 +195,7 @@ bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
       packet.address = start_addr;
       packet.wordCount = itemcount;
 
-      dprint("writing %d words (%zd bytes) for @%x\n", packet.wordCount, databytes, packet.address);
+      DAS_LOG(DAS_DEBUG, "dfu.send_image_write", "writing %d words (%zd bytes) for @%x", packet.wordCount, databytes, packet.address);
 
       if (!SendData(&packet)) {
         show_error(err_DFU_SEND);
@@ -228,7 +205,7 @@ bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
       start_addr += databytes;
     }
     else {
-      dprint("send_data got itemcount of %zd\n", itemcount);
+      DAS_LOG(DAS_ERROR, "dfu.send_image_error", "unexpected itemcount of %zd", itemcount);
       return false;
     }
   }
@@ -236,7 +213,7 @@ bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
 }
 
 bool dfu_validate_image(void) {
-  dprint("validating installed image\n");
+  DAS_LOG(DAS_EVENT, "dfu.validate", "...");
 
   const struct SpineMessageHeader* hdr;
 
@@ -244,7 +221,7 @@ bool dfu_validate_image(void) {
   hdr = hal_wait_for_frame(PAYLOAD_BOOT_FRAME, FRAME_WAIT_MS);
   if (!hdr) {
     //No boot frames means something wrong
-    dprint("validate_image not seeing boot frames\n");
+    DAS_LOG(DAS_EVENT, "dfu.validate_noframes", "not seeing boot frames");
     return false;
   }
 
@@ -252,17 +229,18 @@ bool dfu_validate_image(void) {
 
   hdr = hal_wait_for_frame(PAYLOAD_ACK, VALIDATE_WAIT_MS);
   if (!hdr) {
-    dprint("Validate did not get ACK response\n");
+
+    DAS_LOG(DAS_WARN, "dfu.validate_no_ack", "Did not get ACK response");
   }
   else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
     //Noone should send NACK
-    dprint("Got NACK in response to PAYLOAD_ACK\n");
+    DAS_LOG(DAS_ERROR, "dfu.validate_nak", "Got NACK in response");
     return false;
   }
   //else good ack, but let's wait for a app data frame to be sure
   hdr = hal_wait_for_frame(PAYLOAD_DATA_FRAME, FRAME_WAIT_MS);
   if (!hdr) {
-    dprint("Validate did not get app DATA_FRAME response\n");
+    DAS_LOG(DAS_ERROR, "dfu.validate_timeout", "Did not get app DATA_FRAME");
     return false;
   }
   //else we are up and running
@@ -284,7 +262,6 @@ RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout, bool force
   if (!force_update && CheckVersion(desired_version, installed_version) >= version_OK) {
     return err_SYSCON_VERSION_GOOD; //no update needed
   }
-  //else needs update
 
   if (!dfu_erase_image())
   {
@@ -301,7 +278,7 @@ RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout, bool force
     return err_DFU_VALIDATE_ERROR;
   }
 
-  dprint("Success!\n");
+  DAS_LOG(DAS_EVENT, "dfu.success", "Success");
 
   return err_OK; //Updated
 }
