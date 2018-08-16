@@ -15,8 +15,8 @@ TimeoutStartSec=1830
 Environment=TERM=dumb
 Environment=UPDATE_ENGINE_MAX_SLEEP=1800
 Environment=UPDATE_ENGINE_ENABLED=False
+Environment=UPDATE_ENGINE_ALLOW_DOWNGRADE=False
 EnvironmentFile=-/anki/etc/update-engine.env
-EnvironmentFile=-/data/etc/update-engine.env
 EnvironmentFile=-/run/vic-switchboard/update-engine.env
 ExecStartPre=/bin/rm -rf /run/update-engine
 ExecStartPre=/bin/mkdir -p /run/update-engine /run/vic-switchboard
