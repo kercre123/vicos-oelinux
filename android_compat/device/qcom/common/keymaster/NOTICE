@@ -1,0 +1,14 @@
+Imported from:
+android.googlesource.com/platform/hardware/qcom/keymaster
+
+commit b3120f2b6f75355ce99b2f86bff450115d1ed028
+Merge: c859008 56d7d4b
+Author: Kenny Root <kroot@google.com>
+Date:   Wed Mar 25 11:58:09 2015 +0000
+
+    am 56d7d4bc: am d2bdc571: Merge "Remove superfluous OpenSSL include paths."
+
+    * commit '56d7d4bc5fedf324f63727480a7f54809a445638':
+      Remove superfluous OpenSSL include paths.
+
+
