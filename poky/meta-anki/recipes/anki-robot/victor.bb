@@ -54,10 +54,10 @@ do_compile () {
 
    if [[ "${USER_BUILD}" == "1" ]]; then
      if [[ "${DEV}" == "1" ]]; then
-       if [ -x ./project/victor/scripts/victor_build_userdev.sh ]; then
-         ./project/victor/scripts/victor_build_userdev.sh
+       if [[ "${BETA}" == "1" ]]; then
+         ./project/victor/scripts/victor_build_beta.sh
        else
-         ./project/victor/scripts/victor_build_release.sh
+         ./project/victor/scripts/victor_build_userdev.sh
        fi
      else
        ./project/victor/scripts/victor_build_shipping.sh
