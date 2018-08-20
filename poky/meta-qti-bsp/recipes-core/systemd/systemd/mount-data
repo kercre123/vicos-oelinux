@@ -33,12 +33,17 @@ TOM_LOG="/factory/log1"
 CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 ROBOT_KEY=/data/etc/robot.pem
 
-PASSWORD_FILE=/sys/devices/soc0/serial_number
+fatal() {
+    echo $@
+    exit 1
+}
+[ -x `which user-data-locker` ] || fatal "ERROR: user-data-locker executeable not in path" 
+
 make_userdata() {
   if $1; then
     echo "Remaking /data" > /dev/kmsg
-    cryptsetup -q --key-file "${PASSWORD_FILE}" luksFormat /dev/block/bootdevice/by-name/userdata
-    cryptsetup -q --key-file "${PASSWORD_FILE}" luksOpen /dev/block/bootdevice/by-name/userdata userdata
+    user-data-locker | cryptsetup -q --key-file - luksFormat /dev/block/bootdevice/by-name/userdata
+    user-data-locker | cryptsetup -q --key-file - luksOpen /dev/block/bootdevice/by-name/userdata userdata
     mkfs.ext4 /dev/mapper/userdata
     mount /data
   fi
@@ -59,6 +64,11 @@ make_userdata() {
     chmod 440 $ROBOT_KEY
   fi
 }
+mount_userdata() {
+    user-data-locker | cryptsetup -q --key-file - luksOpen /dev/block/bootdevice/by-name/userdata userdata
+    mount /data
+    return $?
+}
 
 
 case "$1" in
@@ -68,7 +78,7 @@ case "$1" in
       mount -o size=64M -t tmpfs none /data/
       make_userdata false
     else
-      if ! mount /data; then
+      if ! mount_userdata; then
         make_userdata true
         sync
       fi

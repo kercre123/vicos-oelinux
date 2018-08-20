@@ -12,7 +12,7 @@ SRC_URI += "file://mtpserver.rules"
 SRC_URI += "file://setup_localtime_link"
 SRC_URI += "file://setup_localtime_link.service"
 
-DEPENDS += "emr-cat blkdiscard"
+DEPENDS += "emr-cat blkdiscard user-data-locker"
 
 EXTRA_OECONF += " --disable-efi"
 
