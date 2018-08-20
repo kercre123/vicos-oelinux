@@ -6,7 +6,7 @@ SCRIPT_NAME=$(basename $0)
 
 # defaults
 VERBOSE=0
-BUILD_COMMAND=("build-victor-robot-perf-image")
+BUILD_COMMAND=("build-victor-robot-image")
 
 function usage() {
     echo "$SCRIPT_NAME [OPTIONS] <bitbake build command/function> (default: ${BUILD_COMMAND[*]})"
