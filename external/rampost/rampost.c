@@ -116,22 +116,10 @@ int error_exit(RampostErr err) {
   exit(err);
 }
 
-
-
-#include "warning_orange.h"
-#include "locked_qsn.h"
 #include "anki_dev_unit.h"
 #include "lowbattery.h"
 #include "error_801.h"
 
-
-void show_orange_icon(void) {
-  lcd_draw_frame2((uint16_t*)warning_orange, warning_orange_len);
-}
-
-void show_locked_qsn_icon(void) {
-  lcd_draw_frame2((uint16_t*)locked_qsn, locked_qsn_len);
-}
 
 void show_dev_unit(void) {
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
@@ -213,7 +201,7 @@ int main(int argc, const char* argv[]) {
   bool in_recovery_mode = false;
   bool blank_on_exit = true;
   bool show_801 = false;
-  bool is_locked_qsn = false;
+  bool hal_failure = false;
   bool is_dev_unit = false;
   bool is_battery_low = false;
   bool force_update = false;
@@ -224,11 +212,6 @@ int main(int argc, const char* argv[]) {
   for (; argn < argc; argn++) {
     if (argv[argn][0] == '-') {
       switch (argv[argn][1]) {
-        case 'x':
-        {
-          is_locked_qsn = true;
-          break;
-        }
         case 'd':
         {
           is_dev_unit = true;
@@ -256,65 +239,62 @@ int main(int argc, const char* argv[]) {
 
   int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
   if (errCode) {
-    error_exit(errCode);
+    hal_failure = true;
   }
+  else {
+    force_syscon_resync();
+    //clear buffer
+    const struct SpineMessageHeader* hdr;
+    do {
+      hdr= hal_get_next_frame(1); //clear backlog
+    } while (hdr);
 
-  force_syscon_resync();
-  //clear buffer
-  const struct SpineMessageHeader* hdr;
-  do {
-    hdr= hal_get_next_frame(1); //clear backlog
-  } while (hdr);
-
-  if (dfu_file != NULL) { // A DFU file has been specified
-    RampostErr result = dfu_sequence(dfu_file, DFU_TIMEOUT, force_update);
-    if (result == err_SYSCON_VERSION_GOOD) {
-      //hooray!
-    }
-    else if (result != err_OK ) {
-      DAS_LOG(DAS_ERROR, "dfu_error", "DFU Error %d", result);
-      show_801 = true;
+    if (dfu_file != NULL) { // A DFU file has been specified
+      RampostErr result = dfu_sequence(dfu_file, DFU_TIMEOUT, force_update);
+      if (result == err_SYSCON_VERSION_GOOD) {
+        //hooray!
+      }
+      else if (result != err_OK ) {
+        DAS_LOG(DAS_ERROR, "dfu_error", "DFU Error %d", result);
+        show_801 = true;
+      }
     }
   }
+  if (hal_failure) {
+    show_801 = true;
+  }
+  else {
+    BatteryState bat_state = confirm_battery_level();
+    switch (bat_state) {
+      case battery_LEVEL_GOOD:
+        break;
+      case battery_LEVEL_TOOLOW:
+        is_battery_low = true;
+        break;
+      case battery_BOOTLOADER:
+        DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
+        show_801 = true; //should be impossible.
+        break;
+      case battery_TIMEOUT:
+        DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check timed out!");
+        break; // But do continue boot in case this is because something needs recovering etc.
+    }
 
-  //set LEDS only after we expect syscon is good
-  set_body_leds(success, in_recovery_mode);
+    //set LEDS only after we expect syscon is good
+    set_body_leds(success, in_recovery_mode);
+
+  }
 
   lcd_device_init(); // We'll be displaying something
   lcd_set_brightness(5);
 
-  BatteryState bat_state = confirm_battery_level();
-  switch (bat_state) {
-    case battery_LEVEL_GOOD:
-      break;
-    case battery_LEVEL_TOOLOW:
-      is_battery_low = true;
-      return 1;
-    case battery_BOOTLOADER:
-      DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
-      //TODO: This should be an error now?
-      break;
-    case battery_TIMEOUT:
-      DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check timed out!");
-      break; // But do continue boot in case this is because something needs recovering etc.
-  }
-
   //Skip everything else on syscon error!
-  //TODO: is this right? What about case 'X'
   if (show_801) {
     show_error_801();
     blank_on_exit = false;
-    cleanup(blank_on_exit);
-    return 1;
   }
   else if (is_battery_low) {
     show_lowbat_and_shutdown();
-    return 1;
-  }
-  else if (is_locked_qsn) {
-    show_locked_qsn_icon();
-    while (1);
-    return 1;
   }
   else if (is_dev_unit) {
     show_dev_unit();
@@ -322,5 +302,6 @@ int main(int argc, const char* argv[]) {
   }
 
   cleanup(blank_on_exit);
-  return 0;
+  bool has_error = show_801 || is_battery_low;
+  return has_error;
 }

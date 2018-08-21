@@ -13,7 +13,7 @@
 #define VERSTRING_LEN 16
 
 #define FRAME_WAIT_MS 500 //todo hoist to rampost.h
-#define ERASE_WAIT_MS  1000 //up to 1 sec for erase
+#define ERASE_WAIT_MS  5000 //up to 5 sec for erase
 #define DFU_PACKET_WAIT_MS 1000 //up to 1 sec for write
 #define VALIDATE_WAIT_MS  5000 //up to 5 sec for validate
 
@@ -159,7 +159,7 @@ bool dfu_erase_image(void) {
 
   hal_send_frame(PAYLOAD_ERASE, NULL, 0);
 
-  hdr = hal_wait_for_frame(PAYLOAD_ACK, ERASE_WAIT_MS*5);
+  hdr = hal_wait_for_frame(PAYLOAD_ACK, ERASE_WAIT_MS);
   if (!hdr) {
     //No ack means something wrong
     DAS_LOG(DAS_ERROR, "dfu.erase_timeout", "Erase timeout");

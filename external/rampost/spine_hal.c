@@ -73,8 +73,6 @@ crc_t calc_crc(const uint8_t* buf, int len)
 
 #define BODY_TAG_PREFIX ((uint8_t*)&SyncKey)
 #define SPINE_SYNC_LEN (sizeof(SpineSync))
-//#define SPINE_PID_LEN sizeof(PayloadId)
-//#define SPINE_LEN_LEN sizeof(uint16_t)
 #define SPINE_HEADER_LEN (sizeof(struct SpineMessageHeader))
 #define SPINE_CRC_LEN (sizeof(crc_t))
 
@@ -87,7 +85,6 @@ static const SpineSync SyncKey = SYNC_BODY_TO_HEAD;
 
 static struct HalGlobals {
   uint8_t framebuffer[SPINE_MAX_BYTES]; //for whole frames
-//  uint8_t framebuffer[SPINE_B2H_FRAME_LEN]; //for whole frames
   struct SpineMessageHeader outheader;
   int fd;
   uint8_t buf_rx[SPINE_BUFFER_MAX_LEN]; //for incoming bytes
@@ -205,6 +202,7 @@ static ssize_t hal_receive_data(const uint8_t* bytes, size_t len)
     return len;
 }
 
+#ifdef EXTENDED_SPINE_DEBUG
 static const char* ascii[]={
 "00 ","01 ","02 ","03 ","04 ","05 ","06 ","07 ",
 "08 ","09 ","0a ","0b ","0c ","0d ","0e ","0f ",
@@ -239,6 +237,7 @@ static const char* ascii[]={
 "f0 ","f1 ","f2 ","f3 ","f4 ","f5 ","f6 ","f7 ",
 "f8 ","f9 ","fa ","fb ","fc ","fd ","fe ","ff "};
 
+#define open_logfile() creat("serial.log",00777)
 void serial_log(int dir, const uint8_t* buf, int len)
 {
   static int lastdir = 1;
@@ -253,6 +252,10 @@ void serial_log(int dir, const uint8_t* buf, int len)
   }
   write(gHal.logFd,"\n",1);
 }
+#else
+#define open_logfile() NULL //no-op
+#define serial_log(d,b,l)  //no-op
+#endif
 
 static ssize_t hal_spine_io()
 {
@@ -400,7 +403,8 @@ static const uint8_t* spine_construct_header(PayloadId payload_type,  uint16_t p
 SpineErr hal_init(const char* devicename, long baudrate)
 {
   gHal.fd = -1;
-  gHal.logFd = creat("serial.log",00777);
+
+  gHal.logFd = open_logfile();
   SpineErr r = hal_serial_open(devicename, baudrate);
   return r;
 }
@@ -418,7 +422,6 @@ void hal_discard_rx_bytes(ssize_t bytes_to_drop)
             memmove(gHal.buf_rx, rx, remaining);
         }
         gHal.rx_cursor -= bytes_to_drop;
-//        memset(gHal.buf_rx + gHal.rx_cursor, 0x55, sizeof(gHal.buf_rx) - gHal.rx_cursor);
     } else if (bytes_to_drop < 0) {
         // discard all data
         gHal.rx_cursor = 0;
