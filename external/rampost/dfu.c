@@ -100,7 +100,7 @@ bool SendData(const struct WriteDFU* packet) {
   if (!hdr) {
     DAS_LOG(DAS_ERROR, "dfu.send_data_timeout", "No response to DFU_PACKET");
     return false;
-
+  }
   else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
     //Noone should send NACK
     DAS_LOG(DAS_ERROR, "dfu.send_data_nak", "Got NACK in response");

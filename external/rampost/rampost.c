@@ -285,7 +285,6 @@ int main(int argc, const char* argv[]) {
 
   }
 
-  lcd_device_init(); // We'll be displaying something
   lcd_set_brightness(5);
 
   //Skip everything else on syscon error!
