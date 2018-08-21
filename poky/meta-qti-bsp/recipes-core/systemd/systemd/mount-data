@@ -42,7 +42,7 @@ fatal() {
 make_userdata() {
   if $1; then
     echo "Remaking /data" > /dev/kmsg
-    user-data-locker | cryptsetup -q --key-file - luksFormat /dev/block/bootdevice/by-name/userdata
+    user-data-locker reset | cryptsetup -q --key-file - luksFormat /dev/block/bootdevice/by-name/userdata
     user-data-locker | cryptsetup -q --key-file - luksOpen /dev/block/bootdevice/by-name/userdata userdata
     mkfs.ext4 /dev/mapper/userdata
     mount /data
