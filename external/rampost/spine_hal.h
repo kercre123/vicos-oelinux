@@ -39,6 +39,9 @@ const void* hal_wait_for_frame(uint16_t type, int32_t timeout_ms);
 //Sends given frame
 void hal_send_frame(uint16_t type, const void* data, int len);
 
+//low level
+int hal_serial_send(const uint8_t* buffer, int len);
+
 
 enum RobotMode { //todo: mode is a dummy value. If ever needed, this should be in clad file.
     RobotMode_IDLE,
