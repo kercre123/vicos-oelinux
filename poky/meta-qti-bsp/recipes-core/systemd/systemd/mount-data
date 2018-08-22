@@ -91,6 +91,7 @@ case "$1" in
     umount /data
     if test -e $WIPE_COOKIE; then
       cryptsetup luksClose /dev/block/bootdevice/by-name/userdata
+      user-data-locker reset
       blkdiscard -s /dev/block/bootdevice/by-name/userdata
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
     fi
