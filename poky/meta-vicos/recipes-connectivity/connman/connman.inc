@@ -105,6 +105,18 @@ do_install_append() {
     if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
         ln -sf ../run/connman/resolv.conf ${D}${sysconfdir}/resolv-conf.connman
     fi
+
+    # install dbus conf
+    if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
+        install -d ${D}${sysconfdir}/dbus-1/system.d
+        install -m 0644 ${B}/src/connman.conf ${D}${sysconfdir}/dbus-1/system.d
+    fi
+
+    # install main config
+    if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
+        install -d ${D}${sysconfdir}/connman
+        install -m 0644 ${WORKDIR}/connman-main.conf ${D}${sysconfdir}/connman/main.conf
+    fi
 }
 
 # These used to be plugins, but now they are core
@@ -162,7 +174,7 @@ RDEPENDS_${PN}-client ="${PN}"
 
 FILES_${PN} = "${bindir}/* ${sbindir}/* ${libexecdir}/* ${libdir}/lib*.so.* \
             ${libdir}/connman/plugins \
-            ${sysconfdir} ${sharedstatedir} ${localstatedir} \
+            ${sysconfdir} ${localstatedir} \
             ${base_bindir}/* ${base_sbindir}/* ${base_libdir}/*.so* ${datadir}/${PN} \
             ${datadir}/dbus-1/system-services/* \
             ${sysconfdir}/tmpfiles.d/connman_resolvconf.conf"
