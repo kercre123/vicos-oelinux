@@ -113,6 +113,17 @@ function build-8009-robot-userdev-image() {
   cdbitbake machine-robot-image
 }
 
+function build-8009-robot-beta-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-user
+  export VARIANT=perf
+  export PRODUCT=robot
+  export DEV="1"
+  export BETA="1"
+  cdbitbake machine-robot-image
+}
+
 function build-8009-robot-factory-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
@@ -150,6 +161,10 @@ function build-victor-robot-facdev-image() {
 
 function build-victor-robot-userdev-image() {
   build-8009-robot-userdev-image
+}
+
+function build-victor-robot-beta-image() {
+  build-8009-robot-beta-image
 }
 
 
@@ -203,7 +218,7 @@ rebake() {
 }
 
 unset_bb_env() {
-  unset DISTRO MACHINE PRODUCT VARIANT FACTORY DEV
+  unset DISTRO MACHINE PRODUCT VARIANT FACTORY DEV BETA
 }
 
 # Find build templates from qti meta layer.
@@ -219,6 +234,6 @@ export TEMPLATECONF="meta-qti-bsp/conf"
 # (BBLAYERS is explicitly blocked from this within OE-Core itself, though...)
 # oe-init-build-env calls oe-buildenv-internal which sets
 # BB_ENV_EXTRAWHITE, append our vars to the list
-export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN"
+export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN BETA"
 
 list-build-commands

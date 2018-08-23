@@ -19,27 +19,10 @@ extern "C" {
 
 #include <stdint.h>
 
-#include "camera_format.h"
-#include "camera_params.h"
 #include "camera_process.h"
+#include "mm_camera_stream_types.h"
   
-// Camera callback: called with captured `image` of `width` by `height`, with specified bits per pixel
-// (called from separate thread)
-//typedef int(*camera_cb)(uint8_t* image, int width, int height, int bpp);
-typedef int(*camera_cb)(const uint8_t* image,
-                        uint64_t timestamp,
-                        uint32_t frame_id,
-                        int width,
-                        int height,
-                        void* cb_ctx);
-
 #define ANKI_CAMERA_FPS_MAX 30
-
-struct anki_camera_params {
-  camera_cb frame_callback_raw;
-  camera_cb frame_callback_preview;
-  struct anki_camera_capture_params capture_params;
-};
 
 // Initializes the camera
 int camera_init();
@@ -65,6 +48,10 @@ int camera_set_capture_format(struct anki_camera_capture* capture,
                               int(*realloc_with_format)
                                 (struct anki_camera_capture* capture,
                                  anki_camera_pixel_format_t format));
+
+int camera_start_snapshot();
+
+int camera_stop_snapshot();
 
 #ifdef __cplusplus
 }
