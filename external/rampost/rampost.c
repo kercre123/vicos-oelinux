@@ -20,7 +20,6 @@
 
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
-#define DFU_TIMEOUT ((uint64_t)(30 * NSEC_PER_SEC)) // Per VIC-4663
 #define FRAME_WAIT_MS 500
 #define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
@@ -39,6 +38,7 @@ enum {
 #define NSEC_PER_USEC (1000)
 
 
+//returns monotonic time in ns.
 uint64_t steady_clock_now(void) {
    struct timespec time;
    clock_gettime(CLOCK_MONOTONIC,&time);
@@ -81,8 +81,6 @@ void set_body_leds(int success, int inRecovery) {
 
   hal_send_frame(PAYLOAD_LIGHT_STATE, &ledPayload, sizeof(ledPayload));
   hal_get_next_frame(FRAME_WAIT_MS); //need response, don't worry about what it says
-
-
 }
 
 #define CMDLINE_FILE "/proc/cmdline"
@@ -93,7 +91,7 @@ int recovery_mode_check(void) {
   char buffer[MAX_COMMANDLINE_CHARS];
   int fd = open(CMDLINE_FILE, O_RDONLY);
   int result = read(fd, buffer, sizeof(buffer)-1);
-  if  (result > 0) {
+  if (result > 0) {
     buffer[result] = '\0'; //null terminate
     DAS_LOG(DAS_DEBUG, "recovery_mode_check.scan", "scanning [%s] for [%s]", buffer, RECOVERY_MODE_INDICATOR);
     char* pos = strstr(buffer, RECOVERY_MODE_INDICATOR);
@@ -174,7 +172,6 @@ void send_shutdown_message(void) {
   }
 }
 
-
 void show_lowbat_and_shutdown(void) {
   uint64_t start = steady_clock_now();
   uint64_t now;
@@ -193,7 +190,6 @@ void force_syscon_resync(void) {
     bytes_to_send-= sizeof(ALL_EFFS);
   }
 }
-
 
 
 /************ MAIN *******************/
@@ -246,13 +242,14 @@ int main(int argc, const char* argv[]) {
   else {
     force_syscon_resync();
     //clear buffer
+    uint64_t timeout = steady_clock_now() + 1 * NSEC_PER_SEC;
     const struct SpineMessageHeader* hdr;
     do {
       hdr= hal_get_next_frame(1); //clear backlog
-    } while (hdr);
+    } while (hdr && steady_clock_now() < timeout);
 
     if (dfu_file != NULL) { // A DFU file has been specified
-      RampostErr result = dfu_sequence(dfu_file, DFU_TIMEOUT, force_update);
+      RampostErr result = dfu_sequence(dfu_file, force_update);
       if (result == err_SYSCON_VERSION_GOOD) {
         //hooray!
       }

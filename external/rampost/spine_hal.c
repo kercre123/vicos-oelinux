@@ -296,7 +296,6 @@ static ssize_t hal_spine_io()
 
 int hal_serial_read(uint8_t* buffer, int len)   //->bytes_recieved
 {
-
   int result = read(gHal.fd, buffer, len);
   if (result < 0) {
     if (errno == EAGAIN) { //nonblocking no-data
@@ -568,7 +567,7 @@ const void* hal_get_next_frame(int32_t timeout_ms)
 
 const void* hal_wait_for_frame(uint16_t type, int32_t timeout_ms)
 {
-  uint64_t expiry = steady_clock_now()+ (timeout_ms * 1000000LL);
+  uint64_t expiry = steady_clock_now() + (timeout_ms * 1000000LL);
   const struct SpineMessageHeader* hdr = NULL;
 
   while (steady_clock_now() < expiry) {

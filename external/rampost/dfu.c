@@ -175,7 +175,7 @@ bool dfu_erase_image(void) {
   return true;
 }
 
-bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
+bool dfu_send_image(FILE* imgfile) {
   struct WriteDFU packet = {0};
   size_t databytes;
   size_t itemcount;
@@ -201,7 +201,6 @@ bool dfu_send_image(FILE* imgfile, uint64_t expire_time) {
         show_error(err_DFU_SEND);
         return false;
       }
-
       start_addr += databytes;
     }
     else {
@@ -247,10 +246,8 @@ bool dfu_validate_image(void) {
 
 }
 
-RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout, bool force_update)
+RampostErr dfu_sequence(const char* dfu_file, bool force_update)
 {
-  const uint64_t expire_time = steady_clock_now() + timeout;
-
   const uint8_t* installed_version = dfu_get_version();
   if (!installed_version) {
     return err_DFU_NO_VERSION;
@@ -267,7 +264,7 @@ RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout, bool force
     return err_DFU_ERASE_ERROR;
   }
 
-  if (!dfu_send_image(gImgFilep, expire_time))
+  if (!dfu_send_image(gImgFilep))
   {
     return err_DFU_INSTALL_ERROR;
   }

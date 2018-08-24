@@ -3,6 +3,6 @@
 
 #include "rampost.h"
 
-RampostErr dfu_sequence(const char* dfu_file, const uint64_t timeout, bool force_update);
+RampostErr dfu_sequence(const char* dfu_file, bool force_update);
 
 #endif//DFU_H_

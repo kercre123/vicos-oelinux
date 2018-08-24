@@ -81,19 +81,13 @@ static GPIO DnC_PIN;
 static const int DAT_CLOCK = 17500000;
 static const int MAX_TRANSFER = 0x1000;
 
-
 static int spi_fd;
-
-
-
 
 static const char* BACKLIGHT_DEVICES[] = {
   "/sys/class/leds/face-backlight/brightness",
   "/sys/class/leds/face-backlight-left/brightness",
   "/sys/class/leds/face-backlight-right/brightness"
 };
-
-
 
 int lcd_spi_init()
 {
@@ -108,9 +102,6 @@ int lcd_spi_init()
   }
   return spi_fd;
 }
-
-
-
 
 static void lcd_spi_transfer(int cmd, int bytes, const void* data) {
   const uint8_t* tx_buf = data;
@@ -252,8 +243,6 @@ static void lcd_run_script(const INIT_SCRIPT* script)
   }
 }
 
-
-
 void lcd_device_init(void)
 {
   // Init registers and put the display in sleep mode
@@ -268,11 +257,9 @@ void lcd_device_init(void)
   lcd_run_script(display_on_scr);
 }
 
-
-
 void lcd_device_sleep(void)
 {
-    if (spi_fd) {
+  if (spi_fd) {
     static const uint8_t SLEEP = 0x10;
     lcd_spi_transfer(true, 1, &SLEEP);
     close(spi_fd);
