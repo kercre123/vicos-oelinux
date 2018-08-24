@@ -224,7 +224,6 @@ bool dfu_validate_image(void) {
     DAS_LOG(DAS_EVENT, "dfu.validate_noframes", "not seeing boot frames");
     return false;
   }
-
   hal_send_frame(PAYLOAD_VALIDATE, NULL, 0);
 
   hdr = hal_wait_for_frame(PAYLOAD_ACK, VALIDATE_WAIT_MS);

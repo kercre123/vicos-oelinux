@@ -586,7 +586,7 @@ void hal_send_frame(PayloadId type, const void* data, int len)
   const uint8_t* hdr = spine_construct_header(type, len);
   crc_t crc = calc_crc(data, len);
   if (hdr) {
-      DAS_LOG(DAS_DEBUG, "spine.send_frame", "sending %c%c packet (%d bytes) CRC=%08x", type&0xFF, type>>8, len, crc);
+    DAS_LOG(DAS_DEBUG, "spine.send_frame", "sending %c%c packet (%d bytes) CRC=%08x", type&0xFF, type>>8, len, crc);
     hal_serial_send(hdr, SPINE_HEADER_LEN);
     hal_serial_send(data, len);
     hal_serial_send((uint8_t*)&crc, sizeof(crc));
