@@ -229,7 +229,7 @@ int property_get_bt(const char *key, char *value, const char *default_value)
             i++;
         }
     } while(1);
-    ALOGD("property_get_bt: key(%s) has value: %s", key, value);
+    ALOGD("property_get_bt: key(%s) has value: %s\n", key, value);
     if (bytes_read) {
         return 0;
     } else {
