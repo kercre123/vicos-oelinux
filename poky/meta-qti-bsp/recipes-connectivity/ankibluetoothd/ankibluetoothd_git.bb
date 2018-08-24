@@ -13,6 +13,7 @@ FILESPATH =+ "${WORKSPACE}:"
 SRC_URI = "file://external/anki-ble/"
 SRC_URI += "file://ankibluetoothd.service"
 SRC_URI += "file://vicdevsetup.service"
+SRC_URI += "file://smd23.rules"
 
 S = "${WORKDIR}/external/anki-ble/"
 
@@ -29,6 +30,9 @@ do_install_append() {
     ln -sf /etc/systemd/system/ankibluetoothd.service \
       ${D}${sysconfdir}/systemd/system/multi-user.target.wants/ankibluetoothd.service
   fi
+  install -d ${D}${sysconfdir}/udev/rules.d
+  install -m 0644 ${WORKDIR}/smd23.rules ${D}${sysconfdir}/udev/rules.d/smd23.rules
 }
 
 FILES_${PN} += "${systemd_unitdir}/system/"
+FILES_${PN} += "${sysconfdir}/udev/rules.d/smd23.rules"

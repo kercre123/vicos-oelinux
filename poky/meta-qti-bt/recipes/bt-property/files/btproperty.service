@@ -4,6 +4,7 @@ SourcePath=/etc/initscripts/start_btproperty
 After=mount-data.service
 
 [Service]
+User=bluetooth
 Restart=always
 RemainAfterExit=yes
 ExecStart=/etc/initscripts/start_btproperty start

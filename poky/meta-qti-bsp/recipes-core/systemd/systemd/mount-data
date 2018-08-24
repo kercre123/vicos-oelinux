@@ -44,12 +44,15 @@ make_userdata() {
   # to make it work.
   mkdir -p /data/usb
   mkdir -p /data/misc/camera
-  mkdir -p /data/misc/bluetooth
   if [ ! -e $CONNMAN_DONE_TOKEN ]; then
     mkdir -p /data/lib/connman/
     cp -rf /var/lib/connman/* /data/lib/connman
     touch $CONNMAN_DONE_TOKEN
   fi
+
+  mkdir -p /data/misc/bluetooth
+  chown -R bluetooth:bluetooth /data/misc/bluetooth
+  chmod -R 770 /data/misc/bluetooth
 }
 
 
