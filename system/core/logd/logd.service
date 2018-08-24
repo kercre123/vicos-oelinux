@@ -31,6 +31,7 @@ SourcePath=/etc/initscripts/logd
 Description=logd Service
 
 [Service]
+UMask=0002
 Type=forking
 Restart=no
 IgnoreSIGPIPE=no

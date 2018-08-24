@@ -1337,12 +1337,12 @@ int main(int argc, char *argv[])
     perror("socket");
     exit(1);
   }
-  fprintf(stderr, "%s: connecting to %s, bt_prop_socket = %d", __func__, SOCKETNAME, bt_prop_socket);
+  fprintf(stderr, "%s: connecting to %s, bt_prop_socket = %d\n", __func__, SOCKETNAME, bt_prop_socket);
   /*Create the address of the server.*/
   memset(&name, 0, sizeof(struct sockaddr_un));
   name.sun_family = AF_UNIX;
   strlcpy(name.sun_path, SOCKETNAME, sizeof(name.sun_path));
-  printf("connecting to %s", SOCKETNAME);
+  printf("connecting to %s\n", SOCKETNAME);
   len = sizeof(name.sun_family) + strlen(name.sun_path);
   /*Connect to the server.*/
   if (connect(bt_prop_socket, (struct sockaddr *) &name, len) < 0){
