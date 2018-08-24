@@ -9,9 +9,28 @@
 #
 # Daemons ownership and permissions
 # ================================
-usr/bin/ankibluetoothd      2904 2904 0750
+# Bluetooth stuff
+# ================================
+#
+# ankibluetoothd needs CAP_WAKE_ALARM
+# CAP_WAKE_ALARM = 35
+# CAP_TO_MASK(35) = 8 = (1 << ((35) & 31))
+
+usr/bin/ankibluetoothd      2904 2904 0750 capabilities=0x0000000800000000
+usr/bin/viccubetool         2904 2904 0750
+misc/bluetooth              2904 2904 0750
+misc/bluetooth/bt_did.conf  2904 2904 0640
+misc/bluetooth/bt_stack.conf  2904 2904 0640
+misc/bluetooth/init.msm.bt.sh  2904 2904 0750
+misc/bluetooth/iot_devlist.conf 2904 2904 0640
+
+
+# Camera Stuff
+# ===========
 usr/bin/mm-anki-camera      2907 2907 0750
 
+# Anki stuff
+# ===========
 anki                        2901 2901 0750
 anki/lib                    2901 2901 0750
 anki/data                   2901 2901 0750
