@@ -33,10 +33,10 @@ echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
 # Power on hardware test and led states
 if [ -z "${CMDLINE##*anki.dev*}" ]; then
 	is_dev_device=true
-	rampost syscon.dfu -d | tee /dev/rampost.log &
+	rampost syscon.dfu -d | tee /dev/rampost.log
 else
 	is_dev_device=false
-	rampost syscon.dfu | tee /dev/rampost.log &
+	rampost syscon.dfu | tee /dev/rampost.log
 fi
 
 if [ -z "${CMDLINE##*dm=*}" ]; then
