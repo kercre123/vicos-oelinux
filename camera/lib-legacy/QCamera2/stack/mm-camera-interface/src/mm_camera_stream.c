@@ -1011,11 +1011,33 @@ int32_t mm_stream_streamoff(mm_stream_t *my_obj)
     }
 
     /* step2: stream off */
+
+    /* The VIDIOC_STREAMOFF ioctl, apart of aborting or finishing any DMA in progress, 
+       unlocks any user pointer buffers locked in physical memory, and it removes all 
+       buffers from the incoming and outgoing queues. That means all images captured 
+       but not dequeued yet will be lost, likewise all images enqueued for output 
+       but not transmitted yet. */
+    // This mean we need to update buf status bookkeeping below
     rc = ioctl(my_obj->fd, VIDIOC_STREAMOFF, &buf_type);
     if (rc < 0) {
         CDBG_ERROR("%s: STREAMOFF failed: %s\n",
                 __func__, strerror(errno));
     }
+
+    pthread_mutex_lock(&my_obj->buf_lock);
+    
+    if (NULL != my_obj->buf_status) {
+      int i;
+      for(i = 0; i < my_obj->buf_num; i++){
+          my_obj->buf_status[i].buf_refcnt = 0;
+          my_obj->buf_status[i].in_kernel = 0;
+      }
+    }
+    
+    my_obj->queued_buffer_count = 0;
+    
+    pthread_mutex_unlock(&my_obj->buf_lock);
+
     CDBG("%s :X rc = %d",__func__,rc);
     return rc;
 }
@@ -3002,6 +3024,7 @@ int32_t mm_stream_buf_done(mm_stream_t * my_obj,
          __func__, my_obj->my_hdl, my_obj->fd, my_obj->state);
 
     pthread_mutex_lock(&my_obj->buf_lock);
+
     if(my_obj->buf_status[frame->buf_idx].buf_refcnt == 0) {
         CDBG("%s: Error Trying to free second time?(idx=%d) count=%d\n",
                    __func__, frame->buf_idx,

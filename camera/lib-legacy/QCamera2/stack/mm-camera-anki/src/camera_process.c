@@ -369,10 +369,22 @@ int camera_capture_start(struct anki_camera_capture* capture,
 
 int camera_capture_stop(struct anki_camera_capture* capture)
 {
+  int rc;
   assert(capture->buffer.data != NULL);
 
-  camera_stop();
-  camera_cleanup();
+  rc = camera_stop();
+  if(rc != 0)
+  {
+    loge("%s: failed to stop camera", __func__);
+    return rc;
+  }
+
+  rc = camera_cleanup();
+  if(rc != 0)
+  {
+    loge("%s: failed to cleanup camera");
+    return rc;
+  }
 
   capture->state = ANKI_CAMERA_IDLE;
   return 0;

@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/prctl.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <cam_semaphore.h>
@@ -542,9 +543,22 @@ int32_t mm_camera_poll_thread_release(mm_camera_poll_thread_t *poll_cb)
 
     /* send exit signal to poll thread */
     mm_camera_poll_sig(poll_cb, MM_CAMERA_PIPE_CMD_EXIT);
+
     /* wait until poll thread exits */
-    if (pthread_join(poll_cb->pid, NULL) != 0) {
-        CDBG_ERROR("%s: pthread dead already\n", __func__);
+    struct timespec timeout;
+    timeout.tv_sec = 60;
+    timeout.tv_nsec = 0;
+    rc = pthread_timedjoin_np(poll_cb->pid, NULL, &timeout);
+    if (rc != 0) {
+        if(rc == ETIMEDOUT)
+        {
+            CDBG_ERROR("%s: pthread join timedout, cancelling thread", __func__);
+            pthread_cancel(poll_cb->pid);
+        }
+        else
+        {
+            CDBG_ERROR("%s: pthread dead already %d\n", __func__, rc);
+        }
     }
 
     /* close pipe */
@@ -660,8 +674,21 @@ int32_t mm_camera_cmd_thread_stop(mm_camera_cmd_thread_t * cmd_thread)
     cam_sem_post(&cmd_thread->cmd_sem);
 
     /* wait until cmd thread exits */
-    if (pthread_join(cmd_thread->cmd_pid, NULL) != 0) {
-        CDBG("%s: pthread dead already\n", __func__);
+    struct timespec timeout;
+    timeout.tv_sec = 60;
+    timeout.tv_nsec = 0;
+    rc = pthread_timedjoin_np(cmd_thread->cmd_pid, NULL, &timeout);
+
+    if (rc != 0) {
+        if(rc == ETIMEDOUT)
+        {
+            CDBG_ERROR("%s: pthread join timedout, cancelling thread", __func__);
+            pthread_cancel(cmd_thread->cmd_pid);
+        }
+        else
+        {
+            CDBG_ERROR("%s: pthread dead already %d\n", __func__, rc);
+        }
     }
     return rc;
 }
