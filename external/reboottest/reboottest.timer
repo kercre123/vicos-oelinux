@@ -1,0 +1,13 @@
+# Run the rebooter service after resstarting
+
+[Unit]
+Description=Wipe syscon and reboot the robot 1 minute after reboot
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+
+[Timer]
+OnBootSec=90sec
+
+
+[Install]
+WantedBy=multi-user.target

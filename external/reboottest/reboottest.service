@@ -1,0 +1,13 @@
+# Service to periodically reboot the robot
+
+[Unit]
+Description=Rapid Reboot Test
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/data/etc/rebooter.env
+ExecStart=/usr/bin/logwrapper /sbin/reboottest.sh
+
+
