@@ -27,6 +27,11 @@ echo out > /sys/class/gpio/gpio$CAM_REG_GPIO/direction
 echo 1 > /sys/class/gpio/gpio$CAM_REG_GPIO/value
 # End camera force hack
 
+# Set spi buf size to size of LCD frame (184*96*2)
+chmod 666 /sys/modules/spidev/parameters/bufsiz
+echo 35328 > /sys/modules/spidev/parameters/bufsiz
+chmod 444 /sys/modules/spidev/parameters/bufsiz
+
 # emr-cat prints a placeholder value even on error
 SERIALNO=`/bin/emr-cat e`
 HAVE_EMR=$?
