@@ -14,6 +14,7 @@ OnFailure=vic-on-failure.service
 [Service]
 EnvironmentFile=/anki/etc/vic-webserver.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-webserver $VIC_WEBSERVER_OPTS
+ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
 
 [Install]

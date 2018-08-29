@@ -7,11 +7,10 @@ Requires=vic-gateway-cert.service
 Wants=vic-engine.service vic-switchboard.service
 After=vic-gateway-cert.service vic-engine.service vic-switchboard.service
 
-OnFailure=vic-on-failure-gatewayfail.service
-
 [Service]
 EnvironmentFile=/anki/etc/vic-gateway.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-gateway $VIC_GATEWAY_OPTS
+ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
 
 [Install]

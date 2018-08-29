@@ -7,13 +7,12 @@ Wants=vic-robot.service
 Requires=anki-audio-init.service
 After=vic-robot.service anki-audio-init.service
 
-OnFailure=vic-on-failure-animfail.service
-
 [Service]
 EnvironmentFile=/anki/etc/vic-anim.env
 Restart=no
 ExecStartPre=-/bin/systemctl stop vic-bootAnim.service
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-anim $VIC_ANIM_OPTS
+ExecStopPost=/anki/bin/vic-on-exit
 Nice=-2
 
 [Install]
