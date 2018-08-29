@@ -23,6 +23,12 @@ typedef struct cameraobj_t {
   struct anki_camera_params params;
   int is_running;
   anki_camera_pixel_format_t pixel_format;
+
+  int resetable_fields; 
+    
+  pthread_mutex_t shutdown_lock;
+  int shutdown_lock_inited;
+
 } CameraObj;
 
 #endif

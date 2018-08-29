@@ -404,7 +404,7 @@ int camera_init()
   /* mm_camera_test_obj_t test_obj; */
   /* memset(&test_obj, 0, sizeof(mm_camera_test_obj_t)); */
 
-  memset(&gTheCamera, 0, sizeof(gTheCamera));
+  memset(&gTheCamera, 0, ((uint8_t*)&gTheCamera.resetable_fields - (uint8_t*)&gTheCamera));
 
   pthread_mutex_init(&gTheCamera.callback_lock, NULL);
 
@@ -428,6 +428,16 @@ int camera_init()
 int camera_start(struct anki_camera_params* params, void* callback_ctx)
 {
   int rc = MM_CAMERA_OK;
+
+  if(!gTheCamera.shutdown_lock_inited)
+  {
+    pthread_mutex_init(&gTheCamera.shutdown_lock, NULL);
+    gTheCamera.shutdown_lock_inited = 1;
+  }
+  else
+  {
+    pthread_mutex_unlock(&gTheCamera.shutdown_lock);
+  }
 
   camera_set_params(params);
   gTheCamera.callback_ctx = callback_ctx;
@@ -479,6 +489,8 @@ int camera_set_params(struct anki_camera_params* params)
 int camera_stop()
 {
   int rc;
+  pthread_mutex_lock(&gTheCamera.shutdown_lock);
+
   CameraObj* camera = &gTheCamera;
 
   pthread_mutex_lock(&camera->callback_lock);
