@@ -60,6 +60,7 @@ make_userdata() {
 
 case "$1" in
   start )
+    hexdump -e '"%c"' -n 4 /dev/block/bootdevice/by-name/userdata | egrep -q WIPE && echo "1" > /run/data_cleared
     if grep $UNBRICK_KEY /proc/cmdline > /dev/null; then
       echo "Mount-data in UNBRICK MODE" > /dev/kmsg
       mount -o size=64M -t tmpfs none /data/
@@ -82,6 +83,7 @@ case "$1" in
     if test -e $WIPE_COOKIE; then
       blkdiscard -s /dev/block/bootdevice/by-name/userdata
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
+      echo WIPE > /dev/block/bootdevice/by-name/userdata
     fi
     ;;
 
