@@ -158,10 +158,6 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
 
 ssize_t hal_select() {
   static uint8_t selectTimeoutCount = 0;
-  if(selectTimeoutCount >= 5)
-  {
-    return true;
-  }
 
   static fd_set fdSet;
   FD_ZERO(&fdSet);
@@ -173,6 +169,7 @@ ssize_t hal_select() {
   if(s == 0)
   {
     selectTimeoutCount++;
+    DAS_LOG(DAS_ERROR, "spine.select_timeout", "No serial data for %d sec", selectTimeoutCount);
   }
   else {
     selectTimeoutCount=0;
