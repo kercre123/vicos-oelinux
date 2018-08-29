@@ -103,7 +103,7 @@ bool SendData(const struct WriteDFU* packet) {
   }
   else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
     //Noone should send NACK
-    DAS_LOG(DAS_ERROR, "dfu.send_data_nak", "Got NACK in response");
+    DAS_LOG(DAS_ERROR, "dfu.send_data_nak", "Got NACK %d in response",((struct AckMessage*)(hdr + 1))->status);
     return false;
   }
   return true;
@@ -168,7 +168,7 @@ bool dfu_erase_image(void) {
   if (hdr) {
     if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
       //Should not fail
-      DAS_LOG(DAS_ERROR, "dfu.erase_nak", "Got NACK in response");
+      DAS_LOG(DAS_ERROR, "dfu.erase_nak", "Got NACK %d in response",((struct AckMessage*)(hdr + 1))->status);
       return false;
     }
   }
@@ -227,12 +227,11 @@ bool dfu_validate_image(void) {
 
   hdr = hal_wait_for_frame(PAYLOAD_ACK, VALIDATE_WAIT_MS);
   if (!hdr) {
-
     DAS_LOG(DAS_WARN, "dfu.validate_no_ack", "Did not get ACK response");
   }
   else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
     //Noone should send NACK
-    DAS_LOG(DAS_ERROR, "dfu.validate_nak", "Got NACK in response");
+    DAS_LOG(DAS_ERROR, "dfu.validate_nak", "Got NACK %d in response",((struct AckMessage*)(hdr + 1))->status);
     return false;
   }
   //else good ack, but let's wait for a app data frame to be sure
@@ -241,9 +240,9 @@ bool dfu_validate_image(void) {
     DAS_LOG(DAS_ERROR, "dfu.validate_timeout", "Did not get app DATA_FRAME");
     return false;
   }
+  DAS_LOG(DAS_DEBUG, "dfu.validate_success", "Saw DATA_FRAME");
   //else we are up and running
   return true;
-
 }
 
 RampostErr dfu_sequence(const char* dfu_file, bool force_update)

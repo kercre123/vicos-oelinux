@@ -68,7 +68,6 @@ crc_t calc_crc(const uint8_t* buf, int len)
 }
 
 
-
 #define SPINE_MAX_BYTES 1280
 
 #define BODY_TAG_PREFIX ((uint8_t*)&SyncKey)
@@ -124,7 +123,7 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
 
   DAS_LOG(DAS_INFO, "spine.open_serial", "opening serial port %s", devicename);
 
-  gHal.fd = open(devicename, O_RDWR);
+  gHal.fd = open(devicename, O_RDWR, O_NONBLOCK);
   if (gHal.fd < 0) {
     DAS_LOG(DAS_ERROR, "spine.cannot_open", "Cannot open %s", devicename);
     return err_CANT_OPEN_FILE;
@@ -262,48 +261,34 @@ static ssize_t hal_spine_io()
   static uint8_t readBuffer_[4096];
   int fd = gHal.fd;
 
-  if(hal_select() == 0) //no data
-  {
-    return -1;
-  }
   ssize_t bytes_to_read = rx_buffer_space();
   if (sizeof(readBuffer_) < bytes_to_read) {
     bytes_to_read = sizeof(readBuffer_);
+  }
+  if (hal_select() == 0) //no data
+  {
+    return -1;
   }
   ssize_t r = read(fd, readBuffer_, sizeof(readBuffer_));
 
   if (r > 0)
   {
      serial_log(1,readBuffer_, r);
-    r = hal_receive_data((const void*)readBuffer_, r);
+     r = hal_receive_data((const void*)readBuffer_, r);
   }
   else if (r < 0)
   {
     if (errno == EAGAIN) {
       r = 0;
     }
-   else {
-       unsigned char ermsg[]="RE00";
-       ermsg[2]=(r>>8)&0xFF;
-       ermsg[2]=(r)&0xFF;
-       serial_log(1,ermsg, 4);
-     }
-
-  }
-  return r;
-}
-
-
-int hal_serial_read(uint8_t* buffer, int len)   //->bytes_recieved
-{
-  int result = read(gHal.fd, buffer, len);
-  if (result < 0) {
-    if (errno == EAGAIN) { //nonblocking no-data
-      usleep(HAL_SERIAL_POLL_INTERVAL_US); //wait a bit.
-      result = 0; //not an error
+    else {
+      unsigned char ermsg[]="RE00";
+      ermsg[2]=(r>>8)&0xFF;
+      ermsg[2]=(r)&0xFF;
+      serial_log(1,ermsg, 4);
     }
   }
-  return result;
+  return r;
 }
 
 
