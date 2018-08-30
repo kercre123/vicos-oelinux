@@ -15,13 +15,11 @@
 #include "spine_hal.h"
 #include "rampost.h"
 #include "lcd.h"
-#include "imu.h"
 #include "dfu.h"
-
+#include "das.h"
 
 #define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
 #define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
-#define DFU_TIMEOUT ((uint64_t)(30 * NSEC_PER_SEC)) // Per VIC-4663
 #define FRAME_WAIT_MS 500
 #define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
@@ -40,6 +38,7 @@ enum {
 #define NSEC_PER_USEC (1000)
 
 
+//returns monotonic time in ns.
 uint64_t steady_clock_now(void) {
    struct timespec time;
    clock_gettime(CLOCK_MONOTONIC,&time);
@@ -82,8 +81,6 @@ void set_body_leds(int success, int inRecovery) {
 
   hal_send_frame(PAYLOAD_LIGHT_STATE, &ledPayload, sizeof(ledPayload));
   hal_get_next_frame(FRAME_WAIT_MS); //need response, don't worry about what it says
-
-
 }
 
 #define CMDLINE_FILE "/proc/cmdline"
@@ -94,11 +91,11 @@ int recovery_mode_check(void) {
   char buffer[MAX_COMMANDLINE_CHARS];
   int fd = open(CMDLINE_FILE, O_RDONLY);
   int result = read(fd, buffer, sizeof(buffer)-1);
-  if  (result > 0) {
+  if (result > 0) {
     buffer[result] = '\0'; //null terminate
-    printf("scanning [%s] for [%s]\n", buffer, RECOVERY_MODE_INDICATOR);
+    DAS_LOG(DAS_DEBUG, "recovery_mode_check.scan", "scanning [%s] for [%s]", buffer, RECOVERY_MODE_INDICATOR);
     char* pos = strstr(buffer, RECOVERY_MODE_INDICATOR);
-    printf("%s\n", pos?"found":"nope");
+    DAS_LOG(DAS_DEBUG, "recovery_mode_check.result", "%s", pos?"found":"nope");
     return (pos!=NULL);
   }
   return 0; //fault mode
@@ -118,22 +115,10 @@ int error_exit(RampostErr err) {
   exit(err);
 }
 
-
-
-#include "warning_orange.h"
-#include "locked_qsn.h"
 #include "anki_dev_unit.h"
 #include "lowbattery.h"
 #include "error_801.h"
 
-
-void show_orange_icon(void) {
-  lcd_draw_frame2((uint16_t*)warning_orange, warning_orange_len);
-}
-
-void show_locked_qsn_icon(void) {
-  lcd_draw_frame2((uint16_t*)locked_qsn, locked_qsn_len);
-}
 
 void show_dev_unit(void) {
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
@@ -166,7 +151,7 @@ BatteryState confirm_battery_level(void) {
       static const float kBatteryScale = 2.8f / 2048.f;
       const int16_t counts = ((struct BodyToHead*)(hdr+1))->battery.main_voltage;
       const float volts = counts*kBatteryScale;
-      printf("Battery: %f V\n", volts);
+      DAS_LOG(DAS_EVENT, "battery_level", "%0.3f", volts);
       if (volts > 3.55f) return battery_LEVEL_GOOD;
       else return battery_LEVEL_TOOLOW;
     }
@@ -180,13 +165,12 @@ void send_shutdown_message(void) {
   uint64_t now = steady_clock_now();
 
   if (now - lastMsgTime > SHUTDOWN_FRAME_INTERVAL) {
-    printf("Shutting Down\n");
+    DAS_LOG(DAS_INFO, "send_shutdown_message", "PAYLOAD_SHUT_DOWN");
     hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);
     lastMsgTime = now;
     hal_get_next_frame(FRAME_WAIT_MS);
   }
 }
-
 
 void show_lowbat_and_shutdown(void) {
   uint64_t start = steady_clock_now();
@@ -208,14 +192,13 @@ void force_syscon_resync(void) {
 }
 
 
-
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
   bool success = false;
   bool in_recovery_mode = false;
   bool blank_on_exit = true;
   bool show_801 = false;
-  bool is_locked_qsn = false;
+  bool hal_failure = false;
   bool is_dev_unit = false;
   bool is_battery_low = false;
   bool force_update = false;
@@ -226,11 +209,6 @@ int main(int argc, const char* argv[]) {
   for (; argn < argc; argn++) {
     if (argv[argn][0] == '-') {
       switch (argv[argn][1]) {
-        case 'x':
-        {
-          is_locked_qsn = true;
-          break;
-        }
         case 'd':
         {
           is_dev_unit = true;
@@ -253,71 +231,69 @@ int main(int argc, const char* argv[]) {
 
   lcd_device_reset();
   success = lcd_device_read_status();
-  printf("lcd check = %d\n",success);
+  DAS_LOG(DAS_INFO, "lcd_check", "%d",success);
 
   in_recovery_mode = recovery_mode_check();
 
   int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
   if (errCode) {
-    error_exit(errCode);
+    hal_failure = true;
   }
+  else {
+    force_syscon_resync();
+    //clear buffer
+    uint64_t timeout = steady_clock_now() + 1 * NSEC_PER_SEC;
+    const struct SpineMessageHeader* hdr;
+    do {
+      hdr= hal_get_next_frame(1); //clear backlog
+    } while (hdr && steady_clock_now() < timeout);
 
-  force_syscon_resync();
-  //clear buffer
-  const struct SpineMessageHeader* hdr;
-  do {
-    hdr= hal_get_next_frame(1); //clear backlog
-  } while (hdr);
-
-  if (dfu_file != NULL) { // A DFU file has been specified
-    RampostErr result = dfu_sequence(dfu_file, DFU_TIMEOUT, force_update);
-    if (result == err_SYSCON_VERSION_GOOD) {
-      //hooray!
-    }
-    else if (result != err_OK ) {
-      printf("DFU Error %d\n", result);
-      show_801 = true;
+    if (dfu_file != NULL) { // A DFU file has been specified
+      RampostErr result = dfu_sequence(dfu_file, force_update);
+      if (result == err_SYSCON_VERSION_GOOD) {
+        //hooray!
+      }
+      else if (result != err_OK ) {
+        DAS_LOG(DAS_ERROR, "dfu_error", "DFU Error %d", result);
+        show_801 = true;
+      }
     }
   }
+  if (hal_failure) {
+    show_801 = true;
+  }
+  else {
+    BatteryState bat_state = confirm_battery_level();
+    switch (bat_state) {
+      case battery_LEVEL_GOOD:
+        break;
+      case battery_LEVEL_TOOLOW:
+        is_battery_low = true;
+        break;
+      case battery_BOOTLOADER:
+        DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
+        show_801 = true; //should be impossible.
+        break;
+      case battery_TIMEOUT:
+        DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check timed out!");
+        break; // But do continue boot in case this is because something needs recovering etc.
+    }
 
-  //set LEDS only after we expect syscon is good
-  set_body_leds(success, in_recovery_mode);
+    //set LEDS only after we expect syscon is good
+    set_body_leds(success, in_recovery_mode);
+
+  }
 
   lcd_device_init(); // We'll be displaying something
   lcd_set_brightness(5);
 
-  BatteryState bat_state = confirm_battery_level();
-  switch (bat_state) {
-    case battery_LEVEL_GOOD:
-      break;
-    case battery_LEVEL_TOOLOW:
-      is_battery_low = true;
-      return 1;
-    case battery_BOOTLOADER:
-      printf("Battery check saw bootloader!\n");
-      //TODO: This should be an error now?
-      break;
-    case battery_TIMEOUT:
-      printf("Battery timeout\n");
-      break; // But do continue boot in case this is because something needs recovering etc.
-  }
-
   //Skip everything else on syscon error!
-  //TODO: is this right? What about case 'X'
   if (show_801) {
     show_error_801();
     blank_on_exit = false;
-    cleanup(blank_on_exit);
-    return 1;
   }
   else if (is_battery_low) {
     show_lowbat_and_shutdown();
-    return 1;
-  }
-  else if (is_locked_qsn) {
-    show_locked_qsn_icon();
-    while (1);
-    return 1;
   }
   else if (is_dev_unit) {
     show_dev_unit();
@@ -325,5 +301,6 @@ int main(int argc, const char* argv[]) {
   }
 
   cleanup(blank_on_exit);
-  return 0;
+  bool has_error = show_801 || is_battery_low;
+  return has_error;
 }

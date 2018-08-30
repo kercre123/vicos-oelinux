@@ -12,6 +12,8 @@
 #include "messages.h"
 #include "rampost.h"
 
+#include "das.h"
+
 #define SPINE_TTY "/dev/ttyHS0"
 
 #include <stdint.h>
@@ -66,13 +68,10 @@ crc_t calc_crc(const uint8_t* buf, int len)
 }
 
 
-
 #define SPINE_MAX_BYTES 1280
 
 #define BODY_TAG_PREFIX ((uint8_t*)&SyncKey)
 #define SPINE_SYNC_LEN (sizeof(SpineSync))
-//#define SPINE_PID_LEN sizeof(PayloadId)
-//#define SPINE_LEN_LEN sizeof(uint16_t)
 #define SPINE_HEADER_LEN (sizeof(struct SpineMessageHeader))
 #define SPINE_CRC_LEN (sizeof(crc_t))
 
@@ -85,7 +84,6 @@ static const SpineSync SyncKey = SYNC_BODY_TO_HEAD;
 
 static struct HalGlobals {
   uint8_t framebuffer[SPINE_MAX_BYTES]; //for whole frames
-//  uint8_t framebuffer[SPINE_B2H_FRAME_LEN]; //for whole frames
   struct SpineMessageHeader outheader;
   int fd;
   uint8_t buf_rx[SPINE_BUFFER_MAX_LEN]; //for incoming bytes
@@ -97,30 +95,20 @@ static struct HalGlobals {
 } gHal;
 
 
-/************* Error Handling *****************/
-#define spine_error(code, fmt, args...) (printf(fmt, ##args)?(code):(code))
-#define CONSOLE_DEBUG_PRINTF
-#ifdef CONSOLE_DEBUG_PRINTF
-#define spine_debug(fmt, args...)  printf(fmt, ##args)
-#else
-#define spine_debug(fmt, args...)  (LOGD( fmt, ##args))
-#endif
-
 #define EXTENDED_SPINE_DEBUG 0
 #if EXTENDED_SPINE_DEBUG
-#define spine_debug_x spine_debug
-#else
-#define spine_debug_x(fmt, args...)
+#define DEBUG_LEVEL 0
 #endif
 
-#define SpineErr int
+
+typedef int SpineErr;
 
 
 /************* SERIAL INTERFACE ***************/
 
 static void hal_serial_close()
 {
-  spine_debug("close(fd = %d)", gHal.fd);
+  DAS_LOG(DAS_INFO, "spine.close", "fd=%d", gHal.fd);
   close(gHal.fd);
   gHal.fd = -1;
 }
@@ -129,24 +117,25 @@ static void hal_serial_close()
 SpineErr hal_serial_open(const char* devicename, long baudrate)
 {
   if (gHal.fd >= 0) {
-    return spine_error(err_ALREADY_OPEN, "hal serial port in use, close other first");
+    DAS_LOG(DAS_ERROR, "spine.already_open", "hal serial port in use, close other first");
+    return err_ALREADY_OPEN;
   }
 
-  spine_debug("opening serial port %s\n", devicename);
+  DAS_LOG(DAS_INFO, "spine.open_serial", "opening serial port %s", devicename);
 
-  gHal.fd = open(devicename, O_RDWR);
+  gHal.fd = open(devicename, O_RDWR, O_NONBLOCK);
   if (gHal.fd < 0) {
-    return spine_error(err_CANT_OPEN_FILE, "Can't open %s", devicename);
+    DAS_LOG(DAS_ERROR, "spine.cannot_open", "Cannot open %s", devicename);
+    return err_CANT_OPEN_FILE;
   }
-
-  spine_debug("configuring serial port\n");
 
   /* Configure device */
   {
     struct termios cfg;
     if (tcgetattr(gHal.fd, &cfg)) {
       hal_serial_close();
-      return spine_error(err_TERMIOS_FAIL, "tcgetattr() failed");
+      DAS_LOG(DAS_ERROR, "spine.termios_fail", "tcgetattr() failed");
+      return err_TERMIOS_FAIL;
     }
 
     cfmakeraw(&cfg);
@@ -155,23 +144,20 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
 
     cfg.c_cflag |= (CS8 | CSTOPB);    // Use N82 bit words
 
-    spine_debug("configuring port %s (fd=%d)", devicename, gHal.fd);
+    DAS_LOG(DAS_INFO, "spine.configure_serial_port", "configuring port %s (fd=%d)", devicename, gHal.fd);
 
     if (tcsetattr(gHal.fd, TCSANOW, &cfg)) {
       hal_serial_close();
-      return spine_error(err_TERMIOS_FAIL, "tcsetattr() failed");
+      DAS_LOG(DAS_ERROR, "spine.termios_fail", "tcsetattr() failed");
+      return err_TERMIOS_FAIL;
     }
   }
-  spine_debug("serial port OK\n");
+  DAS_LOG(DAS_INFO, "spine.serial_port_ok", "Serial port is okay");
   return err_OK;
 }
 
 ssize_t hal_select() {
   static uint8_t selectTimeoutCount = 0;
-  if(selectTimeoutCount >= 5)
-  {
-    return true;
-  }
 
   static fd_set fdSet;
   FD_ZERO(&fdSet);
@@ -183,6 +169,7 @@ ssize_t hal_select() {
   if(s == 0)
   {
     selectTimeoutCount++;
+    DAS_LOG(DAS_ERROR, "spine.select_timeout", "No serial data for %d sec", selectTimeoutCount);
   }
   else {
     selectTimeoutCount=0;
@@ -199,7 +186,7 @@ static ssize_t hal_receive_data(const uint8_t* bytes, size_t len)
     size_t remaining = rx_buffer_space();
 
     if (len > remaining) {
-      spine_debug("spine_receive_data.overflow :: %u", len - remaining);
+      DAS_LOG(DAS_WARN, "spine.receive_data_overflow", "%u", len - remaining);
       gHal.rx_cursor = 0;
         // BRC: add a flag to indicate a reset (for using in parsing?)
     }
@@ -211,6 +198,7 @@ static ssize_t hal_receive_data(const uint8_t* bytes, size_t len)
     return len;
 }
 
+#ifdef EXTENDED_SPINE_DEBUG
 static const char* ascii[]={
 "00 ","01 ","02 ","03 ","04 ","05 ","06 ","07 ",
 "08 ","09 ","0a ","0b ","0c ","0d ","0e ","0f ",
@@ -245,6 +233,7 @@ static const char* ascii[]={
 "f0 ","f1 ","f2 ","f3 ","f4 ","f5 ","f6 ","f7 ",
 "f8 ","f9 ","fa ","fb ","fc ","fd ","fe ","ff "};
 
+#define open_logfile() creat("serial.log",00777)
 void serial_log(int dir, const uint8_t* buf, int len)
 {
   static int lastdir = 1;
@@ -254,60 +243,49 @@ void serial_log(int dir, const uint8_t* buf, int len)
       else { write(gHal.logFd, "--- IN  ---\n", 12); }
   }
   int i;
-  for (i=0;i<len;i++) { 
+  for (i=0;i<len;i++) {
      write(gHal.logFd,ascii[buf[i]],3);
   }
   write(gHal.logFd,"\n",1);
 }
+#else
+#define open_logfile() NULL //no-op
+#define serial_log(d,b,l)  //no-op
+#endif
 
 static ssize_t hal_spine_io()
 {
   static uint8_t readBuffer_[4096];
   int fd = gHal.fd;
 
-  if(hal_select() == 0) //no data
-  {
-    return -1;
-  }
   ssize_t bytes_to_read = rx_buffer_space();
   if (sizeof(readBuffer_) < bytes_to_read) {
     bytes_to_read = sizeof(readBuffer_);
+  }
+  if (hal_select() == 0) //no data
+  {
+    return -1;
   }
   ssize_t r = read(fd, readBuffer_, sizeof(readBuffer_));
 
   if (r > 0)
   {
      serial_log(1,readBuffer_, r);
-    r = hal_receive_data((const void*)readBuffer_, r);
+     r = hal_receive_data((const void*)readBuffer_, r);
   }
   else if (r < 0)
   {
     if (errno == EAGAIN) {
       r = 0;
     }
-   else {
-       unsigned char ermsg[]="RE00";
-       ermsg[2]=(r>>8)&0xFF;
-       ermsg[2]=(r)&0xFF;
-       serial_log(1,ermsg, 4);
-     }
-
-  }
-  return r;
-}
-
-
-int hal_serial_read(uint8_t* buffer, int len)   //->bytes_recieved
-{
-
-  int result = read(gHal.fd, buffer, len);
-  if (result < 0) {
-    if (errno == EAGAIN) { //nonblocking no-data
-      usleep(HAL_SERIAL_POLL_INTERVAL_US); //wait a bit.
-      result = 0; //not an error
+    else {
+      unsigned char ermsg[]="RE00";
+      ermsg[2]=(r>>8)&0xFF;
+      ermsg[2]=(r)&0xFF;
+      serial_log(1,ermsg, 4);
     }
   }
-  return result;
+  return r;
 }
 
 
@@ -317,11 +295,12 @@ int hal_serial_send(const uint8_t* buffer, int len)
   while (len>0) {
     ssize_t wr = write(gHal.fd, buffer, len);
     if (wr<=0) {
-       unsigned char ermsg[]="ER00";
-       ermsg[2]=(wr>>8)&0xFF;
-       ermsg[2]=(wr)&0xFF;
-       serial_log(0,ermsg,4);
-      return spine_error(wr, "Serial Write Error %d",wr);
+      unsigned char ermsg[]="ER00";
+      ermsg[2]=(wr>>8)&0xFF;
+      ermsg[2]=(wr)&0xFF;
+      serial_log(0,ermsg,4);
+      DAS_LOG(DAS_ERROR, "spine.write_error", "Serial write error=%d", wr);
+      return wr;
     }
     serial_log(0,buffer,wr);
     buffer+=wr;
@@ -385,6 +364,7 @@ static const uint8_t* spine_construct_header(PayloadId payload_type,  uint16_t p
 {
 #ifndef NDEBUG
   int expected_len = get_payload_len(payload_type, dir_SEND);
+  DAS_LOG(DAS_DEBUG, "spine.construct_header_lengths", "expected=%d, payload=%d", expected_len, payload_len);
   assert(expected_len >= 0); //valid type
   assert(expected_len == payload_len);
   assert(payload_len <= (SPINE_MAX_BYTES - SPINE_HEADER_LEN - SPINE_CRC_LEN));
@@ -404,7 +384,8 @@ static const uint8_t* spine_construct_header(PayloadId payload_type,  uint16_t p
 SpineErr hal_init(const char* devicename, long baudrate)
 {
   gHal.fd = -1;
-  gHal.logFd = creat("serial.log",00777);
+
+  gHal.logFd = open_logfile();
   SpineErr r = hal_serial_open(devicename, baudrate);
   return r;
 }
@@ -422,7 +403,6 @@ void hal_discard_rx_bytes(ssize_t bytes_to_drop)
             memmove(gHal.buf_rx, rx, remaining);
         }
         gHal.rx_cursor -= bytes_to_drop;
-//        memset(gHal.buf_rx + gHal.rx_cursor, 0x55, sizeof(gHal.buf_rx) - gHal.rx_cursor);
     } else if (bytes_to_drop < 0) {
         // discard all data
         gHal.rx_cursor = 0;
@@ -441,8 +421,6 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
 
   // Is there at least a header worth of data to process?
   if (rx_len < SPINE_HEADER_LEN) {
-    // indicate that we are waiting
-    //spine_debug_x("not enough data\n");
     return 0;
   }
 
@@ -456,7 +434,6 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
         BODY_TAG_PREFIX[1] == test_bytes[1] &&
         BODY_TAG_PREFIX[2] == test_bytes[2] &&
         BODY_TAG_PREFIX[3] == test_bytes[3]) {
-      //spine_debug_x("found header\n");
       break;
     }
   }
@@ -464,7 +441,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   // No sync sequence in whole buffer
   if (sync_index >= last_test_idx) {
     // throw away all data except unchecked bytes
-    spine_debug_x("no sync\n");
+    DAS_LOG(DAS_DEBUG, "spine.no_sync", "No sync");
     hal_discard_rx_bytes(sync_index);
     return -1;
   }
@@ -487,8 +464,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   // Payload type is invalid or payload len is invalid
   if (payload_len == -1 || header->bytes_to_follow != payload_len) {
     // skip current sync
-    spine_debug("invalid payload len: expected=%d | observed=%u\n",
-                payload_len, header->bytes_to_follow);
+    DAS_LOG(DAS_INFO, "spine.invalid_payload_len", "expected=%d | observed=%u", payload_len, header->bytes_to_follow);
     //start searching again after SYNC
     hal_discard_rx_bytes(sync_index + SPINE_SYNC_LEN);
     return -1;
@@ -508,21 +484,15 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   crc_t expected_crc = *((crc_t*)(payload_start + payload_len));
   crc_t true_crc = calc_crc(payload_start, payload_len);
   if (expected_crc != true_crc) {
-    spine_debug("\nspine_crc_error: calc %08x vs data %08x\n",
-                true_crc, expected_crc);
+    DAS_LOG(DAS_INFO, "spine.crc_error", "calc %08x vs data %08x", true_crc, expected_crc);
     //restart after SYNC
     hal_discard_rx_bytes(sync_index + SPINE_SYNC_LEN);
     return -1;
   }
 
   // At this point we have a valid frame.
-  if (header->payload_type == PAYLOAD_DATA_FRAME) {
-  spine_debug_x("found frame %c%c! %d\n", header->payload_type&0xff, header->payload_type>>8,
-     ((struct BodyToHead*)(header+1))->framecounter);
-  }
-  else {
-  spine_debug_x("found frame %c%c!\n", header->payload_type&0xff, header->payload_type>>8);
-  }
+  DAS_LOG(DAS_DEBUG, "spine.found_frame", "payload type=%c%c",
+          header->payload_type&0xff, header->payload_type>>8);
 
   // Copy data to output buffer
   size_t frame_len = SPINE_HEADER_LEN + payload_len + SPINE_CRC_LEN;
@@ -579,7 +549,7 @@ const void* hal_get_next_frame(int32_t timeout_ms)
 
 const void* hal_wait_for_frame(uint16_t type, int32_t timeout_ms)
 {
-  uint64_t expiry = steady_clock_now()+ (timeout_ms * 1000000LL);
+  uint64_t expiry = steady_clock_now() + (timeout_ms * 1000000LL);
   const struct SpineMessageHeader* hdr = NULL;
 
   while (steady_clock_now() < expiry) {
@@ -597,7 +567,7 @@ void hal_send_frame(PayloadId type, const void* data, int len)
   const uint8_t* hdr = spine_construct_header(type, len);
   crc_t crc = calc_crc(data, len);
   if (hdr) {
-    spine_debug_x("sending %c%c packet (%d bytes) CRC=%08x\n", type&0xFF, type>>8, len, crc);
+    DAS_LOG(DAS_DEBUG, "spine.send_frame", "sending %c%c packet (%d bytes) CRC=%08x", type&0xFF, type>>8, len, crc);
     hal_serial_send(hdr, SPINE_HEADER_LEN);
     hal_serial_send(data, len);
     hal_serial_send((uint8_t*)&crc, sizeof(crc));
@@ -606,7 +576,7 @@ void hal_send_frame(PayloadId type, const void* data, int len)
 
 void hal_set_mode(int new_mode)
 {
-  spine_debug("Sending Mode Change %x\n", PAYLOAD_MODE_CHANGE);
+  DAS_LOG(DAS_INFO, "spine.set_mode", "Sending Mode Change %x", PAYLOAD_MODE_CHANGE);
   hal_send_frame(PAYLOAD_MODE_CHANGE, NULL, 0);
 }
 

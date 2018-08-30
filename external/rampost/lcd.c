@@ -13,6 +13,7 @@
 #include "gpio.h"
 #include "rampost.h"
 #include "lcd.h"
+#include "das.h"
 
 void microwait(long microsec);
 
@@ -80,19 +81,13 @@ static GPIO DnC_PIN;
 static const int DAT_CLOCK = 17500000;
 static const int MAX_TRANSFER = 0x1000;
 
-
 static int spi_fd;
-
-
-
 
 static const char* BACKLIGHT_DEVICES[] = {
   "/sys/class/leds/face-backlight/brightness",
   "/sys/class/leds/face-backlight-left/brightness",
   "/sys/class/leds/face-backlight-right/brightness"
 };
-
-
 
 int lcd_spi_init()
 {
@@ -107,9 +102,6 @@ int lcd_spi_init()
   }
   return spi_fd;
 }
-
-
-
 
 static void lcd_spi_transfer(int cmd, int bytes, const void* data) {
   const uint8_t* tx_buf = data;
@@ -140,7 +132,7 @@ int lcd_spi_readback(int bytes,  const uint8_t* outbuf, uint8_t result[]) {
   gpio_set_value(DnC_PIN, gpio_LOW);
   int err = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &mesg);
   if (err < 1) {
-    printf("cmd Error = %d %s \n", errno, strerror(errno));
+    DAS_LOG(DAS_ERROR, "lcd.spi.cmd_error", "%d %s", errno, strerror(errno));
     return -1;
   }
   mesg.tx_buf = (unsigned long)(&outbuf[1]);
@@ -148,7 +140,7 @@ int lcd_spi_readback(int bytes,  const uint8_t* outbuf, uint8_t result[]) {
   gpio_set_value(DnC_PIN, gpio_HIGH);
    err = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &mesg);
   if (err < 1) {
-    printf("dat Error = %d %s \n", errno, strerror(errno));
+    DAS_LOG(DAS_ERROR, "lcd.spi.dat_error", "%d %s", errno, strerror(errno));
     return -1;
   }
   return 0;
@@ -161,11 +153,10 @@ int lcd_device_read_status(void) {
   memset(result, 0, sizeof(result));
   if (lcd_spi_readback(sizeof(message), message, result))
   {
-    printf("Readback error\n");
+    DAS_LOG(DAS_ERROR, "lcd.read_status", "readback error");
   }
-  printf("Result = %x %x %x\n", result[0], result[1], result[2]);
+  DAS_LOG(DAS_DEBUG, "lcd.read_status", "Result = %x %x %x", result[0], result[1], result[2]);
   return result[2]==0;
-
 }
 
 static void _led_set_brightness(const int brightness, const char* led)
@@ -252,8 +243,6 @@ static void lcd_run_script(const INIT_SCRIPT* script)
   }
 }
 
-
-
 void lcd_device_init(void)
 {
   // Init registers and put the display in sleep mode
@@ -268,11 +257,9 @@ void lcd_device_init(void)
   lcd_run_script(display_on_scr);
 }
 
-
-
 void lcd_device_sleep(void)
 {
-    if (spi_fd) {
+  if (spi_fd) {
     static const uint8_t SLEEP = 0x10;
     lcd_spi_transfer(true, 1, &SLEEP);
     close(spi_fd);
