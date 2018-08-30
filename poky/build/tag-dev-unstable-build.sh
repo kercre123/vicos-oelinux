@@ -3,11 +3,14 @@
 set -e
 set -u
 
-VICTOR_DIR=anki/victor
-# Use the version number, like 0.10.1304d, as the tag name
-TAGNAME=`cat $VICTOR_DIR/_build/vicos/Release/etc/version`
+BUILD_ETC=poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/machine-robot-image/1.0-r0/rootfs/etc
+
+BASE=`cat ${BUILD_ETC}/os-version-base`
+CODE=`cat ${BUILD_ETC}/os-version-code`
+TAGNAME="${BASE}.${CODE}"
 
 # Check to see if the victor submodule pointer has been modified
+VICTOR_DIR=anki/victor
 ANKI_VICTOR_STATUS=`git status --porcelain $VICTOR_DIR | awk '{print $1;}'`
 
 if [ "$ANKI_VICTOR_STATUS" = "M" ]; then
