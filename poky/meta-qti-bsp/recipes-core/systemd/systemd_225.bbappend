@@ -2,6 +2,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/systemd:"
 
 SRC_URI += "file://1001-systemd-Disable-unused-mount-points.patch"
 SRC_URI += "file://1002-systemd-Use-data-etc-localtime.patch"
+SRC_URI += "file://1003-anki-Backport-env-status-for-ExecStop-ExecStopPost-c.patch"
 SRC_URI += "file://mountpartitions.rules"
 SRC_URI += "file://systemd-udevd.service"
 SRC_URI += "file://ffbm.target"
