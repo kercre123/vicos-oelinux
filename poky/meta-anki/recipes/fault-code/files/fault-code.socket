@@ -1,0 +1,8 @@
+[Unit]
+Description=Fault Code socket
+
+[Socket]
+ListenFIFO=/run/fault_code
+
+[Install]
+WantedBy=sockets.target

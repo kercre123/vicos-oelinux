@@ -6,11 +6,10 @@ PartOf=anki-robot.target
 Wants=vic-engine.service ankibluetoothd.service
 After=vic-engine.service ankibluetoothd.service
 
-OnFailure=vic-on-failure.service
-
 [Service]
 EnvironmentFile=/anki/etc/vic-switchboard.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-switchboard $VIC_SWITCHBOARD_OPTS
+ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
 
 [Install]

@@ -1,0 +1,124 @@
+#!/bin/bash
+#
+# fault-code-handler
+#
+# Copyright 2018    Anki, Inc.
+# Accepts fault code string on stdin and invokes associated actions, including:
+#
+# - stops anki-robot.target (victor.target) 
+# - display fault code on face
+# - (optional) restart anki-robot.target
+#
+
+set -u
+
+: ${ON_FAULT_RESTART:=0}
+: ${TIMEOUT_SIGTERM_SEC:=3}
+: ${TIMEOUT_RESTART_SEC:=5}
+
+# enable VERBOSE for debugging
+: ${VERBOSE:=0}
+
+PROGRESS_FILE="/run/fault_code.pending"
+
+function logv () {
+    if [ $VERBOSE -eq 1 ]; then echo "$1"; fi
+}
+
+logv "fault-code-handler: start"
+
+# Read up to 7 chars (max code is UINT16_MAX, newline, null) from stdin with a 1 sec timeout
+# If run from systemd, stdin will be our fault_code FIFO socket
+read -r -n 7 -t 1 FAULT_CODE
+
+if [ $? -ne 0 ]; then
+    # read error
+    logv "error: read failed"
+    exit -1
+fi
+
+if [ -z ${FAULT_CODE+x} ]; then
+    logv "error: empty or invalid fault code"
+    exit -1
+fi
+
+# remove anything that is not a number
+FAULT_CODE=${FAULT_CODE//[^0-9]/}
+
+if [ -f $PROGRESS_FILE ]; then
+    logv "$(basename $0) in progress"
+    exit 0
+fi
+
+echo $FAULT_CODE > $PROGRESS_FILE
+
+logv "FAULT_CODE=$FAULT_CODE"
+
+# handle error-code specific actions
+case $FAULT_CODE in
+915)
+    logv "kill -SEGV vic-engine"
+    PID=$(pidof vic-engine)
+    [ $? -eq 0 ] && kill -SEGV $PID
+    ;;
+917)
+    logv "kill -SEGV vic-anim"
+    PID=$(pidof vic-anim)
+    [ $? -eq 0 ] && kill -SEGV $PID
+    ;;
+*)
+    ;;
+esac
+
+
+function stop_anki_robot_target() {
+    # Get a list of services that belong to anki-robot.target
+    ANKI_SERVICES=( $(systemctl show --plain -p ConsistsOf anki-robot.target | cut -d= -f2-) )
+    RUNNING_PROCS=()
+    systemctl stop anki-robot.target
+
+    for i in $(seq 1 ${TIMEOUT_SIGTERM_SEC}); do
+        RUNNING_PROCS=()
+        for SRV in ${ANKI_SERVICES[@]}; do
+            systemctl is-active --quiet $SRV
+            if [ $? -eq 0 ]; then
+                RUNNING_PROCS+=($SRV)
+            fi
+        done
+
+        if [ ${#RUNNING_PROCS[*]} -gt 0 ]; then
+            sleep 1
+            logv "waiting for stop: $i sec"
+        else
+            break
+        fi
+    done
+
+    if [ ${#RUNNING_PROCS[*]} -gt 0 ]; then
+        logv "kill remaining processes"
+        systemctl kill "${RUNNING_PROCS[@]}"
+    fi
+}
+
+logv "stop anki-robot.target"
+stop_anki_robot_target
+
+# display error code
+logv "display fault code"
+[ -x /anki/bin/vic-faultCodeDisplay ] && /anki/bin/vic-faultCodeDisplay "${FAULT_CODE}"
+
+rm -f $PROGRESS_FILE
+
+if [ $ON_FAULT_RESTART -eq 1 ]; then
+    if [ $TIMEOUT_RESTART_SEC -gt 0 ]; then
+        logv "display fault code for $TIMEOUT_RESTART_SEC"
+        sleep $TIMEOUT_RESTART_SEC
+    fi
+
+    # restart processes
+    logv "restart anki-robot.target"
+    systemctl restart anki-robot.target
+fi
+
+logv "fault-code-handler: done"
+

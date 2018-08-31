@@ -8,6 +8,7 @@ Type=simple
 Restart=no
 RemainAfterExit=no
 ExecStart=/anki/bin/vic-bootAnim
+ExecStopPost=/anki/bin/vic-on-exit
 
 [Install]
 WantedBy=sysinit.target
