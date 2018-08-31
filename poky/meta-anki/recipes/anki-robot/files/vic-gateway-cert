@@ -33,8 +33,13 @@ if [ ! -f ${ROBOT_KEY} ]; then
 fi
 
 if [ -f ${CERT_ROOT}/${CERT_NAME}.cert ]; then
-    # cert already exists
-    exit 0
+    openssl x509 -in ${CERT_ROOT}/${CERT_NAME}.cert -noout
+    if [[ $? == 0 ]]; then
+        # valid cert already exists
+        exit 0
+    fi
+    echo "Removing invalid cert: ${CERT_ROOT}/${CERT_NAME}.cert"
+    rm -f ${CERT_ROOT}/${CERT_NAME}.cert
 fi
 
 CONF="/tmp/gateway-cert.$$.conf"
