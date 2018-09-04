@@ -42,11 +42,19 @@ def log_das_event_for_failure(reason):
     das_event("robot.maintenance_reboot", s1="fail", s2=reason)
 
 
+def write_status(file_name, status):
+    "Simple function to (over)write a file with a status"
+    with open(file_name, "w") as output:
+        output.write(str(status))
+        output.truncate()
+
+
 def reboot():
     if verbose_logging:
         print("Reboot time has arrived.  See you on the other side....")
         sys.stdout.flush()
     das_event("robot.maintenance_reboot", s1="success")
+    write_status("/data/maintenance_reboot", 1)
     os.system("/sbin/reboot")
 
 

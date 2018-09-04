@@ -54,4 +54,9 @@ fi
 
 /bin/hostname `getprop anki.robot.name | tr ' ' '-'`
 
+# If we are coming up from a maintenance reboot, let the anki apps know
+if [ -e /data/maintenance_reboot ]; then
+    mv /data/maintenance_reboot /run/after_maintenance_reboot
+fi
+
 exit 0
