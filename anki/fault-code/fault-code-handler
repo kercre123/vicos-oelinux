@@ -54,8 +54,20 @@ echo $FAULT_CODE > $PROGRESS_FILE
 
 logv "FAULT_CODE=$FAULT_CODE"
 
+STOP_DASMGR_ONLY=0
+
 # handle error-code specific actions
 case $FAULT_CODE in
+70[0-2])
+    # These codes indicate shutdown modes that require vic-robot to stay alive 
+    # in order to tell syscon to shutdown. In theory you can try to kill all of
+    # the other processes, but there may not be enough time since power could 
+    # be cut by syscon at any moment so instead we just kill vic-dasmgr to make
+    # sure the power_off DAS message is recorded and backed up.
+    logv "Shutting down. Stopping vic-dasmgr only."
+    STOP_DASMGR_ONLY=1
+    ON_FAULT_RESTART=0
+    ;;
 915)
     logv "kill -SEGV vic-engine"
     PID=$(pidof vic-engine)
@@ -70,12 +82,11 @@ case $FAULT_CODE in
     ;;
 esac
 
+# Get a list of services that belong to anki-robot.target
+ANKI_SERVICES=( $(systemctl show --plain -p ConsistsOf anki-robot.target | cut -d= -f2-) )
 
-function stop_anki_robot_target() {
-    # Get a list of services that belong to anki-robot.target
-    ANKI_SERVICES=( $(systemctl show --plain -p ConsistsOf anki-robot.target | cut -d= -f2-) )
+function wait_until_services_stopped() {
     RUNNING_PROCS=()
-    systemctl stop anki-robot.target
 
     for i in $(seq 1 ${TIMEOUT_SIGTERM_SEC}); do
         RUNNING_PROCS=()
@@ -100,12 +111,20 @@ function stop_anki_robot_target() {
     fi
 }
 
-logv "stop anki-robot.target"
-stop_anki_robot_target
+if [ $STOP_DASMGR_ONLY -eq 1 ]; then
+    logv "stop vic-dasmgr"
+    ANKI_SERVICES=( "vic-dasmgr" )
+    systemctl stop vic-dasmgr
+    wait_until_services_stopped
+else
+    logv "stop anki-robot.target"
+    systemctl stop anki-robot.target
+    wait_until_services_stopped
 
-# display error code
-logv "display fault code"
-[ -x /anki/bin/vic-faultCodeDisplay ] && /anki/bin/vic-faultCodeDisplay "${FAULT_CODE}"
+    # display error code
+    logv "display fault code"
+    [ -x /anki/bin/vic-faultCodeDisplay ] && /anki/bin/vic-faultCodeDisplay "${FAULT_CODE}"
+fi    
 
 rm -f $PROGRESS_FILE
 
