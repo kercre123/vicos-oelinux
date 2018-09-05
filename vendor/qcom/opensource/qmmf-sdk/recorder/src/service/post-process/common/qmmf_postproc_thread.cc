@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderPostProcThread"
+#define LOG_TAG "RecorderPostProcThread"
 
 #include <sys/prctl.h>
 #include <stdio.h>
@@ -35,7 +35,7 @@
 #include <errno.h>
 
 #include "qmmf_postproc_thread.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 namespace qmmf {
 
@@ -51,6 +51,7 @@ int32_t PostProcThread::Run(const std::string &name) {
     goto exit;
   }
 
+  abort_ = false;
   running_ = true;
   thread_ = new std::thread(MainLoop, this);
   if (thread_ == nullptr) {
@@ -109,6 +110,8 @@ void *PostProcThread::MainLoop(void *userdata) {
     run = pme->ThreadLoop();
   }
 
+  QMMF_INFO("%s: Exit Thread %s abort %d run %d\n", __func__,
+      pme->name_.c_str(), pme->abort_, run);
   pme->running_ = false;
   return NULL;
 }

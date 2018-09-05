@@ -80,8 +80,9 @@ CameraMemory::CameraMemory(int fd, uint32_t size)
         mem_->data = mmap(NULL, alloc.len, PROT_READ | PROT_WRITE, MAP_SHARED,
                           ion_info_fd.fd, 0);
 
-        if (mem_->data == NULL) {
+        if (mem_->data == MAP_FAILED) {
                CAM_ERR("malloc() failed");
+			   return;
         }
         mem_->size = alloc.len;
         frame.fd = ion_info_fd.fd;
@@ -94,6 +95,7 @@ CameraMemory::CameraMemory(int fd, uint32_t size)
                           fd, 0);
         if (mem_->data == MAP_FAILED) {
             CAM_ERR("mmap() failed\n");
+			return;
         }
         type_ = MEM_MAPPED;
         mem_->size = size;

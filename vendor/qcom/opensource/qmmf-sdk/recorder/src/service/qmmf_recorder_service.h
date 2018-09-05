@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #pragma once
 
 #include <camera/CameraMetadata.h>
+#include <camera/VendorTagDescriptor.h>
 
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
@@ -182,7 +183,7 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t GetDefaultCaptureParam(const uint32_t client_id,
                                   const uint32_t camera_id,
-                                  CameraMetadata &meta);
+                                  CameraMetadata &meta) override;
 
   status_t CreateOverlayObject(const uint32_t client_id,
                                const uint32_t track_id, OverlayParam *param,
@@ -226,11 +227,13 @@ class RecorderService : public BnInterface<IRecorderService> {
 
   status_t DisconnectInternal(const uint32_t client_id);
 
+  status_t GetVendorTagDescriptor(sp<VendorTagDescriptor> &desc) override;
+
   RecorderImpl*       recorder_;
   // Map of client ids and their death notifiers.
-  DefaultKeyedVector<uint32_t, sp<DeathNotifier> > death_notifier_list_;
+  std::map<uint32_t, sp<DeathNotifier> > death_notifier_list_;
   // Map of client ids and their callback handlers.
-  DefaultKeyedVector<uint32_t, sp<RemoteCallBack> > remote_cb_list_;
+  std::map<uint32_t, sp<RemoteCallBack> > remote_cb_list_;
   uint32_t    unique_client_id_;
   std::mutex  lock_;
 };

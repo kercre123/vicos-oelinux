@@ -40,6 +40,7 @@ __BEGIN_DECLS
 #define A2DP_SINK_ENABLE_DELAY_REPORTING    0X04
 #define A2DP_SINK_ENABLE_NOTIFICATION_CB    0x08
 #define A2DP_SRC_ENABLE_DELAY_REPORTING     0x01
+#define A2DP_SRC_PUMP_ENCODED_DATA          0x02
 
 #define A2DP_SINK_AUDIO_CODEC_SBC       0x00
 #define A2DP_SINK_AUDIO_CODEC_MP3       0x01
@@ -129,6 +130,10 @@ __BEGIN_DECLS
 
 #define MAX_NUM_CODEC_CONFIGS       20
 
+/* Packet type Macros */
+#define EDR_2MBPS        0x01
+#define EDR_3MBPS        0x02
+
 typedef struct {
     uint8_t   samp_freq;
     uint8_t   ch_mode;
@@ -210,6 +215,10 @@ typedef void (* btav_delay_report_vendor_callback)(bt_bdaddr_t *bd_addr, uint16_
 
 typedef void (* btav_audio_data_read_vendor_callback)(bt_bdaddr_t *bd_addr);
 
+typedef void (*btav_mtu_packettype_config_vendor_callback)(uint16_t mtu,uint8_t packettype, bt_bdaddr_t *bd_addr);
+
+typedef void (*btav_audio_registration_vendor_callback)(bool state);
+
 /** BT-AV Vendor callback structure. */
 typedef struct {
     /** set to sizeof(btav_vendor_callbacks_t) */
@@ -220,6 +229,8 @@ typedef struct {
     btav_reconfig_a2dp_trigger_callback reconfig_a2dp_trigger_cb;
     btav_delay_report_vendor_callback delay_report_vendor_cb;
     btav_audio_codec_config_vendor_callback audio_codec_config_vendor_cb;
+    btav_mtu_packettype_config_vendor_callback mtu_packettype_cb;
+    btav_audio_registration_vendor_callback registration_vendor_cb;
 } btav_vendor_callbacks_t;
 
 typedef struct {
@@ -228,6 +239,7 @@ typedef struct {
     btav_audio_focus_request_vendor_callback audio_focus_request_vendor_cb;
     btav_audio_codec_config_vendor_callback audio_codec_config_vendor_cb;
     btav_audio_data_read_vendor_callback audio_data_read_vendor_cb;
+    btav_audio_registration_vendor_callback registration_vendor_cb;
 } btav_sink_vendor_callbacks_t;
 
 /** Represents the standard BT-AV interface.
@@ -259,6 +271,15 @@ typedef struct {
    /** Updates the supported codec by A2DP Source  */
    bt_status_t (*update_supported_codecs_param_vendor)( btav_codec_configuration_t
                         *p_codec_config_list, uint8_t num_codec_configs);
+   /** Starts A2DP stream. */
+   int (*start_stream)( bt_bdaddr_t *bd_addr);
+
+   /** Sends encoded data. */
+   ssize_t (*btav_send_encoded_data_vendor)( bt_bdaddr_t *bd_addr, const void* buffer, size_t bytes, uint8_t codectype);
+
+   /** Suspends A2DP stream. */
+   int (*suspend_stream)( bt_bdaddr_t *bd_addr);
+
 } btav_vendor_interface_t;
 
 /** Represents the standard BT-AV interface.

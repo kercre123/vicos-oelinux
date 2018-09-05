@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017 The Linux Foundataion. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -301,18 +301,18 @@ std::map<std::string,camera_metadata_enum_android_control_awb_mode> camString2AW
 
 std::map<camera_metadata_enum_android_edge_mode,std::string> camEDGEModeEnum2StringMap =
 {
-    {ANDROID_EDGE_MODE_OFF, EDGE_OFF },
-    {ANDROID_EDGE_MODE_FAST, EDGE_FAST },
-    {ANDROID_EDGE_MODE_HIGH_QUALITY, EDGE_HIGH_QUALITY },
-    {ANDROID_EDGE_MODE_ZERO_SHUTTER_LAG, EDGE_ZERO_SHUTTER_LAG }
+    {ANDROID_EDGE_MODE_OFF, SHARPNESS_MODE_EDGE_OFF },
+    {ANDROID_EDGE_MODE_FAST, SHARPNESS_MODE_EDGE_FAST },
+    {ANDROID_EDGE_MODE_HIGH_QUALITY, SHARPNESS_MODE_EDGE_HIGH_QUALITY },
+    {ANDROID_EDGE_MODE_ZERO_SHUTTER_LAG, SHARPNESS_MODE_EDGE_ZERO_SHUTTER_LAG }
 };
 
 std::map<std::string,camera_metadata_enum_android_edge_mode> camString2EDGEModeEnumMap =
 {
-    {EDGE_OFF, ANDROID_EDGE_MODE_OFF },
-    {EDGE_FAST, ANDROID_EDGE_MODE_FAST },
-    {EDGE_HIGH_QUALITY, ANDROID_EDGE_MODE_HIGH_QUALITY },
-    {EDGE_ZERO_SHUTTER_LAG, ANDROID_EDGE_MODE_ZERO_SHUTTER_LAG }
+    {SHARPNESS_MODE_EDGE_OFF, ANDROID_EDGE_MODE_OFF },
+    {SHARPNESS_MODE_EDGE_FAST, ANDROID_EDGE_MODE_FAST },
+    {SHARPNESS_MODE_EDGE_HIGH_QUALITY, ANDROID_EDGE_MODE_HIGH_QUALITY },
+    {SHARPNESS_MODE_EDGE_ZERO_SHUTTER_LAG, ANDROID_EDGE_MODE_ZERO_SHUTTER_LAG }
 };
 
 std::map<camera_metadata_enum_android_tonemap_mode,std::string> camToneMapModeEnum2StringMap =
@@ -331,6 +331,31 @@ std::map<std::string,camera_metadata_enum_android_tonemap_mode> camString2ToneMa
     {TONEMAP_HIGH_QUALITY, ANDROID_TONEMAP_MODE_HIGH_QUALITY },
     {TONEMAP_GAMMA_VALUE, ANDROID_TONEMAP_MODE_GAMMA_VALUE },
     {TONEMAP_PRESET_CURVE, ANDROID_TONEMAP_MODE_PRESET_CURVE }
+};
+
+
+std::map<qcamera3_ext_iso_mode,std::string> camISOModeEnum2StringMap =
+{
+    {QCAMERA3_ISO_MODE_AUTO,  ISO_AUTO },
+    {QCAMERA3_ISO_MODE_DEBLUR, ISO_HJR },
+    {QCAMERA3_ISO_MODE_100,    ISO_100 },
+    {QCAMERA3_ISO_MODE_200,    ISO_200 },
+    {QCAMERA3_ISO_MODE_400,    ISO_400 },
+    {QCAMERA3_ISO_MODE_800,    ISO_800 },
+    {QCAMERA3_ISO_MODE_1600,   ISO_1600 },
+    {QCAMERA3_ISO_MODE_3200,   ISO_3200 }
+};
+
+std::map<std::string,qcamera3_ext_iso_mode> camString2ISOModeEnumMap =
+{
+    {ISO_AUTO, QCAMERA3_ISO_MODE_AUTO },
+    {ISO_HJR, QCAMERA3_ISO_MODE_DEBLUR },
+    {ISO_100, QCAMERA3_ISO_MODE_100 },
+    {ISO_200, QCAMERA3_ISO_MODE_200 },
+    {ISO_400, QCAMERA3_ISO_MODE_400 } ,
+    {ISO_800, QCAMERA3_ISO_MODE_800 },
+    {ISO_1600, QCAMERA3_ISO_MODE_1600 } ,
+    {ISO_3200, QCAMERA3_ISO_MODE_3200 }
 };
 
 vector<string> CameraParams::getSupportedFocusModes() const
@@ -466,18 +491,70 @@ void CameraParams::setWhiteBalance(const string& value)
 
 vector<string> CameraParams::getSupportedISO() const
 {
-    vector<string> string_vector_temp;
-    return string_vector_temp;
+    vector<string> iso_modes;
+	qcamera3_ext_iso_mode iso_mode;
+
+	params_cast(priv_)->mutexLock();
+	camera_metadata_entry_t entry;
+	if (params_cast(priv_)->static_default_meta_info.exists(QCAMERA3_ISO_AVAILABLE_MODES)) {
+	   entry = params_cast(priv_)->static_default_meta_info.find(QCAMERA3_ISO_AVAILABLE_MODES);
+	   for (uint32_t i = 0 ; i < entry.count; i++) {
+			CAM_DBG("%s:%d QCAMERA3_ISO_AVAILABLE_MODES %d currently supported.",__func__,__LINE__,entry.data.i32[i]);
+			iso_mode = (qcamera3_ext_iso_mode)entry.data.i32[i];
+			auto it = camISOModeEnum2StringMap.find(iso_mode);
+			if (it != camISOModeEnum2StringMap.end()) {
+				CAM_DBG("%s:%d Get ISO mode : %d - %s   \n",__func__,__LINE__,iso_mode,it->second.c_str());
+				iso_modes.emplace_back(it->second);
+			}else{
+				CAM_ERR("%s:%d Unknown ISO mode: %d \n",__func__,__LINE__,iso_mode);
+			}
+	   }
+	 }else{
+	   CAM_ERR("%s:%d QCAMERA3_ISO_AVAILABLE_MODES does not exist",__func__,__LINE__);
+	}
+	params_cast(priv_)->mutexUnlock();
+    return iso_modes;
 }
 
 string CameraParams::getISO() const
 {
     string str;
+	qcamera3_ext_iso_mode iso_mode;
+
+      params_cast(priv_)->mutexLock();
+
+	 if ( (params_cast(priv_)->static_session_meta_info.exists(QCAMERA3_USE_ISO_EXP_PRIORITY)) ){
+	   iso_mode = static_cast<qcamera3_ext_iso_mode>(params_cast(priv_)->static_session_meta_info.find(QCAMERA3_USE_ISO_EXP_PRIORITY).data.i64[0]);
+		auto it = camISOModeEnum2StringMap.find(iso_mode);
+		if (it != camISOModeEnum2StringMap.end()) {
+			str = it->second;
+			CAM_DBG("%s:%s:%d Get ISO mode : %d - %s   \n",TAG,__func__,__LINE__,iso_mode,str.c_str());
+		}else{
+			CAM_ERR("%s:%d Unknown ISO mode: %d \n",__func__,__LINE__,iso_mode);
+		}
+	 }
+    params_cast(priv_)->mutexUnlock();
     return str;
 }
 
 void CameraParams::setISO(const string& value)
 {
+	int32_t use_exp_priority = 0;
+	int64_t iso_mode;
+
+	auto it = camString2ISOModeEnumMap.find(value);
+	if (it != camString2ISOModeEnumMap.end()) {
+	 iso_mode = it->second;
+	 params_cast(priv_)->mutexLock();
+	 params_cast(priv_)->static_session_meta_info.update(QCAMERA3_SELECT_PRIORITY, &use_exp_priority, 4);
+	 params_cast(priv_)->static_session_meta_info.update(QCAMERA3_USE_ISO_EXP_PRIORITY, &iso_mode, 8);
+	 CAM_DBG("%s:%s:%d Set ISO mode : %lld - %s \n",TAG,__func__,__LINE__,iso_mode,value.c_str());
+	 params_cast(priv_)->static_session_meta_info_updated_flag = true;
+	 params_cast(priv_)->mutexUnlock();
+	}else{
+	 CAM_ERR("%s:%d Invalid ISO mode: %s \n",__func__,__LINE__, value.c_str());
+	}
+
     return;
 }
 
@@ -607,9 +684,9 @@ void CameraParams::setSharpness(int value)
 	CAM_DBG("%s:%s:%d Sharpness Mode: %d %d\n",TAG,__func__,__LINE__,edge_mode,ANDROID_EDGE_MODE_OFF);
 	params_cast(priv_)->mutexLock();
 		/* Can do some camera params initialization here */
-		if (edge_mode == ANDROID_EDGE_MODE_OFF) {
-		  params_cast(priv_)->static_default_meta_info.update(QCAMERA3_SHARPNESS_STRENGTH, &value, 1);
-		  CAM_ERR("%s:%s:%d Set Sharpness: %d \n",TAG,__func__,__LINE__,value);
+		if (edge_mode != ANDROID_EDGE_MODE_OFF) {
+		  params_cast(priv_)->static_session_meta_info.update(QCAMERA3_SHARPNESS_STRENGTH, &value, 1);
+		  CAM_INFO("%s:%s:%d Set Sharpness: %d \n",TAG,__func__,__LINE__,value);
 		  params_cast(priv_)->static_session_meta_info_updated_flag = true;
 		}else{
 		CAM_ERR("%s:%d Failed to set sharpness_strength, turn Off ANDROID_EDGE_MODE_OFF\n",__func__,__LINE__);
@@ -648,8 +725,8 @@ vector<string> CameraParams::getSupportedToneMapMode() const
 	   entry = params_cast(priv_)->static_default_meta_info.find(ANDROID_TONEMAP_AVAILABLE_TONE_MAP_MODES);
 	   for (uint32_t i = 0 ; i < entry.count; i++) {
 		 auto it = camToneMapModeEnum2StringMap.find(static_cast<camera_metadata_enum_android_tonemap_mode>(entry.data.u8[i]));
-				 if (it!=camToneMapModeEnum2StringMap.end()) {
-					CAM_ERR("%s:%d ToneMap mode %d currently supported.",__func__,__LINE__,entry.data.u8[i]);
+		if (it!=camToneMapModeEnum2StringMap.end()) {
+			 CAM_ERR("%s:%d ToneMap mode %d currently supported.",__func__,__LINE__,entry.data.u8[i]);
 			 tonemap_modes.emplace_back(it->second);
 		 }else{
 			 CAM_ERR("%s:%d ToneMap mode %d currently not supported.",__func__,__LINE__,entry.data.u8[i]);
@@ -720,66 +797,72 @@ void CameraParams::setContrast(int value)
 {
 	CAM_PRINT("%s API is deprecated for this target \n",__func__);
 }
+
 Tonemap_RBG CameraParams::getContrastTone() const
 {
 	params_cast(priv_)->mutexLock();
 	Tonemap_RBG tonemapCurves;
+    memset(&tonemapCurves,0,sizeof(Tonemap_RBG));
 
 	if(params_cast(priv_)->static_session_meta_info.exists(ANDROID_TONEMAP_CURVE_BLUE) &&
 		params_cast(priv_)->static_session_meta_info.exists(ANDROID_TONEMAP_CURVE_RED) &&
-		params_cast(priv_)->static_session_meta_info.exists(ANDROID_TONEMAP_CURVE_GREEN)) {
+		params_cast(priv_)->static_session_meta_info.exists(ANDROID_TONEMAP_CURVE_GREEN))
+	{
+
 		CAM_ERR("%s:%d In ANDROID_TONEMAP_CURVE_GREEN\n",__func__,__LINE__);
-	tonemapCurves.tonemap_points_cnt = (params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_GREEN).count)/2;
-	CAM_ERR("%s:%d tonemap_points_cnt %d \n",__func__,__LINE__,tonemapCurves.tonemap_points_cnt);
+		tonemapCurves.tonemap_points_cnt = (params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_GREEN).count)/2;
+		CAM_ERR("%s:%d tonemap_points_cnt %d \n",__func__,__LINE__,tonemapCurves.tonemap_points_cnt);
+
 		if (tonemapCurves.tonemap_points_cnt > CAM_MAX_TONEMAP_CURVE_SIZE) {
-			CAM_ERR("%s:%d Fatal:tonemap_points_cnt %d exceeds max value of %d",
+
+			CAM_ERR("%s:%d iWARN:tonemap_points_cnt %d exceeds max value of %d",
 							__func__,__LINE__,
 							tonemapCurves.tonemap_points_cnt,
 							CAM_MAX_TONEMAP_CURVE_SIZE);
 			tonemapCurves.tonemap_points_cnt = CAM_MAX_TONEMAP_CURVE_SIZE;
+		}
 
-        /* ch0 = G */
-        size_t point = 0;
-        cam_tonemap_curve_t tonemapCurveGreen;
-        for (size_t i = 0; i < tonemapCurves.tonemap_points_cnt; i++) {
-            for (size_t j = 0; j < 2; j++) {
-               tonemapCurveGreen.tonemap_points[i][j] =
-                  params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_GREEN).data.f[point];
-               point++;
-            }
-        }
-        tonemapCurves.curves[0] = tonemapCurveGreen;
-
-        /* ch 1 = B */
-        point = 0;
-        cam_tonemap_curve_t tonemapCurveBlue;
-        for (size_t i = 0; i < tonemapCurves.tonemap_points_cnt; i++) {
-            for (size_t j = 0; j < 2; j++) {
-               tonemapCurveBlue.tonemap_points[i][j] =
-                  params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_BLUE).data.f[point];
-               point++;
-            }
-        }
-        tonemapCurves.curves[1] = tonemapCurveBlue;
-
-        /* ch 2 = R */
-        point = 0;
-        cam_tonemap_curve_t tonemapCurveRed;
-        for (size_t i = 0; i < tonemapCurves.tonemap_points_cnt; i++) {
-            for (size_t j = 0; j < 2; j++) {
-               tonemapCurveRed.tonemap_points[i][j] =
-                  params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_RED).data.f[point];
-               point++;
-            }
-        }
-        tonemapCurves.curves[2] = tonemapCurveRed;
+		/* ch0 = G */
+		size_t point = 0;
+		cam_tonemap_curve_t tonemapCurveGreen;
+		for (size_t i = 0; i < tonemapCurves.tonemap_points_cnt; i++) {
+			for (size_t j = 0; j < 2; j++) {
+			   tonemapCurveGreen.tonemap_points[i][j] =
+				  params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_GREEN).data.f[point];
+			   point++;
 			}
+		}
+		tonemapCurves.curves[0] = tonemapCurveGreen;
+
+		/* ch 1 = B */
+		point = 0;
+		cam_tonemap_curve_t tonemapCurveBlue;
+		for (size_t i = 0; i < tonemapCurves.tonemap_points_cnt; i++) {
+			for (size_t j = 0; j < 2; j++) {
+			   tonemapCurveBlue.tonemap_points[i][j] =
+				  params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_BLUE).data.f[point];
+			   point++;
+			}
+		}
+		tonemapCurves.curves[1] = tonemapCurveBlue;
+
+		/* ch 2 = R */
+		point = 0;
+		cam_tonemap_curve_t tonemapCurveRed;
+		for (size_t i = 0; i < tonemapCurves.tonemap_points_cnt; i++) {
+			for (size_t j = 0; j < 2; j++) {
+			   tonemapCurveRed.tonemap_points[i][j] =
+				  params_cast(priv_)->static_session_meta_info.find(ANDROID_TONEMAP_CURVE_RED).data.f[point];
+			   point++;
+			}
+		}
+		tonemapCurves.curves[2] = tonemapCurveRed;
 	} else {
-		CAM_ERR("%s:%d Not in ANDROID_TONEMAP_MODE_CONTRAST_CURVE\n",__func__,__LINE__);
-	}
+		CAM_ERR("%s:%d WARN: No previous ANDROID_TONEMAP_MODE_CONTRAST_CURVE settings \n",__func__,__LINE__);
+    }
+
 	params_cast(priv_)->mutexUnlock();
 	return tonemapCurves;
-	//return 1;
 }
 
 void CameraParams::setContrastTone(Tonemap_RBG& tonemap)
@@ -787,11 +870,15 @@ void CameraParams::setContrastTone(Tonemap_RBG& tonemap)
 	params_cast(priv_)->mutexLock();
 
 	if (tonemap.tonemap_points_cnt > CAM_MAX_TONEMAP_CURVE_SIZE) {
-			CAM_ERR("%s:%d Fatal:tonemap_points_cnt %d exceeds max value of %d",
-							__func__,__LINE__,
-							tonemap.tonemap_points_cnt,
-							CAM_MAX_TONEMAP_CURVE_SIZE);
-            tonemap.tonemap_points_cnt = CAM_MAX_TONEMAP_CURVE_SIZE;
+		CAM_ERR("%s:%d Error: tonemap_points_cnt %d exceeds max value of %d \n",
+						__func__,__LINE__,
+						tonemap.tonemap_points_cnt,
+						CAM_MAX_TONEMAP_CURVE_SIZE);
+		tonemap.tonemap_points_cnt = CAM_MAX_TONEMAP_CURVE_SIZE;
+	}else if (tonemap.tonemap_points_cnt < 2 ) {
+		CAM_ERR("%s:%d Error: tonemap_points_cnt %d < 2 ( min) \n",
+				  __func__,__LINE__,
+				  tonemap.tonemap_points_cnt);
 	}else{
 			params_cast(priv_)->static_session_meta_info.update(ANDROID_TONEMAP_CURVE_GREEN,
                         &tonemap.curves[0].tonemap_points[0][0],
@@ -826,6 +913,8 @@ std::vector<Range> CameraParams::getSupportedPreviewFpsRanges() const
      }else{
 		 CAM_ERR("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES does not exist",__func__,__LINE__);
 	 }
+    std::vector<Range> ranges2 = getHFRFpsRange();
+    ranges.insert( ranges.end(), ranges2.begin(), ranges2.end() );
 	 params_cast(priv_)->mutexUnlock();
     return ranges;
 }
@@ -852,27 +941,87 @@ Range CameraParams::getPreviewFpsRange() const
     return range;
 }
 
+std::vector<Range> CameraParams::getHFRFpsRange() const
+{
+    std::vector<Range> ranges;
+    uint32_t last_fps = 0;
+    uint32_t width_offset = 0;
+    uint32_t height_offset = 1;
+    uint32_t min_fps_offset = 2;
+    uint32_t max_fps_offset = 3;
+    uint32_t batch_size_offset = 4;
+    uint32_t hfr_size = 5;
+
+    bool hfr_supported_ = false;
+    camera_metadata_entry meta_entry =
+      params_cast(priv_)->static_default_meta_info.find(ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
+    for (uint32_t i = 0; i < meta_entry.count; ++i) {
+    uint8_t caps = meta_entry.data.u8[i];
+    if (ANDROID_REQUEST_AVAILABLE_CAPABILITIES_CONSTRAINED_HIGH_SPEED_VIDEO ==
+        caps) {
+      hfr_supported_ = true;
+      break;
+    }
+    }
+    if (!hfr_supported_) {
+    return ranges;
+    }
+
+    meta_entry = params_cast(priv_)->static_default_meta_info.find(
+      ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS);
+    for (uint32_t i = 0; i < meta_entry.count; i += hfr_size) {
+        uint32_t width = meta_entry.data.i32[i + width_offset];
+        uint32_t height = meta_entry.data.i32[i + height_offset];
+        uint32_t min_fps = meta_entry.data.i32[i + min_fps_offset];
+        uint32_t max_fps = meta_entry.data.i32[i + max_fps_offset];
+        uint32_t batch = meta_entry.data.i32[i + batch_size_offset];
+        if (min_fps == max_fps) { //Only constant framerates are supported
+            CAM_ERR("%d, %d, %d, w %d, h %d, b %d", min_fps, max_fps, meta_entry.count, width, height, batch);
+            if (last_fps != min_fps) {
+                ranges.push_back(Range(min_fps*1000, max_fps*1000, 1));
+                last_fps = min_fps;
+            }
+        }
+    }
+    return ranges;
+}
 void CameraParams::setPreviewFpsRange(const Range& value)
 {
+    bool success = false;
     camera_metadata_entry_t entry;
 	params_cast(priv_)->mutexLock();
 	if ((params_cast(priv_)->static_default_meta_info.exists(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES))){
 		entry = params_cast(priv_)->static_default_meta_info.find(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
-		CAM_DBG("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES count = %d ",__func__,__LINE__,entry.count);
+		CAM_INFO("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES count = %d ",__func__,__LINE__,entry.count);
 		size_t i;
 		for ( i = 0 ; i < entry.count; i += 2) {
-		  if (value.min == entry.data.i32[i] && value.max == entry.data.i32[i+1]){
-			  params_cast(priv_)->track_params_ptr[CAMERA_QMMF_TRACK_PREVIEW]->frame_rate = value.max;
-			  CAM_DBG("%s:%d Setting  fps range = %d %d ",__func__,__LINE__,entry.data.i32[i], entry.data.i32[i+1]);
+		    if (value.min/1000 == entry.data.i32[i] && value.max/1000 == entry.data.i32[i+1]){
+                params_cast(priv_)->track_params_ptr[CAMERA_QMMF_TRACK_PREVIEW]->frame_rate = value.max/1000;
+                CAM_INFO("%s:%d Setting  fps range = %d %d ",__func__,__LINE__,entry.data.i32[i], entry.data.i32[i+1]);
+                success = true;
 			  break;
 		  }
 		}
 		if (i >= entry.count) {
-			CAM_ERR("%s:%d Error: Invalid preview range provided ",__func__,__LINE__);
+			CAM_ERR("%s:%d Error: preview range not valid for regular fps",__func__,__LINE__);
 		}
 	} else {
 		CAM_ERR("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES does not exist",__func__,__LINE__);
 	}
+    if (! success) {
+        std::vector<Range> ranges = getHFRFpsRange();
+        for (size_t i = 0; i < ranges.size(); i ++)
+        {
+            if ((ranges[i].min == value.min) && (ranges[i].max == value.max))
+            {
+                success = true;
+                params_cast(priv_)->track_params_ptr[CAMERA_QMMF_TRACK_PREVIEW]->frame_rate = value.max/1000;
+                CAM_INFO("%s:%d Setting  fps(HFR) range = %d %d ",__func__,__LINE__,value.max/1000, value.max/1000);
+                break;
+            }
+        }
+    }
+
 	params_cast(priv_)->mutexUnlock();
 	return;
 }
@@ -880,6 +1029,7 @@ void CameraParams::setPreviewFpsRange(const Range& value)
 std::vector<VideoFPS> CameraParams::getSupportedVideoFps() const
 {
 	camera_metadata_entry_t entry;
+	std::vector<Range> ranges;
 	
 	vector<VideoFPS> values;
 	values.push_back(VIDEO_FPS_1X);
@@ -888,27 +1038,43 @@ std::vector<VideoFPS> CameraParams::getSupportedVideoFps() const
 	int32_t currentPreviewFPS = params_cast(priv_)->track_params_ptr[CAMERA_QMMF_TRACK_PREVIEW]->frame_rate;
 	if ((params_cast(priv_)->static_default_meta_info.exists(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES))){
 		 entry = params_cast(priv_)->static_default_meta_info.find(ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
-		 CAM_DBG("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES count = %d ",__func__,__LINE__,entry.count);
+		 CAM_INFO("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES count = %d ",__func__,__LINE__,entry.count);
 	     for (size_t i = 0 ; i < entry.count; i += 2) {
 			  if (entry.data.i32[i] == entry.data.i32[i+1]) {
 
-				  CAM_DBG("%s:%d Possible fps = %d ",__func__,__LINE__,entry.data.i32[i]);
-				  VideoFPS possibleVideoFPSXX = static_cast<VideoFPS>( entry.data.i32[i] / currentPreviewFPS);
+				  CAM_INFO("%s:%d Possible fps = %d ",__func__,__LINE__,entry.data.i32[i]);
+                  ranges.push_back(Range(entry.data.i32[i], entry.data.i32[i], 1));
+              }
+         }
+    }else
+	    CAM_ERR("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES does not exist",__func__,__LINE__);
+
+    std::vector<Range> ranges2 = getHFRFpsRange();
+    for (size_t i = 0; i < ranges2.size(); i ++) {
+        ranges2[i].min = ranges2[i].min/1000;
+        ranges2[i].max = ranges2[i].max/1000;
+		CAM_INFO("%s:%d Possible fps = %d ",__func__,__LINE__, ranges2[i].max);
+    }
+    ranges.insert( ranges.end(), ranges2.begin(), ranges2.end());
+    for (size_t i = 0; i < ranges.size(); i ++) {
+          int fps = ranges[i].max;
+   	      CAM_INFO("%s:%d currentPreviewFPS %d, fps %d",__func__,__LINE__, currentPreviewFPS, fps);
+          if (fps < currentPreviewFPS) continue;
+    	  VideoFPS possibleVideoFPSXX = static_cast<VideoFPS>( fps / currentPreviewFPS);
 
 				  /* check if element exist */
-				  size_t i;
-				  for (i = 0 ; i < values.size() ; i++) {
+		  size_t j;
+		  for (j = 0 ; j < values.size() ; j++) {
 					  if (values[i] == possibleVideoFPSXX  ) {
 						  break;
 					  }
 				  }
-
-				  if ( i < values.size()) {
+		  if ( j < values.size()) {
 					  continue;
 				  }
 				  
 				  switch (possibleVideoFPSXX) {
-             		  CAM_DBG("%s:%d Add fps = %d ",__func__,__LINE__,entry.data.i32[i]);
+     		  CAM_INFO("%s:%d Add fps = %d ",__func__,__LINE__,entry.data.i32[i]);
 					  case VIDEO_FPS_1X:
 						  values.push_back(VIDEO_FPS_1X);
 						  break;
@@ -928,10 +1094,6 @@ std::vector<VideoFPS> CameraParams::getSupportedVideoFps() const
 						break;
 				  }
 			  }
-		 }
-     }else{
-		 CAM_ERR("%s:%d ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES does not exist",__func__,__LINE__);
-	 }
 
     params_cast(priv_)->mutexUnlock(); 
     return values;
@@ -948,6 +1110,7 @@ VideoFPS CameraParams::getVideoFPS() const
 
 void CameraParams::setVideoFPS(VideoFPS value)
 {
+    CAM_INFO("setVideoFPS %d", value);
 	params_cast(priv_)->mutexLock();
 	params_cast(priv_)->video_FPS_XX = value;
 	params_cast(priv_)->mutexUnlock();
@@ -1155,7 +1318,7 @@ void CameraParams::setHorizontalMirror(bool value)
 
 void CameraParams::setAntibanding(const string& value)
 {
-    CAM_PRINT("%s API is deprecated for this target \n",__func__);
+    CAM_PRINT("%s API is not available for this target \n",__func__);
     return;
 }
 

@@ -36,9 +36,14 @@ import (
     "log"
     "net/http"
     . "system/smap"
+    . "camera/preview"
+    . "camera/overlay"
+    "time"
 )
 
 var __recording_num int = 0
+
+var is4KRecording bool = false
 
 type VideoIdParams struct {
     Video_Id int `json:"video_id"`
@@ -62,6 +67,8 @@ func __check_camera_res(chinfo Channel) bool {
         return false
     }
 
+    log.Printf("recording __check_camera_res value: %v \n", ResolutionConf[chinfo.VideoConf.Resolution])
+    log.Printf("recording __check_camera_res res: %v \n", CameraRes)
     // check res
     if (CameraRes - ResolutionConf[chinfo.VideoConf.Resolution]) < 0 {
         return false
@@ -70,9 +77,10 @@ func __check_camera_res(chinfo Channel) bool {
 }
 
 func __deal_camera_res(chinfo Channel, status State) {
+    log.Printf("deal camera res Resolution: %v, state:%v \n", chinfo.VideoConf.Resolution, status)
     if status == Recording {
         CameraRes -= ResolutionConf[chinfo.VideoConf.Resolution]
-    } else if status == Normal {
+    } else {
         CameraRes += ResolutionConf[chinfo.VideoConf.Resolution]
     }
 }
@@ -93,7 +101,7 @@ func __recording_on(chinfo Channel) bool {
         return false
     }
 
-    if !Create_audio_track(chinfo.TrackIds.AudioId,
+    if !Create_audio_track(chinfo.TrackIds.RecAudioId,
         chinfo.Sids.RecordingId, AudioConf.Track_output) {
         return false
     }
@@ -109,12 +117,13 @@ func __recording_off(chinfo Channel) bool {
     if !Stop_session(chinfo.Sids.RecordingId) {
         return false
     }
+
     if !Delete_video_track(chinfo.TrackIds.RecordingId,
         chinfo.Sids.RecordingId) {
         return false
     }
 
-    if !Delete_audio_track(chinfo.TrackIds.AudioId,
+    if !Delete_audio_track(chinfo.TrackIds.RecAudioId,
         chinfo.Sids.RecordingId) {
         return false
     }
@@ -126,13 +135,6 @@ func __recording_off(chinfo Channel) bool {
 func __switch_recording_on(w http.ResponseWriter, chinfo Channel, sess string, ch int) {
     chState := chinfo.Status
 
-    // check camera res
-    if !__check_camera_res(chinfo) {
-        log.Printf("Error need camrea res \n")
-        Resp_ret_reason(w, "Resource limits")
-        return
-    }
-
     // check state
     if chState == Recording {
         log.Printf("Error other session recording \n")
@@ -140,17 +142,106 @@ func __switch_recording_on(w http.ResponseWriter, chinfo Channel, sess string, c
         return
     }
 
-    // preview on
-    if chState == Preview {
+    // check couter
+    if chinfo.PCounter > 1 {
         log.Printf("Error other session preview \n")
-        Resp_ret(w, false)
+        Resp_ret_reason(w, "The other session is preview")
         return
+    }
+
+    // if video = 4K
+    if chinfo.VideoConf.Resolution == 0 {
+        // wait web stop websocket
+        time.Sleep(50 * time.Millisecond)
+
+        // off current preview
+        if !Preview_video_off(chinfo, sess, ch) {
+            return
+        }
+
+        chinfo, _ = CMap.ChMap_Get(ChList[ch])
+        // set video 480
+        chinfo.VideoConf.Resolution = 3
+        CMap.ChMap_Set(ChList[ch], chinfo)
+
+        // on 480 preview
+        if !Preview_video_on(sess, ch, chinfo.Stream) {
+            return
+        }
+
+        if chinfo.OverlayStatus {
+            if !Pre_overlay_on(ch) {
+                return
+            }
+        }
+
+        is4KRecording = true
+    }
+
+    // check camera res
+    if !__check_camera_res(chinfo) {
+        log.Printf("Error need camrea res \n")
+        Resp_ret_reason(w, "Resource limits")
+        return
+    }
+
+    // if video = 4K
+    if chinfo.VideoConf.Resolution == 0 {
+        // off current preview
+        if !Preview_video_off(chinfo, sess, ch) {
+            return
+        }
+
+        chinfo, _ = CMap.ChMap_Get(ChList[ch])
+        // set video 480
+        chinfo.VideoConf.Resolution = 3
+        CMap.ChMap_Set(ChList[ch], chinfo)
+
+        // on 480 preview
+        if !Preview_video_on(sess, ch, chinfo.Stream) {
+            return
+        }
+
+        if chinfo.OverlayStatus {
+            if !Pre_overlay_on(ch) {
+                return
+            }
+        }
+
+        is4KRecording = true
+    }
+
+    // check camera res
+    if !__check_camera_res(chinfo) {
+        log.Printf("Error need camrea res \n")
+        Resp_ret_reason(w, "Resource limits")
+        return
+    }
+
+    if is4KRecording {
+        // get new chinfo
+        chinfo, _ = CMap.ChMap_Get(ChList[ch])
+
+        // revert 4K video
+        chinfo.VideoConf.Resolution = 0
+        CMap.ChMap_Set(ChList[ch], chinfo)
     }
 
     if !__recording_on(chinfo) {
         Resp_ret_reason(w, "Internal error")
         return
     }
+
+    // open overlay
+    if chinfo.OverlayStatus {
+        if !Rec_overlay_on(ch) {
+            Resp_ret_reason(w, "Internal error")
+            return
+        }
+    }
+
+    // get new chinfo
+    chinfo, _ = CMap.ChMap_Get(ChList[ch])
 
     // save map
     __save_channel_state(chinfo, ch, Recording)
@@ -162,7 +253,6 @@ func __switch_recording_on(w http.ResponseWriter, chinfo Channel, sess string, c
     __update_session_recording_st(sess, true)
     // resp ok
     Resp_ret(w, true)
-
 }
 
 func Switch_recording_off(chinfo Channel, sess string, ch int) {
@@ -185,6 +275,29 @@ func Switch_recording_off(chinfo Channel, sess string, ch int) {
     __recording_num--
     // update session status
     __update_session_recording_st(sess, false)
+
+    // 4k close 480 preview
+    if chinfo.VideoConf.Resolution == 0 {
+        chinfo, _ = CMap.ChMap_Get(ChList[ch])
+
+        // set video 480
+        chinfo.VideoConf.Resolution = 3
+        CMap.ChMap_Set(ChList[ch], chinfo)
+
+        if !Preview_video_off(chinfo, sess, ch) {
+            return
+        }
+
+        // set video 4K
+        chinfo.VideoConf.Resolution = 0
+        CMap.ChMap_Set(ChList[ch], chinfo)
+
+        return
+    }
+
+    if !Preview_video_off(chinfo, sess, ch) {
+        return
+    }
 }
 
 func __switch_recording_off(w http.ResponseWriter, chinfo Channel,
@@ -205,19 +318,65 @@ func __switch_recording_off(w http.ResponseWriter, chinfo Channel,
         return
     }
 
+    // close overlay
+    if chinfo.OverlayStatus {
+        if !Rec_overlay_off(chinfo) {
+            Resp_ret_reason(w, "Internal error")
+            return
+        }
+    }
+
     // real preview off
     if !__recording_off(chinfo) {
         Resp_ret(w, false)
         return
     }
 
-    __save_channel_state(chinfo, ch, Normal)
+    __save_channel_state(chinfo, ch, Preview)
 
-    __deal_camera_res(chinfo, Normal)
+    __deal_camera_res(chinfo, Preview)
     // delete preview num
     __recording_num--
     // update session status
     __update_session_recording_st(sess, false)
+
+    if chinfo.VideoConf.Resolution == 0 {
+        chinfo, _ = CMap.ChMap_Get(ChList[ch])
+
+        // set video 480
+        chinfo.VideoConf.Resolution = 3
+        CMap.ChMap_Set(ChList[ch], chinfo)
+
+        if chinfo.OverlayStatus {
+            if !Pre_overlay_off(chinfo) {
+                return
+            }
+        }
+
+        // get new chinfo
+        chinfo, _ = CMap.ChMap_Get(ChList[ch])
+
+        if !Preview_video_off(chinfo, sess, ch) {
+            return
+        }
+
+        chinfo, _ = CMap.ChMap_Get(ChList[ch])
+        // set video 4K
+        chinfo.VideoConf.Resolution = 0
+        CMap.ChMap_Set(ChList[ch], chinfo)
+
+        if !Preview_video_on(sess, ch, chinfo.Stream) {
+            return
+        }
+
+        if chinfo.OverlayStatus {
+            if !Pre_overlay_on(ch) {
+                return
+            }
+        }
+
+        is4KRecording = true
+    }
 
     Resp_ret(w, true)
 }
@@ -231,6 +390,43 @@ func __recording_post(w http.ResponseWriter, r *http.Request, chinfo Channel,
     } else {
         __switch_recording_off(w, chinfo, sess, ch)
     }
+}
+
+func __recording_get(w http.ResponseWriter, chinfo Channel, sess string, sessinfo Session) {
+    rtsp_url := Get_server_info(chinfo.Sids.PreviewId)
+    log.Printf("Recording get resolution:%v \n", chinfo.VideoConf.Resolution)
+
+    if chinfo.VideoConf.Resolution != 0 {
+        Resp_ret(w, true)
+        return
+    }
+
+    if rtsp_url == "" {
+        log.Printf("Get rtsp url is nil!!!")
+        Resp_ret_reason(w, "Internal error")
+        return
+    }
+
+    if sessinfo.ProxyConf[RTSP].Port == "" {
+        port := Set_rtsp_proxy(RTSP, sess, sessinfo)
+        log.Printf("Recording get proxy port:%v \n", port)
+    }
+
+    rtspURL := Make_resp_rtspURL(CameraIp, rtsp_url)
+    log.Printf("Recording resp rtsp url:%v \n", rtspURL)
+
+    // get new sessinfo
+    sessinfo, _ = SMap.Get(sess)
+
+    m := &RespRtspURL{
+        Url:    rtspURL,
+        Proxy:  sessinfo.ProxyConf[RTSP].Port,
+        Status: true,
+    }
+
+    is4KRecording = false
+
+    Resp_url(w, m)
 }
 
 func RecordingHandler(w http.ResponseWriter, r *http.Request) {
@@ -248,11 +444,12 @@ func RecordingHandler(w http.ResponseWriter, r *http.Request) {
     if r.Method == "POST" {
         __recording_post(w, r, chinfo, sess, ch)
     } else if r.Method == "GET" {
-        // check session status
-        if sessinfo.RecStatus {
-            Resp_ret(w, true)
-        } else {
-            Resp_ret(w, false)
+        if !is4KRecording {
+            if !sessinfo.RecStatus {
+                Resp_ret(w, false)
+                return
+            }
         }
+        __recording_get(w, chinfo, sess, sessinfo)
     }
 }

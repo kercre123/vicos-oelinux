@@ -29,23 +29,21 @@
 
 #pragma once
 
+#include <functional>
+#include <memory>
+#include <vector>
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
-#include <functional>
-#include <memory>
-#include <vector>
-
 #include <gtest/gtest.h>
 #include <linux/msm_ion.h>
 #include <media/msm_media_info.h>
-#include <utils/Condition.h>
-#include <utils/Mutex.h>
+#include <qmmf-sdk/qmmf_avcodec.h>
 
-#include "common/qmmf_common_utils.h"
-#include "qmmf-sdk/qmmf_avcodec.h"
+#include "common/utils/qmmf_common_utils.h"
+#include "common/utils/qmmf_condition.h"
 
 using namespace android;
 using namespace qmmf;
@@ -61,9 +59,9 @@ class OutputCodecSourceImpl;
 class CodecGtest : public ::testing::Test {
 
  public:
-  CodecGtest() {};
+  CodecGtest();
 
-  ~CodecGtest() {};
+  ~CodecGtest(){};
 
  protected:
   const ::testing::TestInfo* test_info_;
@@ -82,7 +80,7 @@ class CodecGtest : public ::testing::Test {
 
   IAVCodec*                         avcodec_;
   int32_t                           ion_device_;
-  Mutex                             stop_lock_;
+  std::mutex                        stop_lock_;
   bool                              stop_;
   vector<BufferDescriptor>          input_buffer_list_;
   vector<BufferDescriptor>          output_buffer_list_;
@@ -115,8 +113,8 @@ public:
 private:
   status_t   ReadFile(int32_t fd, uint32_t size, int32_t *byte_read);
 
-  Mutex                     wait_for_frame_lock_;
-  Condition                 wait_for_frame_;
+  std::mutex                wait_for_frame_lock_;
+  QCondition                wait_for_frame_;
   vector<BufferDescriptor>  input_list_;
   TSQueue<BufferDescriptor> input_free_buffer_queue_;
   TSQueue<BufferDescriptor> input_occupy_buffer_queue_;
@@ -143,8 +141,8 @@ public:
   void AddBufferList(vector<BufferDescriptor>& list);
 
 private:
-  Mutex                     wait_for_frame_lock_;
-  Condition                 wait_for_frame_;
+  std::mutex                wait_for_frame_lock_;
+  QCondition                wait_for_frame_;
   vector<BufferDescriptor>  output_list_;
   TSQueue<BufferDescriptor> output_free_buffer_queue_;
   TSQueue<BufferDescriptor> output_occupy_buffer_queue_;

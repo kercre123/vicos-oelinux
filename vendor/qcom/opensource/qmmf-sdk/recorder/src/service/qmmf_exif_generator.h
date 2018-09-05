@@ -55,7 +55,7 @@ public:
                const std::string &vendor_name,
                const std::string &product_name,
                int32_t width, int32_t height,
-               unsigned char *buffer, uint32_t size);
+               unsigned char *buffer);
 
 private:
 
@@ -157,7 +157,6 @@ private:
   unsigned char *helper_buffer_;
   uint32_t width_;
   uint32_t height_;
-  uint32_t max_exif_size_;
   uint32_t current_offset_;
   uint32_t helper_buffer_offset_;
 

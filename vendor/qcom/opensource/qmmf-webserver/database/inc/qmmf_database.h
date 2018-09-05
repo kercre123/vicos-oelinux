@@ -245,6 +245,9 @@ public:
   int32_t GetEnrollInfo(const char *img_id,
                         vaapi_enrollment_info *enroll_info,
                         bool read_image_data = false);
+  int32_t GetImageIdsFromFeatureId(const char *id,
+                                   std::vector<std::string> *ids);
+  bool IsFeatureId(const char *id);
 };
 
 } //namespace database ends here

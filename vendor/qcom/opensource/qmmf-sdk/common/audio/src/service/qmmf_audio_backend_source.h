@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -53,12 +53,13 @@ class AudioBackendSource : public IAudioBackend {
                      const AudioBufferHandler& buffer_handler);
   ~AudioBackendSource();
 
-  int32_t Open(const ::std::vector<DeviceId>& devices,
+  int32_t Open(const qahw_module_handle_t * const modules[],
+               const ::std::vector<DeviceId>& devices,
                const AudioMetadata& metadata);
   int32_t Close();
 
   int32_t Start();
-  int32_t Stop(const bool flush);
+  int32_t Stop();
   int32_t Pause();
   int32_t Resume();
 
@@ -82,7 +83,6 @@ class AudioBackendSource : public IAudioBackend {
   struct AudioMessage {
     AudioMessageType type;
     ::std::vector<AudioBuffer> buffers;
-    bool flush;
   };
 
   static const audio_io_handle_t kIOHandleMin;

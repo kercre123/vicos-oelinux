@@ -32,10 +32,12 @@
 #include <sys/types.h>
 
 #include <cstdint>
+#include <cstring>
+#include <string>
 
 #include <binder/Parcel.h>
 
-#include "common/qmmf_codec_internal.h"
+#include "common/utils/qmmf_codec_internal.h"
 #include "include/qmmf-sdk/qmmf_recorder_params.h"
 
 namespace qmmf {
@@ -55,6 +57,7 @@ struct AudioTrackCreateParamInternal : public AudioTrackCreateParam {
     parcel->writeUint32(sample_rate);
     parcel->writeUint32(channels);
     parcel->writeUint32(bit_depth);
+    parcel->writeCString(profile);
     parcel->writeInt32(static_cast<int32_t>(format));
     switch (format) {
       case AudioFormat::kPCM:
@@ -68,6 +71,9 @@ struct AudioTrackCreateParamInternal : public AudioTrackCreateParam {
         break;
       case AudioFormat::kG711:
         G711ParamsInternal(codec_params.g711).ToParcel(parcel);
+        break;
+      case AudioFormat::kMP3:
+        // nothing to write
         break;
     }
     parcel->writeInt32(static_cast<int32_t>(out_device));
@@ -83,6 +89,7 @@ struct AudioTrackCreateParamInternal : public AudioTrackCreateParam {
     sample_rate = parcel.readUint32();
     channels = parcel.readUint32();
     bit_depth = parcel.readUint32();
+    ::std::string(parcel.readCString()).copy(profile, sizeof(profile));
     format = static_cast<AudioFormat>(parcel.readInt32());
     switch (format) {
       case AudioFormat::kPCM:
@@ -96,6 +103,9 @@ struct AudioTrackCreateParamInternal : public AudioTrackCreateParam {
         break;
       case AudioFormat::kG711:
         codec_params.g711 = G711ParamsInternal().FromParcel(parcel);
+        break;
+      case AudioFormat::kMP3:
+        // nothing to read
         break;
     }
     out_device = static_cast<DeviceId>(parcel.readInt32());
@@ -124,7 +134,11 @@ struct VideoTrackCreateParamInternal : public VideoTrackCreateParam {
       case VideoFormat::kAVC:
         AVCParamsInternal(codec_param.avc).ToParcel(parcel);
         break;
+      case VideoFormat::kJPEG:
+        JPEGParamsInternal(codec_param.jpeg).ToParcel(parcel);
+        break;
       case VideoFormat::kYUV:
+      case VideoFormat::kBayerRDI8BIT:
       case VideoFormat::kBayerRDI10BIT:
       case VideoFormat::kBayerRDI12BIT:
       case VideoFormat::kBayerIdeal:
@@ -146,7 +160,11 @@ struct VideoTrackCreateParamInternal : public VideoTrackCreateParam {
       case VideoFormat::kAVC:
         codec_param.avc = AVCParamsInternal().FromParcel(parcel);
         break;
+      case VideoFormat::kJPEG:
+        codec_param.jpeg = JPEGParamsInternal().FromParcel(parcel);
+        break;
       case VideoFormat::kYUV:
+      case VideoFormat::kBayerRDI8BIT:
       case VideoFormat::kBayerRDI10BIT:
       case VideoFormat::kBayerRDI12BIT:
       case VideoFormat::kBayerIdeal:

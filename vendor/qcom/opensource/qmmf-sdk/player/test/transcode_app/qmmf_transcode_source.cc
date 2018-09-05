@@ -29,7 +29,8 @@
 
 #include "qmmf_transcode_source.h"
 
-#define TAG "TranscoderSource"
+#undef LOG_TAG
+#define LOG_TAG "TranscoderSource"
 
 namespace qmmf {
 namespace transcode {
@@ -55,17 +56,17 @@ TranscoderSource::TranscoderSource(const CodecType type,
       codec_type_(type),
       params_(codec_params),
       port_index_(kPortIndexInput) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 TranscoderSource::~TranscoderSource() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t TranscoderSource::PreparePipeline() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   avcodec_.reset(IAVCodec::CreateAVCodec());
@@ -86,20 +87,20 @@ status_t TranscoderSource::PreparePipeline() {
     case CodecType::kImageEncoder:
     case CodecType::kImageDecoder:
     default:
-      QMMF_ERROR("%s:%s CodecType not supported", TAG, __func__);
+      QMMF_ERROR("%s CodecType not supported", __func__);
       return -1;
   }
 
   ret = avcodec_->ConfigureCodec(mime_, params_);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to configure codec", TAG, __func__);
+    QMMF_ERROR("%s Failed to configure codec", __func__);
     return ret;
   }
 
   ret = TranscodeBuffer::CreateTranscodeBuffersVector(
       avcodec_, BufferOwner::kTranscoderSource, port_index_, &buffer_list_);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to allocate source side buffers", TAG, __func__);
+    QMMF_ERROR("%s Failed to allocate source side buffers", __func__);
     return ret;
   }
 
@@ -113,7 +114,7 @@ status_t TranscoderSource::PreparePipeline() {
 
   ret = avcodec_->RegisterInputBuffers(temp_in);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to register source side buffers", TAG, __func__);
+    QMMF_ERROR("%s Failed to register source side buffers", __func__);
     goto release_resources;
   }
 
@@ -131,8 +132,8 @@ status_t TranscoderSource::PreparePipeline() {
       static_pointer_cast<ICodecSource>(shared_from_this()),
       temp_in);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to call allocate buffer on source side",
-               TAG, __func__);
+    QMMF_ERROR("%s Failed to call allocate buffer on source side",
+               __func__);
     goto release_resources;
   }
 
@@ -140,52 +141,52 @@ status_t TranscoderSource::PreparePipeline() {
 
   AddBufferList(buffer_list_);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 
 release_resources:
   ReleaseResources();
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::StartCodec() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   ret = avcodec_->StartCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to start source side AVCodec", TAG, __func__);
+    QMMF_ERROR("%s Failed to start source side AVCodec", __func__);
     return ret;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::StopCodec() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
-  ret = avcodec_->StopCodec();
+  ret = avcodec_->StopCodec(true);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to stop source side AVCodec", TAG, __func__);
+    QMMF_ERROR("%s Failed to stop source side AVCodec", __func__);
     return ret;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 void TranscoderSource::ReleaseResources() {
-  QMMF_DEBUG("%s:%s Enter", TAG, __func__);
+  QMMF_DEBUG("%s Enter", __func__);
 
   status_t ret = 0;
   if (avcodec_ != nullptr) {
     ret = avcodec_->ReleaseBuffer();
     if (ret != 0) {
-      QMMF_ERROR("%s:%s Failed to release buffers of source side AVCodec",
-                 TAG, __func__);
+      QMMF_ERROR("%s Failed to release buffers of source side AVCodec",
+                 __func__);
     }
     avcodec_.reset();
   }
@@ -193,17 +194,17 @@ void TranscoderSource::ReleaseResources() {
   TranscodeBuffer::FreeTranscodeBuffersVector(&buffer_list_);
   assert(buffer_list_.empty());
 
-  QMMF_DEBUG("%s:%s Exit", TAG, __func__);
+  QMMF_DEBUG("%s Exit", __func__);
 }
 
 status_t TranscoderSource::DeleteCodec() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   ret = avcodec_->ReleaseBuffer();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to release buffers of source side AVCodec",
-               TAG, __func__);
+    QMMF_ERROR("%s Failed to release buffers of source side AVCodec",
+               __func__);
     return ret;
   }
 
@@ -212,46 +213,46 @@ status_t TranscoderSource::DeleteCodec() {
 
   avcodec_.reset();
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::PauseCodec() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   ret = avcodec_->PauseCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to pause source side AVCodec", TAG, __func__);
+    QMMF_ERROR("%s Failed to pause source side AVCodec", __func__);
     return ret;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::ResumeCodec() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   status_t ret = 0;
   ret = avcodec_->ResumeCodec();
   if (ret != 0) {
-    QMMF_ERROR("%s:%s Failed to resume source side AVCodec", TAG, __func__);
+    QMMF_ERROR("%s Failed to resume source side AVCodec", __func__);
     return ret;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::SetCodecParameters() {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
 void TranscoderSource::AddBufferList(const vector<TranscodeBuffer>& list) {
-  QMMF_DEBUG("%s:%s Enter", TAG, __func__);
+  QMMF_DEBUG("%s Enter", __func__);
 
   free_buffer_queue_.Clear();
   occupy_buffer_queue_.Clear();
@@ -262,12 +263,12 @@ void TranscoderSource::AddBufferList(const vector<TranscodeBuffer>& list) {
     unfilled_frame_queue_.PushBack(iter);
   }
 
-  QMMF_DEBUG("%s:%s Exit", TAG, __func__);
+  QMMF_DEBUG("%s Exit", __func__);
 }
 
 status_t TranscoderSource::GetBuffer(BufferDescriptor& buffer_descriptor,
                                      void* client_data) {
-  QMMF_VERBOSE("%s:%s Enter", TAG, __func__);
+  QMMF_VERBOSE("%s Enter", __func__);
 
   status_t ret = 0;
   // The size of free_buffer_queue_ has been queried twice because after
@@ -279,8 +280,8 @@ status_t TranscoderSource::GetBuffer(BufferDescriptor& buffer_descriptor,
   // free_buffer_queue_ non-zero. The same logic applies everywhere in this
   // application where there is a twice check
   if (free_buffer_queue_.Size() <= 0) {
-    QMMF_DEBUG("%s:%s No buffer available to notify wait for new buffer",
-               TAG, __func__);
+    QMMF_DEBUG("%s No buffer available to notify wait for new buffer",
+               __func__);
     unique_lock<mutex> ul(wait_for_frame_mutex_);
     if (free_buffer_queue_.Size() <= 0)
       wait_for_frame_.wait(ul);
@@ -293,18 +294,18 @@ status_t TranscoderSource::GetBuffer(BufferDescriptor& buffer_descriptor,
   free_buffer_queue_.Erase(free_buffer_queue_.Begin());
 
   if (buffer_descriptor.flag & static_cast<uint32_t>(BufferFlags::kFlagEOS)) {
-    QMMF_INFO("%s:%s Last buffer", TAG, __func__);
+    QMMF_INFO("%s Last buffer", __func__);
     // return value of -1 signifies here end of stream according to avcodec
     ret = -1;
   }
 
-  QMMF_VERBOSE("%s:%s Exit", TAG, __func__);
+  QMMF_VERBOSE("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::ReturnBuffer(BufferDescriptor& buffer_descriptor,
                                         void* client_data) {
-  QMMF_VERBOSE("%s:%s Enter", TAG, __func__);
+  QMMF_VERBOSE("%s Enter", __func__);
 
   status_t ret = 0;
   bool found = false;
@@ -313,7 +314,7 @@ status_t TranscoderSource::ReturnBuffer(BufferDescriptor& buffer_descriptor,
   for (; it != occupy_buffer_queue_.End(); ++it) {
     // TODO: to use BufId instead of Vaddr
     if (it->GetVaddr() == buffer_descriptor.data) {
-      QMMF_VERBOSE("%s:%s Buffer found", TAG, __func__);
+      QMMF_VERBOSE("%s Buffer found", __func__);
       unfilled_frame_queue_.PushBack(*it);
       occupy_buffer_queue_.Erase(it);
       lock_guard<mutex> lg(wait_for_unfilled_frame_mutex_);
@@ -325,24 +326,24 @@ status_t TranscoderSource::ReturnBuffer(BufferDescriptor& buffer_descriptor,
 
   assert(found == true);
 
-  QMMF_VERBOSE("%s:%s Exit", TAG, __func__);
+  QMMF_VERBOSE("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::NotifyPortEvent(PortEventType event_type,
                                            void* event_data) {
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
 status_t TranscoderSource::DequeTranscodeBuffer(TranscodeBuffer* buffer) {
-  QMMF_VERBOSE("%s:%s Enter", TAG, __func__);
+  QMMF_VERBOSE("%s Enter", __func__);
 
   status_t ret = 0;
   if (unfilled_frame_queue_.Size() <= 0) {
-    QMMF_DEBUG("%s:%s No buffer available to notify wait for new buffer",
-               TAG, __func__);
+    QMMF_DEBUG("%s No buffer available to notify wait for new buffer",
+               __func__);
     unique_lock<mutex> ul(wait_for_unfilled_frame_mutex_);
     if (unfilled_frame_queue_.Size() <= 0)
       wait_for_unfilled_frame_.wait(ul);
@@ -352,19 +353,19 @@ status_t TranscoderSource::DequeTranscodeBuffer(TranscodeBuffer* buffer) {
   unfilled_frame_queue_.Erase(unfilled_frame_queue_.Begin());
   being_filled_frame_queue_.PushBack(*buffer);
 
-  QMMF_VERBOSE("%s:%s Exit", TAG, __func__);
+  QMMF_VERBOSE("%s Exit", __func__);
   return ret;
 }
 
 status_t TranscoderSource::QueueTranscodeBuffer(const TranscodeBuffer& buffer) {
-  QMMF_VERBOSE("%s:%s Enter", TAG, __func__);
+  QMMF_VERBOSE("%s Enter", __func__);
 
   status_t ret = 0;
   bool found = false;
   auto it = being_filled_frame_queue_.Begin();
   for (; it != being_filled_frame_queue_.End(); ++it) {
     if (it->GetBufId() == buffer.GetBufId()) {
-      QMMF_VERBOSE("%s:%s Buffer found", TAG, __func__);
+      QMMF_VERBOSE("%s Buffer found", __func__);
       *it = buffer;
       free_buffer_queue_.PushBack(*it);
       being_filled_frame_queue_.Erase(it);
@@ -376,7 +377,7 @@ status_t TranscoderSource::QueueTranscodeBuffer(const TranscodeBuffer& buffer) {
   }
   assert(found == true);
 
-  QMMF_VERBOSE("%s:%s Exit", TAG, __func__);
+  QMMF_VERBOSE("%s Exit", __func__);
   return ret;
 }
 

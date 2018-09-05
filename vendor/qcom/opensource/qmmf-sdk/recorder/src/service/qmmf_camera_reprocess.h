@@ -29,8 +29,6 @@
 
 #pragma once
 
-#include <utils/RefBase.h>
-
 #include "recorder/src/service/qmmf_recorder_common.h"
 
 namespace qmmf {
@@ -48,7 +46,7 @@ struct PostProcParam {
 typedef std::function
     <void(StreamBuffer in_buffer, StreamBuffer out_buffer)>  PostProcCb;
 
-class ICameraPostProcess : public virtual RefBase {
+class ICameraPostProcess {
 
  public:
 

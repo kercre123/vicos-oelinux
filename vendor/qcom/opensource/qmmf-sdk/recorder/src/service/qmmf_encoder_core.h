@@ -30,21 +30,21 @@
 #pragma once
 
 #include <mutex>
-#include <condition_variable>
 #include <memory>
 #include <vector>
 #include <sys/time.h>
 
-#include <utils/KeyedVector.h>
-
+#include "common/utils/qmmf_condition.h"
+#include "common/codecadaptor/src/qmmf_avcodec.h"
+#include "common/codecadaptor/src/qmmf_jpeg_encode.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_camera_source.h"
-#include "common/codecadaptor/src/qmmf_avcodec.h"
 
 namespace qmmf {
 
 namespace recorder {
 
+using  namespace qmmf::avcodec;
 class TrackEncoder;
 
 class EncoderCore {
@@ -73,8 +73,9 @@ class EncoderCore {
 
   bool isTrackValid(uint32_t track_id);
 
-  // vector <track_id, shared_ptr<TrackEncoder> >
-  DefaultKeyedVector<uint32_t, ::std::shared_ptr<TrackEncoder>> track_encoders_;
+  // map <track_id, shared_ptr<TrackEncoder> >
+  std::mutex  encoder_list_lock_;
+  std::map<uint32_t, ::std::shared_ptr<TrackEncoder>> track_encoders_;
 
   int32_t ion_device_;
 
@@ -140,7 +141,7 @@ class TrackEncoder : public ICodecSource {
   uint32_t TrackId() { return track_params_.track_id; }
 
   VideoTrackParams track_params_;
-  AVCodec*         avcodec_;
+  IAVCodec*        avcodec_;
 
   ::std::vector<BufferDescriptor> output_buffer_list_;
   ::std::vector<struct ion_handle_data> output_ion_list_;
@@ -164,7 +165,7 @@ class TrackEncoder : public ICodecSource {
   ::std::map<int32_t, struct ion_handle_data> fd_ion_handle_map_;
 
   std::mutex                 queue_lock_;
-  std::condition_variable    wait_for_frame_;
+  QCondition                 wait_for_frame_;
 };
 
 }; // namespace recorder

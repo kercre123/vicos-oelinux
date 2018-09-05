@@ -33,12 +33,9 @@
 #include <mutex>
 #include <string>
 
-#include <utils/KeyedVector.h>
-#include <utils/Log.h>
-
 #include "qmmf-plugin/qmmf_alg_plugin.h"
 
-#include "common/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils.h"
 
 #include "../../interface/qmmf_postproc_module.h"
 
@@ -77,6 +74,8 @@ class PostProcAlg : public IPostProcModule,
 
   status_t Stop() override;
 
+  status_t Abort(std::shared_ptr<void> &abort) override;
+
   PostProcIOParam GetInput(const PostProcIOParam &out) override;
 
   status_t ValidateOutput(const PostProcIOParam &output) override;
@@ -91,6 +90,28 @@ class PostProcAlg : public IPostProcModule,
 
  private:
 
+  class recursive_lock_guard {
+  public:
+    recursive_lock_guard(std::recursive_mutex &lock) : lock_(lock) {
+      lock_.lock();
+    }
+    ~recursive_lock_guard() {
+      lock_.unlock();
+    }
+  private:
+    std::recursive_mutex &lock_;
+  };
+
+  enum class State {
+    CREATED,
+    INITIALIZED,
+    ACTIVE,
+    RUNING,
+    ABORTED
+  };
+
+  static const int32_t kBufCount = 3; // count for buffer rotation
+
   PixelFormat GetAlgFormat(BufferFormat format);
 
   BufferFormat GetQmmfFormat(PixelFormat format);
@@ -103,17 +124,21 @@ class PostProcAlg : public IPostProcModule,
   void DumpFrame(AlgBuffer buf, bool input);
 
   std::string                       Lib_;
-  bool                              reprocess_flag_;
-  bool                              ready_to_start_;
   bool                              dump_in_frame_;
   bool                              dump_out_frame_;
   bool                              pass_through_;
   IPostProcEventListener            *listener_;
   void*                             lib_handle_;
   IAlgPlugin                        *algo_;
+  Capabilities                      algo_caps_;
 
   std::map<int32_t, StreamBuffer>   buffs_;
   std::mutex                        buffs_lock_;
+
+  std::recursive_mutex              lock_;
+  State                             state_;
+  std::shared_ptr<void>             abort_;
+  uint32_t                          in_fight_count_;
 
 };
 

@@ -34,7 +34,6 @@ libqmmf_recorder_service_la_SOURCES = $(source_files)
 
 libqmmf_recorder_service_la_CPPFLAGS = -I$(top_srcdir)/include
 libqmmf_recorder_service_la_CPPFLAGS += -I$(top_srcdir)/
-libqmmf_recorder_service_la_CPPFLAGS += -I$(LIBGRALLOC)
 libqmmf_recorder_service_la_CPPFLAGS += -I$(MMCORE_CFLAGS)
 libqmmf_recorder_service_la_CPPFLAGS += -I$(CAMERAHAL_CFLAGS)
 libqmmf_recorder_service_la_CPPFLAGS += -I$(CAMERASTACKCOMMON_CFLAGS)
@@ -45,19 +44,21 @@ libqmmf_recorder_service_la_CPPFLAGS += -I$(OPENMAX_CFLAGS)
 if ENABLE_360
 libqmmf_recorder_service_la_CPPFLAGS += -DENABLE_360
 endif
+libqmmf_recorder_service_la_CPPFLAGS += -DHFR_THRESHOLD=30
 
 libqmmf_recorder_service_la_LDFLAGS  = -llog -lbinder -lutils -lcutils
 libqmmf_recorder_service_la_LDFLAGS  += -lcamera_client -lcamera_metadata
 libqmmf_recorder_service_la_LDFLAGS  += -lhardware -lfastcvopt -lC2D2
 
 libqmmf_recorder_service_la_LIBADD   = ../client/libqmmf_recorder_client.la
+libqmmf_recorder_service_la_LIBADD   += ../../../common/utils/libqmmf_utils.la
 libqmmf_recorder_service_la_LIBADD   += ../../../common/cameraadaptor/libcamera_adaptor.la
 libqmmf_recorder_service_la_LIBADD   += ../../../common/codecadaptor/libcodec_adaptor.la
 libqmmf_recorder_service_la_LIBADD   += ../../../common/audio/src/client/libqmmf_audio_client.la
 libqmmf_recorder_service_la_LIBADD   += ../../../common/overlay/liboverlay.la
 libqmmf_recorder_service_la_LIBADD   += ../../../display/src/client/libqmmf_display_client.la
-libqmmf_recorder_service_la_LIBADD   += ../service/post-process/modules/camera-hal-jpeg/libqmmf_camera_hal_jpeg.la
 libqmmf_recorder_service_la_LIBADD   += ../service/post-process/modules/camera-hal-reproc/libqmmf_camera_hal_reproc.la
 libqmmf_recorder_service_la_LIBADD   += ../service/post-process/modules/jpeg-encoder/libqmmf_jpeg.la
 libqmmf_recorder_service_la_LIBADD   += ../service/post-process/modules/test/libqmmf_postproc_test.la
+libqmmf_recorder_service_la_LIBADD   += ../service/post-process/modules/frame-skip/libqmmf_postproc_frame_skip.la
 libqmmf_recorder_service_la_LIBADD   += ../service/post-process/modules/algo/libqmmf_postproc_algo.la

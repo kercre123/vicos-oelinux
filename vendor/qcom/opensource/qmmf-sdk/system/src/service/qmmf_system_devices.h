@@ -51,6 +51,9 @@ class SystemDevices {
   status_t QueryDeviceCapabilities(const SystemHandle system_handle,
                                    const DeviceId device,
                                    DeviceCaps* caps);
+  status_t Mute(const SystemHandle system_handle,
+                const DeviceId device,
+                const bool mute);
 
  private:
   struct SystemDevice {

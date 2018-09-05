@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "PlayerGTest"
+#define LOG_TAG "PlayerGTest"
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -39,7 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "common/qmmf_common_utils.h"
+#include "common/utils/qmmf_common_utils.h"
 #include "player/test/gtest/qmmf_player_gtest.h"
 
 //#define DEBUG
@@ -50,6 +50,8 @@
 #else
 #define TEST_DBG(...) ((void)0)
 #endif
+
+PlayerGtest::PlayerGtest() : player_() { QMMF_GET_LOG_LEVEL(); }
 
 void PlayerGtest::GetGTestParams()
 {
@@ -63,14 +65,14 @@ void PlayerGtest::GetGTestParams()
 
 void PlayerGtest::playercb(EventType event_type, void *event_data,
                           size_t event_data_size) {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   Event* ev = (Event *)event_data;
 
-  TEST_INFO("%s:%s Event type is %s", TAG, __func__,
+  TEST_INFO("%s Event type is %s", __func__,
       player_test_event_[((int)event_type)]);
 
-  TEST_INFO("%s:%s Player is in %s state", TAG,__func__,
+  TEST_INFO("%s Player is in %s state", __func__,
       statemap_[static_cast<uint32_t>(ev->state)]);
 
   std::map<uint32_t, const char*>::iterator it;
@@ -78,30 +80,30 @@ void PlayerGtest::playercb(EventType event_type, void *event_data,
   it = statemap_.find(static_cast<uint32_t>(ev->state));
   if (it != statemap_.end()) {
     current_state_ = statemap_[static_cast<uint32_t>(ev->state)];
-    TEST_INFO("%s:%s current_state_ is %s", TAG, __func__, current_state_);
+    TEST_INFO("%s current_state_ is %s", __func__, current_state_);
   } else {
-    TEST_ERROR("%s:%s key %u not found", TAG,__func__,
+    TEST_ERROR("%s key %u not found", __func__,
         static_cast<uint32_t>(ev->state));
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
-void PlayerGtest::audiotrackcb(EventType event_type, void *event_data,
-                              size_t event_data_size) {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+void PlayerGtest::audiotrackcb(uint32_t track_id, EventType event_type,
+                               void *event_data, size_t event_data_size) {
+  TEST_INFO("%s: Enter", __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
-void PlayerGtest::videotrackcb(EventType event_type, void *event_data,
-                              size_t event_data_size) {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+void PlayerGtest::videotrackcb(uint32_t track_id, EventType event_type,
+                               void *event_data, size_t event_data_size) {
+  TEST_INFO("%s: Enter", __func__);
+  TEST_INFO("%s: Exit", __func__);
 }
 
 void PlayerGtest::SetUp() {
 
-  TEST_INFO("%s:%s Enter ", TAG, __func__);
+  TEST_INFO("%s Enter ", __func__);
 
   test_info_ = ::testing::UnitTest::GetInstance()->current_test_info();
 
@@ -131,12 +133,12 @@ void PlayerGtest::SetUp() {
   codec_type_.push_back("amr");
   codec_type_.push_back("g711");
 
-  TEST_INFO("%s:%s Exit ", TAG, __func__);
+  TEST_INFO("%s Exit ", __func__);
 }
 
 void PlayerGtest::TearDown() {
-  TEST_INFO("%s:%s Enter ", TAG, __func__);
-  TEST_INFO("%s:%s Exit ", TAG, __func__);
+  TEST_INFO("%s Enter ", __func__);
+  TEST_INFO("%s Exit ", __func__);
 }
 
 int32_t PlayerGtest::Init() {
@@ -165,7 +167,7 @@ TEST_F(PlayerGtest, ConnectToService) {
 
   for(uint32_t i = 1; i <= iteration_count_; i++) {
     fprintf(stderr,"test iteration = %d/%d\n", i, iteration_count_);
-    TEST_INFO("%s:%s: Running Test(%s) iteration = %d ", TAG, __func__,
+    TEST_INFO("%s: Running Test(%s) iteration = %d ", __func__,
         test_info_->name(), i);
 
    auto ret = player_.Connect(player_cb_);
@@ -221,7 +223,7 @@ TEST_F(PlayerGtest, AllocDeallocBufAudioPlayback) {
 
     for(uint32_t i = 1; i <= iteration_count_; i++) {
       fprintf(stderr,"test iteration = %d/%d\n", i, iteration_count_);
-      TEST_INFO("%s:%s: Running Test(%s) iteration = %d ", TAG, __func__,
+      TEST_INFO("%s: Running Test(%s) iteration = %d ", __func__,
           test_info_->name(), i);
 
       ret = Prepare();
@@ -304,7 +306,7 @@ TEST_F(PlayerGtest, StartStopAudioPlayback) {
 
     for(uint32_t i = 1; i <= iteration_count_; i++) {
       fprintf(stderr,"test iteration = %d/%d\n", i, iteration_count_);
-      TEST_INFO("%s:%s: Running Test(%s) iteration = %d ", TAG, __func__,
+      TEST_INFO("%s: Running Test(%s) iteration = %d ", __func__,
           test_info_->name(), i);
 
       ret = Start();
@@ -384,7 +386,7 @@ TEST_F(PlayerGtest, RepeatedAudioPlayback) {
 
     for(uint32_t i = 1; i <= iteration_count_; i++) {
       fprintf(stderr,"test iteration = %d/%d\n", i, iteration_count_);
-      TEST_INFO("%s:%s: Running Test(%s) iteration = %d ", TAG, __func__,
+      TEST_INFO("%s: Running Test(%s) iteration = %d ", __func__,
           test_info_->name(), i);
 
       ret = Start();
@@ -418,7 +420,7 @@ TEST_F(PlayerGtest, RepeatedAudioPlayback) {
 }
 
 int32_t PlayerGtest::ParseFile(AudioTrackCreateParam& audio_track_param_) {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   auto result = 0;
 
@@ -428,7 +430,7 @@ int32_t PlayerGtest::ParseFile(AudioTrackCreateParam& audio_track_param_) {
       aac_file_io_ = new AACfileIO("/data/misc/qmmf/test.aac");
       result = aac_file_io_->Fillparams(&audio_track_param_);
       if (result != NO_ERROR) {
-        TEST_INFO("%s:%s Could not fill the AAC params", TAG, __func__);
+        TEST_INFO("%s Could not fill the AAC params", __func__);
       }
       break;
 
@@ -436,7 +438,7 @@ int32_t PlayerGtest::ParseFile(AudioTrackCreateParam& audio_track_param_) {
       g711_file_io_ = new G711fileIO("/data/misc/qmmf/test.g711");
       result = g711_file_io_->Fillparams(&audio_track_param_);
       if (result != NO_ERROR) {
-        TEST_INFO("%s:%s Could not fill the G711 params", TAG, __func__);
+        TEST_INFO("%s Could not fill the G711 params", __func__);
       }
       break;
 
@@ -444,7 +446,7 @@ int32_t PlayerGtest::ParseFile(AudioTrackCreateParam& audio_track_param_) {
       amr_file_io_ = new AMRfileIO("/data/misc/qmmf/test.amr");
       result = amr_file_io_->Fillparams(&audio_track_param_);
       if (result != NO_ERROR) {
-        TEST_INFO("%s:%s Could not fill the AMR params", TAG, __func__);
+        TEST_INFO("%s Could not fill the AMR params", __func__);
       }
       break;
 
@@ -452,12 +454,12 @@ int32_t PlayerGtest::ParseFile(AudioTrackCreateParam& audio_track_param_) {
       break;
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return result;
 }
 
 int32_t PlayerGtest::Prepare() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   std::lock_guard<std::mutex> lock(state_change_lock_);
 
   auto result = 0;
@@ -468,7 +470,7 @@ int32_t PlayerGtest::Prepare() {
 
   result = ParseFile(audio_track_param_);
   if (result != NO_ERROR) {
-    TEST_ERROR("%s:%s unable to parse file", TAG, __func__);
+    TEST_ERROR("%s unable to parse file", __func__);
     return result;
   }
 
@@ -477,32 +479,32 @@ int32_t PlayerGtest::Prepare() {
 
   audio_track_param_.out_device  = AudioOutSubtype::kBuiltIn;
 
-  audio_track_cb_.event_cb = [&] (EventType event_type, void *event_data,
-      size_t event_data_size) {audiotrackcb(event_type, event_data,
-      event_data_size);};
+  audio_track_cb_.event_cb = [&] (uint32_t track_id, EventType event_type,
+      void *event_data, size_t event_data_size) {audiotrackcb(track_id,
+      event_type, event_data, event_data_size);};
 
   result = player_.CreateAudioTrack(track_id_1,audio_track_param_,
       audio_track_cb_);
   if (result != NO_ERROR) {
-    TEST_ERROR("%s:%s Failed to CreateAudioTrack", TAG, __func__);
+    TEST_ERROR("%s Failed to CreateAudioTrack", __func__);
     return result;
   }
 
   result = player_.Prepare();
   if (result != NO_ERROR) {
-    TEST_ERROR("%s:%s Failed to Prepare", TAG, __func__);
+    TEST_ERROR("%s Failed to Prepare", __func__);
     player_.DeleteAudioTrack(track_id_1);
     return result;
   }
 
   start_again_ = false;
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return result;
 }
 
 int32_t PlayerGtest::Start() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   std::lock_guard<std::mutex> lock(state_change_lock_);
 
   auto ret = 0;
@@ -513,14 +515,14 @@ int32_t PlayerGtest::Start() {
     memset(&audio_track_param_, 0x0, sizeof audio_track_param_);
     ret = ParseFile(audio_track_param_);
     if (ret != NO_ERROR) {
-      TEST_ERROR("%s:%s unable to parse file", TAG, __func__);
+      TEST_ERROR("%s unable to parse file", __func__);
       return ret;
     }
   }
 
   ret = player_.Start();
   if (ret != NO_ERROR) {
-    TEST_ERROR("%s:%s unable to start playabck", TAG, __func__);
+    TEST_ERROR("%s unable to start playabck", __func__);
     return ret;
   }
 
@@ -530,16 +532,16 @@ int32_t PlayerGtest::Start() {
   ret = pthread_create(&start_thread_id, NULL, PlayerGtest::StartPlaying,
                        (void*)this);
   if (ret != NO_ERROR) {
-    TEST_ERROR("%s:%s unable to create StartPlaying thread", TAG, __func__);
+    TEST_ERROR("%s unable to create StartPlaying thread", __func__);
     return ret;
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return ret;
 }
 
 void * PlayerGtest::StartPlaying(void *ptr) {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   auto ret = 0;
 
@@ -600,7 +602,7 @@ void * PlayerGtest::StartPlaying(void *ptr) {
 
     if (result != 0 || playergtest->stopped_) {
       //EOF reached or Stopped
-      TEST_INFO("%s:%s:File read completed result is %d", TAG, __func__, result);
+      TEST_INFO("%s:File read completed result is %d", __func__, result);
       buffers[0].flag = 1;
       ret = playergtest->player_.QueueInputBuffer(track_id_1,buffers,(void*)&val,
           sizeof (uint32_t),TrackMetaBufferType::kNone);
@@ -616,9 +618,9 @@ void * PlayerGtest::StartPlaying(void *ptr) {
       break;
     }
 
-    TEST_DBG("%s:%s: filled_size %d", TAG, __func__, buffers[0].filled_size);
-    TEST_DBG("%s:%s: buffer size %d", TAG, __func__, buffers[0].size);
-    TEST_DBG("%s:%s: vaddr 0x%p", TAG, __func__, buffers[0].data);
+    TEST_DBG("%s: filled_size %d", __func__, buffers[0].filled_size);
+    TEST_DBG("%s: buffer size %d", __func__, buffers[0].size);
+    TEST_DBG("%s: vaddr 0x%p", __func__, buffers[0].data);
 
     ret = playergtest->player_.QueueInputBuffer(track_id_1,buffers,(void*)&val,
         sizeof (uint32_t),TrackMetaBufferType::kNone);
@@ -628,30 +630,30 @@ void * PlayerGtest::StartPlaying(void *ptr) {
 
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return NULL;
 }
 
 int32_t PlayerGtest::Stop() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
 
   std::lock_guard<std::mutex> lock(state_change_lock_);
   stopped_ = true;
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return 0;
 }
 
 int32_t PlayerGtest::StopPlaying() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   std::lock_guard<std::mutex> lock(state_change_lock_);
   auto ret = -1;
 
   pthread_join(start_thread_id, NULL);
 
-  ret = player_.Stop(false);
+  ret = player_.Stop();
   if (ret != NO_ERROR) {
-    TEST_ERROR("%s:%s Failed to Stop", TAG, __func__);
+    TEST_ERROR("%s Failed to Stop", __func__);
   }
 
   switch (filetype_) {
@@ -667,53 +669,53 @@ int32_t PlayerGtest::StopPlaying() {
   }
 
   start_again_ = true;
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return ret;
 }
 
 int32_t PlayerGtest::Pause() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   std::lock_guard<std::mutex> lock(state_change_lock_);
 
   paused_ = true;
 
   auto ret = player_.Pause();
   if (ret != NO_ERROR) {
-    TEST_ERROR("%s:%s Failed to Pause", TAG, __func__);
+    TEST_ERROR("%s Failed to Pause", __func__);
     return ret;
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return ret;
 }
 
 int32_t PlayerGtest::Resume() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   std::lock_guard<std::mutex> lock(state_change_lock_);
   paused_ = false;
 
   auto ret = player_.Resume();
   if (ret != NO_ERROR) {
-    TEST_ERROR("%s:%s Failed to Resume", TAG, __func__);
+    TEST_ERROR("%s Failed to Resume", __func__);
     return ret;
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return ret;
 }
 
 int32_t PlayerGtest::Delete() {
-  TEST_INFO("%s:%s: Enter", TAG, __func__);
+  TEST_INFO("%s: Enter", __func__);
   std::lock_guard<std::mutex> lock(state_change_lock_);
 
   auto ret = 0;
   uint32_t track_id_1 =1;
   ret = player_.DeleteAudioTrack(track_id_1);
   if (ret != NO_ERROR) {
-    TEST_ERROR("%s:%s Failed to DeleteAudioTrack", TAG, __func__);
+    TEST_ERROR("%s Failed to DeleteAudioTrack", __func__);
     return ret;
   }
 
-  TEST_INFO("%s:%s: Exit", TAG, __func__);
+  TEST_INFO("%s: Exit", __func__);
   return ret;
 }

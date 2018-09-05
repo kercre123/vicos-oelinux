@@ -1,6 +1,6 @@
-#!/binbash
+#!/bin/bash
 
-# Copyright (c) 2016, The Linux Foundation. All rights reserved.
+# Copyright (c) 2016,2018, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -27,8 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-CAMERA_ID=0
-[[ "$1" -eq "1" ]] && CAMERA_ID=1
+[[ "$1" -eq "" ]] && CAMERA_ID=0 || CAMERA_ID="$1"
 
 printf "\nStop a session\n"
 curl 'http://localhost:4000/stopsession' -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' -H 'Accept: application/json, text/javascript, */*; q=0.01' -H 'X-Requested-With: XMLHttpRequest' -H 'Connection: keep-alive' --data 'session_id=1&flush=1' -i

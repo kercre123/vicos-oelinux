@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  */
 
@@ -24,12 +24,14 @@
 #include <functional>
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
+#ifdef TARGET_USES_GRALLOC1
+#include <hardware/gralloc1.h>
+#else
 #include <hardware/gralloc.h>
+#endif
 #include <camera/CameraMetadata.h>
 
-#include "common/qmmf_common_utils.h"
-
-#define MAX_PLANE 3
+#include "common/utils/qmmf_common_utils.h"
 
 using namespace android;
 
@@ -50,7 +52,21 @@ typedef struct {
   int32_t grallocFlags;
   uint32_t bufferCount;
   StreamCallback cb;
+  bool is_pp_enabled = true;
+  bool is_zzhdr_enabled = false;
 } CameraStreamParameters;
+
+struct StreamConfiguration {
+  bool is_constrained_high_speed;
+  bool is_raw_only;
+  uint32_t batch_size;
+  uint32_t fps_sensormode_index;
+  CameraStreamParameters *params;
+
+  StreamConfiguration()
+    :  is_constrained_high_speed(false), is_raw_only(false), batch_size(1),
+       fps_sensormode_index(0), params(nullptr) {}
+};
 
 typedef struct Camera3Request_t {
   CameraMetadata metadata;

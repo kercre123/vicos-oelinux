@@ -881,6 +881,10 @@ int32_t EventDB::GetEventsCountForFrame(const char *frame_id) {
     return -1;
   }
 
+  if (!dbRes[0].addr) {
+    return 0;
+  }
+
   int32_t count = *((int32_t *)dbRes[0].addr);
   delete [] (uint8_t *)dbRes[0].addr;
   return count;
@@ -1166,6 +1170,11 @@ int32_t EventDB::GetEventCount(uint32_t *event_count) {
   int32_t res = db_.GetNextResult(q, &dbRes);
   if (res != SQLITE_DONE && res != SQLITE_ROW && res != SQLITE_OK) {
     return SQLITE_ERROR;
+  }
+
+  if (!dbRes[0].addr) {
+    *event_count = 0;
+    return SQLITE_OK;
   }
 
   *event_count = *((int32_t *)dbRes[0].addr);
@@ -1567,8 +1576,10 @@ int32_t EventDB::GetRule(const char *rule_id, vaapi_rule *rule) {
     return res;
   }
 
-  memcpy(rule, dbRes[0].addr, sizeof(vaapi_rule));
-  delete [] (uint8_t *)dbRes[0].addr;
+  if (dbRes[0].addr) {
+    memcpy(rule, dbRes[0].addr, sizeof(vaapi_rule));
+    delete [] (uint8_t *)dbRes[0].addr;
+  }
 
   return SQLITE_OK;
 }
@@ -1652,7 +1663,7 @@ int32_t EnrolledFacesDB::OpenDB() {
   if (!db_.checkIfExisting("EnrollInfo", NULL)) {
     std::stringstream sql;
     sql << "CREATE TABLE EnrollInfo( ";
-    sql << "Id TEXT PRIMARY KEY NOT NULL, ";
+    sql << "Id TEXT NOT NULL, ";
     sql << "DisplayName TEXT, ";
     sql << "ImageId TEXT NOT NULL, ";
     sql << "Type INT, ";
@@ -1703,7 +1714,7 @@ int32_t EnrolledFacesDB::WriteImage(const vaapi_enrollment_info *enroll_info) {
   }
 
   std::stringstream path;
-  path << images_dir_ << "/" << enroll_info->img_id;
+  path << images_dir_ << "/" << enroll_info->img_id << ".jpg";
 
   std::ofstream fs(path.str().c_str(), std::ofstream::binary | std::ofstream::app);
   for (int i = 0; i < 3; i++) {
@@ -1723,7 +1734,7 @@ int32_t EnrolledFacesDB::ReadImage(vaapi_enrollment_info *enroll_info) {
   }
 
   std::stringstream path;
-  path << images_dir_ << "/" << enroll_info->img_id;
+  path << images_dir_ << "/" << enroll_info->img_id << ".jpg";
 
   std::ifstream fs(path.str().c_str(), std::ifstream::binary);
   if (!fs.is_open() || fs.eof()) {
@@ -1756,7 +1767,7 @@ int32_t EnrolledFacesDB::DeleteImage(const char *img_id) {
 
   std::lock_guard<std::mutex> lg(delete_lock_);
   std::stringstream path;
-  path << images_dir_ << "/" << img_id;
+  path << images_dir_ << "/" << img_id << ".jpg";
   remove(path.str().c_str());
   return SQLITE_OK;
 }
@@ -2011,7 +2022,7 @@ int32_t EnrolledFacesDB::GetEnrollInfo(const char *img_id,
 
     if (!dbRes[0].addr) {
       VAM_DB_LOGE("%s: no enroll info entry for %s.", __func__, img_id);
-      return res;
+      return SQLITE_ERROR;
     }
 
     int iArg = 0;
@@ -2038,6 +2049,42 @@ int32_t EnrolledFacesDB::GetEnrollInfo(const char *img_id,
   }
 
   return res;
+}
+
+int32_t EnrolledFacesDB::GetImageIdsFromFeatureId(const char *id,
+                                               std::vector<std::string> *ids) {
+  if (!IsVAAPIIdValid(id) || !ids) {
+    VAM_DB_LOGE("%s: invalid input parameter", __func__);
+    return SQLITE_ERROR;
+  }
+
+  std::stringstream sql;
+  sql << "WHERE Id='" << id << "';";
+
+  return GetMultipleIDs(sql.str().c_str(), "ImageId", ids);
+}
+
+bool EnrolledFacesDB::IsFeatureId(const char *id) {
+  std::stringstream sql;
+  sql << "SELECT COUNT(*) FROM EnrollInfo WHERE Id='" << id << "';";
+
+  vector<SQLiteDataEntry> dbRes;
+  SQLiteDataEntry e;
+  e.type = SQLiteDataType::INTEGER;
+  e.addr = NULL;
+  dbRes.push_back(e);
+
+  SQLiteQuery *q = db_.PrepareQuery(sql.str().c_str());
+  SQLiteQueryCleanup qc(q, &db_);
+  int32_t res = db_.GetNextResult(q, &dbRes);
+  if (res != SQLITE_DONE && res != SQLITE_ROW && res != SQLITE_OK) {
+    return false;
+  }
+
+  uint32_t count = *((uint32_t *)dbRes[0].addr);
+  delete [] (uint8_t *)dbRes[0].addr;
+
+  return (count > 0);
 }
 
 } //namespace database ends here

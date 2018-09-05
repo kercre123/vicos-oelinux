@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -71,7 +71,6 @@ enum QMMF_PLAYER_SERVICE_CMDS {
   PLAYER_RESUME,
   PLAYER_SET_POSITION,
   PLAYER_SET_TRICKMODE,
-  PLAYER_GRAB_PICTURE,
 };
 
 
@@ -134,53 +133,38 @@ class IPlayerService : public IInterface {
   DECLARE_META_INTERFACE(PlayerService);
 
   virtual status_t Connect(const sp<IPlayerServiceCallback>& service_cb) = 0;
-
   virtual status_t Disconnect() = 0;
 
-  virtual status_t CreateAudioTrack(
-      uint32_t track_id,
-      AudioTrackCreateParam& param) = 0;
-
-  virtual status_t CreateVideoTrack(
-      uint32_t track_id,
-      VideoTrackCreateParam& param) = 0;
-
+  virtual status_t CreateAudioTrack(uint32_t track_id,
+                                    AudioTrackCreateParam& param) = 0;
+  virtual status_t CreateVideoTrack(uint32_t track_id,
+                                    VideoTrackCreateParam& param) = 0;
   virtual status_t DeleteAudioTrack(uint32_t track_id) = 0;
-
   virtual status_t DeleteVideoTrack(uint32_t track_id) = 0;
 
+
+  virtual status_t DequeueInputBuffer(uint32_t track_id,
+                                      std::vector<AVCodecBuffer>& buffers) = 0;
+  virtual status_t QueueInputBuffer(uint32_t track_id,
+                                    std::vector<AVCodecBuffer>& buffers,
+                                    void *meta_param,
+                                    size_t meta_size,
+                                    TrackMetaBufferType meta_type) = 0;
+
   virtual status_t Prepare() = 0;
-
-  virtual status_t DequeueInputBuffer(
-      uint32_t track_id,
-      std::vector<AVCodecBuffer>& buffers) = 0;
-
-  virtual status_t QueueInputBuffer(
-      uint32_t track_id,
-      std::vector<AVCodecBuffer>& buffers,
-      void *meta_param,
-      size_t meta_size,
-      TrackMetaBufferType meta_type) = 0;
-
   virtual status_t Start() = 0;
-
-  virtual status_t Stop(bool do_flush) = 0;
-
-  virtual status_t Pause() = 0;
-
+  virtual status_t Stop(const PictureParam& params) = 0;
+  virtual status_t Pause(const PictureParam& params) = 0;
   virtual status_t Resume() = 0;
 
   virtual status_t SetPosition(int64_t seek_time) = 0;
-
-  virtual status_t SetTrickMode(TrickModeSpeed speed, TrickModeDirection dir) = 0;
-
-  virtual status_t GrabPicture(PictureParam param) = 0;
+  virtual status_t SetTrickMode(TrickModeSpeed speed,
+                                TrickModeDirection dir) = 0;
 
   virtual status_t SetAudioTrackParam(uint32_t track_id,
                                       CodecParamType type,
                                       void *param,
                                       size_t param_size) = 0;
-
   virtual status_t SetVideoTrackParam(uint32_t track_id,
                                       CodecParamType type,
                                       void *param,
@@ -190,9 +174,7 @@ class IPlayerService : public IInterface {
 
 enum PLAYER_SERVICE_CB_CMDS {
   PLAYER_NOTIFY_EVENT=IBinder::FIRST_CALL_TRANSACTION,
-  PLAYER_NOTIFY_VIDEO_TRACK_DATA,
   PLAYER_NOTIFY_VIDEO_TRACK_EVENT,
-  PLAYER_NOTIFY_AUDIO_TRACK_DATA,
   PLAYER_NOTIFY_AUDIO_TRACK_EVENT,
   PLAYER_NOTIFY_GRAB_PICTURE_DATA,
 };
@@ -205,36 +187,16 @@ class IPlayerServiceCallback : public IInterface {
   virtual void NotifyPlayerEvent(EventType event_type, void *event_data,
                                  size_t event_data_size) = 0;
 
-  virtual void NotifyVideoTrackData(uint32_t track_id,
-                                    std::vector<BnTrackBuffer> &buffers,
-                                    void *meta_param,
-                                    TrackMetaBufferType meta_type,
-                                    size_t meta_size) = 0;
-
   virtual void NotifyVideoTrackEvent(uint32_t track_id, EventType event_type,
                                      void *event_data,
                                      size_t event_data_size) = 0;
-
-  virtual void NotifyAudioTrackData(uint32_t track_id,
-                                    const std::vector<BnTrackBuffer>& buffers,
-                                    void *meta_param,
-                                    TrackMetaBufferType meta_type,
-                                    size_t meta_size) = 0;
 
   virtual void NotifyAudioTrackEvent(uint32_t track_id, EventType event_type,
                                      void *event_data,
                                      size_t event_data_size) = 0;
 
-  virtual void NotifyGrabPictureData(BufferDescriptor& buffer) = 0;
-
-  // This method is not exposed to client as a callback, it is just to update
-  // Internal data structure, ServiceCallbackHandler is not forced to implement
-  // this method.
-  virtual void NotifyDeleteVideoTrack(uint32_t track_id
-      __attribute__((__unused__))) {}
-
-  virtual void NotifyDeleteAudioTrack(uint32_t track_id
-      __attribute__((__unused__))) {}
+  virtual void NotifyGrabPictureData(uint32_t track_id,
+                                     BufferDescriptor& buffer) = 0;
 };
 
 // This class is responsible to provide callbacks from player service.

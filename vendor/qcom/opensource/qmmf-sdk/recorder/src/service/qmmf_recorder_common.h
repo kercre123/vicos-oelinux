@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,12 +29,10 @@
 
 #pragma once
 
-#include <utils/List.h>
-#include <utils/Mutex.h>
 
 #include "qmmf-sdk/qmmf_recorder_params.h"
-#include "common/qmmf_common_utils.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_common_utils.h"
+#include "common/utils/qmmf_log.h"
 
 #include "recorder/src/client/qmmf_recorder_service_intf.h"
 #include "common/cameraadaptor/qmmf_camera3_device_client.h"
@@ -51,7 +49,7 @@
 
 //#define NO_FRAME_PROCESS
 
-#define BUFFER_WAIT_TIMEOUT 500000000  // 500 ms
+#define BUFFER_WAIT_TIMEOUT 1000000000  // 1 sec
 
 // Enable DUMP_BITSTREAM to enable encoded data at TrackEncoder layer.
 //#define DUMP_BITSTREAM
@@ -73,6 +71,7 @@ enum class TrackType {
 enum class CameraStreamFormat {
   kNV12,
   kNV21,
+  kRAW8,
   kRAW10,
   kRAW12,
 };
@@ -125,6 +124,9 @@ struct CameraStreamParam {
   float              frame_rate;
   uint32_t           id;
   bool               low_power_mode;
+  bool               wait_aec_mode;
+  int32_t            rotation;
+  bool               is_zzhdr_enabled;
 };
 
 struct Buffer {

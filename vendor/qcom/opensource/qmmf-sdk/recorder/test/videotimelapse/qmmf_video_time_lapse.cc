@@ -53,22 +53,27 @@ using namespace qmmf::avcodec;
 using namespace android;
 
 #define TIMELAPSE_DEBUG 0
+#define OUTPUT_BUFFER_COUNT (6)
 
 const uint32_t TimeLapse::kLPMTrackId = 1;
 const uint32_t TimeLapse::kLPMTrackWidth = 640;
 const uint32_t TimeLapse::kLPMTrackHeight = 480;
 const uint32_t TimeLapse::kThresholdTime = 3000;
 const uint32_t TimeLapse::kSanpShotBufferReturnedWaitTimeOut = 2;  // 2 sec
+const uint32_t TimeLapse::kJPEGImageQuality = 95;
 
 const uint32_t EncoderSource::kEOSFlag = 1;
 
 TimeLapse::TimeLapse(const TimeLapseParams &params)
-    : params_(params),
-      video_time_lapse_mode_(VideoTimeLapseMode::kModeOne),
+    : avcodec_(nullptr),
+      params_(params),
+      time_lapse_mode_(TimeLapseMode::kModeOne),
       session_id_(0),
       ion_device_(-1),
       snapshot_count_(0),
-      atomic_stop_(false) {
+      atomic_stop_(false),
+      video_encode_(true),
+      multicam_mode_(false) {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter ", __func__);
 
   ion_device_ = open("/dev/ion", O_RDONLY);
@@ -87,7 +92,10 @@ TimeLapse::TimeLapse(const TimeLapseParams &params)
 TimeLapse::~TimeLapse() {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter ", __func__);
 
-  if (avcodec_) delete avcodec_;
+  if (avcodec_ != nullptr) {
+    delete avcodec_;
+    avcodec_ = nullptr;
+  }
 
   close(ion_device_);
   ion_device_ = -1;
@@ -108,24 +116,53 @@ int32_t TimeLapse::Start() {
     return ret;
   }
 
-  ret = StartAVCodec();
-  if (NO_ERROR != ret) {
-    ALOGE("%s: StartAVCodec Failed", __func__);
-    return ret;
+  TimeLapseType time_lapse_type =
+      static_cast<TimeLapseType>(params_.time_lapse_type);
+
+  switch (time_lapse_type) {
+    case TimeLapseType::kVideoTimeLapse:
+      multicam_mode_ = false;
+      break;
+    case TimeLapseType::kPhotoTimeLapse:
+      multicam_mode_ = false;
+      video_encode_ = false;
+      break;
+    case TimeLapseType::kStitchedVideoTimeLapse:
+      multicam_type_ = MultiCameraConfigType::k360Stitch;
+      multicam_mode_ = true;
+      break;
+    case TimeLapseType::kStitchedPhotoTimeLapse:
+      multicam_type_ = MultiCameraConfigType::k360Stitch;
+      multicam_mode_ = true;
+      video_encode_ = false;
+      break;
+    case TimeLapseType::kSideBySideVideoTimeLapse:
+      multicam_type_ = MultiCameraConfigType::kSideBySide;
+      multicam_mode_ = true;
+      break;
+    case TimeLapseType::kSideBySidePhotoTimeLapse:
+      multicam_type_ = MultiCameraConfigType::kSideBySide;
+      multicam_mode_ = true;
+      video_encode_ = false;
+      break;
+    default:
+      multicam_mode_ = false;
+      break;
   }
 
-  if (static_cast<TimeLapseMode>(params_.time_lapse_mode) ==
-      TimeLapseMode::kVideoTimeLapse) {
-    if (params_.time_lapse_interval <= kThresholdTime) {
-      video_time_lapse_mode_ = VideoTimeLapseMode::kModeOne;
-    } else {
-      video_time_lapse_mode_ = VideoTimeLapseMode::kModeTwo;
+  if (params_.time_lapse_interval <= kThresholdTime) {
+    time_lapse_mode_ = TimeLapseMode::kModeOne;
+  } else {
+    time_lapse_mode_ = TimeLapseMode::kModeTwo;
+  }
+  time_lapse_thread_ = thread(TimeLapse::TimeLapseModeThread, this);
+
+  if (video_encode_) {
+    ret = StartAVCodec();
+    if (NO_ERROR != ret) {
+      ALOGE("%s: StartAVCodec Failed", __func__);
+      return ret;
     }
-    time_lapse_thread_ = thread(TimeLapse::TimeLapseModeThread, this);
-  } else if (static_cast<TimeLapseMode>(params_.time_lapse_mode) ==
-             TimeLapseMode::kPhotoTimeLapse) {
-    ALOGE("%s: Currently JPEG Mode is not supported", __func__);
-    return INVALID_OPERATION;
   }
 
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Exit", __func__);
@@ -135,10 +172,9 @@ int32_t TimeLapse::Start() {
 void TimeLapse::TimeLapseModeThread(TimeLapse *timelapse) {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
 
-  if (timelapse->video_time_lapse_mode_ == VideoTimeLapseMode::kModeOne) {
+  if (timelapse->time_lapse_mode_ == TimeLapseMode::kModeOne) {
     timelapse->StartTimeLapseModeOne();
-  } else if (timelapse->video_time_lapse_mode_ ==
-             VideoTimeLapseMode::kModeTwo) {
+  } else if (timelapse->time_lapse_mode_ == TimeLapseMode::kModeTwo) {
     timelapse->StartTimeLapseModeTwo();
   }
 
@@ -174,12 +210,19 @@ int32_t TimeLapse::StartTimeLapseModeOne() {
   }
 
   while (!atomic_stop_) {
-    ret = TakeYUVSnapshotandEnqueuetoEncoder();
-    if (NO_ERROR != ret) {
-      ALOGE("%s: Take YUV Snapshtot Failed", __func__);
-      break;
+    if (video_encode_) {
+      ret = TakeYUVSnapshotandEnqueuetoEncoder();
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Take YUV Snapshot Failed", __func__);
+        break;
+      }
+    } else {
+      ret = TakeJPEGSnapshot();
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Take JPEG Snapshot Failed", __func__);
+        break;
+      }
     }
-
     sleep_for(std::chrono::milliseconds(params_.time_lapse_interval));
   }
 
@@ -245,9 +288,16 @@ int32_t TimeLapse::StartTimeLapseModeTwo() {
     snapshot_buffer_returnerd_future_ =
         snapshot_buffer_returned_promise_.get_future();
 
-    ret = TakeYUVSnapshotandEnqueuetoEncoder();
-    if (NO_ERROR != ret) {
-      ALOGE("%s: Take YUV Snapshtot Failed", __func__);
+    if (video_encode_) {
+      ret = TakeYUVSnapshotandEnqueuetoEncoder();
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Take YUV Snapshot Failed", __func__);
+      }
+    } else {
+      ret = TakeJPEGSnapshot();
+      if (NO_ERROR != ret) {
+         ALOGE("%s: Take JPEG Snapshot Failed", __func__);
+      }
     }
 
     auto status = snapshot_buffer_returnerd_future_.wait_for(
@@ -288,7 +338,9 @@ int32_t TimeLapse::StartTimeLapseModeTwo() {
     ALOGD_IF(TIMELAPSE_DEBUG, "%s: Pipeline reconfiguration time =%lld ms",
              __func__, diff);
 
-    sleep_for(std::chrono::milliseconds(params_.time_lapse_interval - diff));
+    if (!atomic_stop_) {
+      sleep_for(std::chrono::milliseconds(params_.time_lapse_interval - diff));
+    }
   }
 
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Exit", __func__);
@@ -298,12 +350,49 @@ int32_t TimeLapse::StartTimeLapseModeTwo() {
 int32_t TimeLapse::StartCamera() {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
   int32_t ret;
-  CameraStartParam camera_start_params{false, 0, 0, 0, 30, 0};
 
-  ret = recorder_.StartCamera(params_.camera_id, camera_start_params);
-  if (NO_ERROR != ret) {
-    ALOGE("%s: StartCamera Failed", __func__);
-    return ret;
+  if (multicam_mode_ == false) {
+
+    CameraStartParam camera_start_params{false, false, 0, 0, 0, 30, 0};
+
+    ret = recorder_.StartCamera(params_.camera_id, camera_start_params);
+    cam_id_ = params_.camera_id;
+    if (NO_ERROR != ret) {
+      ALOGE("%s: StartCamera Failed", __func__);
+      return ret;
+    }
+  } else {
+
+    uint32_t multicam_id;
+    multicam_id = 0;
+
+    memset(&multicam_start_params_, 0x0, sizeof multicam_start_params_);
+    multicam_start_params_.zsl_mode         = false;
+    multicam_start_params_.enable_partial_metadata = false;
+    multicam_start_params_.flags            = 0x0;
+
+    std::vector<uint32_t> camera_ids;
+    camera_ids.push_back(params_.camera_id);
+    camera_ids.push_back(params_.camera_id_2);
+
+    ret = recorder_.CreateMultiCamera(camera_ids, &multicam_id);
+    if (NO_ERROR != ret) {
+      ALOGE("%s: CreateMultiCamera Failed", __func__);
+      return ret;
+    }
+    cam_id_ = multicam_id;
+
+    ret = recorder_.ConfigureMultiCamera(cam_id_, multicam_type_, nullptr, 0);
+    if (NO_ERROR != ret) {
+      ALOGE("%s: ConfigureMultiCamera Failed", __func__);
+      return ret;
+    }
+
+    ret = recorder_.StartCamera(cam_id_, multicam_start_params_);
+    if (NO_ERROR != ret) {
+      ALOGE("%s: StartCamera Failed", __func__);
+      return ret;
+    }
   }
 
   if (!ResolutionSupported(params_.width, params_.height)) {
@@ -317,13 +406,14 @@ int32_t TimeLapse::StartCamera() {
 
 bool TimeLapse::ResolutionSupported(uint32_t width, uint32_t height) {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
-  int32_t ret;
+  int32_t ret = 0;
 
   std::vector<android::CameraMetadata> meta_array;
   camera_metadata_entry_t entry;
   android::CameraMetadata meta;
 
-  ret = recorder_.GetDefaultCaptureParam(params_.camera_id, meta);
+  ret = recorder_.GetDefaultCaptureParam(cam_id_, meta);
+
   if (NO_ERROR != ret) {
     ALOGE("%s: Unable to query default capture parameters!\n", __func__);
     return false;
@@ -351,7 +441,7 @@ bool TimeLapse::ResolutionSupported(uint32_t width, uint32_t height) {
 }
 
 int32_t TimeLapse::StopCamera() {
-  return recorder_.StopCamera(params_.camera_id);
+  return recorder_.StopCamera(cam_id_);
 }
 
 int32_t TimeLapse::CreateSession() {
@@ -408,7 +498,7 @@ int32_t TimeLapse::StopAVCodec() {
 
   encoder_source_->SetEOS();
 
-  ret = avcodec_->StopCodec();
+  ret = avcodec_->StopCodec(true);
   if (NO_ERROR != ret) {
     ALOGE("%s: StopCodec Failed", __func__);
     return ret;
@@ -422,16 +512,20 @@ int32_t TimeLapse::Stop() {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
   int32_t ret;
 
-  ret = StopAVCodec();
-  if (NO_ERROR != ret) {
-    ALOGE("%s: StopAVCodec Failed", __func__);
+  if (video_encode_) {
+    ret = StopAVCodec();
+    if (NO_ERROR != ret) {
+      ALOGE("%s: StopAVCodec Failed", __func__);
+    }
   }
 
   atomic_stop_ = true;
 
-  ret = ReleaseBuffer();
-  if (NO_ERROR != ret) {
-    ALOGE("%s: failed to release allocated buffers", __func__);
+  if (video_encode_) {
+    ret = ReleaseBuffer();
+    if (NO_ERROR != ret) {
+      ALOGE("%s: failed to release allocated buffers", __func__);
+    }
   }
 
   time_lapse_thread_.join();
@@ -453,8 +547,19 @@ int32_t TimeLapse::CreateLPMTrack() {
           kLPMTrackHeight);
   }
 
-  VideoTrackCreateParam video_track_param{params_.camera_id, VideoFormat::kYUV,
-                                          kLPMTrackWidth, kLPMTrackHeight, 30};
+  VideoTrackCreateParam video_track_param;
+
+  if (multicam_mode_ == true) {
+    VideoTrackCreateParam video_track_param1 {cam_id_, VideoFormat::kYUV,
+                                              2*kLPMTrackHeight, kLPMTrackHeight, 30};
+    video_track_param = video_track_param1;
+  } else {
+    VideoTrackCreateParam video_track_param2 {cam_id_, VideoFormat::kYUV,
+                                             kLPMTrackWidth, kLPMTrackHeight, 30};
+   video_track_param = video_track_param2;
+  }
+
+  video_track_param.low_power_mode = true;
 
   TrackCb video_track_cb;
   video_track_cb.data_cb = {[&](uint32_t track_id,
@@ -479,18 +584,28 @@ int32_t TimeLapse::DeleteLPMTrack() {
 
 int32_t TimeLapse::TakeYUVSnapshotandEnqueuetoEncoder() {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
+  int32_t ret = 0;
 
-  ImageParam image_param{params_.width, params_.height, 0, ImageFormat::kNV12};
+  ImageParam image_param {params_.width, params_.height, 0, ImageFormat::kNV12};
 
   std::vector<android::CameraMetadata> meta_array;
+  CameraMetadata meta;
+  ret = recorder_.GetDefaultCaptureParam(cam_id_, meta);
+  if (NO_ERROR != ret) {
+    ALOGE("%s: Unable to query default capture parameters!\n", __func__);
+    return ret;
+  }
+
+  meta_array.push_back(meta);
+
   ImageCaptureCb cb;
   cb = {[&](uint32_t camera_id, uint32_t image_count, BufferDescriptor buffer,
             MetaData meta_data) {
     YUVSnapshotCb(camera_id, image_count, buffer, meta_data);
   }};
 
-  int32_t ret =
-      recorder_.CaptureImage(params_.camera_id, image_param, 1, meta_array, cb);
+  ret = recorder_.CaptureImage(cam_id_, image_param, 1, meta_array, cb);
+
   if (NO_ERROR != ret) {
     ALOGE("%s: CaptureImage Failed", __func__);
   }
@@ -504,9 +619,8 @@ void TimeLapse::YUVSnapshotCb(uint32_t camera_id, uint32_t image_sequence_count,
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
 
   if (atomic_stop_) {
-    int32_t ret = 0;
     // Return buffer back to recorder service.
-    ret = recorder_.ReturnImageCaptureBuffer(params_.camera_id, buffer);
+    int32_t ret = recorder_.ReturnImageCaptureBuffer(cam_id_, buffer);
     if (NO_ERROR != ret) {
       ALOGE("%s: ReturnImageCaptureBuffer failed", __func__);
     }
@@ -516,21 +630,99 @@ void TimeLapse::YUVSnapshotCb(uint32_t camera_id, uint32_t image_sequence_count,
     DumpYUVSnapShot(buffer);
   }
 
-  encoder_source_->ConsumeBuffer(buffer);
+  encoder_source_->ConsumeBuffer(buffer, meta_data);
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Exit", __func__);
 }
 
 void TimeLapse::ReturnYUVSnapshotBuffer(BufferDescriptor &buffer) {
   ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
-  int32_t ret = 0;
 
   // Return buffer back to recorder service.
-  ret = recorder_.ReturnImageCaptureBuffer(params_.camera_id, buffer);
+  int32_t ret = recorder_.ReturnImageCaptureBuffer(cam_id_, buffer);
   if (NO_ERROR != ret) {
     ALOGE("%s: ReturnImageCaptureBuffer failed", __func__);
   }
 
-  if (video_time_lapse_mode_ == VideoTimeLapseMode::kModeTwo) {
+  if (time_lapse_mode_ == TimeLapseMode::kModeTwo) {
+    snapshot_buffer_returned_promise_.set_value(1);
+  }
+
+  ALOGD_IF(TIMELAPSE_DEBUG, "%s: Exit", __func__);
+}
+
+int32_t TimeLapse::TakeJPEGSnapshot() {
+  ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
+  int32_t ret = 0;
+
+  ImageParam image_param{params_.width, params_.height, kJPEGImageQuality,
+      ImageFormat::kJPEG};
+
+  std::vector<android::CameraMetadata> meta_array;
+  CameraMetadata meta;
+  ret = recorder_.GetDefaultCaptureParam(cam_id_, meta);
+  if (NO_ERROR != ret) {
+    ALOGE("%s: Unable to query default capture parameters!\n", __func__);
+    return ret;
+  }
+
+  meta_array.push_back(meta);
+
+  ImageCaptureCb cb;
+  cb = {[&](uint32_t camera_id, uint32_t image_count, BufferDescriptor buffer,
+            MetaData meta_data) {
+    JPEGSnapshotCb(camera_id, image_count, buffer, meta_data);
+  }};
+
+  ret = recorder_.CaptureImage(cam_id_, image_param, 1, meta_array, cb);
+  if (NO_ERROR != ret) {
+    ALOGE("%s: CaptureImage Failed", __func__);
+  }
+
+  ALOGD_IF(TIMELAPSE_DEBUG, "%s: Exit", __func__);
+  return ret;
+}
+
+void TimeLapse::JPEGSnapshotCb(uint32_t camera_id, uint32_t image_sequence_count,
+                              BufferDescriptor buffer, MetaData meta_data) {
+  ALOGD_IF(TIMELAPSE_DEBUG, "%s: Enter", __func__);
+  int32_t ret = 0;
+
+  std::ofstream snapshot_file;
+  std::ostringstream snapshot_file_path;
+  std::streampos before;
+  std::streampos after;
+
+  auto time_now = std::chrono::system_clock::now();
+  auto time_us = std::chrono::duration_cast<std::chrono::microseconds>(
+      time_now.time_since_epoch());
+
+  snapshot_file_path << jpeg_snapshot_file_name_preamble;
+  snapshot_file_path << params_.width << "x" << params_.height << "_";
+  snapshot_file_path << time_us.count() << ".jpg";
+
+  snapshot_file.open(snapshot_file_path.str(),
+      std::ios::out | std::ios::binary | std::ios::trunc);
+
+  if (snapshot_file.is_open()) {
+    before = snapshot_file.tellp();
+    snapshot_file.write(reinterpret_cast<const char *>(buffer.data), buffer.size);
+    after = snapshot_file.tellp();
+    if (after - before != buffer.size) {
+      ALOGE("%s: Bad Write error (%d):(%s)\n", __func__, errno, strerror(errno));
+    }
+    snapshot_file.close();
+  } else {
+    ALOGE("%s: error opening file[%s]", __func__,
+        (snapshot_file_path.str()).c_str());
+  }
+
+  // Return buffer back to recorder service.
+  ret = recorder_.ReturnImageCaptureBuffer(cam_id_, buffer);
+  if (NO_ERROR != ret) {
+    ALOGE("%s: ReturnImageCaptureBuffer failed", __func__);
+  }
+
+  if (time_lapse_mode_ == TimeLapseMode::kModeTwo) {
     snapshot_buffer_returned_promise_.set_value(1);
   }
 
@@ -556,7 +748,7 @@ int32_t TimeLapse::SetupAVCodec(const TimeLapseParams &params) {
       break;
   }
 
-  VideoTrackCreateParam video_track_params{params.camera_id, format,
+  VideoTrackCreateParam video_track_params{cam_id_, format,
                                            params.width, params.height,
                                            static_cast<float>(params.fps)};
 
@@ -588,7 +780,8 @@ int32_t TimeLapse::SetupAVCodec(const TimeLapseParams &params) {
     return ret;
   }
 
-  encoder_source_ = make_shared<EncoderSource>(ret_buf_cb, params_.fps, size);
+  encoder_source_ = make_shared<EncoderSource>(ret_buf_cb, params_.fps, size,
+      params.width, params.height);
   if (encoder_source_.get() == nullptr) {
     ALOGE("%s: failed to create input source", __func__);
     return NO_MEMORY;
@@ -677,16 +870,16 @@ int32_t TimeLapse::AllocateBuffer(uint32_t index) {
     return ret;
   }
 
+  count = OUTPUT_BUFFER_COUNT;
   struct ion_allocation_data alloc;
   struct ion_fd_data ionFdData;
 
   void *vaddr = nullptr;
 
   for (uint32_t i = 0; i < count; i++) {
-    BufferDescriptor buffer;
+    BufferDescriptor buffer{};
     vaddr = nullptr;
 
-    memset(&buffer, 0x0, sizeof(buffer));
     memset(&alloc, 0x0, sizeof(ion_allocation_data));
     memset(&ionFdData, 0x0, sizeof(ion_fd_data));
 
@@ -786,13 +979,16 @@ int32_t TimeLapse::ReleaseBuffer() {
 }
 
 EncoderSource::EncoderSource(ReturnBufferCB &return_buffer_cb,
-                             const uint32_t fps, uint32_t buffer_size)
+                             const uint32_t fps, uint32_t buffer_size,
+                             const uint32_t width, const uint32_t height)
     : atomic_eos_(false), time_stamp_(0) {
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: Enter ", __func__);
 
   buffer_size_ = buffer_size;
   encode_fps_ = fps;
   return_buffer_cb_ = return_buffer_cb;
+  encode_width_ = width;
+  encode_height_ = height;
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: Exit", __func__);
 }
 
@@ -808,7 +1004,8 @@ int32_t EncoderSource::NotifyPortEvent(PortEventType event_type,
   return 0;
 }
 
-void EncoderSource::ConsumeBuffer(BufferDescriptor &buffer) {
+void EncoderSource::ConsumeBuffer(BufferDescriptor& buffer,
+                                  MetaData& meta_data) {
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: Enter ", __func__);
 
   std::unique_lock<mutex> lock(wait_for_frame_lock_);
@@ -821,8 +1018,10 @@ void EncoderSource::ConsumeBuffer(BufferDescriptor &buffer) {
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: codec_buffer.size(%d)", __func__,
            buffer.size);
 
+  buffer_format_ = FromQmmfToHalFormat(meta_data.cam_buffer_meta_data.format);
+
   input_free_buffer_list_.push_back(buffer);
-  wait_for_frame_.notify_one();
+  wait_for_frame_.Signal();
 
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: Exit", __func__);
 }
@@ -834,47 +1033,38 @@ int32_t EncoderSource::GetBuffer(BufferDescriptor &codec_buffer,
 
   std::unique_lock<mutex> lock(wait_for_frame_lock_);
   while (input_free_buffer_list_.size() <= 0) {
-    ALOGW("EncoderSource:%s: No sanpshot available wait for snapshot",
+    ALOGW("EncoderSource:%s: No snapshot available wait for snapshot",
           __func__);
-    wait_for_frame_.wait(lock);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor &buffer = *input_free_buffer_list_.begin();
   lock.unlock();
 
-  int num_fds = 1;
-  int num_ints = 3;
+  private_handle_t *meta_handle = new private_handle_t(static_cast<int>(buffer.fd),
+      static_cast<unsigned int>(buffer.size),
+      private_handle_t::PRIV_FLAGS_VIDEO_ENCODER, 1,
+      static_cast<int>(buffer_format_), static_cast<int>(encode_width_),
+      static_cast<int>(encode_height_));
 
-  // Allocate buffer for MetaData Handle
-  native_handle_t *meta_handle = (native_handle_create(1, 16));
   if (meta_handle == nullptr) {
-    ALOGE("EncoderSource:%s: failed to allocated metabuffer handle", __func__);
+    ALOGD_IF(TIMELAPSE_DEBUG, "%s failed to allocated metabuffer handle", __func__);
     return NO_MEMORY;
   }
+  ALOGD_IF(TIMELAPSE_DEBUG, "%s buffer native handle(%p)", __func__, meta_handle);
 
-  meta_handle->version = sizeof(native_handle_t);
-  meta_handle->numFds = num_fds;
-  meta_handle->numInts = num_ints;
-  meta_handle->data[0] = buffer.fd;
-  meta_handle->data[1] = 0;  // offset
-  meta_handle->data[4] = buffer_size_;
-
-  codec_buffer.data =
-      const_cast<void *>(reinterpret_cast<const void *>(meta_handle));
-  codec_buffer.fd = buffer.fd;
-  codec_buffer.capacity = buffer.capacity;
-  codec_buffer.size = buffer.size;
+  meta_handle->unaligned_width  = static_cast<int>(encode_width_);
+  meta_handle->unaligned_height = static_cast<int>(encode_height_);
+  codec_buffer.data = reinterpret_cast<void*>(meta_handle);
 
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: codec_buffer.data(0x%p)",
            __func__, codec_buffer.data);
-  ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: codec_buffer.fd(%d)", __func__,
-           codec_buffer.fd);
-  ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: buffer.capacity(%d)", __func__,
-           codec_buffer.capacity);
-  ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: codec_buffer.size(%d)", __func__,
-           codec_buffer.size);
-  ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: required buffer size(%d)",
-           __func__, buffer_size_);
+
+  ALOGD_IF(TIMELAPSE_DEBUG, "%s fd = %d offset = %u size = %u width = %d "
+      "height = %d unaligned_width = %d unaligned_height = %d", __func__,
+      meta_handle->fd, meta_handle->offset, meta_handle->size,
+      meta_handle->width, meta_handle->height, meta_handle->unaligned_width,
+      meta_handle->unaligned_height);
 
   if (atomic_eos_) {
     codec_buffer.flag = kEOSFlag;
@@ -912,10 +1102,8 @@ int32_t EncoderSource::ReturnBuffer(BufferDescriptor &codec_buffer,
   return_buffer_cb_(buffer);
   input_occupy_buffer_list_.erase(input_occupy_buffer_list_.begin());
 
-  native_handle_t *meta_handle =
-      reinterpret_cast<native_handle_t *>(codec_buffer.data);
-  native_handle_delete(meta_handle);
-  meta_handle = nullptr;
+  delete reinterpret_cast<private_handle_t *>(codec_buffer.data);
+  codec_buffer.data = nullptr;
 
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: Exit ", __func__);
   return NO_ERROR;
@@ -936,6 +1124,27 @@ int32_t EncoderSource::BufferStatus() {
 }
 
 void EncoderSource::SetEOS() { atomic_eos_ = true; }
+
+int32_t EncoderSource::FromQmmfToHalFormat(BufferFormat& buffer_format) {
+      int32_t format;
+  ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSource:%s: Buffer Format:%d ", __func__,
+      buffer_format);
+  switch (buffer_format) {
+    case BufferFormat::kNV12:
+      format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;
+      break;
+    case BufferFormat::kNV12UBWC:
+      format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+      break;
+    case BufferFormat::kNV21:
+      format = HAL_PIXEL_FORMAT_NV21_ZSL;
+      break;
+    default:
+      format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;
+      break;
+  }
+  return format;
+}
 
 EncoderSink::EncoderSink(string file_name) {
   ALOGD_IF(TIMELAPSE_DEBUG, "EncoderSink:%s: Enter ", __func__);
@@ -986,7 +1195,7 @@ int32_t EncoderSink::GetBuffer(BufferDescriptor &codec_buffer,
   std::unique_lock<mutex> lock(wait_for_frame_lock_);
   while (output_free_buffer_list_.size() <= 0) {
     ALOGW("%s: No buffer available to notify. Wait for new buffer", __func__);
-    wait_for_frame_.wait(lock);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor &buffer = *output_free_buffer_list_.begin();
@@ -1036,7 +1245,7 @@ int32_t EncoderSink::ReturnBuffer(BufferDescriptor &codec_buffer,
       if (((*it).data) == (codec_buffer.data)) {
         output_free_buffer_list_.push_back(*it);
         output_occupy_buffer_list_.erase(it);
-        wait_for_frame_.notify_one();
+        wait_for_frame_.Signal();
         found = true;
         break;
       }

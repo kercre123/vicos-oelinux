@@ -40,7 +40,7 @@ typedef int32_t SystemHandle;
 typedef ::std::function<void(const SystemHandle system_handle,
                              const int32_t error)> SystemErrorHandler;
 typedef ::std::function<void(const SystemHandle system_handle,
-                             const int32_t error)> SystemTriggerHandler;
+    const int32_t error, const BufferDescriptor& buffer)> SystemTriggerHandler;
 typedef ::std::function<void(const SystemHandle system_handle,
                              const DeviceInfo& device)> SystemDeviceHandler;
 typedef ::std::function<void(const SystemHandle system_handle,

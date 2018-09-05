@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -28,7 +28,11 @@
 */
 
 #include <inttypes.h>
-#include <libgralloc/gralloc_priv.h>
+#ifdef TARGET_USES_GRALLOC1
+#include <libgralloc1/gralloc_priv.h>
+#else
+#include <qcom/display/gralloc_priv.h>
+#endif
 #include "qmmf_dual_camera_adaptor_gtest.h"
 
 #define BUFFER_COUNT 4
@@ -69,9 +73,10 @@ void DualCamera3Gtest::SetUp() {
 
 void DualCamera3Gtest::StreamCb(StreamBuffer buffer) {
   String8 path;
-  alloc_device_t *grallocDevice = device_client_->GetGrallocDevice();
+  mem_alloc_device allocDevice =
+      device_client_->alloc_device_interface_->GetDevice();
   gralloc_module_t const *mapper = reinterpret_cast<gralloc_module_t const *>(
-        grallocDevice->common.module);
+      allocDevice->common.module);
 
   printf("%s: E streamId: %d buffer: %p size %d ts: %" PRId64 "\n", __func__,
          buffer.stream_id, buffer.handle, buffer.size, buffer.timestamp);
@@ -200,8 +205,11 @@ int32_t DualCamera3Gtest::StartStreaming(CameraContext &ctx, uint32_t width,
     request.streamIds.add(ret);
     /* during multi camera we need to use Raw only mode to avoid
      * allocating unneeded resources */
-    bool isRawOnly = (format == HAL_PIXEL_FORMAT_RAW10);
-    ret = ctx.device->EndConfigure(false, isRawOnly);
+    bool is_raw_only = (format == HAL_PIXEL_FORMAT_RAW10);
+    StreamConfiguration stream_config = StreamConfiguration();
+    stream_config.is_raw_only = is_raw_only;
+
+    ret = ctx.device->EndConfigure(stream_config);
     if (0 != ret) {
       printf("%s: Unable to complete camera configuration: %d %s\n", __func__,
              ret, strerror(-ret));

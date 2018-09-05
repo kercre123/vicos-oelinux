@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,7 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "CodecTest"
+#define LOG_TAG "CodecTest"
 
 #include <memory>
 
@@ -44,20 +44,20 @@ CodecTest::CodecTest()
      ion_device_(-1),
      stop_(false) {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
 
   ion_device_ = open("/dev/ion", O_RDONLY);
   if (ion_device_ <= 0) {
-    QMMF_ERROR("%s:%s Ion dev open failed %s", TAG, __func__,strerror(errno));
+    QMMF_ERROR("%s Ion dev open failed %s", __func__,strerror(errno));
     ion_device_ = -1;
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 }
 
 CodecTest::~CodecTest() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
 
   if(avcodec_)
     delete avcodec_;
@@ -65,16 +65,16 @@ CodecTest::~CodecTest() {
   close(ion_device_);
   ion_device_ = -1;
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 }
 
 status_t CodecTest::CreateCodec(int argc, char *argv[]) {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
   status_t ret = 0;
 
   if((argc < 2 ) || (strcmp(argv[1], "-c"))) {
-    QMMF_INFO("%s:%s Usage: %s -c config.txt", TAG, __func__, argv[0]);
+    QMMF_INFO("%s Usage: %s -c config.txt", __func__, argv[0]);
     return -1;
   }
 
@@ -83,7 +83,7 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
 
   ret = ParseConfig(argv[2], &params);
   if(ret != OK) {
-    QMMF_ERROR("%s:%s Failed to parse config file(%s)", TAG, __func__, argv[2]);
+    QMMF_ERROR("%s Failed to parse config file(%s)", __func__, argv[2]);
     return ret;
   }
 
@@ -91,12 +91,12 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
     if(!strncmp(argv[3], "-d", sizeof("-d"))) {
       ret = ParseDynamicConfig(argv[4]);
       if(ret != 0) {
-          QMMF_ERROR("%s:%s Error while parsing dynamic-config.txt", TAG,
+          QMMF_ERROR("%s Error while parsing dynamic-config.txt",
               __func__);
           return ret;
       }
     } else {
-      QMMF_INFO("%s:%s  Usage: %s -c config.txt -d dynamic-config.txt",TAG,
+      QMMF_INFO("%s  Usage: %s -c config.txt -d dynamic-config.txt",
           __func__, argv[0]);
       return -1;
     }
@@ -104,19 +104,19 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
 
   avcodec_ = IAVCodec::CreateAVCodec();
   if(avcodec_ ==  nullptr) {
-    QMMF_ERROR("%s:%s avcodec creation failed", TAG, __func__);
+    QMMF_ERROR("%s avcodec creation failed", __func__);
     return NO_MEMORY;
   }
 
   ret = avcodec_->ConfigureCodec(params.codec_type, params.create_param);
   if(ret != OK) {
-    QMMF_ERROR("%s:%s Failed to configure Codec", TAG, __func__);
+    QMMF_ERROR("%s Failed to configure Codec", __func__);
     return ret;
   }
 
   ret = AllocateBuffer(kPortIndexInput);
   if(ret != OK) {
-    QMMF_ERROR("%s:%s Failed to allocate buffer on PORT_NAME(%d)", TAG,
+    QMMF_ERROR("%s Failed to allocate buffer on PORT_NAME(%d)",
         __func__, kPortIndexInput);
     return ret;
   }
@@ -124,7 +124,7 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
   input_source_impl_= make_shared<InputCodecSourceImpl>(params.input_file,
                                                         params.record_frame);
   if(input_source_impl_.get() == nullptr) {
-    QMMF_ERROR("%s:%s failed to create input source", TAG, __func__);
+    QMMF_ERROR("%s failed to create input source", __func__);
     return NO_MEMORY;
   }
 
@@ -132,8 +132,8 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
                                  shared_ptr<ICodecSource>(input_source_impl_),
                                  input_buffer_list_);
   if(ret != OK) {
-    QMMF_ERROR("%s:%s Failed to Call Allocate buffer on PORT_NAME(%d)",
-               TAG, __func__, kPortIndexInput);
+    QMMF_ERROR("%s Failed to Call Allocate buffer on PORT_NAME(%d)",
+               __func__, kPortIndexInput);
     ReleaseBuffer();
     return ret;
   }
@@ -142,7 +142,7 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
 
   ret = AllocateBuffer(kPortIndexOutput);
   if(ret != OK) {
-    QMMF_ERROR("%s:%s Failed to allocate buffer on PORT_NAME(%d)", TAG,
+    QMMF_ERROR("%s Failed to allocate buffer on PORT_NAME(%d)",
         __func__, kPortIndexOutput);
     ReleaseBuffer();
     return ret;
@@ -150,14 +150,14 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
 
   ret = avcodec_->RegisterOutputBuffers(output_buffer_list_);
   if (ret != NO_ERROR) {
-    QMMF_ERROR("%s:%s output buffers failed to register to AVCodec",
-               TAG, __func__);
+    QMMF_ERROR("%s output buffers failed to register to AVCodec",
+               __func__);
     return ret;
   }
 
   output_source_impl_ = make_shared<OutputCodecSourceImpl>(params.output_file);
   if(output_source_impl_.get() == nullptr) {
-    QMMF_ERROR("%s:%s failed to create output source",TAG, __func__);
+    QMMF_ERROR("%s failed to create output source",__func__);
     return NO_MEMORY;
   }
 
@@ -165,21 +165,21 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
                                  shared_ptr<ICodecSource>(output_source_impl_),
                                  output_buffer_list_);
   if(ret != OK) {
-    QMMF_ERROR("%s:%s Failed to Call Allocate buffer on PORT_NAME(%d)",
-               TAG, __func__, kPortIndexOutput);
+    QMMF_ERROR("%s Failed to Call Allocate buffer on PORT_NAME(%d)",
+               __func__, kPortIndexOutput);
     ReleaseBuffer();
     return ret;
   }
 
   output_source_impl_->AddBufferList(output_buffer_list_);
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::DeleteCodec() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
   status_t ret = 0;
 
   ret = avcodec_->ReleaseBuffer();
@@ -188,73 +188,73 @@ status_t CodecTest::DeleteCodec() {
   ret = ReleaseBuffer();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::StartCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   {
-    Mutex::Autolock l(stop_lock_);
+    std::lock_guard<std::mutex> lock(stop_lock_);
     stop_ = false;
   }
 
   ret = avcodec_->StartCodec();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::StopCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   {
-    Mutex::Autolock l(stop_lock_);
+    std::lock_guard<std::mutex> lock(stop_lock_);
     stop_ = true;
   }
 
-  ret = avcodec_->StopCodec();
+  ret = avcodec_->StopCodec(true);
   assert(ret == OK);
 
   input_source_impl_->BufferStatus();
   output_source_impl_->BufferStatus();
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::ResumeCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   ret = avcodec_->ResumeCodec();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::PauseCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   ret = avcodec_->PauseCodec();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::SetCodecParameters() {
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
   CodecParamType param_type;
 
@@ -296,19 +296,19 @@ status_t CodecTest::SetCodecParameters() {
     }
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 bool CodecTest::IsStop() {
 
-   Mutex::Autolock l(stop_lock_);
-   return stop_;
+  std::lock_guard<std::mutex> lock(stop_lock_);
+  return stop_;
 }
 
 status_t CodecTest::AllocateBuffer(uint32_t index) {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
   status_t ret = 0;
 
   assert(ion_device_ > 0);
@@ -317,7 +317,7 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
   uint32_t count, size;
   ret = avcodec_->GetBufferRequirements(index,  &count, &size);
   if(ret != OK) {
-    QMMF_INFO("%s:%s Failed to get Buffer Requirements on %s", TAG, __func__,
+    QMMF_INFO("%s Failed to get Buffer Requirements on %s", __func__,
         PORT_NAME(index));
     return ret;
   }
@@ -344,14 +344,14 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
 
       ret = ioctl(ion_device_, ION_IOC_ALLOC, &alloc);
       if (ret < 0) {
-        QMMF_ERROR("%s:%s ION allocation failed", TAG, __func__);
+        QMMF_ERROR("%s ION allocation failed", __func__);
         goto ION_ALLOC_FAILED;
       }
 
       ionFdData.handle = alloc.handle;
       ret = ioctl(ion_device_, ION_IOC_SHARE, &ionFdData);
       if (ret < 0) {
-        QMMF_ERROR("%s:%s ION map failed %s", TAG, __func__, strerror(errno));
+        QMMF_ERROR("%s ION map failed %s", __func__, strerror(errno));
         goto ION_MAP_FAILED;
       }
 
@@ -360,7 +360,7 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
       //Allocate buffer for MetaData Handle
       native_handle_t* meta_handle = (native_handle_create(1, 16));
       if(meta_handle == nullptr) {
-        QMMF_ERROR("%s:%s failed to allocated metabuffer handle", TAG, __func__);
+        QMMF_ERROR("%s failed to allocated metabuffer handle", __func__);
         return NO_MEMORY;
       }
 
@@ -372,9 +372,9 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
       meta_handle->data[4] = alloc.len;
       buffer.data = meta_handle;
 
-      QMMF_INFO("%s:%s  buffer native handle(%p)", TAG, __func__, meta_handle);
-      QMMF_INFO("%s:%s  buffer ionFd(%d)", TAG, __func__, meta_handle->data[0]);
-      QMMF_INFO("%s:%s  buffer frameLen(%d)",TAG,__func__,meta_handle->data[4]);
+      QMMF_INFO("%s  buffer native handle(%p)", __func__, meta_handle);
+      QMMF_INFO("%s  buffer ionFd(%d)", __func__, meta_handle->data[0]);
+      QMMF_INFO("%s  buffer frameLen(%d)",__func__,meta_handle->data[4]);
       input_buffer_list_.push_back(buffer);
     }
   } else {
@@ -397,21 +397,21 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
 
       ret = ioctl(ion_device_, ION_IOC_ALLOC, &alloc);
       if (ret < 0) {
-        QMMF_ERROR("%s:%s ION allocation failed", TAG, __func__);
+        QMMF_ERROR("%s ION allocation failed", __func__);
         goto ION_ALLOC_FAILED;
       }
 
       ionFdData.handle = alloc.handle;
       ret = ioctl(ion_device_, ION_IOC_SHARE, &ionFdData);
       if (ret < 0) {
-        QMMF_ERROR("%s:%s ION map failed %s", TAG, __func__, strerror(errno));
+        QMMF_ERROR("%s ION map failed %s", __func__, strerror(errno));
         goto ION_MAP_FAILED;
       }
 
       vaddr = mmap(nullptr, alloc.len, PROT_READ  | PROT_WRITE, MAP_SHARED,
                   ionFdData.fd, 0);
       if(vaddr == MAP_FAILED) {
-        QMMF_ERROR("%s:%s  ION mmap failed: %s (%d)", TAG, __func__,
+        QMMF_ERROR("%s  ION mmap failed: %s (%d)", __func__,
             strerror(errno), errno);
         goto ION_MAP_FAILED;
       }
@@ -423,14 +423,14 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
       buffer.size     = alloc.len;
       buffer.data     = vaddr;
 
-      QMMF_INFO("%s:%s buffer.Fd(%d)", TAG, __func__, buffer.fd );
-      QMMF_INFO("%s:%s buffer.capacity(%d)", TAG,__func__, buffer.capacity);
-      QMMF_INFO("%s:%s buffer.vaddr(%p)", TAG, __func__, buffer.data);
+      QMMF_INFO("%s buffer.Fd(%d)", __func__, buffer.fd );
+      QMMF_INFO("%s buffer.capacity(%d)", __func__, buffer.capacity);
+      QMMF_INFO("%s buffer.vaddr(%p)", __func__, buffer.data);
       output_buffer_list_.push_back(buffer);
     }
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 
 ION_MAP_FAILED:
@@ -441,14 +441,14 @@ ION_MAP_FAILED:
 ION_ALLOC_FAILED:
   close(ion_device_);
   ion_device_ = -1;
-  QMMF_ERROR("%s:%s ION Buffer allocation failed!", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_ERROR("%s ION Buffer allocation failed!", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return -1;
 }
 
 status_t CodecTest::ReleaseBuffer() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   for(auto& iter : input_ion_handle_data) {
       ioctl(ion_device_, ION_IOC_FREE, &iter);
@@ -483,7 +483,7 @@ status_t CodecTest::ReleaseBuffer() {
   input_ion_handle_data.clear();
   output_ion_handle_data.clear();
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
@@ -499,7 +499,7 @@ status_t CodecTest::ParseConfig(char *fileName, TestInitParams* params) {
   bool avc = false;
 
   if(!(fp = fopen(fileName,"r"))) {
-    QMMF_ERROR("%s:%s failed to open config file: %s", TAG, __func__,fileName);
+    QMMF_ERROR("%s failed to open config file: %s", __func__,fileName);
     return -1;
   }
 
@@ -550,7 +550,7 @@ status_t CodecTest::ParseConfig(char *fileName, TestInitParams* params) {
       if(!strncmp("VideoEncode", value, strlen("VideoEncode"))) {
         params->codec_type = CodecMimeType::kMimeTypeVideoEncAVC;
       } else {
-        QMMF_ERROR("%s:%s Unknown CodecType(%s)", TAG, __func__, value);
+        QMMF_ERROR("%s Unknown CodecType(%s)", __func__, value);
         goto READ_FAILED;
       }
     } else if(!strncmp("Width", key, strlen("Width"))) {
@@ -566,7 +566,7 @@ status_t CodecTest::ParseConfig(char *fileName, TestInitParams* params) {
       } else if(!strncmp("HEVC", value, strlen("HEVC"))) {
         params->create_param.video_enc_param.format_type = VideoFormat::kHEVC;
       } else {
-        QMMF_ERROR("%s:%s Unknown Video CodecType(%s)", TAG, __func__, value);
+        QMMF_ERROR("%s Unknown Video CodecType(%s)", __func__, value);
         goto READ_FAILED;
       }
     } else if(!strncmp("IFR", key, strlen("IFR"))) {
@@ -703,7 +703,7 @@ status_t CodecTest::ParseConfig(char *fileName, TestInitParams* params) {
       else
           params->create_param.video_enc_param.codec_param.hevc.hier_layer = atoi(value);
     } else {
-        QMMF_ERROR("%s:%s Unknown Key %s found", TAG, __func__, key);
+        QMMF_ERROR("%s Unknown Key %s found", __func__, key);
         goto READ_FAILED;
     }
   }
@@ -766,27 +766,27 @@ status_t CodecTest::ParseDynamicConfig(char *fileName) {
 InputCodecSourceImpl::InputCodecSourceImpl(char* file_name,
                                            uint32_t num_frame) {
 
-  QMMF_INFO("%s:%s  Enter",TAG, __func__);
+  QMMF_INFO("%s  Enter",__func__);
 
   input_file_ = fopen(file_name, "r");
   if(input_file_ == nullptr) {
-    QMMF_ERROR("%s:%s failed to open input file(%s)", TAG, __func__, file_name);
+    QMMF_ERROR("%s failed to open input file(%s)", __func__, file_name);
   }
 
   num_frame_read = num_frame;
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 InputCodecSourceImpl::~InputCodecSourceImpl() {
 
-  QMMF_INFO("%s:%s  Enter", TAG, __func__);
-  QMMF_INFO("%s:%s  Exit", TAG, __func__);
+  QMMF_INFO("%s  Enter", __func__);
+  QMMF_INFO("%s  Exit", __func__);
 }
 
 void InputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   input_list_ = list;
   input_free_buffer_queue_.Clear();
@@ -795,14 +795,14 @@ void InputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
     input_free_buffer_queue_.PushBack(iter);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t InputCodecSourceImpl::NotifyPortEvent(PortEventType event_type,
                                                void* event_data) {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
@@ -815,9 +815,9 @@ status_t InputCodecSourceImpl::GetBuffer(BufferDescriptor& stream_buffer,
   static int32_t frame_count = 0;
 
   if(input_free_buffer_queue_.Size() <= 0) {
-    QMMF_WARN("%s:%s No buffer available. Wait for new buffer", TAG, __func__);
-    Mutex::Autolock autoLock(wait_for_frame_lock_);
-    wait_for_frame_.wait(wait_for_frame_lock_);
+    QMMF_WARN("%s No buffer available. Wait for new buffer", __func__);
+    std::unique_lock<std::mutex> lock(wait_for_frame_lock_);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor buffer = *input_free_buffer_queue_.Begin();
@@ -829,15 +829,15 @@ status_t InputCodecSourceImpl::GetBuffer(BufferDescriptor& stream_buffer,
   if(input_file_) {
     ret = ReadFile(meta->data[0], meta->data[4], &byte_read);
   } else {
-    QMMF_ERROR("%s:%s input file is not opened", TAG, __func__);
+    QMMF_ERROR("%s input file is not opened", __func__);
     return -1;
   }
 
   if(ret != OK) {
-    QMMF_INFO("%s:%s Read completed. Read from start..", TAG, __func__);
+    QMMF_INFO("%s Read completed. Read from start..", __func__);
     ret = fseek(input_file_, 0, SEEK_SET);
     if(ret != OK) {
-      QMMF_ERROR("%s:%s Failed to seek file", TAG, __func__);
+      QMMF_ERROR("%s Failed to seek file", __func__);
     } else {
       ret = ReadFile(meta->data[0], meta->data[4], &byte_read);
     }
@@ -853,7 +853,7 @@ status_t InputCodecSourceImpl::GetBuffer(BufferDescriptor& stream_buffer,
   frame_count++;
 
   if((num_frame_read != -1) && (frame_count > num_frame_read)) {
-    QMMF_INFO("%s:%s Number of Frame read completed(%d). Send EOS", TAG, __func__,
+    QMMF_INFO("%s Number of Frame read completed(%d). Send EOS", __func__,
         frame_count);
     ret = -1;
   }
@@ -908,11 +908,12 @@ status_t InputCodecSourceImpl::ReturnBuffer(BufferDescriptor& buffer,
   status_t ret = 0;
   bool found = false;
 
-  List<BufferDescriptor>::iterator it = input_occupy_buffer_queue_.Begin();
+  std::list<BufferDescriptor>::iterator it =
+      input_occupy_buffer_queue_.Begin();
   for (; it != input_occupy_buffer_queue_.End(); ++it) {
     if ((*it).data ==  buffer.data) {
       input_free_buffer_queue_.PushBack(*it);
-      wait_for_frame_.signal();
+      wait_for_frame_.Signal();
       found = true;
       break;
     }
@@ -925,7 +926,7 @@ status_t InputCodecSourceImpl::ReturnBuffer(BufferDescriptor& buffer,
 
 void InputCodecSourceImpl::BufferStatus() {
 
-  QMMF_INFO("%s:%s Total Buffer(%d), free(%d), occupy(%d)", TAG, __func__,
+  QMMF_INFO("%s Total Buffer(%d), free(%d), occupy(%d)", __func__,
       input_list_.size(), input_free_buffer_queue_.Size(),
       input_occupy_buffer_queue_.Size());
   assert(input_occupy_buffer_queue_.Size() == 0);
@@ -933,25 +934,25 @@ void InputCodecSourceImpl::BufferStatus() {
 
 OutputCodecSourceImpl::OutputCodecSourceImpl(char* file_name) {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   file_fd_ = open(file_name, O_CREAT | O_WRONLY | O_TRUNC, 0655);
   if(file_fd_ < 0) {
-    QMMF_ERROR("%s:%s Failed to open o/p file(%s)", TAG, __func__, file_name);
+    QMMF_ERROR("%s Failed to open o/p file(%s)", __func__, file_name);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 OutputCodecSourceImpl::~OutputCodecSourceImpl() {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 void OutputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   output_list_ = list;
   output_free_buffer_queue_.Clear();
@@ -961,14 +962,14 @@ void OutputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
     output_free_buffer_queue_.PushBack(iter);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t OutputCodecSourceImpl::NotifyPortEvent(PortEventType event_type,
                                                 void* event_data) {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
@@ -978,10 +979,10 @@ status_t OutputCodecSourceImpl::GetBuffer(BufferDescriptor& codec_buffer,
   status_t ret = 0;
 
   if(output_free_buffer_queue_.Size() <= 0) {
-    QMMF_WARN("%s:%s No buffer available to notify. Wait for new buffer", TAG,
+    QMMF_WARN("%s No buffer available to notify. Wait for new buffer",
         __func__);
-    Mutex::Autolock autoLock(wait_for_frame_lock_);
-    wait_for_frame_.wait(wait_for_frame_lock_);
+    std::unique_lock<std::mutex> lock(wait_for_frame_lock_);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor iter = *output_free_buffer_queue_.Begin();
@@ -1003,28 +1004,29 @@ status_t OutputCodecSourceImpl::ReturnBuffer(BufferDescriptor& codec_buffer,
   if(file_fd_ > 0) {
     ssize_t expSize = (ssize_t) codec_buffer.size;
     if (expSize != write(file_fd_, codec_buffer.data, codec_buffer.size)) {
-        QMMF_ERROR("%s:%s Bad Write error (%d) %s", TAG, __func__,
+        QMMF_ERROR("%s Bad Write error (%d) %s", __func__,
             errno, strerror(errno));
         close(file_fd_);
         file_fd_ = -1;
     }
   } else {
-    QMMF_ERROR("%s:%s File is not open to write", TAG, __func__);
+    QMMF_ERROR("%s File is not open to write", __func__);
   }
 
   if(codec_buffer.flag & static_cast<uint32_t>(BufferFlags::kFlagEOS)) {
-    QMMF_INFO("%s:%s This is last buffer from encoder.Close file", TAG,__func__);
+    QMMF_INFO("%s This is last buffer from encoder.Close file", __func__);
     close(file_fd_);
     file_fd_ = -1;
   }
 
-  List<BufferDescriptor>::iterator it = output_occupy_buffer_queue_.Begin();
+  std::list<BufferDescriptor>::iterator it =
+      output_occupy_buffer_queue_.Begin();
   bool found = false;
   for (; it != output_occupy_buffer_queue_.End(); ++it) {
     if (((*it).data) ==  (codec_buffer.data)) {
       output_free_buffer_queue_.PushBack(*it);
       output_occupy_buffer_queue_.Erase(it);
-      wait_for_frame_.signal();
+      wait_for_frame_.Signal();
       found = true;
       break;
     }
@@ -1036,7 +1038,7 @@ status_t OutputCodecSourceImpl::ReturnBuffer(BufferDescriptor& codec_buffer,
 
 void OutputCodecSourceImpl::BufferStatus() {
 
-  QMMF_INFO("%s:%s Total Buffer(%d), free(%d), occupy(%d)", TAG, __func__,
+  QMMF_INFO("%s Total Buffer(%d), free(%d), occupy(%d)", __func__,
       output_list_.size(), output_free_buffer_queue_.Size(),
       output_occupy_buffer_queue_.Size());
   assert(output_occupy_buffer_queue_.Size() == 0);
@@ -1075,9 +1077,10 @@ CmdMenu::Command CmdMenu::GetCommand() {
   return CmdMenu::Command(static_cast<CmdMenu::CommandType>(getchar()));
 }
 
-int main(int argc,char *argv[]) {
+int main(int argc, char* argv[]) {
+  QMMF_GET_LOG_LEVEL();
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   CodecTest test_context;
 
@@ -1126,7 +1129,7 @@ int main(int argc,char *argv[]) {
       break;
        case CmdMenu::EXIT_CMD:
       {
-        QMMF_INFO("%s:%s exit from test", TAG, __func__);
+        QMMF_INFO("%s exit from test", __func__);
         testRunning = false;
       }
       break;
@@ -1134,6 +1137,6 @@ int main(int argc,char *argv[]) {
       break;
     }
   }
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }

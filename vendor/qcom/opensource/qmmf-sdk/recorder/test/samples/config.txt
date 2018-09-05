@@ -15,6 +15,8 @@
  * TNR             : 1(Enable tnr), 0(Disable tnr)
  * VHDR            : 1(Enable vhdr), 0(Disable vhdr)
  * BinningCorrect  : 1 (enable binning correction), 0 (disable binning correction).
+ * VideoStabilize  : 1 (enable video stabilization),disabled by default.
+ *                 : Only 1080p resolutions are supported.
  * TrackType       : YUV(Track YUV format stream), AVC(Track AVC format stream),
  *                 : HEVC(Track HEVC format stream), RAW(Track RAW format stream).
  * LTRCount        : LTR count for track[AVC/HEVC]. Should be in range [1-4].
@@ -22,32 +24,86 @@
  * CamLowPowerMode : 0 (with post processing), 1 (without post processing)
  */
 
-CameraID          : 0
-CameraFPS         : 30
-SnapshotType      : None
-SnapshotWidth     : 3840
-SnapshotHeight    : 2160
-SnapshotCount     : 0
-AFMode            : None
-RecordingTime     : 10
-NumStream         : 2
-TNR               : 0
-VHDR              : 0
-BinningCorrect    : 0
+CameraID               : 0
+CameraFPS              : 30
+SnapshotType           : None
+SnapshotWidth          : 3840
+SnapshotHeight         : 2160
+SnapshotCount          : 0
+AFMode                 : None
+RecordingTime          : 60
+NumStream              : 3
+TNR                    : 0
+VHDR                   : 0
+BinningCorrect         : 0
+VideoStabilize         : 0
+LCACYUV                : 0
 
 #First Stream Encoder Params
-Width             : 3840
-Height            : 2160
-FPS               : 30
-Bitrate           : 8000000
-TrackType         : AVC
-LTRCount          : 0
-CamLowPowerMode   : 0
+Width                  : 3840
+Height                 : 2160
+FPS                    : 30
+Bitrate                : 10000000
+TrackType              : AVC
+profile                : kHigh
+level                  : kLevel3
+ratecontrol_type       : kMaxBitrate
+Ltr_Count              : 0
+Hier_Layer             : 0
+enable_init_qp         : 1
+init_IQP               : 27
+init_PQP               : 28
+init_BQP               : 28
+init_QP_mode           : 0x7
+enable_qp_range        : 1
+min_QP                 : 10
+max_QP                 : 51
+enable_qp_IBP_range    : 1
+min_IQP                : 10
+max_IQP                : 51
+min_PQP                : 10
+max_PQP                : 51
+min_BQP                : 10
+max_BQP                : 15
+insert_aud_delimiter   : 1
+prepend_sps_pps_to_idr : 1
+slice_enabled          : 0
+slice_header_spacing   : 8192
+CamLowPowerMode        : 0
 
 #Second Stream Encoder Params
-Width             : 1920
-Height            : 1080
-FPS               : 30
-Bitrate           : 6000000
-TrackType         : YUV
-CamLowPowerMode   : 1
+Width                  : 1920
+Height                 : 1080
+FPS                    : 30
+TrackType              : YUV
+CamLowPowerMode        : 1
+
+#Third Stream Encoder Params
+Width                  : 640
+Height                 : 480
+FPS                    : 30
+Bitrate                : 2000000
+TrackType              : HEVC
+profile                : kMain
+level                  : kLevel5
+ratecontrol_type       : kMaxBitrate
+Ltr_Count              : 0
+Hier_Layer             : 0
+enable_init_qp         : 1
+init_IQP               : 27
+init_PQP               : 28
+init_BQP               : 28
+init_QP_mode           : 0x7
+enable_qp_range        : 1
+min_QP                 : 10
+max_QP                 : 51
+enable_qp_IBP_range    : 1
+min_IQP                : 10
+max_IQP                : 51
+min_PQP                : 10
+max_PQP                : 51
+min_BQP                : 10
+max_BQP                : 15
+insert_aud_delimiter   : 1
+prepend_sps_pps_to_idr : 1
+CamLowPowerMode        : 0

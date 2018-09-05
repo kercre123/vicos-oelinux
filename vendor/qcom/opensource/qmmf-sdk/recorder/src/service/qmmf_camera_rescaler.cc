@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "RecorderCameraSourceCopy"
+#define LOG_TAG "RecorderCameraSourceCopy"
 
 #include <math.h>
 #include <sys/mman.h>
@@ -60,7 +60,7 @@ using ::std::chrono::duration_cast;
 using namespace android;
 
 C2dRescaler::C2dRescaler() {
-  QMMF_INFO("%s:%s: Enter (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter (%p)", __func__, this);
   src_surface_id_ = -1;
   target_surface_id_ = -1;
   char prop[PROPERTY_VALUE_MAX];
@@ -68,11 +68,11 @@ C2dRescaler::C2dRescaler() {
   property_get("persist.qipcam.rescaler.perf", prop, "0");
   uint32_t value = (uint32_t) atoi(prop);
   print_process_time_ = (value == 1) ? true : false;
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 }
 
 C2dRescaler::~C2dRescaler() {
-  QMMF_INFO("%s:%s: Enter (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter (%p)", __func__, this);
   if(target_surface_id_) {
     c2dDestroySurface(target_surface_id_);
     target_surface_id_ = 0;
@@ -81,11 +81,11 @@ C2dRescaler::~C2dRescaler() {
     c2dDestroySurface(src_surface_id_);
     src_surface_id_ = 0;
   }
-  QMMF_INFO("%s:%s: Exit ", TAG, __func__);
+  QMMF_INFO("%s: Exit ", __func__);
 }
 
 int32_t C2dRescaler::Init() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   C2D_YUV_SURFACE_DEF surface_def = {
     C2D_COLOR_FORMAT_420_NV12,
@@ -112,7 +112,7 @@ int32_t C2dRescaler::Init() {
                            |C2D_SURFACE_WITH_PHYS_DUMMY),
                            &surface_def);
   if(ret != C2D_STATUS_OK) {
-    QMMF_ERROR("%s:%s: c2dCreateSurface failed!", TAG, __func__);
+    QMMF_ERROR("%s: c2dCreateSurface failed!", __func__);
     return ret;
   }
 
@@ -124,17 +124,17 @@ int32_t C2dRescaler::Init() {
                                |C2D_SURFACE_WITH_PHYS_DUMMY),
                                &surface_def);
   if(ret != C2D_STATUS_OK) {
-    QMMF_ERROR("%s:%s: c2dCreateSurface failed!", TAG, __func__);
+    QMMF_ERROR("%s: c2dCreateSurface failed!", __func__);
     return ret;
   }
 
-  QMMF_INFO("%s:%s: Exit streamId", TAG, __func__);
+  QMMF_INFO("%s: Exit streamId", __func__);
   return ret;
 }
 
 int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
                                 StreamBuffer& dst_buffer) {
-  QMMF_DEBUG("%s:%s: Enter (%p)", TAG, __func__, this);
+  QMMF_DEBUG("%s: Enter (%p)", __func__, this);
   time_point<high_resolution_clock>   start_time;
   if (print_process_time_) {
     start_time = high_resolution_clock::now();
@@ -157,12 +157,12 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
   src_buf_fd       = src_buffer.fd;
   src_buf_frame_len = src_buffer.size;
 
-  QMMF_DEBUG("%s:%s: src_buf_fd = %d", TAG, __func__, src_buf_fd);
-  QMMF_DEBUG("%s:%s: src_buf_frame_len = %d", TAG, __func__, src_buf_frame_len);
+  QMMF_DEBUG("%s: src_buf_fd = %d", __func__, src_buf_fd);
+  QMMF_DEBUG("%s: src_buf_frame_len = %d", __func__, src_buf_frame_len);
 
   src_buf_vaddr = src_buffer.data;
   if(src_buf_vaddr == nullptr) {
-   QMMF_ERROR("%s:%s: Invalid src_buf_vaddr!", TAG, __func__);
+   QMMF_ERROR("%s: Invalid src_buf_vaddr!", __func__);
    goto EXIT_2;
   }
 
@@ -172,12 +172,12 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
   ret = c2dMapAddr(src_buf_fd, src_buf_vaddr, src_buf_frame_len, data_offset,
                    KGSL_USER_MEM_TYPE_ION, &src_buf_gpu_addr);
   if(ret != C2D_STATUS_OK) {
-   QMMF_ERROR("%s:%s: c2dMapAddr failed!", TAG, __func__);
+   QMMF_ERROR("%s: c2dMapAddr failed!", __func__);
    goto EXIT_2;
   }
 
   if(src_buf_gpu_addr == nullptr) {
-   QMMF_ERROR("%s:%s: Invalid src_buf_gpu_addr!", TAG, __func__);
+   QMMF_ERROR("%s: Invalid src_buf_gpu_addr!", __func__);
    goto EXIT_2;
   }
 
@@ -187,19 +187,19 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
   ret = c2dMapAddr(dst_buffer.fd, dst_buffer.data, dst_buffer.size,
                    data_offset, KGSL_USER_MEM_TYPE_ION, &target_buf_gpu_addr);
   if(ret != C2D_STATUS_OK) {
-   QMMF_ERROR("%s:%s: c2dMapAddr failed!", TAG, __func__);
+   QMMF_ERROR("%s: c2dMapAddr failed!", __func__);
    goto EXIT_1;
   }
 
   if(target_buf_gpu_addr == nullptr) {
-   QMMF_ERROR("%s:%s: Invalid target_buf_gpu_addr!", TAG, __func__);
+   QMMF_ERROR("%s: Invalid target_buf_gpu_addr!", __func__);
    goto EXIT_1;
   }
 
   //STEP4: Create source C2dSurface for input Camera stream buffer.
   if ((src_buffer.info.plane_info[0].width == 0) ||
       (src_buffer.info.plane_info[0].height == 0)) {
-   QMMF_ERROR("%s:%s: Invalid Src size!", TAG, __func__);
+   QMMF_ERROR("%s: Invalid Src size!", __func__);
    goto EXIT;
   }
 
@@ -214,7 +214,7 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
       c2d_color_format = C2D_COLOR_FORMAT_420_NV12;
       break;
     default:
-      QMMF_ERROR("%s:%s: Unsupported format: %d", TAG,  __func__,
+      QMMF_ERROR("%s: Unsupported format: %d", __func__,
           src_buffer.info.format);
       ret = BAD_VALUE;
       goto EXIT;
@@ -234,15 +234,15 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
   //Y plane hostptr.
   src_surface_def.plane0 = src_buf_vaddr;
 
-  QMMF_DEBUG("%s:%s: src_surface_def.width = %d ", TAG, __func__,
+  QMMF_DEBUG("%s: src_surface_def.width = %d ", __func__,
                               src_surface_def.width);
-  QMMF_DEBUG("%s:%s: src_surface_def.height = %d ", TAG, __func__,
+  QMMF_DEBUG("%s: src_surface_def.height = %d ", __func__,
                              src_surface_def.height);
-  QMMF_DEBUG("%s:%s: src_surface_def.stride0 = %d ", TAG, __func__,
+  QMMF_DEBUG("%s: src_surface_def.stride0 = %d ", __func__,
                             src_surface_def.stride0);
-  QMMF_DEBUG("%s:%s: src_surface_def.stride1 = %d ", TAG, __func__,
+  QMMF_DEBUG("%s: src_surface_def.stride1 = %d ", __func__,
                             src_surface_def.stride1);
-  QMMF_DEBUG("%s:%s: plane_y_len = %d", TAG, __func__,
+  QMMF_DEBUG("%s: plane_y_len = %d", __func__,
                                         plane_y_len);
 
   //Y plane Gpu address.
@@ -258,23 +258,23 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
                           |C2D_SURFACE_WITH_PHYS), &src_surface_def);
 
   if(ret != C2D_STATUS_OK) {
-   QMMF_ERROR("%s:%s: c2dUpdateSurface failed!", TAG, __func__);
+   QMMF_ERROR("%s: c2dUpdateSurface failed!", __func__);
    goto EXIT;
   }
-  QMMF_DEBUG("%s:%s: src_surface_id_ = %d", TAG, __func__, src_surface_id_);
+  QMMF_DEBUG("%s: src_surface_id_ = %d", __func__, src_surface_id_);
 
   //STEP5: Update target C2dSurface.
   target_surface_def.format  = c2d_color_format;
   target_surface_def.width   = dst_buffer.info.plane_info[0].width;
   target_surface_def.height  = dst_buffer.info.plane_info[0].height;
-  QMMF_DEBUG("%s:%s: target_surface_def.width = %d ", TAG, __func__,
+  QMMF_DEBUG("%s: target_surface_def.width = %d ", __func__,
                            target_surface_def.width);
-  QMMF_DEBUG("%s:%s: target_surface_def.height = %d ", TAG, __func__,
+  QMMF_DEBUG("%s: target_surface_def.height = %d ", __func__,
                          target_surface_def.height);
   //Y plane stride.
   target_surface_def.stride0 = dst_buffer.info.plane_info[0].stride;
 
-  QMMF_DEBUG("%s:%s: target_surface_def.stride0 = %d ", TAG,  __func__,
+  QMMF_DEBUG("%s: target_surface_def.stride0 = %d ", __func__,
                          target_surface_def.stride0);
   //Y plane hostptr.
   target_surface_def.plane0  = dst_buffer.data;
@@ -285,7 +285,7 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
   //UV plane stride.
   target_surface_def.stride1 = dst_buffer.info.plane_info[0].stride;
 
-  QMMF_DEBUG("%s:%s: target_surface_def.stride1 = %d ", TAG,  __func__,
+  QMMF_DEBUG("%s: target_surface_def.stride1 = %d ", __func__,
                          target_surface_def.stride1);
 
   plane_y_len =
@@ -300,7 +300,7 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
                           (C2D_SURFACE_TYPE)(C2D_SURFACE_YUV_HOST
                           |C2D_SURFACE_WITH_PHYS), &target_surface_def);
   if(ret != C2D_STATUS_OK) {
-   QMMF_ERROR("%s:%s: c2dUpdateSurface failed!", TAG, __func__);
+   QMMF_ERROR("%s: c2dUpdateSurface failed!", __func__);
    goto EXIT;
   }
 
@@ -332,13 +332,13 @@ int32_t C2dRescaler::CopyBuffer(StreamBuffer& src_buffer,
   //STEP7: Draw C2dObject on target surface.
   ret = c2dDraw(target_surface_id_, 0, 0, 0, 0, draw_object, 1);
   if(ret != C2D_STATUS_OK) {
-   QMMF_ERROR("%s:%s: c2dDraw failed!", TAG, __func__);
+   QMMF_ERROR("%s: c2dDraw failed!", __func__);
    goto EXIT;
   }
 
   ret = c2dFinish(target_surface_id_);
   if(ret != C2D_STATUS_OK) {
-     QMMF_ERROR("%s:%s: c2dFinish failed!", TAG, __func__);
+     QMMF_ERROR("%s: c2dFinish failed!", __func__);
      goto EXIT;
   }
 
@@ -346,13 +346,13 @@ EXIT:
   //STEP8: Unmap input src_buffer and targetBuffer from GPU.
   ret = c2dUnMapAddr(src_buf_gpu_addr);
   if(ret != C2D_STATUS_OK) {
-   QMMF_ERROR("%s:%s: c2dUnMapAddr failed!", TAG, __func__);
+   QMMF_ERROR("%s: c2dUnMapAddr failed!", __func__);
   }
 
 EXIT_1:
   ret = c2dUnMapAddr(target_buf_gpu_addr);
   if(ret != C2D_STATUS_OK) {
-     QMMF_ERROR("%s:%s: c2dUnMapAddr failed!", TAG, __func__);
+     QMMF_ERROR("%s: c2dUnMapAddr failed!", __func__);
   }
 
 EXIT_2:
@@ -360,11 +360,11 @@ EXIT_2:
     time_point<high_resolution_clock> curr_time = high_resolution_clock::now();
     uint64_t time_diff = duration_cast<microseconds>
                              (curr_time - start_time).count();
-    QMMF_INFO("%s:%s: stream_id(%d) C2D Full ProcessingTime=%lld",
-        TAG, __func__, src_buffer.stream_id, time_diff);
+    QMMF_INFO("%s: stream_id(%d) C2D Full ProcessingTime=%lld",
+        __func__, src_buffer.stream_id, time_diff);
   }
 
-  QMMF_DEBUG("%s:%s: Exit", TAG, __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return ret;
 }
 
@@ -395,10 +395,10 @@ int32_t FastCVRescaler::Init() {
   }
 
   int stat = fcvSetOperationMode(FASTCV_OP_LOW_POWER);
-  QMMF_INFO("%s:%s: set fcvSetOperationMode %d",TAG , __func__, fastcv_level_);
+  QMMF_INFO("%s: set fcvSetOperationMode %d",__func__, fastcv_level_);
 
   if (0 != stat) {
-    QMMF_ERROR("%s:%s: Unable to set FastCV operation mode: %d", TAG, __func__,
+    QMMF_ERROR("%s: Unable to set FastCV operation mode: %d", __func__,
         stat);
   }
 
@@ -420,9 +420,9 @@ int32_t FastCVRescaler::CopyBuffer(StreamBuffer& src_buffer,
 
   if ((src_buffer.info.format != BufferFormat::kNV21) &&
       (src_buffer.info.format != BufferFormat::kNV12)) {
-    QMMF_ERROR("%s:%s: Unsupported input format: 0x%x!",TAG, __func__,
+    QMMF_ERROR("%s: Unsupported input format: 0x%x!",__func__,
         src_buffer.info.format);
-    QMMF_ERROR("%s:%s: Only NV12/NV21 are supported currently!", TAG, __func__);
+    QMMF_ERROR("%s: Only NV12/NV21 are supported currently!", __func__);
     ret = BAD_VALUE;
     goto EXIT;
   }
@@ -456,8 +456,8 @@ int32_t FastCVRescaler::CopyBuffer(StreamBuffer& src_buffer,
     time_point<high_resolution_clock> curr_time = high_resolution_clock::now();
     uint64_t time_diff = duration_cast<microseconds>
                              (curr_time - start_time).count();
-    QMMF_INFO("%s:%s: stream_id(%d) FastCV Y ProcessingTime=%lld", __func__,
-        TAG, src_buffer.stream_id, time_diff);
+    QMMF_INFO("%s: stream_id(%d) FastCV Y ProcessingTime=%lld", __func__,
+        src_buffer.stream_id, time_diff);
   }
 
   fcvScaleDownMNInterleaveu8(src_buffer_uv,
@@ -474,15 +474,15 @@ EXIT:
     time_point<high_resolution_clock> curr_time = high_resolution_clock::now();
     uint64_t time_diff = duration_cast<microseconds>
                              (curr_time - start_time).count();
-    QMMF_INFO("%s:%s: stream_id(%d) FastCV Full ProcessingTime=%lld",
-        TAG, __func__, src_buffer.stream_id, time_diff);
+    QMMF_INFO("%s: stream_id(%d) FastCV Full ProcessingTime=%lld",
+        __func__, src_buffer.stream_id, time_diff);
   }
   return ret;
 }
 
 CameraRescalerBase::CameraRescalerBase()
     :CameraRescalerThread() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   char prop[PROPERTY_VALUE_MAX];
   memset(prop, 0, sizeof(prop));
   property_get("persist.qmmf.rescaler.c2d", prop, "1");
@@ -495,20 +495,20 @@ CameraRescalerBase::CameraRescalerBase()
   }
 
   rescaler_->Init();
-  QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 CameraRescalerBase::~CameraRescalerBase() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   delete rescaler_;
-  QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 status_t CameraRescalerBase::ReturnBufferToBufferPool(
     const StreamBuffer &buffer) {
   status_t ret = ReturnBufferLocked(buffer);
   if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s: Failed to return buffer to memory pool", TAG, __func__);
+    QMMF_ERROR("%s: Failed to return buffer to memory pool", __func__);
   }
   return ret;
 }
@@ -522,16 +522,16 @@ void CameraRescalerBase::FlushBufs() {
     iter = bufs_list_.begin();
     buffer = *iter;
     bufs_list_.erase(iter);
-    QMMF_INFO("%s:%s: back to client node: FD: %d", TAG, __func__, buffer.fd);
+    QMMF_INFO("%s: back to client node: FD: %d", __func__, buffer.fd);
     ReturnBufferToProducer(buffer);
   }
 }
 
 void CameraRescalerBase::AddBuf(StreamBuffer& buffer) {
-  QMMF_DEBUG("%s:%s: Enter", TAG, __func__);
+  QMMF_DEBUG("%s: Enter", __func__);
   std::unique_lock<std::mutex> lock(wait_lock_);
   bufs_list_.push_back(buffer);
-  wait_.notify_one();
+  wait_.Signal();
 }
 
 bool CameraRescalerBase::ThreadLoop() {
@@ -542,9 +542,9 @@ bool CameraRescalerBase::ThreadLoop() {
     std::unique_lock<std::mutex> lock(wait_lock_);
     std::chrono::nanoseconds wait_time(kFrameTimeout);
     while (bufs_list_.empty()) {
-      auto ret = wait_.wait_for(lock, wait_time);
-      if (ret == std::cv_status::timeout) {
-        QMMF_DEBUG("%s:%s: Wait for frame available timed out", TAG, __func__);
+      auto ret = wait_.WaitFor(lock, wait_time);
+      if (ret != 0) {
+        QMMF_DEBUG("%s: Wait for frame available timed out", __func__);
         // timeout loop again
         return true;
       }
@@ -554,8 +554,7 @@ bool CameraRescalerBase::ThreadLoop() {
     bufs_list_.erase(iter);
   }
 
-  StreamBuffer out_buffer;
-  memset(&out_buffer, 0x0, sizeof(out_buffer));
+  StreamBuffer out_buffer{};
   GetFreeOutputBuffer(&out_buffer);
 
   out_buffer.stream_id    = 0x55aa;
@@ -564,10 +563,10 @@ bool CameraRescalerBase::ThreadLoop() {
   out_buffer.camera_id    = in_buffer.camera_id;
   out_buffer.flags        = in_buffer.flags;
 
-  QMMF_DEBUG("%s:%s: Thread map", TAG, __func__);
+  QMMF_DEBUG("%s: Thread map", __func__);
   auto ret = MapBuf(out_buffer);
   if (ret != NO_ERROR) {
-    QMMF_ERROR("%s:%s: fail to map in_buffer", TAG, __func__);
+    QMMF_ERROR("%s: fail to map in_buffer", __func__);
     ReturnBufferToBufferPool(out_buffer);
     ReturnBufferToProducer(in_buffer);
     return true;
@@ -578,7 +577,7 @@ bool CameraRescalerBase::ThreadLoop() {
   if (in_buffer.data == nullptr) {
     vaaddr = mmap(nullptr, in_buffer.size, PROT_READ  | PROT_WRITE,
         MAP_SHARED, in_buffer.fd, 0);
-    QMMF_DEBUG("%s:%s: Thread map in buff done", TAG, __func__);
+    QMMF_DEBUG("%s: Thread map in buff done", __func__);
     in_buff_map = true;
     in_buffer.data = vaaddr;
   }
@@ -600,18 +599,18 @@ status_t CameraRescalerBase::MapBuf(StreamBuffer& buffer) {
   void *vaaddr = nullptr;
 
   if (buffer.fd == -1) {
-    QMMF_ERROR("%s:%s: Error Invalid FD", TAG, __func__);
+    QMMF_ERROR("%s: Error Invalid FD", __func__);
     return BAD_VALUE;
   }
 
-  QMMF_DEBUG("%s:%s: buffer.fd=%d buffer.size=%d", TAG, __func__,
+  QMMF_DEBUG("%s: buffer.fd=%d buffer.size=%d", __func__,
       buffer.fd, buffer.size);
 
   if (mapped_buffs_.count(buffer.fd) == 0) {
     vaaddr = mmap(nullptr, buffer.size, PROT_READ  | PROT_WRITE,
         MAP_SHARED, buffer.fd, 0);
     if (vaaddr == MAP_FAILED) {
-        QMMF_ERROR("%s:%s: ION mmap failed: error(%s):(%d)", TAG, __func__,
+        QMMF_ERROR("%s: ION mmap failed: error(%s):(%d)", __func__,
             strerror(errno), errno);
         return BAD_VALUE;
     }
@@ -632,7 +631,7 @@ void CameraRescalerBase::UnMapBufs() {
   for (auto iter : mapped_buffs_) {
     auto map = iter.second;
     if (map.addr) {
-      QMMF_INFO("%s:%s: Unmap addr(%p) size(%d)", TAG, __func__,
+      QMMF_INFO("%s: Unmap addr(%p) size(%d)", __func__,
           map.addr, map.size);
       munmap(map.addr, map.size);
     }
@@ -650,6 +649,7 @@ int32_t CameraRescalerThread::Run(const std::string &name) {
     goto exit;
   }
 
+  abort_ = false;
   running_ = true;
   thread_ = new std::thread(MainLoop, this);
   if (thread_ == nullptr) {
@@ -720,19 +720,21 @@ bool CameraRescalerThread::ExitPending() {
 #define RESCALER_BUFFERS_CNT (5)
 
 CameraRescalerMemPool::CameraRescalerMemPool()
-    : gralloc_device_(nullptr),
+    : alloc_device_interface_(nullptr),
+      mem_alloc_interface_(nullptr),
+      alloc_device_(nullptr),
       gralloc_slots_(nullptr),
       buffers_allocated_(0),
       pending_buffer_count_(0),
       buffer_cnt_(RESCALER_BUFFERS_CNT) {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Enter", __func__);
+  QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 CameraRescalerMemPool::~CameraRescalerMemPool() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
-  if (gralloc_device_ != nullptr) {
+  if (alloc_device_ != nullptr) {
     if (!gralloc_buffers_.empty()) {
       for (auto const& it : gralloc_buffers_) {
         FreeGrallocBuffer(it.first);
@@ -742,12 +744,16 @@ CameraRescalerMemPool::~CameraRescalerMemPool() {
     if (nullptr != gralloc_slots_) {
       delete[] gralloc_slots_;
     }
-
-   if (nullptr != gralloc_device_->common.close) {
-      gralloc_device_->common.close(&gralloc_device_->common);
+    if (nullptr != alloc_device_interface_) {
+      delete alloc_device_interface_;
+      alloc_device_interface_ = nullptr;
+    }
+    if (nullptr != mem_alloc_interface_) {
+      delete mem_alloc_interface_;
+      mem_alloc_interface_ = nullptr;
     }
   }
-  QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 int32_t CameraRescalerMemPool::Initialize(uint32_t width,
@@ -762,30 +768,40 @@ int32_t CameraRescalerMemPool::Initialize(uint32_t width,
 
   ret = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module);
   if ((NO_ERROR != ret) || (nullptr == module)) {
-    QMMF_ERROR("%s:%s: Unable to load GrallocHal module: %d", TAG,
+    QMMF_ERROR("%s: Unable to load GrallocHal module: %d",
                __func__, ret);
     return ret;
   }
 
-  ret = module->methods->open(module, GRALLOC_HARDWARE_GPU0,
-                              (struct hw_device_t **)&gralloc_device_);
-  if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s: Could not open Gralloc module: %s (%d)", TAG,
-               __func__, strerror(-ret), ret);
+  alloc_device_interface_ = IAllocDevice::CreateAllocDevice(module);
+  if (nullptr == alloc_device_interface_) {
+    QMMF_ERROR("%s: Could not create alloc device", __func__);
     goto FAIL;
   }
 
-  QMMF_INFO("%s:%s: Gralloc Module author: %s, version: %d name: %s",
-            TAG, __func__,
-            gralloc_device_->common.module->author,
-            gralloc_device_->common.module->hal_api_version,
-            gralloc_device_->common.module->name);
+  alloc_device_ = alloc_device_interface_->GetDevice();
+  if (nullptr == alloc_device_) {
+    QMMF_ERROR("%s: Unable to get gralloc device", __func__);
+    goto FAIL;
+  }
+
+  mem_alloc_interface_ = IMemAllocator::CreateMemAllocator(alloc_device_);
+  if (mem_alloc_interface_ == nullptr) {
+    QMMF_ERROR("%s: Could not open allocator module", __func__);
+    goto FAIL;
+  }
+
+  QMMF_INFO("%s: Gralloc Module author: %s, version: %d name: %s",
+            __func__,
+            alloc_device_->common.module->author,
+            alloc_device_->common.module->hal_api_version,
+            alloc_device_->common.module->name);
 
   // Allocate gralloc slots.
   if (buffer_cnt_ > 0) {
     gralloc_slots_ = new buffer_handle_t[buffer_cnt_];
     if (gralloc_slots_ == nullptr) {
-      QMMF_ERROR("%s:%s: Unable to allocate buffer handles!", TAG, __func__);
+      QMMF_ERROR("%s: Unable to allocate buffer handles!", __func__);
       ret = NO_MEMORY;
       goto FAIL;
     }
@@ -796,8 +812,13 @@ int32_t CameraRescalerMemPool::Initialize(uint32_t width,
   return NO_ERROR;
 
 FAIL:
-  if (nullptr != gralloc_device_) {
-    gralloc_device_->common.close(&gralloc_device_->common);
+  if (nullptr != alloc_device_interface_) {
+    delete alloc_device_interface_;
+    alloc_device_interface_ = nullptr;
+  }
+  if (nullptr != mem_alloc_interface_) {
+    delete mem_alloc_interface_;
+    mem_alloc_interface_ = nullptr;
   }
   return -1;
 }
@@ -805,22 +826,22 @@ FAIL:
 status_t CameraRescalerMemPool::ReturnBufferLocked(const StreamBuffer &buffer) {
 
   if (pending_buffer_count_ == 0) {
-    QMMF_ERROR("%s:%s: Not expecting any buffers!", TAG, __func__);
+    QMMF_ERROR("%s: Not expecting any buffers!", __func__);
     return INVALID_OPERATION;
   }
 
   std::lock_guard<std::mutex> lock(buffer_lock_);
 
   if (gralloc_buffers_.find(buffer.handle) == gralloc_buffers_.end()) {
-    QMMF_ERROR("%s:%s: Buffer %p returned that wasn't allocated by this node",
-        TAG, __func__, buffer.handle);
+    QMMF_ERROR("%s: Buffer %p returned that wasn't allocated by this node",
+        __func__, buffer.handle);
     return BAD_VALUE;
   }
 
   gralloc_buffers_.at(buffer.handle) = true;
   --pending_buffer_count_;
 
-  wait_for_buffer_.notify_one();
+  wait_for_buffer_.Signal();
   return NO_ERROR;
 }
 
@@ -832,25 +853,25 @@ status_t CameraRescalerMemPool::GetFreeOutputBuffer(StreamBuffer* buffer) {
   buffer->fd = -1;
 
   if (gralloc_slots_ == nullptr) {
-    QMMF_ERROR("%s:%s: Error gralloc slots!", TAG, __func__);
+    QMMF_ERROR("%s: Error gralloc slots!", __func__);
     return NO_ERROR;
   }
 
   if (pending_buffer_count_ == buffer_cnt_) {
-    QMMF_VERBOSE("%s:%s: Already retrieved maximum buffers (%d), waiting"
-        " on a free one", TAG, __func__, buffer_cnt_);
+    QMMF_VERBOSE("%s: Already retrieved maximum buffers (%d), waiting"
+        " on a free one",  __func__, buffer_cnt_);
 
     std::chrono::nanoseconds wait_time(kBufferWaitTimeout);
-    auto status = wait_for_buffer_.wait_for(lock, wait_time);
-    if (status == std::cv_status::timeout) {
-      QMMF_ERROR("%s:%s: Wait for output buffer return timed out", TAG,
+    auto status = wait_for_buffer_.WaitFor(lock, wait_time);
+    if (status != 0) {
+      QMMF_ERROR("%s: Wait for output buffer return timed out",
                  __func__);
       return TIMED_OUT;
     }
   }
   ret = GetBufferLocked(buffer);
   if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s: Failed to retrieve output buffer", TAG, __func__);
+    QMMF_ERROR("%s: Failed to retrieve output buffer", __func__);
   }
 
   return ret;
@@ -893,7 +914,7 @@ status_t CameraRescalerMemPool::GetBufferLocked(StreamBuffer* buffer) {
   }
 
   if ((nullptr == handle) || (0 > idx)) {
-    QMMF_ERROR("%s:%s: Unable to allocate or find a free buffer!", TAG,
+    QMMF_ERROR("%s: Unable to allocate or find a free buffer!",
                __func__);
     return INVALID_OPERATION;
   }
@@ -903,7 +924,7 @@ status_t CameraRescalerMemPool::GetBufferLocked(StreamBuffer* buffer) {
         gralloc_slots_[idx];
     ret = PopulateMetaInfo(buffer->info, priv_handle);
     if (NO_ERROR != ret) {
-      QMMF_ERROR("%s:%s: Failed to populate buffer meta info", TAG, __func__);
+      QMMF_ERROR("%s: Failed to populate buffer meta info", __func__);
       return ret;
     }
     buffer->handle = gralloc_slots_[idx];
@@ -919,19 +940,16 @@ status_t CameraRescalerMemPool::PopulateMetaInfo(CameraBufferMetaData &info,
                                    struct private_handle_t *priv_handle) {
 
   if (nullptr == priv_handle) {
-    QMMF_ERROR("%s:%s: Invalid private handle!\n", TAG, __func__);
+    QMMF_ERROR("%s: Invalid private handle!\n", __func__);
     return BAD_VALUE;
   }
 
   int alignedW, alignedH;
-  gralloc_module_t const *mapper = reinterpret_cast<gralloc_module_t const *>(
-          gralloc_device_->common.module);
-  status_t ret = mapper->perform(mapper,
-      GRALLOC_MODULE_PERFORM_GET_CUSTOM_STRIDE_AND_HEIGHT_FROM_HANDLE,
-      priv_handle, &alignedW, &alignedH);
-
+  auto ret = mem_alloc_interface_->GetStrideAndHeightFromHandle(priv_handle,
+                                                                &alignedW,
+                                                                &alignedH);
   if (0 != ret) {
-    QMMF_ERROR("%s:%s: Unable to query stride&scanline: %d\n", TAG, __func__,
+    QMMF_ERROR("%s: Unable to query stride&scanline: %d\n", __func__,
                ret);
     return ret;
   }
@@ -975,7 +993,7 @@ status_t CameraRescalerMemPool::PopulateMetaInfo(CameraBufferMetaData &info,
       info.plane_info[1].scanline = alignedH/2;
       break;
     default:
-      QMMF_ERROR("%s:%s: Unsupported format: %d", TAG, __func__,
+      QMMF_ERROR("%s: Unsupported format: %d", __func__,
                  priv_handle->format);
       return NAME_NOT_FOUND;
   }
@@ -999,25 +1017,25 @@ status_t CameraRescalerMemPool::AllocGrallocBuffer(buffer_handle_t *buf) {
     width = height = 1;
   }
 
-  int stride = 0;
+  uint32_t stride = 0;
 
-  ret = gralloc_device_->alloc(gralloc_device_, static_cast<int>(width),
-                               static_cast<int>(height), format,
-                               static_cast<int>(usage), buf, &stride);
+  ret = mem_alloc_interface_->AllocBuffer(buf, static_cast<int>(width),
+                                          static_cast<int>(height), format,
+                                          static_cast<int>(usage), &stride);
   if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s: Failed to allocate gralloc buffer", TAG, __func__);
+    QMMF_ERROR("%s: Failed to allocate gralloc buffer", __func__);
   }
   return ret;
 }
 
 status_t CameraRescalerMemPool::FreeGrallocBuffer(buffer_handle_t buf) {
-  return gralloc_device_->free(gralloc_device_, buf);
+  return mem_alloc_interface_->FreeBuffer(buf);
 }
 
 CameraRescaler::CameraRescaler()
   : CameraRescalerBase(),
     is_stop_(false) {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   BufferConsumerImpl<CameraRescaler> *impl;
   impl = new BufferConsumerImpl<CameraRescaler>(this);
@@ -1027,26 +1045,26 @@ CameraRescaler::CameraRescaler()
   producer_impl = new BufferProducerImpl<CameraRescaler>(this);
   buffer_producer_impl_ = producer_impl;
 
-  QMMF_INFO("%s:%s: Exit (0x%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
 
 CameraRescaler::~CameraRescaler() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   buffer_producer_impl_.clear();
   buffer_consumer_impl_.clear();
-  QMMF_INFO("%s:%s: Exit (0x%p)", TAG, __func__, this);
+  QMMF_INFO("%s: Exit (0x%p)", __func__, this);
 }
 
 
 status_t CameraRescaler::AddConsumer(const sp<IBufferConsumer>& consumer) {
   if (consumer.get() == nullptr) {
-    QMMF_ERROR("%s:%s: Input consumer is nullptr", TAG, __func__);
+    QMMF_ERROR("%s: Input consumer is nullptr", __func__);
     return BAD_VALUE;
   }
 
   buffer_producer_impl_->AddConsumer(consumer);
   consumer->SetProducerHandle(buffer_producer_impl_);
-  QMMF_VERBOSE("%s:%s: Consumer(%p) has been added.", TAG, __func__,
+  QMMF_VERBOSE("%s: Consumer(%p) has been added.", __func__,
       consumer.get());
 
   return NO_ERROR;
@@ -1058,7 +1076,7 @@ uint32_t CameraRescaler::GetNumConsumer() {
 
 status_t CameraRescaler::RemoveConsumer(sp<IBufferConsumer>& consumer) {
   if(buffer_producer_impl_->GetNumConsumer() == 0) {
-    QMMF_ERROR("%s:%s: There are no connected consumers!", TAG, __func__);
+    QMMF_ERROR("%s: There are no connected consumers!", __func__);
     return INVALID_OPERATION;
   }
   buffer_producer_impl_->RemoveConsumer(consumer);
@@ -1071,11 +1089,11 @@ sp<IBufferConsumer>& CameraRescaler::GetCopyConsumerIntf() {
 }
 
 void CameraRescaler::OnFrameAvailable(StreamBuffer& buffer) {
-  QMMF_DEBUG("%s:%s: Camera %u: Frame %d is available", TAG,
+  QMMF_DEBUG("%s: Camera %u: Frame %d is available",
       __func__, buffer.camera_id, buffer.frame_number);
 
   if (IsStop()) {
-    QMMF_INFO("%s:%s: IsStop", TAG, __func__);
+    QMMF_INFO("%s: IsStop", __func__);
     return;
   }
 
@@ -1083,7 +1101,7 @@ void CameraRescaler::OnFrameAvailable(StreamBuffer& buffer) {
 }
 
 void CameraRescaler::NotifyBufferReturned(const StreamBuffer& buffer) {
-  QMMF_DEBUG("%s:%s: Stream buffer(handle %p) returned", TAG, __func__,
+  QMMF_DEBUG("%s: Stream buffer(handle %p) returned", __func__,
       buffer.handle);
   ReturnBufferToBufferPool(buffer);
 }
@@ -1094,49 +1112,49 @@ status_t CameraRescaler::NotifyBufferToClient(StreamBuffer &buffer) {
   if(buffer_producer_impl_->GetNumConsumer() > 0) {
     buffer_producer_impl_->NotifyBuffer(buffer);
   } else {
-    QMMF_DEBUG("%s:%s: No consumer, simply return buffer back to"
-        " memory pool!", TAG, __func__);
+    QMMF_DEBUG("%s: No consumer, simply return buffer back to"
+        " memory pool!",  __func__);
     ret = ReturnBufferToBufferPool(buffer);
   }
   return ret;
 }
 
 status_t CameraRescaler::ReturnBufferToProducer(StreamBuffer &buffer) {
-  QMMF_DEBUG("%s:%s: Enter", TAG, __func__);
+  QMMF_DEBUG("%s: Enter", __func__);
   const sp<IBufferConsumer> consumer = buffer_consumer_impl_;
   if (consumer.get() == nullptr) {
-    QMMF_ERROR("%s:%s: Failed to retrieve buffer consumer for camera(%d)!",
-               TAG, __func__, buffer.camera_id);
+    QMMF_ERROR("%s: Failed to retrieve buffer consumer for camera(%d)!",
+               __func__, buffer.camera_id);
     return BAD_VALUE;
   }
   consumer->GetProducerHandle()->NotifyBufferReturned(buffer);
 
-  QMMF_DEBUG("%s:%s: Exit", TAG, __func__);
+  QMMF_DEBUG("%s: Exit", __func__);
   return NO_ERROR;
 }
 
 status_t CameraRescaler::Start() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   std::lock_guard<std::mutex> lock(stop_lock_);
   is_stop_ = false;
-  QMMF_INFO("%s:%s: Start thread", TAG, __func__);
-  Run(TAG);
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Start thread", __func__);
+  Run(LOG_TAG);
+  QMMF_INFO("%s: Exit", __func__);
   return NO_ERROR;
 }
 
 status_t CameraRescaler::Stop() {
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   {
     std::lock_guard<std::mutex> lock(stop_lock_);
     is_stop_ = true;
   }
-  QMMF_INFO("%s:%s: Stop thread", TAG, __func__);
+  QMMF_INFO("%s: Stop thread", __func__);
   RequestExitAndWait();
-  QMMF_INFO("%s:%s: Stop thread done", TAG, __func__);
+  QMMF_INFO("%s: Stop thread done", __func__);
   UnMapBufs();
-  QMMF_INFO("%s:%s: unmap done", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: unmap done", __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return NO_ERROR;
 }
 

@@ -11,12 +11,18 @@ include $(CLEAR_VARS)
 
 include $(QMMF_SDK_TOP_SRCDIR)/common.mk
 
+LOCAL_C_INCLUDES += $(TOP)/system/media/camera/include
+
 LOCAL_SRC_FILES := qmmf_player_gtest.cc
 LOCAL_SRC_FILES += qmmf_player_parser.cc
 
 LOCAL_SHARED_LIBRARIES += libqmmf_player_client
 
 LOCAL_MODULE = qmmf_player_gtest
+
+ifeq ($(LOCAL_VENDOR_MODULE),true)
+LOCAL_VENDOR_MODULE := false
+endif
 
 include $(BUILD_NATIVE_TEST)
 

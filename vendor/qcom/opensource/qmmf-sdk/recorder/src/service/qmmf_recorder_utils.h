@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -57,20 +57,20 @@ class IBufferProducer : public RefBase {
 
   // To provide number of connected consumers.
   int32_t GetNumConsumer() {
-      Mutex::Autolock autoLock(lock_);
+      std::lock_guard<std::mutex> autoLock(lock_);
       return buffer_consumers_.size();
   }
 
  protected:
   // Lock to protect list of consumer.
-  Mutex lock_;
+  std::mutex lock_;
 
   // Lock to protect return buffer sequence, buffer would come back to produces
   // from different thread context
-  Mutex buffer_return_lock_;
+  std::mutex buffer_return_lock_;
 
   // List of consumers.
-  Vector< sp<IBufferConsumer>> buffer_consumers_;
+  std::vector< sp<IBufferConsumer>> buffer_consumers_;
 };
 
 class IBufferConsumer : public RefBase {
@@ -134,39 +134,39 @@ class BufferConsumerImpl : public IBufferConsumer {
 template <typename _type>
 BufferProducerImpl<_type>::BufferProducerImpl(_type* source)
     : source_(source) {
-    QMMF_INFO("%s:%s: Enter", TAG, __func__);
+    QMMF_INFO("%s: Enter", __func__);
 
-    QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+    QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 template <typename _type>
 BufferProducerImpl<_type>::~BufferProducerImpl() {
-    QMMF_INFO("%s:%s: Enter", TAG, __func__);
-    QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+    QMMF_INFO("%s: Enter", __func__);
+    QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 template <typename _type>
 void BufferProducerImpl<_type>::NotifyBuffer(StreamBuffer& buffer) {
-  Mutex::Autolock autoLock(lock_);
+  std::lock_guard<std::mutex> autoLock(lock_);
   //Check for any consumer present. Notify them
   //about the new incoming buffer and keep reference count.
-  if (!buffer_consumers_.isEmpty()) {
+  if (!buffer_consumers_.empty()) {
       buffer_map_.Add(buffer);
       buffer_map_.ReplaceValueFor(buffer, buffer_consumers_.size());
 
-      QMMF_VERBOSE("%s:%s: (%p) buffer(0x%p) map size(%d) and it's ref count(%d)"
-          , TAG, __func__ , this, buffer.handle, buffer_map_.Size(),
+      QMMF_VERBOSE("%s: (%p) buffer(0x%p) map size(%d) and it's ref count(%d)",
+          __func__ , this, buffer.handle, buffer_map_.Size(),
           buffer_map_.ValueFor(buffer));
 
-      QMMF_VERBOSE("%s:%s: Notify buffer to %d-consumers", TAG, __func__,
+      QMMF_VERBOSE("%s: Notify buffer to %d-consumers", __func__,
           buffer_consumers_.size());
 
       for(auto& iter : buffer_consumers_) {
           (iter)->OnFrameAvailable(buffer);
       }
   } else {
-      QMMF_WARN("%s:%s: No consumer connected to ProducerImpl, Return Buffer",
-          TAG, __func__);
+      QMMF_WARN("%s: No consumer connected to ProducerImpl, Return Buffer",
+          __func__);
       source_->NotifyBufferReturned(buffer);
   }
 }
@@ -174,11 +174,11 @@ void BufferProducerImpl<_type>::NotifyBuffer(StreamBuffer& buffer) {
 template <typename _type>
 void BufferProducerImpl<_type>::NotifyBufferReturned(StreamBuffer& buffer) {
 
-  Mutex::Autolock autoLock(buffer_return_lock_);
+  std::lock_guard<std::mutex> autoLock(buffer_return_lock_);
 
    if (!buffer_map_.IsExist(buffer)) {
-    QMMF_INFO("%s:%s: Warning Buffer is already returned (%p)",
-        TAG, __func__, buffer.handle);
+    QMMF_INFO("%s: Warning Buffer is already returned (%p)",
+        __func__, buffer.handle);
     return;
   }
 
@@ -190,7 +190,7 @@ void BufferProducerImpl<_type>::NotifyBufferReturned(StreamBuffer& buffer) {
     source_->NotifyBufferReturned(buffer);
   } else {
     // Hold this buffer, do not return until its ref count is 1.
-    QMMF_INFO("%s:%s: Hold buffer Refcount is not 1", TAG, __func__);
+    QMMF_INFO("%s: Hold buffer Refcount is not 1", __func__);
     uint32_t value = buffer_map_.ValueFor(buffer);
     buffer_map_.ReplaceValueFor(buffer, --value);
   }
@@ -201,9 +201,9 @@ void BufferProducerImpl<_type>::AddConsumer(const sp<IBufferConsumer>&
                                             consumer) {
 
   assert(consumer.get() != NULL);
-  Mutex::Autolock autoLock(lock_);
-  buffer_consumers_.add(consumer);
-  QMMF_VERBOSE("%s:%s: Consumer(%p) added successfully!", TAG, __func__,
+  std::lock_guard<std::mutex> autoLock(lock_);
+  buffer_consumers_.push_back(consumer);
+  QMMF_VERBOSE("%s: Consumer(%p) added successfully!", __func__,
       consumer.get());
 }
 
@@ -211,14 +211,14 @@ template <typename _type>
 void BufferProducerImpl<_type>::RemoveConsumer(sp<IBufferConsumer>& consumer) {
 
   assert(consumer.get() != NULL);
-  Mutex::Autolock autoLock(lock_);
+  std::lock_guard<std::mutex> autoLock(lock_);
 
-  Vector<sp<IBufferConsumer> >::iterator iter = buffer_consumers_.begin();
+  std::vector<sp<IBufferConsumer> >::iterator iter = buffer_consumers_.begin();
   for(; iter != buffer_consumers_.end(); ++iter) {
-    QMMF_INFO("%s:%s: (%p) iter=%p & consumer=%p", TAG, __func__, this,
+    QMMF_INFO("%s: (%p) iter=%p & consumer=%p", __func__, this,
         (*iter).get(), consumer.get());
     if((*iter).get() == consumer.get()) {
-      QMMF_INFO("%s:%s: Consumer(%p) Removed!", TAG,__func__, consumer.get());
+      QMMF_INFO("%s: Consumer(%p) Removed!", __func__, consumer.get());
       iter = buffer_consumers_.erase(iter);
       break;
     }
@@ -229,15 +229,15 @@ template <typename _type>
 BufferConsumerImpl<_type>::BufferConsumerImpl(_type* source)
     : source_(source)
 {
-    QMMF_INFO("%s:%s: Enter", TAG, __func__);
-    QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+    QMMF_INFO("%s: Enter", __func__);
+    QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 template <typename _type>
 BufferConsumerImpl<_type>::~BufferConsumerImpl()
 {
-    QMMF_INFO("%s:%s: Enter", TAG, __func__);
-    QMMF_INFO("%s:%s: Exit (%p)", TAG, __func__, this);
+    QMMF_INFO("%s: Enter", __func__);
+    QMMF_INFO("%s: Exit (%p)", __func__, this);
 }
 
 template <typename _type>

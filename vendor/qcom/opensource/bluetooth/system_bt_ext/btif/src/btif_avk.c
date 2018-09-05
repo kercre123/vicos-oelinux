@@ -34,6 +34,7 @@
 #include "hardware/bt_av.h"
 #include "osi/include/allocator.h"
 #include <cutils/properties.h>
+#include "btcore/include/bdaddr.h"
 
 #define LOG_TAG "bt_btif_avk"
 
@@ -47,6 +48,7 @@
 #include "btu.h"
 #include "bt_utils.h"
 #include "hardware/bt_av_vendor.h"
+#include "osi/include/fixed_queue.h"
 #include "osi/include/list.h"
 
 /*****************************************************************************
@@ -452,6 +454,11 @@ static BOOLEAN btif_avk_state_idle_handler(btif_sm_event_t event, void *p_data, 
         case BTA_AVK_REGISTER_EVT:
             BTIF_TRACE_EVENT("The AV Handle:%d", ((tBTA_AVK*)p_data)->registr.hndl);
             btif_avk_cb[index].bta_handle = ((tBTA_AVK*)p_data)->registr.hndl;
+            if (btif_max_avk_clients == index + 1) {
+                if (bt_av_sink_vendor_callbacks != NULL) {
+                    HAL_CBACK(bt_av_sink_vendor_callbacks, registration_vendor_cb, TRUE);
+                }
+            }
             break;
 
         case BTIF_AVK_CONNECT_REQ_EVT:
@@ -3824,7 +3831,7 @@ static BOOLEAN btif_avk_any_br_peer(void)
             {
                 BTIF_TRACE_WARNING("%s : Connected to BR device : %s",
                     __FUNCTION__, bdaddr_to_string(&btif_avk_cb[index].peer_bda,
-                    &addr_string), sizeof(addr_string));
+                    &addr_string, sizeof(addr_string)));
                 return TRUE;
             }
         }

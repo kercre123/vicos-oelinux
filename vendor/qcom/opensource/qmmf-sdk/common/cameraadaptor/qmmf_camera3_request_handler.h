@@ -30,6 +30,7 @@
 #include "common/cameraadaptor/qmmf_camera3_types.h"
 #include "common/cameraadaptor/qmmf_camera3_internal_types.h"
 #include "common/cameraadaptor/qmmf_camera3_thread.h"
+#include "qmmf_camera3_smooth_zoom.h"
 
 using namespace android;
 
@@ -111,11 +112,14 @@ class Camera3RequestHandler : public Camera3Thread {
   pthread_cond_t pause_state_signal_;
 
   uint32_t current_frame_number_;
+  uint32_t current_input_frame_number_;
   int64_t streaming_last_frame_number_;
 
   Camera3Monitor &monitor_;
   int32_t monitor_id_;
   uint32_t batch_size_;
+
+  Camera3SmoothZoom smooth_zoom_;
 };
 
 }  // namespace cameraadaptor ends here

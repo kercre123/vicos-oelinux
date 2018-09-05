@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,7 +40,22 @@ enum ParamTag {
   QMMF_SURFACE_CROP,
   QMMF_MULTICAM_STITCH_CONFIG,
   QMMF_POSTPROCESS_PLUGIN,
+  QMMF_POSTPROCESS_FRAME_SKIP,
   QMMF_SOURCE_VIDEO_TRACK_ID,
+  QMMF_VIDEO_TIMELAPSE_INTERVAL,
+  QMMF_IMAGE_THUMBNAIL,
+  QMMF_SNAPSHOT_TYPE,
+  QMMF_VIDEO_WAIT_AEC_MODE,
+  QMMF_VIDEO_ROTATE,
+  QMMF_EXIF,
+  QMMF_VIDEO_HDR_MODE,
+};
+
+enum class RotationFlags {
+  kNone,
+  kRotate90,
+  kRotate180,
+  kRotate270,
 };
 
 enum class TransformFlags {
@@ -79,6 +94,13 @@ enum class StitchingMode {
   // client via the QMMF_SURFACE_PLACEMENT tag structure.
   // TODO: Not implemented. Do not use!
   kCustomComposition
+};
+
+enum class SnapshotMode {
+  kNone,
+  kStill,
+  kVideo,
+  kContinuous
 };
 
 struct SourceSurfaceDesc : DataTagBase {
@@ -135,11 +157,76 @@ struct PostprocPlugin : DataTagBase {
       uid(0) {}
 };
 
+struct PostprocFrameSkip : DataTagBase {
+  // Number of skip frames for each sent frame
+  uint32_t frame_skip;     // Default: 0 means no skip
+
+  PostprocFrameSkip()
+    : DataTagBase(QMMF_POSTPROCESS_FRAME_SKIP),
+      frame_skip(0) {}
+};
+
 struct SourceVideoTrack : DataTagBase {
   int32_t source_track_id;  // Default: -1
   SourceVideoTrack()
     : DataTagBase(QMMF_SOURCE_VIDEO_TRACK_ID),
       source_track_id(-1) {}
+};
+
+struct VideoTimeLapse : DataTagBase {
+  uint32_t time_interval;  // Default: 33ms
+  VideoTimeLapse()
+    : DataTagBase(QMMF_VIDEO_TIMELAPSE_INTERVAL),
+      time_interval(33) {}
+};
+
+struct ImageThumbnail : DataTagBase {
+  uint32_t width;   // Default: 0
+  uint32_t height;  // Default: 0
+  uint32_t quality; // Default: 75 (range: 0~100)
+
+  ImageThumbnail()
+    : DataTagBase(QMMF_IMAGE_THUMBNAIL),
+      width(0), height(0), quality(75) {}
+};
+
+struct SnapshotType : DataTagBase {
+  SnapshotMode type;
+  SnapshotType()
+    : DataTagBase(QMMF_SNAPSHOT_TYPE),
+      type(SnapshotMode::kStill) {}
+};
+
+struct VideoWaitAECMode : DataTagBase {
+  // Wait for initial AE, right after start of video tracks to converge
+  // before passing the frames to the client.
+  bool enable;     // Default: false
+
+  VideoWaitAECMode()
+    : DataTagBase(QMMF_VIDEO_WAIT_AEC_MODE),
+      enable(false) {}
+};
+
+struct VideoRotate : DataTagBase {
+  RotationFlags flags; // Default: TransformFlags::kNone
+  VideoRotate()
+    : DataTagBase(QMMF_VIDEO_ROTATE),
+      flags(RotationFlags::kNone) {
+  }
+};
+
+struct ImageExif : DataTagBase {
+  bool enable;     // Default: true
+  ImageExif()
+    : DataTagBase(QMMF_EXIF),
+      enable(true) {}
+};
+
+struct VideoHDRMode : DataTagBase {
+  bool enable;  // Default: false to disable HDR
+  VideoHDRMode()
+    : DataTagBase(QMMF_VIDEO_HDR_MODE),
+      enable(false) {}
 };
 
 }; //namespace recorder.

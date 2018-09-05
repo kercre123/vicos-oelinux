@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -43,6 +43,13 @@ enum class AudioState {
   kPaused,  // stopped with data retention
 };
 
+enum AudioHAL {
+  kPrimary = 0,
+  kA2DP,
+  kUSB,
+  kNum
+};
+
 // handle to a specific audio client/service connection
 typedef int32_t AudioHandle;
 
@@ -50,6 +57,8 @@ typedef ::std::function<void(const AudioHandle audio_handle,
                              const int32_t error)> AudioErrorHandler;
 typedef ::std::function<void(const AudioHandle audio_handle,
                              const AudioBuffer& buffer)> AudioBufferHandler;
+typedef ::std::function<void(const AudioHandle audio_handle)>
+        AudioStoppedHandler;
 
 }; // namespace audio
 }; // namespace common

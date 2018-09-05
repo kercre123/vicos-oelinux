@@ -31,19 +31,17 @@
 
 #include <memory>
 #include <mutex>
-#include <condition_variable>
 
 #include <camera/CameraMetadata.h>
-#include <utils/KeyedVector.h>
+#include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 
+#include "common/utils/qmmf_condition.h"
+#include "common/cameraadaptor/qmmf_camera3_device_client.h"
+#include "common/codecadaptor/src/qmmf_avcodec.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_camera_interface.h"
 #include "recorder/src/service/qmmf_camera_context.h"
 #include "recorder/src/service/qmmf_camera_rescaler.h"
-#include "common/cameraadaptor/qmmf_camera3_device_client.h"
-#include "common/codecadaptor/src/qmmf_avcodec.h"
-
-#include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 
 namespace qmmf {
 
@@ -54,7 +52,7 @@ using namespace avcodec;
 
 namespace recorder {
 
-#define FPS_CHANGE_THRESHOLD  (0.005)
+#define FPS_CHANGE_THRESHOLD  (0.5)
 #define FRAME_SKIP_THRESHOLD_PERCENT (0.05)
 
 class TrackSource;
@@ -177,22 +175,24 @@ class CameraSource {
 
   bool IsCopyStream(const VideoTrackParams& params);
 
+  status_t ParseThumb(uint8_t* vaddr, uint32_t size, StreamBuffer& buffer);
+
   // Map of camera id and CameraContext.
-  DefaultKeyedVector<uint32_t, sp<CameraInterface>> camera_map_;
+  std::map<uint32_t, std::shared_ptr<CameraInterface>> camera_map_;
 
   // Map of track it and TrackSources.
-  DefaultKeyedVector<uint32_t, ::std::shared_ptr<TrackSource>> track_sources_;
+  std::map<uint32_t, ::std::shared_ptr<TrackSource>> track_sources_;
 
   SnapshotCb client_snapshot_cb_;
 
-  sp<PostProcFactory> factory_;
+  std::shared_ptr<PostProcFactory> factory_;
 
   // Not allowed
   CameraSource();
   CameraSource(const CameraSource&);
   CameraSource& operator=(const CameraSource&);
   static CameraSource* instance_;
-  std::map<int32_t, sp<CameraRescaler> > rescalers_;
+  std::map<int32_t, std::shared_ptr<CameraRescaler> > rescalers_;
 
 };
 
@@ -202,7 +202,7 @@ class CameraSource {
 class TrackSource : public ICodecSource {
  public:
   TrackSource(const VideoTrackParams& params,
-              const sp<CameraInterface>& camera_intf);
+              const std::shared_ptr<CameraInterface>& camera_intf);
 
   ~TrackSource();
 
@@ -264,7 +264,7 @@ class TrackSource : public ICodecSource {
   //status_t GetStreamParam(CameraStreamParam& stream_param);
 
   status_t InitCopy(std::shared_ptr<TrackSource> track_source,
-                    const sp<CameraRescaler>& rescaler,
+                    const std::shared_ptr<CameraRescaler>& rescaler,
                     int32_t port_track_id,
                     int32_t track_id_master);
 
@@ -308,21 +308,21 @@ class TrackSource : public ICodecSource {
   VideoTrackParams         track_params_;
   sp<IBufferConsumer>      buffer_consumer_impl_;
   bool                     is_stop_;
-  Mutex                    stop_lock_;
+  std::mutex               stop_lock_;
   bool                     eos_acked_;
-  Mutex                    eos_lock_;
+  std::mutex               eos_lock_;
 
   std::mutex               lock_;
-  std::condition_variable  wait_for_frame_;
+  QCondition               wait_for_frame_;
 
   // will be used till we make stop api as async.
   std::mutex               idle_lock_;
-  std::condition_variable  wait_for_idle_;
+  QCondition               wait_for_idle_;
 
   // Maps of Unique buffer Id and Buffer.
-  DefaultKeyedVector<uint32_t, StreamBuffer> buffer_list_;
+  std::map<uint32_t, StreamBuffer> buffer_list_;
 
-  Mutex buffer_list_lock_;
+  std::mutex buffer_list_lock_;
 
   // Input buffer list, to feed buffers to encoder.
   TSQueue<StreamBuffer> frames_received_;
@@ -330,7 +330,7 @@ class TrackSource : public ICodecSource {
   // List of buffers held by encoder.
   TSQueue<StreamBuffer> frames_being_encoded_;
 
-  sp<CameraInterface>   camera_interface_;
+  std::shared_ptr<CameraInterface>   camera_interface_;
 
   Overlay  overlay_;
   uint32_t active_overlays_;
@@ -340,7 +340,7 @@ class TrackSource : public ICodecSource {
   double  input_frame_interval_;
   double  output_frame_interval_;
   double  remaining_frame_skip_time_;
-  Mutex   frame_skip_lock_;
+  std::mutex frame_skip_lock_;
 
   uint32_t debug_fps_;
   struct timeval input_prevtv_;
@@ -353,7 +353,7 @@ class TrackSource : public ICodecSource {
   uint64_t   frame_repeat_ts_curr_;
   bool       enable_frame_repeat_;
   std::mutex frame_repeat_lock_;
-  sp<CameraRescaler>  rescaler_;
+  std::shared_ptr<CameraRescaler>  rescaler_;
   CameraStreamParam stream_param_;
 
   bool  connected_tocamera_port_;
@@ -369,6 +369,13 @@ class TrackSource : public ICodecSource {
   std::map<buffer_handle_t, uint32_t >  buffer_map_;
   std::map<buffer_handle_t, StreamBuffer > stream_buffer_map_;
 
+  bool time_lapse_mode_;
+  uint32_t time_lapse_interval_;
+  uint64_t time_stamp_;
+
+  uint32_t num_consumers_;
+
+  int32_t rotation_;
 };
 
 }; //namespace recorder

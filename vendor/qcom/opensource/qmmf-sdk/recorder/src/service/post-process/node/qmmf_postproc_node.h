@@ -29,16 +29,15 @@
 
 #pragma once
 
-#include <utils/RefBase.h>
-#include <utils/Log.h>
 #include <map>
 #include <mutex>
-#include <condition_variable>
 #include <chrono>
 
-#include "recorder/src/service/qmmf_recorder_common.h"
-#include "common/qmmf_common_utils.h"
+#include <utils/Timers.h>
 
+#include "common/utils/qmmf_common_utils.h"
+#include "common/utils/qmmf_condition.h"
+#include "recorder/src/service/qmmf_recorder_common.h"
 #include "../interface/qmmf_postproc.h"
 #include "../interface/qmmf_postproc_module.h"
 #include "../plugin/qmmf_postproc_plugin.h"
@@ -59,6 +58,7 @@ enum class PostProcNodeState {
   LINKED,
   STARTING,
   ACTIVE,
+  ABORT,
   STOPPING,
 };
 
@@ -85,6 +85,8 @@ class InputHandler : public PostProcThread {
 
   status_t GetInputBuffers(std::vector<StreamBuffer> &in_buffs);
 
+  status_t ReturnInputBuffers(std::vector<StreamBuffer> &in_buffs);
+
   status_t GetOutputBuffers(std::vector<StreamBuffer> &out_buffs,
                             const std::vector<StreamBuffer> &in_buffs);
 
@@ -98,7 +100,7 @@ class InputHandler : public PostProcThread {
   std::map<uint32_t, map_data_t>    mapped_buffs_;
   std::deque<StreamBuffer>          bufs_list_;
   std::mutex                        wait_lock_;
-  std::condition_variable           wait_;
+  QCondition                        wait_;
 
 };
 
@@ -121,23 +123,25 @@ class OutputHandler : public PostProcThread {
   PostProcNode                      *node_;
   std::vector<StreamBuffer>         bufs_list_;
   std::mutex                        wait_lock_;
-  std::condition_variable           wait_;
+  QCondition                        wait_;
 
 };
 
 class PostProcNode : public PostProcPlugin<PostProcNode>,
-                     public IPostProcEventListener,
-                     public RefBase {
+                     public IPostProcEventListener {
    friend class InputHandler;
    friend class OutputHandler;
 
  public:
-   PostProcNode(int32_t Id, std::string name, sp<IPostProcModule> module);
+   PostProcNode(int32_t Id, std::string name,
+                std::shared_ptr<IPostProcModule> module);
 
    ~PostProcNode();
 
    status_t Initialize(const PostProcIOParam &in_param,
                        const PostProcIOParam &out_param);
+
+   status_t Delete();
 
    status_t Configure(const std::string &config_json_data);
 
@@ -165,6 +169,8 @@ class PostProcNode : public PostProcPlugin<PostProcNode>,
 
    status_t Stop();
 
+   status_t Abort(std::shared_ptr<void> &abort);
+
    std::string& GetName() { return name_; }
 
    uint32_t GetId() { return id_; };
@@ -184,8 +190,8 @@ class PostProcNode : public PostProcPlugin<PostProcNode>,
    InputHandler                      in_;
    OutputHandler                     out_;
 
-   sp<MemPool>                       mem_pool_;
-   sp<IPostProcModule>               module_;
+   std::shared_ptr<MemPool>          mem_pool_;
+   std::shared_ptr<IPostProcModule>  module_;
 
    MemPoolParams                     mem_pool_params_;
 

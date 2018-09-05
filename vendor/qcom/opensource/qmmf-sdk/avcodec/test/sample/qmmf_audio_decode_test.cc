@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,16 +26,19 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "CodecTest"
+#define LOG_TAG "CodecTest"
 #define TAG2 "AACfileIO"
 #define TAG3 "AMRfileIO"
 #define TAG4 "G711fileIO"
 
+#include <cstring>
 #include <memory>
+#include <string>
 
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+#include <unistd.h>
 
 #include "avcodec/test/sample/qmmf_audio_decode_test.h"
 
@@ -50,21 +53,21 @@ using ::std::make_shared;
 AACfileIO* AACfileIO::aacfileIO_ = nullptr;
 
 AACfileIO* AACfileIO::createAACfileIOobj(const char* file) {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s Enter",TAG2,__func__);
   if (aacfileIO_ == nullptr) {
     if (file == nullptr) {
-      QMMF_ERROR("%s:%s:%s  file pointer is NULL",TAG,TAG2,__func__);
+      QMMF_ERROR("%s:%s  file pointer is NULL",TAG2,__func__);
       assert(0);
     }
     aacfileIO_ = new AACfileIO(file);
     if (aacfileIO_ == nullptr) {
-        QMMF_ERROR("%s:%s:%s Could not create AACfileIO object",TAG,TAG2,__func__);
+        QMMF_ERROR("%s:%s Could not create AACfileIO object",TAG2,__func__);
         assert(0);
     }
-    QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+    QMMF_INFO("%s:%s Exit",TAG2,__func__);
     return aacfileIO_;
   }
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s Exit",TAG2,__func__);
   return aacfileIO_;
 }
 
@@ -82,16 +85,16 @@ AACfileIO::AACfileIO(const char*file)
     duration(0),
     starting_offset(0),
     read_completed(false) {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG2,__func__);
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s Enter",TAG2,__func__);
+  QMMF_INFO("%s:%s Exit",TAG2,__func__);
 }
 
 AACfileIO::~AACfileIO() {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s Enter",TAG2,__func__);
   if (infile.is_open()) {
     infile.close();
   }
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s Exit",TAG2,__func__);
 }
 
 
@@ -155,7 +158,7 @@ size_t AACfileIO::getAdtsFrameLength(uint64_t offset,size_t*headersize) {
 }
 
 status_t AACfileIO::Fillparams(TestInitParams *params) {
-  QMMF_INFO("%s:%s:%s   Enter",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s   Enter",TAG2,__func__);
   size_t pos = 0;
   uint64_t offset = 0;
 
@@ -163,7 +166,7 @@ status_t AACfileIO::Fillparams(TestInitParams *params) {
     char id3header[10];
 
     if (infile.read(id3header,sizeof(id3header)).gcount() < (ssize_t)sizeof(id3header)) {
-      QMMF_ERROR("%s:%s:%s Error in reading id3header",TAG,TAG2,__func__);
+      QMMF_ERROR("%s:%s Error in reading id3header",TAG2,__func__);
       return -1;
     }
 
@@ -178,31 +181,31 @@ status_t AACfileIO::Fillparams(TestInitParams *params) {
     len += 10;
     pos += len;
     infile.seekg(pos);
-    QMMF_INFO("%s:%s:%s skipped ID3 tag, new starting offset is %lld",TAG,TAG2,__func__,(long long)pos);
+    QMMF_INFO("%s:%s skipped ID3 tag, new starting offset is %lld",TAG2,__func__,(long long)pos);
   }
 
   char header[2];
 
   if (infile.read(header,2).gcount() != 2) {
-    QMMF_ERROR("%s:%s:%s Error in reading header[2] / syncwords",TAG,TAG2,__func__);
+    QMMF_ERROR("%s:%s Error in reading header[2] / syncwords",TAG2,__func__);
     return -1;
   }
 
   infile.seekg(pos);
 
   if (((uint8_t)header[0] == 0xff) && (((uint8_t)header[1] & 0xf6) == 0xf0)) {
-    QMMF_INFO("%s:%s:%s ADTS header found",TAG,TAG2,__func__);
+    QMMF_INFO("%s:%s ADTS header found",TAG2,__func__);
     confidence = 0.2;
     offset = pos;
     starting_offset = pos;
   } else {
-    QMMF_ERROR("%s:%s:%s ADTS header not found",TAG,TAG2,__func__);
+    QMMF_ERROR("%s:%s ADTS header not found",TAG2,__func__);
       return -1;
   }
 
   infile.seekg(offset+2);
   if (infile.read(header,2).gcount() < 2) {
-        QMMF_ERROR("%s:%s:%s Error in reading header[2]  at offset+2 ",TAG,TAG2,__func__);
+        QMMF_ERROR("%s:%s Error in reading header[2]  at offset+2 ",TAG2,__func__);
     return -1;
   }
   infile.seekg(offset);
@@ -212,7 +215,7 @@ status_t AACfileIO::Fillparams(TestInitParams *params) {
   sf_index = ((uint8_t)header[0] >> 2) & 0xf;
   sr = get_sample_rate(sf_index);
   if (sr == 0) {
-        QMMF_ERROR("%s:%s:%s Sampling rate could not be found",TAG,TAG2,__func__);
+        QMMF_ERROR("%s:%s Sampling rate could not be found",TAG2,__func__);
     return -1;
   }
 
@@ -226,11 +229,11 @@ status_t AACfileIO::Fillparams(TestInitParams *params) {
   QMMF_INFO("Size of size_t = %d",sizeof(size_t));
   while(offset < streamSize) {
       if ((framesize = getAdtsFrameLength(offset,&headersize)) == 0) {
-          QMMF_ERROR("%s:%s:%s Error from AACfileIO::getAdtsFrameLength function",TAG,TAG2,__func__);
+          QMMF_ERROR("%s:%s Error from AACfileIO::getAdtsFrameLength function",TAG2,__func__);
           return -1;
       }
-      QMMF_INFO("%s:%s:%s Current Offset for the ADTS header %llu is %lld with"
-                " framesize = %u and headersize = %u" , TAG, TAG2, __func__,
+      QMMF_INFO("%s:%s Current Offset for the ADTS header %llu is %lld with"
+                " framesize = %u and headersize = %u" ,  TAG2, __func__,
                 numFrames + 1, (long long)offset, (uint32_t)framesize,
                 (uint32_t)headersize);
       OffsetVector.push_back(offset);
@@ -240,12 +243,12 @@ status_t AACfileIO::Fillparams(TestInitParams *params) {
       numFrames++;
   }
 
-  QMMF_INFO("%s:%s:%s The aac file read completed",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s The aac file read completed",TAG2,__func__);
 
   Framedurationus = (1024 * 1000000ll + (sr - 1)) / sr;
   duration = numFrames * Framedurationus;
 
-  params->create_param.audio_dec_param.codec = ::qmmf::player::AudioCodecType::kAAC;
+  params->create_param.audio_dec_param.codec = ::qmmf::AudioFormat::kAAC;
   params->create_param.audio_dec_param.sample_rate = sr;
   params->create_param.audio_dec_param.channels = channel;
   params->create_param.audio_dec_param.bit_depth = 16;
@@ -264,10 +267,10 @@ status_t AACfileIO::Fillparams(TestInitParams *params) {
       params->create_param.audio_dec_param.codec_params.aac.mode = AACMode::kHEVC_v2;
     break;
     default:
-      QMMF_ERROR("%s:%s:%s unsupported AAC mode: %d", TAG, TAG2,__func__,profile);
+      QMMF_ERROR("%s:%s unsupported AAC mode: %d", TAG2,__func__,profile);
   }
 
-  QMMF_INFO("%s:%s:%s   Exit",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s   Exit",TAG2,__func__);
   return 0;
 }
 
@@ -275,9 +278,9 @@ status_t AACfileIO::Fillparams(TestInitParams *params) {
 
 status_t AACfileIO::GetFrames(void*buffer,uint32_t size_buffer,int32_t*num_frames_read,uint32_t*bytes_read) {
 
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s Enter",TAG2,__func__);
   if (read_completed) {
-        QMMF_ERROR("%s:%s:%s File read has already been completed",TAG,TAG2,__func__);
+        QMMF_ERROR("%s:%s File read has already been completed",TAG2,__func__);
     return -1;
   }
   char*aac = (char*)buffer;
@@ -294,17 +297,17 @@ status_t AACfileIO::GetFrames(void*buffer,uint32_t size_buffer,int32_t*num_frame
     size_t framesize = *v_frameSize;
     size_t headersize  = *v_headerSize;
 
-    QMMF_INFO("%s:%s:%s offset = %lld frameSize = %u headerSize = %u",TAG,TAG2,__func__,(long long)offset,(uint32_t)framesize,(uint32_t)headersize);
+    QMMF_INFO("%s:%s offset = %lld frameSize = %u headerSize = %u",TAG2,__func__,(long long)offset,(uint32_t)framesize,(uint32_t)headersize);
 
     if (size_buffer - *bytes_read < (uint32_t)framesize) {
-        QMMF_INFO("%s:%s:%s No space left in Buffer header(%p)",TAG,TAG2,__func__,buffer);
+        QMMF_INFO("%s:%s No space left in Buffer header(%p)",TAG2,__func__,buffer);
         return 0;
     }
     uint32_t read_bytes = 0;
     infile.seekg(offset);
 
     if ((read_bytes  = infile.read(aac,framesize).gcount()) != framesize) {
-        QMMF_ERROR("%s:%s:%s Error in reading the %d bytes from aac file, read_bytes = %d",TAG,TAG2,__func__,framesize,read_bytes);
+        QMMF_ERROR("%s:%s Error in reading the %d bytes from aac file, read_bytes = %d",TAG2,__func__,framesize,read_bytes);
         assert(0);
     }
     aac += read_bytes;
@@ -315,34 +318,34 @@ status_t AACfileIO::GetFrames(void*buffer,uint32_t size_buffer,int32_t*num_frame
     v_headerSize++;
     if ((v_OffsetVector == OffsetVector.end()) && (v_frameSize == frameSize.end()) && (v_headerSize == headerSize.end())) {
       read_completed = true;
-      QMMF_INFO("%s:%s:%s The input file has been read completely. Now EOS has to be send",TAG,TAG2,__func__);
-      QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+      QMMF_INFO("%s:%s The input file has been read completely. Now EOS has to be send",TAG2,__func__);
+      QMMF_INFO("%s:%s Exit",TAG2,__func__);
       return -1;
     }
   }
 
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+  QMMF_INFO("%s:%s Exit",TAG2,__func__);
   return 0;
 }
 
 AMRfileIO* AMRfileIO::amrfileIO_ = nullptr;
 
 AMRfileIO* AMRfileIO::createAMRfileIOobj(const char* file) {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Enter",TAG3,__func__);
   if (amrfileIO_ == nullptr) {
     if (file == nullptr) {
-      QMMF_ERROR("%s:%s:%s  file pointer is NULL",TAG,TAG3,__func__);
+      QMMF_ERROR("%s:%s  file pointer is NULL",TAG3,__func__);
       assert(0);
     }
     amrfileIO_ = new AMRfileIO(file);
     if (amrfileIO_ == nullptr) {
-        QMMF_ERROR("%s:%s:%s Could not create AMRfileIO object",TAG,TAG3,__func__);
+        QMMF_ERROR("%s:%s Could not create AMRfileIO object",TAG3,__func__);
         assert(0);
     }
-    QMMF_INFO("%s:%s:%s Exit",TAG,TAG3,__func__);
+    QMMF_INFO("%s:%s Exit",TAG3,__func__);
     return amrfileIO_;
   }
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Exit",TAG3,__func__);
   return amrfileIO_;
 }
 
@@ -359,16 +362,16 @@ AMRfileIO::AMRfileIO(const char*file)
     starting_offset(0),
     read_completed(false),
     mIsWide(false) {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG3,__func__);
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Enter",TAG3,__func__);
+  QMMF_INFO("%s:%s Exit",TAG3,__func__);
 }
 
 AMRfileIO::~AMRfileIO() {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Enter",TAG3,__func__);
   if (infile.is_open()) {
     infile.close();
   }
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Exit",TAG3,__func__);
 }
 
 
@@ -388,7 +391,7 @@ size_t AMRfileIO::getFrameSize(bool isWide,unsigned int FT) {
    };
 
    if (FT > 15 || (isWide && FT > 9 && FT < 14) || (!isWide && FT > 11 && FT < 15)) {
-       QMMF_ERROR("%s:%s:%s illegal AMR frame type %d", TAG,TAG3,__func__,FT);
+       QMMF_ERROR("%s:%s illegal AMR frame type %d", TAG3,__func__,FT);
         return 0;
    }
 
@@ -404,36 +407,36 @@ status_t AMRfileIO::getFrameSizeByOffset(uint64_t offset, bool isWide, size_t *f
   infile.seekg(offset);
   char header[1];
   if (infile.read(header,1).gcount() != 1) {
-    QMMF_ERROR("%s:%s:%s Could not read the header of AMR at offset = %lld",TAG,TAG3,__func__,(long long)offset);
+    QMMF_ERROR("%s:%s Could not read the header of AMR at offset = %lld",TAG3,__func__,(long long)offset);
     assert(0);
     return 0;
   }
   unsigned int FT = ((uint8_t)header[0] >> 3) & 0x0f;
   *framesize = getFrameSize(isWide, FT);
   if (*framesize == 0) {
-    QMMF_ERROR("%s:%s:%s AMR framesize is 0",TAG,TAG3,__func__);
+    QMMF_ERROR("%s:%s AMR framesize is 0",TAG3,__func__);
     return 0;
   }
   return 1;
 }
 
 status_t AMRfileIO::Fillparams(TestInitParams *params) {
-  QMMF_INFO("%s:%s:%s   Enter",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s   Enter",TAG3,__func__);
   char header[9];
   if (infile.read(header,sizeof(header)).gcount() != (ssize_t)(sizeof(header))) {
-    QMMF_ERROR("%s:%s:%s Could not get AMR MIME TYPE",TAG,TAG3,__func__);
+    QMMF_ERROR("%s:%s Could not get AMR MIME TYPE",TAG3,__func__);
     return -1;
   }
   if (!memcmp(header, "#!AMR\n", 6)) {
     mIsWide = false;
     confidence = 0.5;
-    QMMF_INFO("%s:%s:%s AMR MIME TYPE is not Wide",TAG,TAG3,__func__);
+    QMMF_INFO("%s:%s AMR MIME TYPE is not Wide",TAG3,__func__);
   } else if (!memcmp(header, "#!AMR-WB\n", 9)) {
     mIsWide = true;
     confidence = 0.5;
-    QMMF_INFO("%s:%s:%s AMR MIME TYPE is Wide",TAG,TAG3,__func__);
+    QMMF_INFO("%s:%s AMR MIME TYPE is Wide",TAG3,__func__);
   } else {
-    QMMF_ERROR("%s:%s:%s Could not get AMR MIME TYPE",TAG,TAG3,__func__);
+    QMMF_ERROR("%s:%s Could not get AMR MIME TYPE",TAG3,__func__);
     return -1;
   }
   starting_offset = mIsWide ? 9 : 6;
@@ -444,7 +447,7 @@ status_t AMRfileIO::Fillparams(TestInitParams *params) {
   size_t framesize;
   while(offset < streamSize) {
       if (getFrameSizeByOffset(offset, mIsWide, &framesize) == 0) {
-        QMMF_ERROR("%s:%s:%s Could not get frame size by offset",TAG,TAG3,__func__);
+        QMMF_ERROR("%s:%s Could not get frame size by offset",TAG3,__func__);
         return -1;
       }
       OffsetVector.push_back(offset);
@@ -456,7 +459,7 @@ status_t AMRfileIO::Fillparams(TestInitParams *params) {
 
   sr = mIsWide ? 16000 : 8000;
   channel = 1;
-  params->create_param.audio_dec_param.codec = ::qmmf::player::AudioCodecType::kAMR;
+  params->create_param.audio_dec_param.codec = ::qmmf::AudioFormat::kAMR;
   params->create_param.audio_dec_param.sample_rate = sr;
   params->create_param.audio_dec_param.channels = channel;
   params->create_param.audio_dec_param.bit_depth = 16;
@@ -468,15 +471,15 @@ status_t AMRfileIO::Fillparams(TestInitParams *params) {
       QMMF_INFO("Channel = %d, sampling rate = %d AMR is not Wide",channel,sr);
   }
 
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Exit",TAG3,__func__);
   return 0;
 }
 
 status_t AMRfileIO::GetFrames(void*buffer,uint32_t size_buffer,int32_t* num_frames_read,uint32_t* bytes_read) {
 
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Enter",TAG3,__func__);
   if (read_completed) {
-        QMMF_ERROR("%s:%s:%s File read has already been completed",TAG,TAG3,__func__);
+        QMMF_ERROR("%s:%s File read has already been completed",TAG3,__func__);
     return -1;
   }
   char*amr = (char*)buffer;
@@ -490,22 +493,22 @@ status_t AMRfileIO::GetFrames(void*buffer,uint32_t size_buffer,int32_t* num_fram
   while(*bytes_read < size_buffer) {
     uint64_t offset =  *v_OffsetVector;
     size_t framesize = *v_frameSize;
-    QMMF_INFO("%s:%s:%s offset = %lld frameSize = %u",TAG,TAG2,__func__,(long long)offset,(uint32_t)framesize);
+    QMMF_INFO("%s:%s offset = %lld frameSize = %u",TAG2,__func__,(long long)offset,(uint32_t)framesize);
     if (size_buffer - *bytes_read < (uint32_t)framesize) {
 
-        QMMF_INFO("%s:%s:%s No space left in Buffer header(%p)",TAG,TAG3,__func__,buffer);
-        QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+        QMMF_INFO("%s:%s No space left in Buffer header(%p)",TAG3,__func__,buffer);
+        QMMF_INFO("%s:%s Exit",TAG2,__func__);
         return 0;
     }
     if (*num_frames_read == MAX_NUM_FRAMES_PER_BUFF_AMR) {
-        QMMF_INFO("%s:%s:%s MAX_NUM_FRAMES_PER_BUFF_AMR in Buffer header(%p)",TAG,TAG3,__func__,buffer);
-        QMMF_INFO("%s:%s:%s Exit",TAG,TAG2,__func__);
+        QMMF_INFO("%s:%s MAX_NUM_FRAMES_PER_BUFF_AMR in Buffer header(%p)",TAG3,__func__,buffer);
+        QMMF_INFO("%s:%s Exit",TAG2,__func__);
         return 0;
     }
     uint32_t read_bytes = 0;
     infile.seekg(offset);
     if ((read_bytes  = infile.read(amr,framesize).gcount()) != framesize) {
-        QMMF_ERROR("%s:%s:%s Error in reading the %d bytes from aac file, read_bytes = %d",TAG,TAG3,__func__,framesize,read_bytes);
+        QMMF_ERROR("%s:%s Error in reading the %d bytes from aac file, read_bytes = %d",TAG3,__func__,framesize,read_bytes);
         assert(0);
     }
     amr += read_bytes;
@@ -515,34 +518,34 @@ status_t AMRfileIO::GetFrames(void*buffer,uint32_t size_buffer,int32_t* num_fram
     v_frameSize++;
     if ((v_OffsetVector == OffsetVector.end()) && (v_frameSize == frameSize.end())) {
       read_completed = true;
-      QMMF_INFO("%s:%s:%s The input file has been read completely. Now EOS has to be send",TAG,TAG3,__func__);
-      QMMF_INFO("%s:%s:%s Exit",TAG,TAG3,__func__);
+      QMMF_INFO("%s:%s The input file has been read completely. Now EOS has to be send",TAG3,__func__);
+      QMMF_INFO("%s:%s Exit",TAG3,__func__);
       return -1;
     }
   }
 
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG3,__func__);
+  QMMF_INFO("%s:%s Exit",TAG3,__func__);
   return 0;
 }
 
 G711fileIO* G711fileIO::g711fileIO_ = nullptr;
 
 G711fileIO* G711fileIO::createG711fileIOobj(const char* file) {
-    QMMF_INFO("%s:%s:%s Enter",TAG,TAG4,__func__);
+    QMMF_INFO("%s:%s Enter",TAG4,__func__);
     if (g711fileIO_ == nullptr) {
     if (file == nullptr) {
-      QMMF_ERROR("%s:%s:%s  file pointer is NULL",TAG,TAG4,__func__);
+      QMMF_ERROR("%s:%s  file pointer is NULL",TAG4,__func__);
       assert(0);
     }
     g711fileIO_ = new G711fileIO(file);
     if (g711fileIO_ == nullptr) {
-        QMMF_ERROR("%s:%s:%s Could not create G711fileIO object",TAG,TAG4,__func__);
+        QMMF_ERROR("%s:%s Could not create G711fileIO object",TAG4,__func__);
         assert(0);
     }
-    QMMF_INFO("%s:%s:%s Exit",TAG,TAG4,__func__);
+    QMMF_INFO("%s:%s Exit",TAG4,__func__);
     return g711fileIO_;
   }
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG4,__func__);
+  QMMF_INFO("%s:%s Exit",TAG4,__func__);
   return g711fileIO_;
 }
 
@@ -557,38 +560,38 @@ G711fileIO::G711fileIO(const char*file)
     read_completed(false),
     isAlaw(false),
     isMulaw(false) {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG4,__func__);
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG4,__func__);
+  QMMF_INFO("%s:%s Enter",TAG4,__func__);
+  QMMF_INFO("%s:%s Exit",TAG4,__func__);
 }
 
 G711fileIO::~G711fileIO() {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG4,__func__);
+  QMMF_INFO("%s:%s Enter",TAG4,__func__);
   if (infile.is_open()) {
     infile.close();
   }
-  QMMF_INFO("%s:%s:%s Exit",TAG,TAG4,__func__);
+  QMMF_INFO("%s:%s Exit",TAG4,__func__);
 }
 
 status_t G711fileIO::Fillparams(TestInitParams *params) {
-  QMMF_ERROR("%s:%s:%s Enter",TAG,TAG4,__func__);
+  QMMF_ERROR("%s:%s Enter",TAG4,__func__);
   struct g711_header g711hdr;
   uint32_t read_bytes;
   if ((read_bytes =  infile.read((char*)&g711hdr,sizeof(g711hdr)).gcount()) != (ssize_t)(sizeof(g711hdr))) {
-    QMMF_ERROR("%s:%s:%s Error in reading the %d bytes from g711 file for g711 header, read_bytes = %d",TAG,TAG3,__func__,sizeof(g711hdr),read_bytes);
+    QMMF_ERROR("%s:%s Error in reading the %d bytes from g711 file for g711 header, read_bytes = %d",TAG3,__func__,sizeof(g711hdr),read_bytes);
     return -1;
   }
   if ((g711hdr.audio_format != FORMAT_MULAW) && (g711hdr.audio_format != FORMAT_ALAW)) {
-    QMMF_INFO("%s:%s:%s g711 file is not MULAW or ALAW format it's format is %d ",TAG,TAG4,__func__,g711hdr.audio_format);
+    QMMF_INFO("%s:%s g711 file is not MULAW or ALAW format it's format is %d ",TAG4,__func__,g711hdr.audio_format);
     return -1;
   }
 
 if ((g711hdr.sample_rate != 8000) && (g711hdr.sample_rate != 16000)) {
-      QMMF_ERROR("%s:%s:%s samplerate = %d, not supported, Supported samplerates are 8000, 16000",TAG,TAG4,__func__,g711hdr.sample_rate);
+      QMMF_ERROR("%s:%s samplerate = %d, not supported, Supported samplerates are 8000, 16000",TAG4,__func__,g711hdr.sample_rate);
     return -1;
   }
 
 if (g711hdr.num_channels != 1) {
-      QMMF_ERROR("%s:%s:%s stereo and multi channel are not supported, channels %d",TAG,TAG4,__func__,g711hdr.num_channels);
+      QMMF_ERROR("%s:%s stereo and multi channel are not supported, channels %d",TAG4,__func__,g711hdr.num_channels);
     return -1;
   }
   sr = g711hdr.sample_rate;
@@ -597,31 +600,31 @@ if (g711hdr.num_channels != 1) {
   infile.seekg(0,infile.end);
   streamSize = infile.tellg();
   infile.seekg(starting_offset);
-  params->create_param.audio_dec_param.codec = ::qmmf::player::AudioCodecType::kG711;
+  params->create_param.audio_dec_param.codec = ::qmmf::AudioFormat::kG711;
   params->create_param.audio_dec_param.sample_rate = g711hdr.sample_rate;
   params->create_param.audio_dec_param.channels = g711hdr.num_channels;
   params->create_param.audio_dec_param.bit_depth = 16;
   params->create_param.audio_dec_param.bitrate = ((sr*channel)*(params->create_param.audio_dec_param.bit_depth))/8;
-  QMMF_INFO(" %s:%s:%s Channel = %d, sampling rate = %d",TAG,TAG4,__func__,channel,sr);
+  QMMF_INFO(" %s:%s Channel = %d, sampling rate = %d",TAG4,__func__,channel,sr);
 
   if (g711hdr.audio_format == FORMAT_MULAW) {
     params->create_param.audio_dec_param.codec_params.g711.mode = G711Mode::kMuLaw;
     isMulaw = true;
-    QMMF_INFO("%s:%s:%s Format is MULAW",TAG,TAG4,__func__);
+    QMMF_INFO("%s:%s Format is MULAW",TAG4,__func__);
   } else {
     params->create_param.audio_dec_param.codec_params.g711.mode = G711Mode::kALaw;
     isAlaw = true;
-    QMMF_INFO("%s:%s:%s Format is ALAW",TAG,TAG4,__func__);
+    QMMF_INFO("%s:%s Format is ALAW",TAG4,__func__);
   }
-  QMMF_ERROR("%s:%s:%s Exit",TAG,TAG4,__func__);
+  QMMF_ERROR("%s:%s Exit",TAG4,__func__);
   return 0;
 }
 
 status_t G711fileIO::GetFrames(void*buffer,uint32_t size_buffer,uint32_t* bytes_read) {
-  QMMF_INFO("%s:%s:%s Enter",TAG,TAG4,__func__);
+  QMMF_INFO("%s:%s Enter",TAG4,__func__);
   if (read_completed) {
-    QMMF_ERROR("%s:%s:%s File read has already been completed",TAG,TAG4,__func__);
-    QMMF_INFO("%s:%s:%s Exit",TAG,TAG4,__func__);
+    QMMF_ERROR("%s:%s File read has already been completed",TAG4,__func__);
+    QMMF_INFO("%s:%s Exit",TAG4,__func__);
     return -1;
   }
 
@@ -632,19 +635,19 @@ status_t G711fileIO::GetFrames(void*buffer,uint32_t size_buffer,uint32_t* bytes_
   uint32_t bytes_to_read = (streamSize - offset) > size_buffer ? size_buffer : (streamSize - offset);
   uint32_t read_bytes;
   if ((read_bytes = infile.read(g711,bytes_to_read).gcount()) != bytes_to_read) {
-    QMMF_ERROR("%s:%s:%s Could not read %d bytes requested, bytes read = %d",TAG,TAG4,__func__,bytes_to_read,read_bytes);
+    QMMF_ERROR("%s:%s Could not read %d bytes requested, bytes read = %d",TAG4,__func__,bytes_to_read,read_bytes);
     assert(0);
   }
   *bytes_read = read_bytes;
   offset += (uint64_t)(*bytes_read);
   if (offset >= streamSize) {
     read_completed = true;
-    QMMF_INFO("%s:%s:%s The input file has been read completely. Now EOS has to be send",TAG,TAG4,__func__);
-    QMMF_INFO("%s:%s:%s Exit",TAG,TAG4,__func__);
+    QMMF_INFO("%s:%s The input file has been read completely. Now EOS has to be send",TAG4,__func__);
+    QMMF_INFO("%s:%s Exit",TAG4,__func__);
     return -1;
   }
 
-   QMMF_INFO("%s:%s:%s Exit",TAG,TAG4,__func__);
+   QMMF_INFO("%s:%s Exit",TAG4,__func__);
   return 0;
 }
 
@@ -654,34 +657,34 @@ CodecTest::CodecTest()
      ion_device_(-1),
      stop_(false) {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
 
   ion_device_ = open("/dev/ion", O_RDONLY);
   if (ion_device_ <= 0) {
-    QMMF_ERROR("%s:%s Ion dev open failed %s", TAG, __func__,strerror(errno));
+    QMMF_ERROR("%s Ion dev open failed %s", __func__,strerror(errno));
     ion_device_ = -1;
   }
 
 
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 }
 
 CodecTest::~CodecTest() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
 
   if (avcodec_)
     delete avcodec_;
 
   if (audiofiletype == AudioFileType::kAAC) {
-    QMMF_INFO("%s:%s Deleting AACfileIO class",TAG,__func__);
+    QMMF_INFO("%s Deleting AACfileIO class",__func__);
     delete aacfileIO_;
   } else if (audiofiletype == AudioFileType::kAMR) {
-    QMMF_INFO("%s:%s Deleting AMRfileIO class",TAG,__func__);
+    QMMF_INFO("%s Deleting AMRfileIO class",__func__);
     delete amrfileIO_;
   } else if (audiofiletype == AudioFileType::kG711) {
-    QMMF_INFO("%s:%s Deleting G711fileIO class",TAG,__func__);
+    QMMF_INFO("%s Deleting G711fileIO class",__func__);
     delete g711fileIO_;
   }
 
@@ -690,28 +693,32 @@ CodecTest::~CodecTest() {
     ion_device_ = -1;
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 }
 
 status_t CodecTest::CreateCodec(int argc, char *argv[]) {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
   status_t ret = 0;
 
   if ((argc < 2 ) || (strcmp(argv[1], "-c"))) {
-    QMMF_INFO("%s:%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", TAG, __func__, argv[0]);
+    QMMF_INFO("%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", __func__, argv[0]);
     return -1;
   }
 
   if ((argc < 4)  || (strcmp(argv[3],"-f"))) {
-    QMMF_INFO("%s:%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", TAG, __func__, argv[0]);
+    QMMF_INFO("%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", __func__, argv[0]);
     return -1;
   }
 
   TestInitParams params;
   memset(&params, 0x0, sizeof(params));
-  strncpy(params.input_file,argv[2],strlen(argv[2]));
-  strncpy(params.output_file,"/data/misc/qmmf/pcm.wav",strlen("/data/misc/qmmf/pcm.wav"));
+
+  string(argv[2]).copy(params.input_file, strlen(argv[2]));
+  string output_file = "/data/misc/qmmf/pcm_";
+  output_file.append(to_string(getpid()));
+  output_file.append(".pcm");
+  output_file.copy(params.output_file, output_file.size());
 
   if (!strncmp("aac",argv[4],strlen("aac"))) {
     audiofiletype = AudioFileType::kAAC;
@@ -720,7 +727,7 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
   } else if (!strncmp("g711",argv[4],strlen("g711"))) {
     audiofiletype = AudioFileType::kG711;
   } else {
-    QMMF_INFO("%s:%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", TAG, __func__, argv[0]);
+    QMMF_INFO("%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", __func__, argv[0]);
     assert(0);
     return -1;
   }
@@ -732,13 +739,13 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
   //Only for AAC
   aacfileIO_ = AACfileIO::createAACfileIOobj(params.input_file);
   if (aacfileIO_ == nullptr) {
-    QMMF_ERROR("%s:%s AACfileIO creation failed",TAG,__func__);
+    QMMF_ERROR("%s AACfileIO creation failed",__func__);
     assert(0);
   }
 
   ret = aacfileIO_->Fillparams(&params);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s TestInitParams could not be filled",TAG,__func__);
+    QMMF_ERROR("%s TestInitParams could not be filled",__func__);
     assert(0);
   }
   break;
@@ -746,13 +753,13 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
     //Only for AMR
   amrfileIO_ = AMRfileIO::createAMRfileIOobj(params.input_file);
   if (amrfileIO_ == nullptr) {
-    QMMF_ERROR("%s:%s AMRfileIO creation failed",TAG,__func__);
+    QMMF_ERROR("%s AMRfileIO creation failed",__func__);
     assert(0);
   }
 
   ret = amrfileIO_->Fillparams(&params);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s TestInitParams could not be filled",TAG,__func__);
+    QMMF_ERROR("%s TestInitParams could not be filled",__func__);
     assert(0);
   }
    break;
@@ -760,19 +767,19 @@ status_t CodecTest::CreateCodec(int argc, char *argv[]) {
       //Only for G711
   g711fileIO_ = G711fileIO::createG711fileIOobj(params.input_file);
   if (g711fileIO_ == nullptr) {
-    QMMF_ERROR("%s:%s AMRfileIO creation failed",TAG,__func__);
+    QMMF_ERROR("%s AMRfileIO creation failed",__func__);
     assert(0);
   }
 
   ret = g711fileIO_->Fillparams(&params);
   if (ret != 0) {
-    QMMF_ERROR("%s:%s TestInitParams could not be filled",TAG,__func__);
+    QMMF_ERROR("%s TestInitParams could not be filled",__func__);
     assert(0);
   }
   break;
 default:
-  QMMF_INFO("%s:%s Unknown AudioFileType", TAG, __func__);
-  QMMF_INFO("%s:%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", TAG, __func__, argv[0]);
+  QMMF_INFO("%s Unknown AudioFileType", __func__);
+  QMMF_INFO("%s Usage: %s -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", __func__, argv[0]);
   return -1;
   }
 
@@ -780,19 +787,19 @@ default:
 
   avcodec_ = IAVCodec::CreateAVCodec();
   if (avcodec_ ==  nullptr) {
-    QMMF_ERROR("%s:%s avcodec creation failed", TAG, __func__);
+    QMMF_ERROR("%s avcodec creation failed", __func__);
     return NO_MEMORY;
   }
 
   ret = avcodec_->ConfigureCodec(params.codec_type, params.create_param);
   if (ret != OK) {
-    QMMF_ERROR("%s:%s Failed to configure Codec", TAG, __func__);
+    QMMF_ERROR("%s Failed to configure Codec", __func__);
     return ret;
   }
 
   ret = AllocateBuffer(kPortIndexInput);
   if (ret != OK) {
-    QMMF_ERROR("%s:%s Failed to allocate buffer on PORT_NAME(%d)", TAG,
+    QMMF_ERROR("%s Failed to allocate buffer on PORT_NAME(%d)",
         __func__, kPortIndexInput);
     return ret;
   }
@@ -800,7 +807,7 @@ default:
   input_source_impl_= make_shared<InputCodecSourceImpl>(params.input_file,
                                                         params.record_frame);
   if (input_source_impl_.get() == nullptr) {
-    QMMF_ERROR("%s:%s failed to create input source", TAG, __func__);
+    QMMF_ERROR("%s failed to create input source", __func__);
     return NO_MEMORY;
   }
 
@@ -808,8 +815,8 @@ default:
                                  shared_ptr<ICodecSource>(input_source_impl_),
                                  input_buffer_list_);
   if (ret != OK) {
-    QMMF_ERROR("%s:%s Failed to Call Allocate buffer on PORT_NAME(%d)",
-               TAG, __func__, kPortIndexInput);
+    QMMF_ERROR("%s Failed to Call Allocate buffer on PORT_NAME(%d)",
+               __func__, kPortIndexInput);
     ReleaseBuffer();
     return ret;
   }
@@ -818,7 +825,7 @@ default:
 
   ret = AllocateBuffer(kPortIndexOutput);
   if (ret != OK) {
-    QMMF_ERROR("%s:%s Failed to allocate buffer on PORT_NAME(%d)", TAG,
+    QMMF_ERROR("%s Failed to allocate buffer on PORT_NAME(%d)",
         __func__, kPortIndexOutput);
     ReleaseBuffer();
     return ret;
@@ -826,7 +833,7 @@ default:
 
   output_source_impl_ = make_shared<OutputCodecSourceImpl>(params.output_file);
   if (output_source_impl_.get() == nullptr) {
-    QMMF_ERROR("%s:%s failed to create output source",TAG, __func__);
+    QMMF_ERROR("%s failed to create output source",__func__);
     return NO_MEMORY;
   }
 
@@ -834,21 +841,21 @@ default:
                                  shared_ptr<ICodecSource>(output_source_impl_),
                                  output_buffer_list_);
   if (ret != OK) {
-    QMMF_ERROR("%s:%s Failed to Call Allocate buffer on PORT_NAME(%d)",
-               TAG, __func__, kPortIndexOutput);
+    QMMF_ERROR("%s Failed to Call Allocate buffer on PORT_NAME(%d)",
+               __func__, kPortIndexOutput);
     ReleaseBuffer();
     return ret;
   }
 
   output_source_impl_->AddBufferList(output_buffer_list_);
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::DeleteCodec() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
   status_t ret = 0;
 
   ret = avcodec_->ReleaseBuffer();
@@ -857,87 +864,87 @@ status_t CodecTest::DeleteCodec() {
   ret = ReleaseBuffer();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::StartCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   {
-    Mutex::Autolock l(stop_lock_);
+    std::lock_guard<std::mutex> lock(stop_lock_);
     stop_ = false;
   }
 
   ret = avcodec_->StartCodec();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::StopCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   {
-    Mutex::Autolock l(stop_lock_);
+    std::lock_guard<std::mutex> lock(stop_lock_);
     stop_ = true;
   }
 
-  ret = avcodec_->StopCodec();
+  ret = avcodec_->StopCodec(true);
   assert(ret == OK);
 
   input_source_impl_->BufferStatus();
   output_source_impl_->BufferStatus();
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::ResumeCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   ret = avcodec_->ResumeCodec();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::PauseCodec() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
 
   ret = avcodec_->PauseCodec();
   assert(ret == OK);
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 status_t CodecTest::SetCodecParameters() {
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
   status_t ret = 0;
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 }
 
 bool CodecTest::IsStop() {
 
-   Mutex::Autolock l(stop_lock_);
-   return stop_;
+  std::lock_guard<std::mutex> lock(stop_lock_);
+  return stop_;
 }
 
 status_t CodecTest::AllocateBuffer(uint32_t index) {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
   status_t ret = 0;
 
   assert(ion_device_ > 0);
@@ -946,7 +953,7 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
   uint32_t count, size;
   ret = avcodec_->GetBufferRequirements(index,  &count, &size);
   if (ret != OK) {
-    QMMF_INFO("%s:%s Failed to get Buffer Requirements on %s", TAG, __func__,
+    QMMF_INFO("%s Failed to get Buffer Requirements on %s", __func__,
         PORT_NAME(index));
     return ret;
   }
@@ -972,21 +979,21 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
 
     ret = ioctl(ion_device_, ION_IOC_ALLOC, &alloc);
     if (ret < 0) {
-      QMMF_ERROR("%s:%s ION allocation failed", TAG, __func__);
+      QMMF_ERROR("%s ION allocation failed", __func__);
       goto ION_ALLOC_FAILED;
     }
 
     ionFdData.handle = alloc.handle;
     ret = ioctl(ion_device_, ION_IOC_SHARE, &ionFdData);
     if (ret < 0) {
-      QMMF_ERROR("%s:%s ION map failed %s", TAG, __func__, strerror(errno));
+      QMMF_ERROR("%s ION map failed %s", __func__, strerror(errno));
       goto ION_MAP_FAILED;
     }
 
     vaddr = mmap(nullptr, alloc.len, PROT_READ  | PROT_WRITE, MAP_SHARED,
                 ionFdData.fd, 0);
     if (vaddr == MAP_FAILED) {
-      QMMF_ERROR("%s:%s  ION mmap failed: %s (%d)", TAG, __func__,
+      QMMF_ERROR("%s  ION mmap failed: %s (%d)", __func__,
           strerror(errno), errno);
       goto ION_MAP_FAILED;
     }
@@ -995,9 +1002,9 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
     buffer.size     = 0;
     buffer.fd       = ionFdData.fd;
     input_ion_handle_data.push_back(alloc);
-    QMMF_INFO("%s:%s buffer.Fd(%d)", TAG, __func__, buffer.fd );
-    QMMF_INFO("%s:%s buffer.capacity(%d)", TAG,__func__, buffer.capacity);
-    QMMF_INFO("%s:%s buffer.vaddr(%p)", TAG, __func__, buffer.data);
+    QMMF_INFO("%s buffer.Fd(%d)", __func__, buffer.fd );
+    QMMF_INFO("%s buffer.capacity(%d)", __func__, buffer.capacity);
+    QMMF_INFO("%s buffer.vaddr(%p)", __func__, buffer.data);
     input_buffer_list_.push_back(buffer);
     } else {
       BufferDescriptor buffer;
@@ -1013,21 +1020,21 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
 
       ret = ioctl(ion_device_, ION_IOC_ALLOC, &alloc);
       if (ret < 0) {
-        QMMF_ERROR("%s:%s ION allocation failed", TAG, __func__);
+        QMMF_ERROR("%s ION allocation failed", __func__);
         goto ION_ALLOC_FAILED;
       }
 
       ionFdData.handle = alloc.handle;
       ret = ioctl(ion_device_, ION_IOC_SHARE, &ionFdData);
       if (ret < 0) {
-        QMMF_ERROR("%s:%s ION map failed %s", TAG, __func__, strerror(errno));
+        QMMF_ERROR("%s ION map failed %s", __func__, strerror(errno));
         goto ION_MAP_FAILED;
       }
 
       vaddr = mmap(nullptr, alloc.len, PROT_READ  | PROT_WRITE, MAP_SHARED,
                   ionFdData.fd, 0);
       if (vaddr == MAP_FAILED) {
-        QMMF_ERROR("%s:%s  ION mmap failed: %s (%d)", TAG, __func__,
+        QMMF_ERROR("%s  ION mmap failed: %s (%d)", __func__,
             strerror(errno), errno);
         goto ION_MAP_FAILED;
       }
@@ -1037,14 +1044,14 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
       buffer.size     = 0;
       buffer.fd       = ionFdData.fd;
       output_ion_handle_data.push_back(alloc);
-      QMMF_INFO("%s:%s buffer.Fd(%d)", TAG, __func__, buffer.fd );
-      QMMF_INFO("%s:%s buffer.capacity(%d)", TAG,__func__, buffer.capacity);
-      QMMF_INFO("%s:%s buffer.vaddr(%p)", TAG, __func__, buffer.data);
+      QMMF_INFO("%s buffer.Fd(%d)", __func__, buffer.fd );
+      QMMF_INFO("%s buffer.capacity(%d)", __func__, buffer.capacity);
+      QMMF_INFO("%s buffer.vaddr(%p)", __func__, buffer.data);
       output_buffer_list_.push_back(buffer);
     }
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return ret;
 
   ION_MAP_FAILED:
@@ -1055,14 +1062,14 @@ status_t CodecTest::AllocateBuffer(uint32_t index) {
   ION_ALLOC_FAILED:
     close(ion_device_);
     ion_device_ = -1;
-    QMMF_ERROR("%s:%s ION Buffer allocation failed!", TAG, __func__);
-    QMMF_INFO("%s:%s Exit", TAG, __func__);
+    QMMF_ERROR("%s ION Buffer allocation failed!", __func__);
+    QMMF_INFO("%s Exit", __func__);
     return -1;
 }
 
 status_t CodecTest::ReleaseBuffer() {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   int i = 0;
   for (auto& iter : input_buffer_list_) {
@@ -1097,20 +1104,20 @@ status_t CodecTest::ReleaseBuffer() {
   input_ion_handle_data.clear();
   output_ion_handle_data.clear();
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
 InputCodecSourceImpl::InputCodecSourceImpl(char* file_name,
                                            uint32_t num_frame = 0) {
 
-  QMMF_INFO("%s:%s  Enter",TAG, __func__);
+  QMMF_INFO("%s  Enter",__func__);
 switch(audiofiletype) {
   case AudioFileType::kAAC:
     //Only for AAC
   aacfileIO_  = AACfileIO::createAACfileIOobj(file_name);
   if (aacfileIO_ == nullptr) {
-    QMMF_ERROR("%s:%s failed to create ACfileIO object",TAG,__func__);
+    QMMF_ERROR("%s failed to create ACfileIO object",__func__);
     assert(0);
   }
   break;
@@ -1118,7 +1125,7 @@ switch(audiofiletype) {
     //Only for AMR
   amrfileIO_  = AMRfileIO::createAMRfileIOobj(file_name);
   if (amrfileIO_ == nullptr) {
-    QMMF_ERROR("%s:%s failed to create AMRfileIO object",TAG,__func__);
+    QMMF_ERROR("%s failed to create AMRfileIO object",__func__);
     assert(0);
   }
   break;
@@ -1126,30 +1133,30 @@ switch(audiofiletype) {
       //Only for G711
   g711fileIO_  = G711fileIO::createG711fileIOobj(file_name);
   if (g711fileIO_ == nullptr) {
-    QMMF_ERROR("%s:%s failed to create AMRfileIO object",TAG,__func__);
+    QMMF_ERROR("%s failed to create AMRfileIO object",__func__);
     assert(0);
   }
   break;
   default:
-  QMMF_INFO("%s:%s Unknown AudioFileType", TAG, __func__);
-  QMMF_INFO("%s:%s Usage: test_app -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", TAG, __func__);
+  QMMF_INFO("%s Unknown AudioFileType", __func__);
+  QMMF_INFO("%s Usage: test_app -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", __func__);
   assert(0);
   }
 
   num_frame_read = num_frame;
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 InputCodecSourceImpl::~InputCodecSourceImpl() {
 
-  QMMF_INFO("%s:%s  Enter", TAG, __func__);
-  QMMF_INFO("%s:%s  Exit", TAG, __func__);
+  QMMF_INFO("%s  Enter", __func__);
+  QMMF_INFO("%s  Exit", __func__);
 }
 
 void InputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   input_list_ = list;
   input_free_buffer_queue_.Clear();
@@ -1158,14 +1165,14 @@ void InputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
     input_free_buffer_queue_.PushBack(iter);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t InputCodecSourceImpl::NotifyPortEvent(PortEventType event_type,
                                                void* event_data)  {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
@@ -1175,9 +1182,9 @@ status_t InputCodecSourceImpl::GetBuffer(BufferDescriptor& stream_buffer,
   status_t ret = 0;
 
   if (input_free_buffer_queue_.Size() <= 0) {
-    QMMF_WARN("%s:%s No buffer available. Wait for new buffer", TAG, __func__);
-    Mutex::Autolock autoLock(wait_for_frame_lock_);
-    wait_for_frame_.wait(wait_for_frame_lock_);
+    QMMF_WARN("%s No buffer available. Wait for new buffer", __func__);
+    std::unique_lock<std::mutex> lock(wait_for_frame_lock_);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor buffer = *input_free_buffer_queue_.Begin();
@@ -1192,7 +1199,7 @@ switch(audiofiletype) {
   if (aacfileIO_->isfileopen()) {
     ret = aacfileIO_->GetFrames(buffer.data,buffer.capacity,&num_frames_read,&bytes_read);
   } else {
-    QMMF_ERROR("%s:%s input file is not opened", TAG, __func__);
+    QMMF_ERROR("%s input file is not opened", __func__);
     return -1;
   }
   break;
@@ -1201,7 +1208,7 @@ switch(audiofiletype) {
   if (amrfileIO_->isfileopen()) {
     ret = amrfileIO_->GetFrames(buffer.data,buffer.capacity,&num_frames_read,&bytes_read);
   } else {
-    QMMF_ERROR("%s:%s input file is not opened", TAG, __func__);
+    QMMF_ERROR("%s input file is not opened", __func__);
     return -1;
   }
   break;
@@ -1210,19 +1217,19 @@ switch(audiofiletype) {
   if (g711fileIO_->isfileopen()) {
     ret = g711fileIO_->GetFrames(buffer.data,buffer.capacity,&bytes_read);
   } else {
-    QMMF_ERROR("%s:%s input file is not opened", TAG, __func__);
+    QMMF_ERROR("%s input file is not opened", __func__);
     return -1;
   }
   break;
   default:
-  QMMF_INFO("%s:%s Unknown AudioFileType", TAG, __func__);
-  QMMF_INFO("%s:%s Usage: test_app -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", TAG, __func__);
+  QMMF_INFO("%s Unknown AudioFileType", __func__);
+  QMMF_INFO("%s Usage: test_app -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", __func__);
   assert(0);
 }
 
 
   if (ret != OK)
-    QMMF_INFO("%s:%s Read completed.", TAG, __func__);
+    QMMF_INFO("%s Read completed.", __func__);
 
   buffer.size = bytes_read;
   stream_buffer.data = buffer.data;
@@ -1248,8 +1255,8 @@ switch(audiofiletype) {
   stream_buffer.timestamp = 0;
   break;
   default:
-  QMMF_INFO("%s:%s Unknown AudioFileType", TAG, __func__);
-  QMMF_INFO("%s:%s Usage: -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", TAG, __func__);
+  QMMF_INFO("%s Unknown AudioFileType", __func__);
+  QMMF_INFO("%s Usage: -c [INPUT_AAC_FILE_PATH] -f [aac/amr/g711]", __func__);
   assert(0);
 }
 
@@ -1263,11 +1270,12 @@ status_t InputCodecSourceImpl::ReturnBuffer(BufferDescriptor& buffer,
   status_t ret = 0;
   bool found = false;
 
-  List<BufferDescriptor>::iterator it = input_occupy_buffer_queue_.Begin();
+  std::list<BufferDescriptor>::iterator it =
+      input_occupy_buffer_queue_.Begin();
   for (; it != input_occupy_buffer_queue_.End(); ++it) {
     if ((*it).data ==  buffer.data) {
       input_free_buffer_queue_.PushBack(*it);
-      wait_for_frame_.signal();
+      wait_for_frame_.Signal();
       found = true;
       break;
     }
@@ -1280,7 +1288,7 @@ status_t InputCodecSourceImpl::ReturnBuffer(BufferDescriptor& buffer,
 
 void InputCodecSourceImpl::BufferStatus() {
 
-  QMMF_INFO("%s:%s Total Buffer(%d), free(%d), occupy(%d)", TAG, __func__,
+  QMMF_INFO("%s Total Buffer(%d), free(%d), occupy(%d)", __func__,
       input_list_.size(), input_free_buffer_queue_.Size(),
       input_occupy_buffer_queue_.Size());
   assert(input_occupy_buffer_queue_.Size() == 0);
@@ -1288,31 +1296,31 @@ void InputCodecSourceImpl::BufferStatus() {
 
 OutputCodecSourceImpl::OutputCodecSourceImpl(char* file_name) {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   file_fd_ = open(file_name, O_CREAT | O_WRONLY | O_TRUNC, 0655);
   if (file_fd_ < 0) {
-    QMMF_ERROR("%s:%s Failed to open o/p file(%s)", TAG, __func__, file_name);
+    QMMF_ERROR("%s Failed to open o/p file(%s)", __func__, file_name);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 OutputCodecSourceImpl::~OutputCodecSourceImpl() {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   if (file_fd_ > 0) {
     close(file_fd_);
     file_fd_ = -1;
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 void OutputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
 
-  QMMF_INFO("%s:%s Enter ", TAG, __func__);
+  QMMF_INFO("%s Enter ", __func__);
 
   output_list_ = list;
   output_free_buffer_queue_.Clear();
@@ -1322,14 +1330,14 @@ void OutputCodecSourceImpl::AddBufferList(vector<BufferDescriptor>& list) {
     output_free_buffer_queue_.PushBack(iter);
   }
 
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
 }
 
 status_t OutputCodecSourceImpl::NotifyPortEvent(PortEventType event_type,
                                                 void* event_data)  {
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }
 
@@ -1339,10 +1347,10 @@ status_t OutputCodecSourceImpl::GetBuffer(BufferDescriptor& codec_buffer,
   status_t ret = 0;
 
   if (output_free_buffer_queue_.Size() <= 0) {
-    QMMF_WARN("%s:%s No buffer available to notify. Wait for new buffer", TAG,
+    QMMF_WARN("%s No buffer available to notify. Wait for new buffer",
         __func__);
-    Mutex::Autolock autoLock(wait_for_frame_lock_);
-    wait_for_frame_.wait(wait_for_frame_lock_);
+    std::unique_lock<std::mutex> lock(wait_for_frame_lock_);
+    wait_for_frame_.Wait(lock);
   }
 
   BufferDescriptor iter = *output_free_buffer_queue_.Begin();
@@ -1367,30 +1375,31 @@ status_t OutputCodecSourceImpl::ReturnBuffer(BufferDescriptor& codec_buffer,
     if (expSize != write(file_fd_,
           reinterpret_cast<uint8_t*>(codec_buffer.data) + codec_buffer.offset,
           codec_buffer.size)) {
-        QMMF_ERROR("%s:%s Bad Write error (%d) %s", TAG, __func__,
+        QMMF_ERROR("%s Bad Write error (%d) %s", __func__,
             errno, strerror(errno));
         close(file_fd_);
         file_fd_ = -1;
     }
   } else {
-    QMMF_ERROR("%s:%s File is not open to write", TAG, __func__);
+    QMMF_ERROR("%s File is not open to write", __func__);
   }
 
   if (codec_buffer.flag & static_cast<uint32_t>(BufferFlags::kFlagEOS)) {
-    QMMF_INFO("%s:%s This is last buffer from encoder.Close file", TAG,__func__);
+    QMMF_INFO("%s This is last buffer from encoder.Close file", __func__);
     if (file_fd_ > 0) {
       close(file_fd_);
       file_fd_ = -1;
     }
   }
 
-  List<BufferDescriptor>::iterator it = output_occupy_buffer_queue_.Begin();
+  std::list<BufferDescriptor>::iterator it =
+      output_occupy_buffer_queue_.Begin();
   bool found = false;
   for (; it != output_occupy_buffer_queue_.End(); ++it) {
     if (((*it).data) ==  (codec_buffer.data)) {
       output_free_buffer_queue_.PushBack(*it);
       output_occupy_buffer_queue_.Erase(it);
-      wait_for_frame_.signal();
+      wait_for_frame_.Signal();
       found = true;
       break;
     }
@@ -1402,7 +1411,7 @@ status_t OutputCodecSourceImpl::ReturnBuffer(BufferDescriptor& codec_buffer,
 
 void OutputCodecSourceImpl::BufferStatus() {
 
-  QMMF_INFO("%s:%s Total Buffer(%d), free(%d), occupy(%d)", TAG, __func__,
+  QMMF_INFO("%s Total Buffer(%d), free(%d), occupy(%d)", __func__,
       output_list_.size(), output_free_buffer_queue_.Size(),
       output_occupy_buffer_queue_.Size());
   assert(output_occupy_buffer_queue_.Size() == 0);
@@ -1441,9 +1450,10 @@ CmdMenu::Command CmdMenu::GetCommand() {
   return CmdMenu::Command(static_cast<CmdMenu::CommandType>(getchar()));
 }
 
-int main(int argc,char *argv[]) {
+int main(int argc, char* argv[]) {
+  QMMF_GET_LOG_LEVEL();
 
-  QMMF_INFO("%s:%s Enter", TAG, __func__);
+  QMMF_INFO("%s Enter", __func__);
 
   CodecTest test_context;
 
@@ -1492,7 +1502,7 @@ int main(int argc,char *argv[]) {
       break;
        case CmdMenu::EXIT_CMD:
       {
-        QMMF_INFO("%s:%s exit from test", TAG, __func__);
+        QMMF_INFO("%s exit from test", __func__);
         testRunning = false;
       }
       break;
@@ -1500,6 +1510,6 @@ int main(int argc,char *argv[]) {
       break;
     }
   }
-  QMMF_INFO("%s:%s Exit", TAG, __func__);
+  QMMF_INFO("%s Exit", __func__);
   return 0;
 }

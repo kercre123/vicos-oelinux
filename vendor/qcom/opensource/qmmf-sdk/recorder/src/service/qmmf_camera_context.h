@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,32 +30,27 @@
 #pragma once
 
 #include <mutex>
-#include <condition_variable>
-#include <utils/RefBase.h>
-#include <utils/KeyedVector.h>
-#include <utils/Log.h>
-#include <libgralloc/gralloc_priv.h>
 
-#include "qmmf-sdk/qmmf_recorder_params.h"
-#include "qmmf-sdk/qmmf_recorder_extra_param_tags.h"
+#include <qcom/display/gralloc_priv.h>
+#include <qmmf-sdk/qmmf_recorder_params.h>
+#include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
+
+#include "common/utils/qmmf_condition.h"
 #include "common/cameraadaptor/qmmf_camera3_device_client.h"
 #include "recorder/src/service/qmmf_camera_interface.h"
-
 #include "post-process/pipe/qmmf_postproc_pipe.h"
 #include "post-process/plugin/qmmf_postproc_plugin.h"
 #include "post-process/interface/qmmf_postproc.h"
+
 namespace qmmf {
 
 using namespace cameraadaptor;
 
 #define VIDEO_STREAM_BUFFER_COUNT    11
 #define PREVIEW_STREAM_BUFFER_COUNT  10
+#define REPROC_STREAM_BUFFER_COUNT    2
 #define SNAPSHOT_STREAM_BUFFER_COUNT 30
 #define EXTRA_DCVS_BUFFERS            2
-
-//FIXME: This is temporary change until necessary vendor mode changes are merged
-// in HAL3.
-#define QCAMERA3_VENDOR_SENSOR_MODE 1
 
 namespace recorder {
 
@@ -63,14 +58,27 @@ class CameraPort;
 class IBufferConsumer;
 class IBufferProducer;
 
+struct AECData {
+  uint8_t state;
+  int64_t timestamp;
+
+  AECData()
+    : state(ANDROID_CONTROL_AE_STATE_INACTIVE),
+      timestamp(-1) {}
+
+  void Reset() {
+    state = ANDROID_CONTROL_AE_STATE_INACTIVE;
+    timestamp = -1;
+  }
+};
+
 // This class deals with Camera3DeviceClient, and exposes simple Apis to create
 // Different types of streams (preview, video, and snashot). this class has a
 // Concept of ports, maintains vector of ports, each port is mapped one-to-one
 // to camera device stream.
 class CameraContext : public CameraInterface,
                       public PostProcPlugin<CameraContext>,
-                      public virtual IPostProc,
-                      public virtual RefBase {
+                      public virtual IPostProc {
  public:
   CameraContext();
 
@@ -120,31 +128,31 @@ class CameraContext : public CameraInterface,
 
   CameraStartParam& GetCameraStartParam() override;
 
-  Vector<int32_t>& GetSupportedFps() override;
+  std::vector<int32_t>& GetSupportedFps() override;
 
-  status_t ReturnStreamBuffer(StreamBuffer buffer);
+  status_t ReturnStreamBuffer(StreamBuffer buffer) override;
 
   status_t CreateDeviceInputStream(CameraInputStreamParameters& params,
-                                   int32_t* stream_id);
+                                   int32_t* stream_id) override;
 
   status_t CreateDeviceStream(CameraStreamParameters& params,
-                              uint32_t frame_rate, int32_t* stream_id,
-                              bool is_pp_enabled = true);
+                              uint32_t frame_rate, int32_t* stream_id)
+                              override;
 
   int32_t SubmitRequest(Camera3Request request,
                         bool is_streaming,
-                        int64_t *lastFrameNumber);
+                        int64_t *lastFrameNumber) override;
 
-  status_t DeleteDeviceStream(int32_t stream_id, bool cache);
+  status_t DeleteDeviceStream(int32_t stream_id, bool cache) override;
 
-  void OnFrameAvailable(StreamBuffer& buffer);
+  void OnFrameAvailable(StreamBuffer& buffer) override;
 
-  void NotifyBufferReturned(StreamBuffer& buffer);
+  void NotifyBufferReturned(StreamBuffer& buffer) override;
 
   status_t CreateCaptureRequest(Camera3Request& request,
-                                camera3_request_template_t template_type);
+                        camera3_request_template_t template_type) override;
 
-  CameraMetadata GetCameraStaticMeta();
+  CameraMetadata GetCameraStaticMeta() override;
 
  private:
 
@@ -155,15 +163,10 @@ class CameraContext : public CameraInterface,
     uint32_t framerate;
   };
 
-  struct SyncFrame {
-    int64_t         last_frame_id;
-    Vector<int32_t> stream_ids;
-  };
-
   friend class CameraPort;
   friend class ZslPort;
 
-  void StoreBatchStreamId(sp<CameraPort>& port);
+  void StoreBatchStreamId(std::shared_ptr<CameraPort>& port);
 
   void RestoreBatchStreamId(CameraPort* port);
 
@@ -172,6 +175,8 @@ class CameraContext : public CameraInterface,
   void InitSupportedFPS();
 
   bool IsInputSupported();
+
+  AECData GetAECData();
 
   status_t CreateZSLStream(const CameraStartParam &param);
 
@@ -185,6 +190,10 @@ class CameraContext : public CameraInterface,
 
   status_t ValidateResolution(const ImageFormat format, const uint32_t width,
                               const uint32_t height);
+
+#ifdef USE_FPS_IDX
+  uint32_t GetSensorModeIndex(uint32_t frame_rate);
+#endif
 
   void InitHFRModes();
 
@@ -209,7 +218,7 @@ class CameraContext : public CameraInterface,
 
   std::function<void(StreamBuffer)> GetStreamCb(const ImageParam &param);
 
-  bool IsPostProcNeeded(const ImageParam &param);
+  bool IsPostProcNeeded(const ImageParam &param, const uint32_t sequence_cnt);
 
   CameraPort* GetPort(const uint32_t track_id);
 
@@ -219,79 +228,108 @@ class CameraContext : public CameraInterface,
 
   status_t PostProcCreatePipeAndUpdateStreams(
                                       CameraStreamParameters& stream_param,
-                                      uint32_t image_quality,
                                       uint32_t frame_rate,
                                       const std::vector<uint32_t> &plugins);
 
   int32_t PostProcStart(int32_t stream_id);
 
-  status_t PostProcAddResult(const CaptureResult &result);
+  template <typename T>
+  bool QueryPartialTag(const CameraMetadata &result, int32_t tag, T *value,
+                       uint32_t frame_number);
+
+  template <typename T>
+  bool UpdatePartialTag(CameraMetadata &result, int32_t tag, const T *value,
+                        uint32_t frame_number);
+
+  void HandleFinalResult(const CaptureResult &result);
+
+  status_t ValidateCaptureParams(const ImageParam &image_param);
+
+  std::string GetSnapshotJsonConfig();
+
+  bool IsRawOnly(const int32_t format);
 
   sp<Camera3DeviceClient>  camera_device_;
   CameraClientCallbacks    camera_callbacks_;
   uint32_t                 camera_id_;
-  Mutex                    device_access_lock_;
+  std::mutex               device_access_lock_;
   CameraStartParam         camera_start_params_;
   CameraMetadata           static_meta_;
-
-  std::vector<uint32_t>    capture_plugins_;
 
   // Global Capture request.
   int32_t                  streaming_request_id_;
   int32_t                  previous_streaming_request_id_;
 
+  // Map of stream id and it's last request frame number submitted to HAL.
+  std::map<int32_t, int64_t> last_frame_number_map_;
+
+  // Stream ids that have been removed from capture requests.
+  std::set<int32_t>        removed_stream_ids_;
+
+  int64_t                  last_frame_number_;
+
   //Non zsl capture request.
   Camera3Request           snapshot_request_;
-  Vector<int32_t>          snapshot_request_id_;
-  ImageParam               snapshot_param_;
+  std::vector<int32_t>     snapshot_request_id_;
   StreamSnapshotCb         client_snapshot_cb_;
   uint32_t                 sequence_cnt_;
-  uint32_t                 burst_cnt_;
+  int64_t                  last_snapshot_id_;
+  int64_t                  curr_snapshot_id_;
+  uint32_t                 capture_cnt_;
+  bool                     capture_done_;
+  std::mutex               capture_lock_;
+  QCondition               capture_signal_;
   bool                     postproc_enable_;
   bool                     cancel_capture_ = false;
 
   ResultCb                 result_cb_;
   ErrorCb                  error_cb_;
-  Vector<int32_t>          supported_fps_;
-  sp<CameraPort>           zsl_port_;
+  std::vector<int32_t>     supported_fps_;
+  std::shared_ptr<CameraPort>           zsl_port_;
 
   // Map of <consumer id and CameraPort>
-  Vector<sp<CameraPort> > active_ports_;
+  std::vector<std::shared_ptr<CameraPort> > active_ports_;
 
   // Map of <port_id and PostProc plugins>
   std::map<uint32_t, std::vector<uint32_t> >  video_plugins_;
 
   // Maps of buffer Id and Buffer.
-  DefaultKeyedVector<uint32_t, StreamBuffer> snapshot_buffer_list_;
-
-  // User define value for sensor mode
-  int32_t sensor_vendor_mode_;
+  std::map<uint32_t, StreamBuffer> snapshot_buffer_list_;
 
   static float             kConstrainedModeThreshold;
   static float             kHFRBatchModeThreshold;
   bool                     hfr_supported_;
-  Vector<HFRMode_t>        hfr_batch_modes_list_;
-  Vector<Camera3Request>   streaming_active_requests_;
+  std::vector<HFRMode_t>   hfr_batch_modes_list_;
+  std::vector<Camera3Request> streaming_active_requests_;
 
-  DefaultKeyedVector<uint32_t, int32_t> snapshot_buffer_stream_list_;
+  std::map<uint32_t, int32_t> snapshot_buffer_stream_list_;
   int32_t                  input_stream_id_;
-  sp<PostProcPipe>         postproc_pipe_;
-  SyncFrame                sync_frame_;
+  std::shared_ptr<PostProcPipe> postproc_pipe_;
   uint32_t                 batch_size_;
   int32_t                  batch_stream_id_;
-  bool                     aec_done_;
 
-  std::mutex               capture_count_lock_;
-  std::condition_variable  capture_count_signal_;
+  std::mutex               pending_frames_lock_;
+  QCondition               pending_frames_;
 
-  std::mutex               sync_frame_lock_;
-  std::condition_variable  sync_frame_cond_;
-
+  AECData                  aec_;
   std::mutex               aec_lock_;
-  std::condition_variable  aec_signal_;
+  QCondition               aec_state_updated_;
 
-  static const uint32_t kSyncFrameWaitDuration = 500000000; // 500 ms.
+  static const uint32_t    kWaitAecTimeout = 500000000; // 500 ms.
+  static const uint32_t    kWaitPendingFramesTimeout = 1500000000; // 1500 ms.
 
+  bool                     partial_metadata_required_;
+  int32_t                  partial_result_count_;
+  std::mutex               partial_result_lock_;
+
+  // snapshot configuration
+  ImageParam                    snapshot_param_;
+  std::vector<uint32_t>         capture_plugins_;
+  std::vector<ImageThumbnail>   thumbnails_;
+  SnapshotMode                  snapshot_type_;
+  SnapshotMode                  new_snapshot_type_;
+  uint32_t                      postproc_frame_skip_;
+  bool                          exif_en_;
 };
 
 enum class CameraPortType {
@@ -317,7 +355,7 @@ struct ZSLEntry {
 // from camera stream and passes to its consumers, for optimization reason
 // single port can serve multiple consumers if their characterstics are exactly
 // same.
-class CameraPort : public RefBase {
+class CameraPort {
  public:
   CameraPort(const CameraStreamParam& param, size_t batch_size,
              CameraPortType port_type, CameraContext *context);
@@ -374,12 +412,20 @@ class CameraPort : public RefBase {
   size_t                 batch_size_;
   uint32_t               port_id_;
 
+  // Indicates whether and for which frame the AE has converged after start.
+  bool                   aec_converged_;
+  int64_t                aec_timestamp_;
+
   std::map<uintptr_t, sp<IBufferConsumer> >consumers_;
 
-  sp<PostProcPipe>       postproc_pipe_;
-  std::mutex             consumer_lock_;
+  std::shared_ptr<PostProcPipe> postproc_pipe_;
   sp<IBufferConsumer>    consumer_;
-  Mutex                  stop_lock_;
+
+  std::mutex             consumer_lock_;
+  std::mutex             stop_lock_;
+  std::mutex             aec_lock_;
+
+  std::string            pipe_config_json_data_;
 };
 
 class ZslPort : public CameraPort {
@@ -417,8 +463,8 @@ class ZslPort : public CameraPort {
   void ReturnZSLInputBuffer(StreamBuffer &buffer);
 
   int32_t         input_stream_id_ = -1;
-  Mutex           zsl_queue_lock_;
-  List<ZSLEntry>  zsl_queue_;
+  std::mutex      zsl_queue_lock_;
+  std::list<ZSLEntry>  zsl_queue_;
   ZSLEntry        zsl_input_buffer_ = {};
   bool            zsl_running_ = false;
   uint32_t        zsl_queue_depth_ = 0;

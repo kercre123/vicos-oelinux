@@ -14,7 +14,8 @@ include $(QMMF_WEBSERVER_TOP_SRCDIR)/common.mk
 
 LOCAL_C_INCLUDES += $(TOP)/system/media/camera/include
 
-LOCAL_SRC_FILES = src/qmmf_vam_dummy_interface.cc
+LOCAL_SRC_FILES = src/qmmf_vam_interface.cc
+LOCAL_SRC_FILES += src/qmmf_vam_config_parser.cc
 
 LOCAL_SHARED_LIBRARIES += libqmmf_recorder_client
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -32,13 +32,19 @@
 #include <qmmf-sdk/qmmf_display.h>
 #include <qmmf-sdk/qmmf_display_params.h>
 #include <qmmf-sdk/qmmf_recorder.h>
+#include <qmmf-sdk/qmmf_recorder_extra_param.h>
+#include <qmmf-sdk/qmmf_recorder_extra_param_tags.h>
 #include <qmmf_rtsp_server_interface.h>
+#include <qmmf-sdk/qmmf_player.h>
+#include <qmmf-sdk/qmmf_player_params.h>
 #include <qmmf_mux_interface.h>
 #include <qmmf_vam_interface.h>
+#include <cutils/properties.h>
 #include <utils/Log.h>
 #include <utils/Mutex.h>
 #include <utils/KeyedVector.h>
 #include <utils/Errors.h>
+#include <unistd.h>
 #include <media/msm_media_info.h>
 #ifdef QMMF_LE_BUILD
 #include <fpv_rave/fpv_config.hpp>
@@ -52,9 +58,22 @@
 #include "qmmf_http_interface.h"
 #include <fstream>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+
+
 #define STORE_SNAPSHOT 1
 #define TABLE_SIZE(table) sizeof(table)/sizeof(table[0])
 
+#define VAM_LOG_VIDEO 1
+#define EXTRA_PARAM 1
+
+#define RUNNING 1
+#define MICBUFSIZE 1280
+#define PORT_NUM 7078
 namespace qmmf {
 
 namespace httpinterface {
@@ -225,6 +244,13 @@ class HTTPInterface : public VAMCb {
                                             uint32_t bitrate);
 #endif
 
+  static int32_t AudioPlayerConnectOp(struct qmmf_module_t *module);
+  static int32_t AudioPlayerPrepareOp(struct qmmf_module_t *module);
+  static int32_t AudioPlayerStartOp(struct qmmf_module_t *module);
+  static int32_t AudioPlayerStopOp(struct qmmf_module_t *module);
+  static int32_t AudioPlayerDeleteOp(struct qmmf_module_t *module);//#####audioTrackId should be delete
+  static int32_t AudioPlayerDisconnectOp(struct qmmf_module_t *module);
+
   static int32_t CreateMultiCameraOp(struct qmmf_module_t *module,
                                      const uint32_t *camera_ids,
                                      uint32_t num_camera,
@@ -331,8 +357,9 @@ class HTTPInterface : public VAMCb {
                     std::vector<MetaData> meta_data);
   void SnapshotCb(uint32_t camera_id, uint32_t image_sequence_count,
                   BufferDescriptor buffer, MetaData meta_data);
-  void CameraCb(uint32_t camera_id,
-                const CameraMetadata &result);
+  void chkCamType();
+  void chkExtraParam();
+  void skipAECConv();
 #ifdef QMMF_LE_BUILD
   int32_t RaveTrackResolutionChangeCb(uint32_t width, uint32_t height,
                                       uint32_t framerate, uint32_t bitrate);
@@ -342,20 +369,45 @@ class HTTPInterface : public VAMCb {
   int32_t RaveExit();
 #endif
 
+  void Audiotrackcb_event(__attribute__((unused))uint32_t track_id,
+          __attribute__((unused))qmmf::player::EventType event_type,
+          __attribute__((unused))void *event_data,
+          __attribute__((unused))size_t event_data_size);
+  void PlayerCb_event(__attribute__((unused))qmmf::player::EventType event_type,
+                      __attribute__((unused))void *event_data,
+                      __attribute__((unused))size_t event_data_size);
+  int32_t AudioPlayerConnect();
+  int32_t AudioPlayerPrepare();
+  int32_t AudioPlayerStart();
+  int32_t AudioPlayerStop();
+  int32_t AudioPlayerDelete(uint32_t audio_track_id);
+  int32_t AudioPlayerDisconnect();
+  int32_t AudioPlayerAcc(char * buf, int buf_size);
+  int32_t InitUdpServer();
+  static void *AudioUdpServer(void *phttp);
+
   /**Not allowed */
   HTTPInterface(const HTTPInterface &);
   HTTPInterface &operator=(const HTTPInterface &);
 
-  Mutex lock_;
   KeyedVector<uint32_t, uint32_t> session_map_;
-  Recorder recorder_;
-  KeyedVector<uint32_t, qmmf_camera_start_param> cameras_;
-  KeyedVector<uint32_t, CameraConfiguration*> camera_configs_;
-  KeyedVector<uint32_t, RTSPContext> rtsp_servers_;
   KeyedVector<uint32_t, qmmf_video_track_status> video_tracks_;
   KeyedVector<uint32_t, qmmf_audio_track_param> audio_tracks_;
+  KeyedVector<uint32_t, qmmf_camera_start_param> cameras_;
+  KeyedVector<uint32_t, CameraConfiguration*> camera_configs_;
+  // to protect of sessions, video and audio tracks, and list of cameras.
+  Mutex lock_;
+
+  Recorder recorder_;
+  KeyedVector<uint32_t, RTSPContext> rtsp_servers_;
+  // to protect list of rtsp servers.
+  Mutex  rtsp_mutex_;
+
   KeyedVector<uint32_t, MuxInterface *> muxers_;
   KeyedVector<uint32_t, qmmf_muxer_init> muxer_params_;
+  // to protect list of muxers and params.
+  Mutex muxer_mutex_;
+
   pthread_mutex_t snapshot_lock_;
   pthread_mutex_t aec_converge_lock_;
   qmmf_image_result snapshot_result_;
@@ -378,7 +430,6 @@ class HTTPInterface : public VAMCb {
   SurfaceBuffer surface_buffer_;
   bool display_started_;
   uint32_t dsi_counter_ = 0;
-  bool aec_converged_;
   static const char kMuxedFileName[];
   static const AVCProfileMap kAVCMuxerProfiles[];
   static const AVCLevelMap kAVCMuxerLevels[];
@@ -394,7 +445,25 @@ class HTTPInterface : public VAMCb {
   static const char imageIdFileName[];
   static const uint32_t kRepeat = 3;
   bool camera_error_;
+  uint32_t qmmf_prop_vam_logging_;
+  uint32_t qmmf_prop_extra_param_;
+  qmmf::player::TrackCb audio_track_cb_;
+  static const uint32_t audio_track_id_ = 999;
+  qmmf::player::AudioTrackCreateParam audio_track_param_;
+  qmmf::player::Player player_;
 };
+
+void HTTPInterface::chkCamType() {
+  char prop[PROPERTY_VALUE_MAX];
+  property_get("persist.qmmf.vam.vidlog", prop, 0);
+  qmmf_prop_vam_logging_ = atoi (prop);
+}
+
+void HTTPInterface::chkExtraParam() {
+  char prop[PROPERTY_VALUE_MAX];
+  property_get("persist.qmmf.opt360.extraparam", prop, 0);
+  qmmf_prop_extra_param_ = atoi (prop);
+}
 
 const char HTTPInterface::kMuxedFileName[] = "/data/misc/qmmf/qmmf_video_%d.%s";
 const char HTTPInterface::videoIdFileName[] = "/data/misc/qmmf/video_id";
@@ -487,8 +556,8 @@ qmmf_http_interface QMMF_MODULE = {
 
 HTTPInterface::HTTPInterface() :
     snapshot_completed_(false),
-    aec_converged_(false),
     camera_error_(false) {
+  ALOGD("%s: Enter", __func__);
   pthread_condattr_t snapshot_cond_attr;
   memset(&snapshot_result_, 0, sizeof(snapshot_result_));
   pthread_mutex_init(&snapshot_lock_, nullptr);
@@ -501,9 +570,11 @@ HTTPInterface::HTTPInterface() :
   memset(&vam_video_log_params_, 0, sizeof(vam_video_log_params_));
   vam_interface_ = VAMInterfaceFactory::NewInstance(this);
   assert(nullptr != vam_interface_);
+  ALOGD("%s: Exit", __func__);
 }
 
 HTTPInterface::~HTTPInterface() {
+  ALOGD("%s: Enter", __func__);
   pthread_mutex_destroy(&snapshot_lock_);
   pthread_cond_destroy(&snapshot_cond_);
   pthread_mutex_destroy(&aec_converge_lock_);
@@ -532,11 +603,12 @@ HTTPInterface::~HTTPInterface() {
     }
     camera_configs_.clear();
   }
-
   delete vam_interface_;
+  ALOGD("%s: Exit", __func__);
 }
 
 int32_t HTTPInterface::Open(struct qmmf_module_t *module) {
+  ALOGD("%s: Enter", __func__);
   if (nullptr == module) {
     ALOGE("%s: Bad module parameter!", __func__);
     return BAD_VALUE;
@@ -579,11 +651,19 @@ int32_t HTTPInterface::Open(struct qmmf_module_t *module) {
   module->create_multicamera = HTTPInterface::CreateMultiCameraOp;
   module->configure_multicamera = HTTPInterface::ConfigureMultiCameraOp;
   module->database_command = HTTPInterface::DatabaseCommandOp;
+  module->audio_player_connect = HTTPInterface::AudioPlayerConnectOp;
+  module->audio_player_prepare = HTTPInterface::AudioPlayerPrepareOp;
+  module->audio_player_start = HTTPInterface::AudioPlayerStartOp;
+  module->audio_player_stop = HTTPInterface::AudioPlayerStopOp;
+  module->audio_player_delete = HTTPInterface::AudioPlayerDeleteOp;
+  module->audio_player_disconnect = HTTPInterface::AudioPlayerDisconnectOp;
 
+  ALOGD("%s: Exit", __func__);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::Close(struct qmmf_module_t *module) {
+  ALOGD("%s: Enter", __func__);
   if (nullptr == module) {
     ALOGE("%s: Bad module parameter!", __func__);
     return BAD_VALUE;
@@ -597,7 +677,7 @@ int32_t HTTPInterface::Close(struct qmmf_module_t *module) {
   HTTPInterface *httpIntf = (HTTPInterface *) module->priv;
   delete httpIntf;
   memset(module, 0, sizeof(struct qmmf_module_t));
-
+  ALOGD("%s: Exit", __func__);
   return NO_ERROR;
 }
 
@@ -1180,17 +1260,130 @@ int32_t HTTPInterface::DisconnectOp(struct qmmf_module_t *module) {
   return httpIntf->Disconnect();
 }
 
+#if 1
+int32_t HTTPInterface::AudioPlayerConnectOp(struct qmmf_module_t *module)
+{
+  ALOGD("%s: Enter\n", __func__);
+  if (NULL == module) {
+    ALOGE("%s: Bad module parameter!", __func__);
+    return BAD_VALUE;
+  }
+
+  if (NULL == module->priv) {
+    ALOGE("%s: No valid module!", __func__);
+    return BAD_VALUE;
+  }
+
+  HTTPInterface *httpIntf = (HTTPInterface *) module->priv;
+
+  return httpIntf->AudioPlayerConnect();
+}
+
+int32_t HTTPInterface::AudioPlayerPrepareOp(struct qmmf_module_t *module)
+{
+  ALOGD("%s: Enter\n", __func__);
+  if (NULL == module) {
+    ALOGE("%s: Bad module parameter!", __func__);
+    return BAD_VALUE;
+  }
+
+  if (NULL == module->priv) {
+    ALOGE("%s: No valid module!", __func__);
+    return BAD_VALUE;
+  }
+
+  HTTPInterface *httpIntf = (HTTPInterface *) module->priv;
+
+  return httpIntf->AudioPlayerPrepare();
+}
+
+int32_t HTTPInterface::AudioPlayerStartOp(struct qmmf_module_t *module)
+{
+  ALOGD("%s: Enter\n", __func__);
+  if (NULL == module) {
+    ALOGE("%s: Bad module parameter!", __func__);
+    return BAD_VALUE;
+  }
+
+  if (NULL == module->priv) {
+    ALOGE("%s: No valid module!", __func__);
+    return BAD_VALUE;
+  }
+
+  HTTPInterface *httpIntf = (HTTPInterface *) module->priv;
+
+  return httpIntf->AudioPlayerStart();
+}
+
+int32_t HTTPInterface::AudioPlayerStopOp(struct qmmf_module_t *module)
+{
+  ALOGD("%s: Enter\n", __func__);
+  if (NULL == module) {
+    ALOGE("%s: Bad module parameter!", __func__);
+    return BAD_VALUE;
+  }
+
+  if (NULL == module->priv) {
+    ALOGE("%s: No valid module!", __func__);
+    return BAD_VALUE;
+  }
+
+  HTTPInterface *httpIntf = (HTTPInterface *) module->priv;
+
+  return httpIntf->AudioPlayerStop();
+}
+
+int32_t HTTPInterface::AudioPlayerDeleteOp(struct qmmf_module_t *module)
+{
+  ALOGD("%s: Enter\n", __func__);
+  if (NULL == module) {
+    ALOGE("%s: Bad module parameter!", __func__);
+    return BAD_VALUE;
+  }
+
+  if (NULL == module->priv) {
+    ALOGE("%s: No valid module!", __func__);
+    return BAD_VALUE;
+  }
+
+  HTTPInterface *httpIntf = (HTTPInterface *) module->priv;
+
+  return httpIntf->AudioPlayerDelete(audio_track_id_);
+}
+
+int32_t HTTPInterface::AudioPlayerDisconnectOp(struct qmmf_module_t *module)
+{
+  ALOGD("%s: Enter\n", __func__);
+  if (NULL == module) {
+    ALOGE("%s: Bad module parameter!", __func__);
+    return BAD_VALUE;
+  }
+
+  if (NULL == module->priv) {
+    ALOGE("%s: No valid module!", __func__);
+    return BAD_VALUE;
+  }
+
+  HTTPInterface *httpIntf = (HTTPInterface *) module->priv;
+
+  return httpIntf->AudioPlayerDisconnect();
+}
+#endif
 int32_t HTTPInterface::Connect() {
+  ALOGD("%s: Enter", __func__);
   RecorderCb recorder_status_cb;
   recorder_status_cb.event_cb = [&] ( EventType event_type, void *event_data,
           size_t event_data_size) { RecorderEventCb(event_type,event_data,
                                                     event_data_size); };
 
-  return recorder_.Connect(recorder_status_cb);
+  auto ret = recorder_.Connect(recorder_status_cb);
+  ALOGD("%s: Exit", __func__);
+  return ret;
 }
 
 int32_t HTTPInterface::StartCamera(uint32_t camera_id,
                                    qmmf_camera_start_param start_parms) {
+  ALOGD("%s: Enter", __func__);
   CameraStartParam params;
   memset(&params, 0, sizeof(params));
   params.flags = start_parms.flags;
@@ -1199,17 +1392,15 @@ int32_t HTTPInterface::StartCamera(uint32_t camera_id,
   params.zsl_width = start_parms.zsl_width;
   params.zsl_mode = start_parms.zsl_mode;
   params.zsl_queue_depth = start_parms.zsl_queue_depth;
-  CameraResultCb result_cb = [&] (uint32_t camera_id,
-                                  const CameraMetadata &result) {
-                                  CameraCb(camera_id, result);};
-  auto ret = recorder_.StartCamera(camera_id, params, result_cb);
+
+  auto ret = recorder_.StartCamera(camera_id, params);
   if (NO_ERROR == ret) {
-    Mutex::Autolock l(lock_);
+    Mutex::Autolock lock(lock_);
     ssize_t idx = cameras_.indexOfKey(camera_id);
     if (NAME_NOT_FOUND == idx) {
       cameras_.add(camera_id, start_parms);
     } else {
-      cameras_.replaceValueAt(camera_id, start_parms);
+      cameras_.replaceValueFor(camera_id, start_parms);
     }
   }
 
@@ -1220,7 +1411,7 @@ int32_t HTTPInterface::StartCamera(uint32_t camera_id,
           __func__);
     return ret;
   } else {
-    Mutex::Autolock l(lock_);
+    Mutex::Autolock lock(lock_);
     ssize_t idx = camera_configs_.indexOfKey(camera_id);
     if (NAME_NOT_FOUND == idx) {
       CameraConfiguration *config = new CameraConfiguration(static_info);
@@ -1231,20 +1422,22 @@ int32_t HTTPInterface::StartCamera(uint32_t camera_id,
       camera_configs_.add(camera_id, config);
     }
   }
-
+  ALOGD("%s: Exit", __func__);
   return ret;
 }
 
 int32_t HTTPInterface::StopCamera(uint32_t camera_id) {
+
+  ALOGD("%s: Enter", __func__);
   auto ret = recorder_.StopCamera(camera_id);
   if (NO_ERROR == ret) {
-    Mutex::Autolock l(lock_);
+    Mutex::Autolock lock(lock_);
     ssize_t idx = cameras_.indexOfKey(camera_id);
     if (NAME_NOT_FOUND == idx) {
       ALOGE("%s: Camera with id: %d not found in status!\n",
             __func__, camera_id);
     } else {
-      cameras_.removeItemsAt(camera_id, 1);
+      cameras_.removeItemsAt(idx, 1);
     }
 
     idx = camera_configs_.indexOfKey(camera_id);
@@ -1254,43 +1447,55 @@ int32_t HTTPInterface::StopCamera(uint32_t camera_id) {
     } else {
       CameraConfiguration *config = camera_configs_.valueAt(idx);
       delete config;
-      camera_configs_.removeItemsAt(camera_id, 1);
+      camera_configs_.removeItemsAt(idx, 1);
     }
   }
-
+  ALOGD("%s: Exit", __func__);
   return ret;
 }
 
 int32_t HTTPInterface::CreateSession(uint32_t *session_id) {
+  ALOGD("%s: Enter", __func__);
   SessionCb cb;
   cb.event_cb = [&] (EventType event_type, void *event_data,
       size_t event_data_size) { SessionEventCb(event_type, event_data,
                                               event_data_size); };
 
-  return recorder_.CreateSession(cb, session_id);
+  auto ret = recorder_.CreateSession(cb, session_id);
+  ALOGD("%s: Exit session_id:%d", __func__, *session_id);
+  return ret;
 }
 
 int32_t HTTPInterface::DeleteSession(uint32_t session_id) {
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
   auto ret = recorder_.DeleteSession(session_id);
-
-  Mutex::Autolock l(lock_);
-  ssize_t idx = muxers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    MuxInterface *mux = muxers_.valueAt(idx);
-    muxers_.removeItem(session_id);
-    delete mux;
-    muxer_params_.removeItem(session_id);
+  ssize_t idx = NAME_NOT_FOUND;
+  {
+    Mutex::Autolock lock(muxer_mutex_);
+    idx = muxers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND != idx) {
+      MuxInterface *muxer = muxers_.valueAt(idx);
+      muxers_.removeItem(session_id);
+      delete muxer;
+      muxer_params_.removeItem(session_id);
+    }
   }
 
-  idx = rtsp_servers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_servers_.removeItem(session_id);
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND != idx) {
+      rtsp_servers_.removeItem(session_id);
+    }
   }
-
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return ret;
 }
 
 int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
+
+  ALOGD("%s: Enter session_id:%d & track_id:%d ", __func__,
+      track_parms.session_id, track_parms.track_id);
   struct VideoTrackCreateParam video_track_param;
   memset(&video_track_param, 0x0, sizeof video_track_param);
 
@@ -1387,16 +1592,45 @@ int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
                                  __attribute__((unused)) size_t event_data_size)
                                  { /* TODO */ };
 
-  auto ret = recorder_.CreateVideoTrack(track_parms.session_id,
-                                        track_parms.track_id,
-                                        video_track_param,
-                                        video_track_cb);
-  if (NO_ERROR != ret) {
-    ALOGE("%s: Unable to create video track: %d", __func__,
-               ret);
-    return ret;
+  ALOGD("%s: track_parms.output: %d", __func__, track_parms.output);
+
+  status_t ret;
+
+  chkCamType();
+  chkExtraParam();
+
+  if (( qmmf_prop_extra_param_ == EXTRA_PARAM) && track_parms.width == 3840) {
+    ALOGI("%s: Entered Source Surface Crop!!", __func__);
+    VideoExtraParam extra_param;
+    for (int32_t i = 0; i < 2; ++i) {
+      SourceSurfaceDesc source_surface;
+      source_surface.camera_id = i;
+      source_surface.width = 1600;
+      source_surface.height = 1600;
+      source_surface.flags = TransformFlags::kNone;
+      extra_param.Update(QMMF_SOURCE_SURFACE_DESCRIPTOR, source_surface, i);
+    }
+    ret = recorder_.CreateVideoTrack(track_parms.session_id,
+                                      track_parms.track_id,
+                                      video_track_param,
+                                      extra_param,
+                                      video_track_cb);
+    if (NO_ERROR != ret) {
+      ALOGE("%s: Unable to create video track: %d", __func__, ret);
+      return ret;
+    }
+
+  } else {
+    ALOGI("%s: Entered Normal CreateVideoTrack!!", __func__);
+    ret = recorder_.CreateVideoTrack(track_parms.session_id,
+                                      track_parms.track_id,
+                                      video_track_param,
+                                      video_track_cb);
+    if (NO_ERROR != ret) {
+      ALOGE("%s: Unable to create video track: %d", __func__, ret);
+      return ret;
+    }
   }
-  Mutex::Autolock l(lock_);
 
   qmmf_video_track_status status;
   memset(&status, 0, sizeof(status));
@@ -1419,6 +1653,8 @@ int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
     if ((!rave_stopsession_)
         ||(rave_stopsession_
           && (track_parms.session_id != rave_track_param_store_.session_id))) {
+      ALOGD("%s: session_id:%d & track_id:%d :RTSP", __func__,
+          track_parms.session_id, track_parms.track_id);
       stat = AddRTSPVideoLocked(track_parms.session_id, track_parms.track_id,
                                 video_track_param,
                                 (qmmf_video_track_output) track_parms.output);
@@ -1453,6 +1689,8 @@ int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
       }
       break;
     case TRACK_OUTPUT_VAM:
+      ALOGD("%s: session_id:%d & track_id:%d :VAM", __func__,
+          track_parms.session_id, track_parms.track_id);
       ret = vam_interface_->InitVAM(status.session_id, status.track_id);
       if (NO_ERROR != ret) {
         ALOGE("%s: Unable to initialize VAM!", __func__);
@@ -1484,6 +1722,7 @@ int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
         goto exit;
       }
       ALOGD("%s: VAM track started successfully!", __func__);
+
       stat = AddRTSPVideoLocked(track_parms.session_id, track_parms.track_id,
                                 video_track_param,
                                 (qmmf_video_track_output) track_parms.output);
@@ -1496,13 +1735,18 @@ int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
         goto exit;
       }
 
-      stat = StartVAMVideoLogLocked(track_parms);
-      if (stat) {
-        ALOGE("%s: Unable to start vam video log track: %d", __func__, stat);
+      if (qmmf_prop_vam_logging_ == VAM_LOG_VIDEO) {
+        stat = StartVAMVideoLogLocked(track_parms);
+        if (stat) {
+          ALOGE("%s: Unable to start vam video log track: %d", __func__, stat);
+        }
       }
+
       break;
     case TRACK_OUTPUT_MP4:
     case TRACK_OUTPUT_3GP:
+      ALOGD("%s: session_id:%d & track_id:%d :MUX", __func__,
+          track_parms.session_id, track_parms.track_id);
       ret = AddVidMuxParmsLocked(track_parms.session_id, track_parms.track_id,
                                  video_track_param,
                                  (qmmf_video_track_output) track_parms.output);
@@ -1517,12 +1761,15 @@ int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
         ret = BAD_VALUE;
         goto exit;
       }
+      ALOGD("%s: session_id(%d):track_id(%d) :Display", __func__,
+          track_parms.session_id, track_parms.track_id);
       ret = AddVidDisplayLocked(DisplayType::kPrimary, track_parms);
       if (NO_ERROR != ret) {
         ALOGE("%s: Unable to setup dsi parameters!\n", __func__);
         goto exit;
       }
       dsi_counter_++;
+      break;
     case TRACK_OUTPUT_EVENT_LOGGER: // Do Nothing
       break;
     default:
@@ -1531,54 +1778,78 @@ int32_t HTTPInterface::CreateVideoTrack(qmmf_video_track_param track_parms) {
       ret = BAD_VALUE;
       goto exit;
   }
-  session_map_.add(track_parms.track_id, track_parms.session_id);
-  video_tracks_.add(track_parms.track_id, status);
+  {
+    Mutex::Autolock lock(lock_);
+    session_map_.add(track_parms.track_id, track_parms.session_id);
+    video_tracks_.add(track_parms.track_id, status);
+  }
 
+  ALOGD("%s: Exit session_id:%d & track_id:%d ", __func__,
+      track_parms.session_id, track_parms.track_id);
   return ret;
 
 exit:
-
   recorder_.DeleteVideoTrack(track_parms.session_id, track_parms.track_id);
-
+  ALOGE("%s: Exit session_id:%d & track_id:%d ", __func__,
+      track_parms.session_id, track_parms.track_id);
   return ret;
 }
 
 int32_t HTTPInterface::DeleteVideoTrack(uint32_t session_id,
                                         uint32_t track_id) {
-  Mutex::Autolock l(lock_);
+
+  ALOGD("%s: Enter session_id:%d & track_id:%d", __func__, session_id,
+      track_id);
   auto ret = recorder_.DeleteVideoTrack(session_id, track_id);
   if (NO_ERROR != ret) {
     ALOGE("%s: Unable to delete video track: %d\n", __func__, ret);
     return ret;
   }
-  session_map_.removeItem(track_id);
-  ssize_t idx = video_tracks_.indexOfKey(track_id);
-  if (0 <= idx) {
-    qmmf_video_track_status status = video_tracks_.valueAt(idx);
-    video_tracks_.removeItem(track_id);
 
-    switch(status.output) {
-      case TRACK_OUTPUT_RTSP:
-      case TRACK_OUTPUT_MPEGTS:
+  ssize_t idx = NAME_NOT_FOUND;
+  qmmf_video_track_status status;
+  {
+    Mutex::Autolock l(lock_);
+    session_map_.removeItem(track_id);
+    idx = video_tracks_.indexOfKey(track_id);
+    if (idx == NAME_NOT_FOUND) {
+      ALOGE("%s: No status data for track id: %d", __func__,
+               track_id);
+      return BAD_VALUE;
+    }
+    status = video_tracks_.valueAt(idx);
+    video_tracks_.removeItem(track_id);
+  }
+
+  switch(status.output) {
+    case TRACK_OUTPUT_RTSP:
+    case TRACK_OUTPUT_MPEGTS:
 #ifdef QMMF_LE_BUILD
-        if ((!rave_stopsession_)
-            ||(rave_stopsession_
-              && (session_id != rave_track_param_store_.session_id))) {
-          ret = RemoveRTSPVideoLocked(session_id);
-          if (NO_ERROR != ret) {
-            ALOGE("%s: Failed to remove video track from RTSP Session:%d\n",
-                  __func__, ret);
-          }
-        }
-#else
+      if ((!rave_stopsession_)
+          ||(rave_stopsession_
+            && (session_id != rave_track_param_store_.session_id))) {
+        ALOGD("%s: session_id:%d & track_id:%d :RTSP", __func__, session_id,
+            track_id);
         ret = RemoveRTSPVideoLocked(session_id);
         if (NO_ERROR != ret) {
           ALOGE("%s: Failed to remove video track from RTSP Session:%d\n",
                 __func__, ret);
         }
+      }
+#else
+      ret = RemoveRTSPVideoLocked(session_id);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Failed to remove video track from RTSP Session:%d\n",
+              __func__, ret);
+      }
 #endif
-        break;
-      case TRACK_OUTPUT_VAM:
+      ALOGD("%s: session_id:%d & track_id:%d :RTSP: Removed!!", __func__,
+          session_id, track_id);
+      break;
+    case TRACK_OUTPUT_VAM:
+      ALOGD("%s: session_id:%d & track_id:%d :VAM", __func__, session_id,
+          track_id);
+      if (qmmf_prop_vam_logging_ == VAM_LOG_VIDEO) {
         if (vam_video_log_params_.session_id) {
           lock_.unlock();
           StopSession(vam_video_log_params_.session_id, true);
@@ -1587,50 +1858,47 @@ int32_t HTTPInterface::DeleteVideoTrack(uint32_t session_id,
           DeleteSession(vam_video_log_params_.session_id);
           lock_.lock();
           memset(&vam_video_log_params_, 0, sizeof(vam_video_log_params_));
-
           vam_interface_->DeinitVAMVLog();
         }
-
-        ret = vam_interface_->CloseVAM();
-        if (NO_ERROR != ret) {
-          ALOGE("%s: Unable to close VAM: %d", __func__,
-                     ret);
+      }
+      ret = RemoveRTSPVideoLocked(session_id);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Failed to remove video track from RTSP Session:%d\n",
+              __func__, ret);
+      }
+      ret = vam_interface_->CloseVAM();
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Unable to close VAM: %d", __func__,
+                   ret);
+      }
+      break;
+    case TRACK_OUTPUT_MP4:
+    case TRACK_OUTPUT_3GP:
+      ALOGD("%s: session_id:%d & track_id:%d :MUX", __func__, session_id,
+          track_id);
+      ret = RemoveVidMuxParmsLocked(session_id);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Failed to remote video track from muxer!\n", __func__);
+      }
+      break;
+    case TRACK_OUT_DSI:
+      if (display_started_ == 1) {
+        ret = RemoveVidDisplayLocked(DisplayType::kPrimary);
+        if (ret != NO_ERROR) {
+          ALOGE("%s Stop Display Failed\n", __func__);
         }
-
-        ret = RemoveRTSPVideoLocked(session_id);
-        if (NO_ERROR != ret) {
-          ALOGE("%s: Failed to remove video track from RTSP Session:%d\n",
-                __func__, ret);
-        }
-        break;
-      case TRACK_OUTPUT_MP4:
-      case TRACK_OUTPUT_3GP:
-        ret = RemoveVidMuxParmsLocked(session_id);
-        if (NO_ERROR != ret) {
-          ALOGE("%s: Failed to remote video track from muxer!\n", __func__);
-        }
-
-        break;
-      case TRACK_OUT_DSI:
-        if (display_started_ == 1) {
-          ret = RemoveVidDisplayLocked(DisplayType::kPrimary);
-          if (ret != NO_ERROR) {
-            ALOGE("%s Stop Display Failed\n", __func__);
-          }
-          dsi_counter_--;
-        }
-      case TRACK_OUTPUT_EVENT_LOGGER: // Do Nothing
-        break;
-      default:
-        ALOGE("%s: Unsupported track output: %d\n", __func__,
-              status.output);
-        ret = BAD_VALUE;
-    }
-  } else {
-    ALOGE("%s: No status data for track id: %d", __func__,
-               track_id);
-    ret = BAD_VALUE;
+        dsi_counter_--;
+      }
+      break;
+    case TRACK_OUTPUT_EVENT_LOGGER: // Do Nothing
+      break;
+    default:
+      ALOGE("%s: Unsupported track output: %d\n", __func__,
+            status.output);
+      ret = BAD_VALUE;
   }
+  ALOGD("%s: Exit session_id:%d & track_id:%d", __func__, session_id,
+      track_id);
   return ret;
 }
 
@@ -1675,6 +1943,9 @@ param_type HTTPInterface::ValidateParamType(CodecParamType param) {
     case CodecParamType::kVQZipInfo:
       type = kVQZipInfoType;
       break;
+    case CodecParamType::kJPEGQuality:
+      type = kJPEGQuality;
+      break;
   }
   return type;
 }
@@ -1718,6 +1989,9 @@ CodecParamType HTTPInterface::SetCodecParamType(param_type type) {
     case kVQZipInfoType:
       param = CodecParamType::kVQZipInfo;
       break;
+    case kJPEGQuality:
+      param = CodecParamType::kJPEGQuality;
+      break;
   }
   return param;
 }
@@ -1737,6 +2011,9 @@ int32_t HTTPInterface::SetVideoTrackParam(uint32_t session_id, uint32_t track_id
 }
 
 int32_t HTTPInterface::CreateAudioTrack(qmmf_audio_track_param track_parms) {
+
+  ALOGD("%s: Enter session_id:%d & track_id:%d", __func__,
+      track_parms.session_id, track_parms.track_id);
   AudioTrackCreateParam audio_track_params;
   memset(&audio_track_params, 0, sizeof(audio_track_params));
 
@@ -1746,7 +2023,7 @@ int32_t HTTPInterface::CreateAudioTrack(qmmf_audio_track_param track_parms) {
       break;
     case CODEC_AAC:
       audio_track_params.format = AudioFormat::kAAC;
-      audio_track_params.codec_params.aac.format = AACFormat::kADTS;
+      audio_track_params.codec_params.aac.format = AACFormat::kMP4FF;
       audio_track_params.codec_params.aac.mode = AACMode::kAALC;
       audio_track_params.codec_params.aac.bit_rate = track_parms.bitrate;
       break;
@@ -1797,12 +2074,16 @@ int32_t HTTPInterface::CreateAudioTrack(qmmf_audio_track_param track_parms) {
     return ret;
   }
 
-  Mutex::Autolock l(lock_);
-  session_map_.add(track_parms.track_id, track_parms.session_id);
+  {
+    Mutex::Autolock l(lock_);
+    session_map_.add(track_parms.track_id, track_parms.session_id);
+  }
 
   int32_t stat;
   switch (track_parms.output) {
     case AUDIO_TRACK_OUTPUT_MPEGTS:
+      ALOGD("%s: session_id:%d & track_id:%d :MPEGTS/RTSP", __func__,
+          track_parms.session_id, track_parms.track_id);
       stat = AddRTSPAudioLocked(track_parms.session_id, track_parms);
       if (INVALID_OPERATION == stat) {
         ALOGV("%s: RTSP link not supported!", __func__);
@@ -1815,6 +2096,8 @@ int32_t HTTPInterface::CreateAudioTrack(qmmf_audio_track_param track_parms) {
       break;
     case AUDIO_TRACK_OUTPUT_MP4:
     case AUDIO_TRACK_OUTPUT_3GP:
+      ALOGD("%s: session_id:%d  & track_id:%d :MUX", __func__,
+          track_parms.session_id, track_parms.track_id);
       ret = AddAudMuxParmsLocked(track_parms);
       if (NO_ERROR != ret) {
         ALOGE("%s: Unable to setup audio muxer parameters!\n", __func__);
@@ -1827,58 +2110,72 @@ int32_t HTTPInterface::CreateAudioTrack(qmmf_audio_track_param track_parms) {
       ret = BAD_VALUE;
       goto exit;
   }
-  audio_tracks_.add(track_parms.track_id, track_parms);
 
+  {
+    Mutex::Autolock l(lock_);
+    audio_tracks_.add(track_parms.track_id, track_parms);
+  }
+  ALOGD("%s: Exit session_id:%d & track_id:%d", __func__,
+      track_parms.session_id, track_parms.track_id);
   return ret;
 
 exit:
-
+  ALOGE("%s: Exit session_id:%d & track_id:%d", __func__,
+      track_parms.session_id, track_parms.track_id);
   recorder_.DeleteAudioTrack(track_parms.session_id, track_parms.track_id);
-
   return ret;
 }
 
 int32_t HTTPInterface::DeleteAudioTrack(uint32_t session_id,
                                         uint32_t track_id) {
+
+  ALOGD("%s: Enter session_id:%d & track_id:%d", __func__, session_id,
+      track_id);
+
   auto ret = recorder_.DeleteAudioTrack(session_id, track_id);
   if (NO_ERROR != ret) {
     ALOGE("%s: Unable to delete audio track: %d\n", __func__, ret);
     return ret;
   }
 
-  Mutex::Autolock l(lock_);
-  session_map_.removeItem(track_id);
-  ssize_t idx = audio_tracks_.indexOfKey(track_id);
-  if (0 <= idx) {
-    qmmf_audio_track_param status = audio_tracks_.valueAt(idx);
-    audio_tracks_.removeItem(track_id);
-
-    switch(status.output) {
-      case AUDIO_TRACK_OUTPUT_MPEGTS:
-        ret = RemoveRTSPAudioLocked(session_id);
-        if (NO_ERROR !=ret ) {
-          ALOGE("%s: Failed to remove audio track from RTSP session!\n",
-                __func__);
-        }
-        break;
-      case AUDIO_TRACK_OUTPUT_MP4:
-      case AUDIO_TRACK_OUTPUT_3GP:
-        ret = RemoveAudMuxParmsLocked(session_id);
-        if (NO_ERROR != ret) {
-          ALOGE("%s: Failed to remove audio track from muxer!\n", __func__);
-        }
-        break;
-      default:
-        ALOGE("%s: Unsupported track output: %d\n", __func__,
-              status.output);
-        ret = BAD_VALUE;
+  ssize_t idx = NAME_NOT_FOUND;
+  qmmf_audio_track_param status;
+  {
+    Mutex::Autolock l(lock_);
+    session_map_.removeItem(track_id);
+    idx = audio_tracks_.indexOfKey(track_id);
+    if (idx != NAME_NOT_FOUND) {
+      status = audio_tracks_.valueAt(idx);
+      audio_tracks_.removeItem(track_id);
     }
-  } else {
-    ALOGE("%s: No status data for track id: %d", __func__,
-               track_id);
-    ret = BAD_VALUE;
   }
 
+  switch(status.output) {
+    case AUDIO_TRACK_OUTPUT_MPEGTS:
+      ALOGD("%s: session_id:%d & track_id:%d :MPEGTS/RTSP to Remove!", __func__,
+          session_id, track_id);
+      ret = RemoveRTSPAudioLocked(session_id);
+      if (NO_ERROR !=ret ) {
+        ALOGE("%s: Failed to remove audio track from RTSP session!\n",
+              __func__);
+      }
+      break;
+    case AUDIO_TRACK_OUTPUT_MP4:
+    case AUDIO_TRACK_OUTPUT_3GP:
+      ALOGD("%s: session_id:%d & track_id:%d :MUX to Remove!", __func__,
+          session_id, track_id);
+      ret = RemoveAudMuxParmsLocked(session_id);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Failed to remove audio track from muxer!\n", __func__);
+      }
+      break;
+    default:
+      ALOGE("%s: Unsupported track output: %d\n", __func__,
+            status.output);
+      ret = BAD_VALUE;
+  }
+  ALOGD("%s: Exit session_id:%d & track_id:%d", __func__, session_id,
+      track_id);
   return ret;
 }
 
@@ -1940,71 +2237,103 @@ int32_t HTTPInterface::RaveExit(){
 #endif
 
 int32_t HTTPInterface::StartSession(uint32_t session_id) {
+
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
+  qmmf_muxer_init init_params;
+  bool muxer_exist = false;
   {
-    Mutex lock_;
+    Mutex::Autolock lock(muxer_mutex_);
     ssize_t muxer_idx = muxer_params_.indexOfKey(session_id);
     if (NAME_NOT_FOUND != muxer_idx) {
-      qmmf_muxer_init init_params = muxer_params_.valueAt(muxer_idx);
-      auto ret = InitMuxerLocked(session_id, init_params);
+      init_params = muxer_params_.valueAt(muxer_idx);
+      muxer_exist = true;
+    }
+  }
+  if (muxer_exist) {
+    auto ret = InitMuxerLocked(session_id, init_params);
+    if (NO_ERROR != ret) {
+      ALOGE("%s: Unable to initialize muxer!\n", __func__);
+      return ret;
+    }
+  }
+
+#ifdef QMMF_LE_BUILD
+  ssize_t rtsp_idx = NAME_NOT_FOUND;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    rtsp_idx = rtsp_servers_.indexOfKey(session_id);
+  }
+  if (NAME_NOT_FOUND != rtsp_idx) {
+    if ((!rave_stopsession_)
+        ||(rave_stopsession_
+          && (session_id != rave_track_param_store_.session_id))) {
+      auto ret = InitRTSPServerLocked(session_id);
       if (NO_ERROR != ret) {
-        ALOGE("%s: Unable to initialize muxer!\n", __func__);
+        ALOGE("%s: Unable to initialize RTSP server: %d!\n", __func__, ret);
         return ret;
       }
     }
-
-#ifdef QMMF_LE_BUILD
-    ssize_t rtsp_idx = rtsp_servers_.indexOfKey(session_id);
-    if (NAME_NOT_FOUND != rtsp_idx) {
-      if ((!rave_stopsession_)
-          ||(rave_stopsession_
-            && (session_id != rave_track_param_store_.session_id))) {
-        auto ret = InitRTSPServerLocked(session_id);
-        if (NO_ERROR != ret) {
-          ALOGE("%s: Unable to initialize RTSP server: %d!\n", __func__, ret);
-          return ret;
-        }
-      }
-      //start FPV rave
-      if ((true == rave_track_initialized_)
-          && (session_id == rave_track_param_store_.session_id)
-          && (false == rave_track_started_)
-          && (true == get_rave_status())) {
-        if (FPV_NO_ERROR == RaveStart()) {
-          ALOGV("%s: rave_start Success.\n", __func__);
-          rave_track_started_ = true;
-        } else {
-          ALOGE("%s: rave_start failed.\n", __func__);
-        }
+    //start FPV rave
+    if ((true == rave_track_initialized_)
+        && (session_id == rave_track_param_store_.session_id)
+        && (false == rave_track_started_)
+        && (true == get_rave_status())) {
+      if (FPV_NO_ERROR == RaveStart()) {
+        ALOGV("%s: rave_start Success.\n", __func__);
+        rave_track_started_ = true;
       } else {
-        ALOGV("%s: uninited or session mismatch or already started.\n", __func__);
+        ALOGE("%s: rave_start failed.\n", __func__);
       }
+    } else {
+      ALOGV("%s: uninited or session mismatch or already started.\n", __func__);
     }
+    ALOGD("%s: session_id:%d RTSP Initialized!!", __func__, session_id);
+  }
 #else
+  ssize_t rtsp_idx = NAME_NOT_FOUND;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    rtsp_idx = rtsp_servers_.indexOfKey(session_id);
+  }
+  if (NAME_NOT_FOUND != rtsp_idx) {
     auto ret = InitRTSPServerLocked(session_id);
     if (NO_ERROR != ret) {
       ALOGE("%s: Unable to initialize RTSP server: %d!\n", __func__, ret);
       return ret;
     }
-#endif
   }
-
-  return recorder_.StartSession(session_id);
+#endif
+  auto status = recorder_.StartSession(session_id);
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
+  return status;
 }
 
 int32_t HTTPInterface::StopSession(uint32_t session_id, uint32_t flush) {
+
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
   int32_t status = NO_ERROR;
-  Mutex lock_;
-  ssize_t idx = muxers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    MuxInterface *mux = muxers_.valueAt(idx);
-    status = mux->Stop();
+  ssize_t idx = NAME_NOT_FOUND;
+
+  MuxInterface *muxer = nullptr;
+  {
+    Mutex::Autolock lock(muxer_mutex_);
+    idx = muxers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND != idx) {
+      muxer = muxers_.valueAt(idx);
+    }
+  }
+  if (muxer != nullptr) {
+    status = muxer->Stop();
     if (NO_ERROR != status) {
       ALOGE("%s: Failed to stop muxer: %d\n", __func__, status);
     }
   }
 
 #ifdef QMMF_LE_BUILD
-  idx = rtsp_servers_.indexOfKey(session_id);
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+  }
   if (NAME_NOT_FOUND != idx) {
     if ((!rave_stopsession_)
         && (session_id == rave_track_param_store_.session_id)
@@ -2017,21 +2346,28 @@ int32_t HTTPInterface::StopSession(uint32_t session_id, uint32_t flush) {
         ALOGE("%s: Failed to close RTSP Server: %d\n", __func__, status);
       }
     }
+    ALOGD("%s: session_id:%d RTSP De-initialized!!", __func__, session_id);
   }
 #else
-  status = CloseRTSPServerLocked(session_id);
-  if (NO_ERROR != status) {
-    ALOGE("%s: Failed to close RTSP Server: %d\n", __func__, status);
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+  }
+  if (NAME_NOT_FOUND != idx) {
+    status = CloseRTSPServerLocked(session_id);
+    if (NO_ERROR != status) {
+      ALOGE("%s: Failed to close RTSP Server: %d\n", __func__, status);
+    }
   }
 #endif
-
   auto ret = recorder_.StopSession(session_id, flush);
-
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return ret | status;
 }
 
 qmmf_image_result HTTPInterface::CaptureImage(qmmf_image_param image_args) {
   ALOGI("%s : %s : Enter ",LOG_TAG,__func__);
+
   std::vector<CameraMetadata> meta;
   ImageParam image_param;
   memset(&image_param, 0x0, sizeof image_param);
@@ -2046,15 +2382,7 @@ qmmf_image_result HTTPInterface::CaptureImage(qmmf_image_param image_args) {
   ImageCaptureCb cb = [&] (uint32_t camera_id, uint32_t image_sequence_count,
       BufferDescriptor buffer, MetaData meta_data) {
       SnapshotCb(camera_id, image_sequence_count, buffer, meta_data); };
-  ALOGD("%s : %s : Waiting For AEC ",LOG_TAG,__func__);
-  pthread_mutex_lock(&aec_converge_lock_);
-  while(!aec_converged_) {
-    pthread_cond_wait(&aec_converge_cond_, &aec_converge_lock_);
-  }
-  pthread_mutex_unlock(&aec_converge_lock_);
-  ALOGD("%s : %s : Waiting For AEC Done ",LOG_TAG,__func__);
   pthread_mutex_lock(&snapshot_lock_);
-
 
   int32_t repeat = kRepeat;
   do {
@@ -2090,12 +2418,14 @@ exit:
 
   ALOGD("%s :%s Capture Image END %d",LOG_TAG, __func__, repeat);
   pthread_mutex_unlock(&snapshot_lock_);
-
+  ALOGD("%s: Exit", __func__);
   return snapshot_result_;
 }
 
 qmmf_status * HTTPInterface::GetStatus() {
-  Mutex::Autolock l(lock_);
+
+  ALOGD("%s: Enter", __func__);
+  Mutex::Autolock lock(lock_);
   qmmf_status *ret = nullptr;
   qmmf_camera_status camera_status;
   size_t camera_count;
@@ -2164,8 +2494,8 @@ qmmf_status * HTTPInterface::GetStatus() {
     }
   }
 
+  ALOGD("%s: Exit", __func__);
   return ret;
-
 EXIT:
 
   if (nullptr != ret) {
@@ -2173,23 +2503,21 @@ EXIT:
     if (nullptr != ret->tracks) {
       free(ret->tracks);
     }
-
     if (nullptr != ret->cameras) {
       free(ret->cameras);
     }
-
     if (nullptr != ret->audio_tracks) {
       free(ret->audio_tracks);
     }
-
     free(ret);
   }
-
   return nullptr;
 }
 
 int32_t HTTPInterface::UpdateTrackRTSPURLLocked(uint32_t track_id,
                                                 const char *url) {
+  ALOGD("%s: Enter track_id:%d", __func__, track_id);
+  Mutex::Autolock lock(lock_);
   ssize_t idx = video_tracks_.indexOfKey(track_id);
   if (0 <= idx) {
     qmmf_video_track_status status = video_tracks_.valueAt(idx);
@@ -2199,18 +2527,24 @@ int32_t HTTPInterface::UpdateTrackRTSPURLLocked(uint32_t track_id,
     ALOGE("%s: Track with id %d not present!\n", __func__, track_id);
     return BAD_VALUE;
   }
-
+  ALOGD("%s: Exit track_id:%d", __func__, track_id);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::InitRTSPServerLocked(uint32_t session_id) {
+
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
   RTSPContext rtsp_ctx;
-  ssize_t idx = rtsp_servers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_ctx = rtsp_servers_.valueAt(idx);
-  } else {
-    ALOGE("%s: RTSP server context missing!\n", __func__);
-    return NO_INIT;
+  ssize_t idx = NAME_NOT_FOUND;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND != idx) {
+      rtsp_ctx = rtsp_servers_.editValueFor(session_id);
+    } else {
+      ALOGE("%s: RTSP server context missing!\n", __func__);
+      return NO_INIT;
+    }
   }
 
   if (0 == rtsp_ctx.rtsp_port) {
@@ -2282,38 +2616,59 @@ int32_t HTTPInterface::InitRTSPServerLocked(uint32_t session_id) {
     ALOGE("%s: RTSP URL size is invalid!", __func__);
   }
 
-  rtsp_servers_.replaceValueAt(idx, rtsp_ctx);
-
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    rtsp_servers_.replaceValueFor(session_id, rtsp_ctx);
+  }
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return NO_ERROR;
 }
 
-int32_t HTTPInterface::CloseRTSPServerLocked(uint32_t session_id)
-{
-  ssize_t idx = rtsp_servers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    RTSPContext rtsp_ctx = rtsp_servers_.valueAt(idx);
-    if (nullptr != rtsp_ctx.rtsp_server) {
-      rtsp_ctx.rtsp_server->StopTaskScheduler();
-      rtsp_ctx.rtsp_server->ResetRtspServer();
-      delete rtsp_ctx.rtsp_server;
-      rtsp_ctx.rtsp_server = nullptr;
-    }
+int32_t HTTPInterface::CloseRTSPServerLocked(uint32_t session_id) {
 
-    if (nullptr != rtsp_ctx.rtsp_url) {
-      free(rtsp_ctx.rtsp_url);
-      rtsp_ctx.rtsp_url = nullptr;
-    }
-
-    rtsp_servers_.replaceValueAt(idx, rtsp_ctx);
-  } else {
-    ALOGE("%s: No RTSP server present for session id: %d", __func__,
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
+  ssize_t idx = NAME_NOT_FOUND;
+  RTSPContext rtsp_ctx;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND == idx) {
+      ALOGE("%s: No RTSP server present for session id: %d", __func__,
           session_id);
+      return idx;
+    }
+    ALOGD("%s: session_id:%d rtps server idx:%d ", __func__,
+      session_id, idx);
+    rtsp_ctx = rtsp_servers_.editValueFor(session_id);
   }
 
+  if (nullptr != rtsp_ctx.rtsp_server) {
+    rtsp_ctx.rtsp_server->StopTaskScheduler();
+    rtsp_ctx.rtsp_server->ResetRtspServer();
+    delete rtsp_ctx.rtsp_server;
+    rtsp_ctx.rtsp_server = nullptr;
+    ALOGD("%s: session_id:%d rtsp server deleted!", __func__, session_id);
+  }
+
+  if (nullptr != rtsp_ctx.rtsp_url) {
+    free(rtsp_ctx.rtsp_url);
+    rtsp_ctx.rtsp_url = nullptr;
+  }
+
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    rtsp_servers_.replaceValueFor(session_id, rtsp_ctx);
+    ALOGD("%s: session_id:%d rtsp_servers_.size=%d", __func__,
+        session_id, rtsp_servers_.size());
+  }
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return NO_ERROR;
 }
 
-int32_t HTTPInterface::AddAudMuxParmsLocked(const qmmf_audio_track_param &audio) {
+int32_t HTTPInterface::AddAudMuxParmsLocked(const qmmf_audio_track_param
+                                                &audio) {
+  ALOGD("%s: Enter session_id:%d track_id:%d", __func__, audio.session_id,
+      audio.track_id);
   qmmf_muxer_init params;
   MUX_brand_type brand;
   switch(audio.output) {
@@ -2328,6 +2683,7 @@ int32_t HTTPInterface::AddAudMuxParmsLocked(const qmmf_audio_track_param &audio)
       return BAD_VALUE;
   }
 
+  Mutex::Autolock lock(muxer_mutex_);
   ssize_t param_idx = muxer_params_.indexOfKey(audio.session_id);
   if (NAME_NOT_FOUND != param_idx) {
     params = muxer_params_.valueAt(param_idx);
@@ -2354,11 +2710,15 @@ int32_t HTTPInterface::AddAudMuxParmsLocked(const qmmf_audio_track_param &audio)
   } else {
     muxer_params_.add(audio.session_id, params);
   }
-
+  ALOGD("%s: Exit session_id:%d track_id:%d", __func__, audio.session_id,
+      audio.track_id);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::RemoveAudMuxParmsLocked(uint32_t session_id) {
+
+  ALOGD("%s: Enter session_id:%d ", __func__, session_id);
+  Mutex::Autolock lock(muxer_mutex_);
   qmmf_muxer_init params;
   ssize_t param_idx = muxer_params_.indexOfKey(session_id);
   if (NAME_NOT_FOUND != param_idx) {
@@ -2378,7 +2738,7 @@ int32_t HTTPInterface::RemoveAudMuxParmsLocked(uint32_t session_id) {
     ALOGE("%s: No muxer found for this stream!\n", __func__);
     return BAD_VALUE;
   }
-
+  ALOGD("%s: Exit session_id:%d ", __func__, session_id);
   return NO_ERROR;
 }
 
@@ -2456,6 +2816,7 @@ int32_t HTTPInterface::getHEVCProfileLevel(const VideoTrackCreateParam &video,
 
 int32_t HTTPInterface::AddVidDisplayLocked(DisplayType display_type,
                                            qmmf_video_track_param track_parms) {
+  ALOGD("%s: Enter", __func__);
   int32_t ret = BAD_VALUE;
   SurfaceConfig surface_config;
   DisplayCb  display_status_cb;
@@ -2499,6 +2860,7 @@ int32_t HTTPInterface::AddVidDisplayLocked(DisplayType display_type,
   surface_config.buffer_count = 1;
   surface_config.cache = 0;
   surface_config.use_buffer = 1;
+  surface_config.z_order = 1;
   ret = display_->CreateSurface(surface_config, &surface_id_);
   if (ret != NO_ERROR) {
     ALOGE("%s: Create Surface error\n", __func__);
@@ -2514,17 +2876,17 @@ int32_t HTTPInterface::AddVidDisplayLocked(DisplayType display_type,
   surface_param_.surface_blending = SurfaceBlending::kBlendingCoverage;
   surface_param_.surface_flags.cursor = 0;
   surface_param_.frame_rate = track_parms.framerate;
-  surface_param_.z_order = 0;
   surface_param_.solid_fill_color = 0;
   surface_param_.surface_transform.rotation = 0.0f;
   surface_param_.surface_transform.flip_horizontal = 0;
   surface_param_.surface_transform.flip_vertical = 0;
   display_started_ = 1;
-
+  ALOGD("%s: Exit", __func__);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::RemoveVidDisplayLocked(DisplayType display_type) {
+  ALOGD("%s: Enter", __func__);
   if (display_ == NULL) {
     ALOGE("%s: display_ is NULL", __func__);
     return NO_INIT;
@@ -2537,6 +2899,7 @@ int32_t HTTPInterface::RemoveVidDisplayLocked(DisplayType display_type) {
   delete display_;
   display_ = NULL;
   display_started_ = 0;
+  ALOGD("%s: Exit", __func__);
   return NO_ERROR;
 }
 
@@ -2569,17 +2932,24 @@ int32_t HTTPInterface::AddRTSPVideoLocked(uint32_t session_id,
                                           uint32_t track_id,
                                           const VideoTrackCreateParam &video,
                                           qmmf_video_track_output output) {
+
+  ALOGD("%s: Enter session_id:%d, track_id:%d", __func__, session_id,
+      track_id);
+  ssize_t idx = NAME_NOT_FOUND;
   RTSPContext rtsp_ctx;
-  ssize_t idx = rtsp_servers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_ctx = rtsp_servers_.valueAt(idx);
-    if (nullptr != rtsp_ctx.rtsp_video_queue) {
-      ALOGE("%s: Video stream already present in the RTSP session!\n",
-            __func__);
-      return ALREADY_EXISTS;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND != idx) {
+      rtsp_ctx = rtsp_servers_.editValueFor(session_id);
+      if (nullptr != rtsp_ctx.rtsp_video_queue) {
+        ALOGE("%s: Video stream already present in the RTSP session!\n",
+              __func__);
+        return ALREADY_EXISTS;
+      }
+    } else {
+      memset(&rtsp_ctx, 0, sizeof(rtsp_ctx));
     }
-  } else {
-    memset(&rtsp_ctx, 0, sizeof(rtsp_ctx));
   }
 
   rtsp_ctx.rtsp_port = DEFAULT_PORT + track_id;
@@ -2615,81 +2985,106 @@ int32_t HTTPInterface::AddRTSPVideoLocked(uint32_t session_id,
   }
   rtsp_ctx.frame_rate = video.frame_rate;
 
-
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_servers_.replaceValueAt(idx, rtsp_ctx);
-  } else {
-    rtsp_servers_.add(session_id, rtsp_ctx);
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    if (NAME_NOT_FOUND != idx) {
+      rtsp_servers_.replaceValueFor(session_id, rtsp_ctx);
+    } else {
+      rtsp_servers_.add(session_id, rtsp_ctx);
+    }
   }
-
+  ALOGD("%s: Exit session_id:%d, track_id:%d", __func__, session_id,
+      track_id);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::RemoveRTSPVideoLocked(uint32_t session_id) {
+
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
+  ssize_t idx = NAME_NOT_FOUND;
   RTSPContext rtsp_ctx;
-  ssize_t idx = rtsp_servers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_ctx = rtsp_servers_.valueAt(idx);
-    if ((nullptr == rtsp_ctx.rtsp_video_queue) &&
-        (nullptr == rtsp_ctx.rtsp_meta_queue)) {
-      ALOGE("%s: Video stream not present in RTSP session!\n",
-            __func__);
-      return NO_INIT;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND == idx) {
+      ALOGE("%s: No RTSP session found!\n", __func__);
+      return BAD_VALUE;
     }
-
-    if (nullptr != rtsp_ctx.rtsp_video_queue) {
-      RtspServerInterface::QueueDInit(&rtsp_ctx.rtsp_video_queue);
-      rtsp_ctx.rtsp_video_queue = nullptr;
-    }
-
-    if (nullptr != rtsp_ctx.rtsp_meta_queue) {
-      RtspServerInterface::QueueDInit(&rtsp_ctx.rtsp_meta_queue);
-      rtsp_ctx.rtsp_meta_queue = nullptr;
-    }
-
-    rtsp_ctx.video_codec_id = ES_FORMAT_MAX;
-    rtsp_ctx.is_mp2ts = false;
-    rtsp_ctx.rtsp_port = 0;
-    rtsp_ctx.video_track_id = 0;
-    rtsp_ctx.meta_track_id = 0;
-    if (nullptr != rtsp_ctx.rtsp_url) {
-      free(rtsp_ctx.rtsp_url);
-      rtsp_ctx.rtsp_url = nullptr;
-    }
-
-    rtsp_servers_.replaceValueAt(idx, rtsp_ctx);
-  } else {
-    ALOGE("%s: No RTSP session found!\n", __func__);
-    return BAD_VALUE;
+    ALOGD("%s: session_id:%d rtps server idx:%d", __func__, session_id, idx);
+    rtsp_ctx = rtsp_servers_.editValueFor(session_id);
   }
 
+  if ((nullptr == rtsp_ctx.rtsp_video_queue) &&
+      (nullptr == rtsp_ctx.rtsp_meta_queue)) {
+    ALOGE("%s: Video stream not present in RTSP session!\n",
+          __func__);
+    return NO_INIT;
+  }
+
+  if (nullptr != rtsp_ctx.rtsp_video_queue) {
+    RtspServerInterface::QueueDInit(&rtsp_ctx.rtsp_video_queue);
+    rtsp_ctx.rtsp_video_queue = nullptr;
+  }
+
+  if (nullptr != rtsp_ctx.rtsp_meta_queue) {
+    RtspServerInterface::QueueDInit(&rtsp_ctx.rtsp_meta_queue);
+    rtsp_ctx.rtsp_meta_queue = nullptr;
+  }
+
+  ALOGD("%s: session_id:%d Buffer Queues are clear!", __func__, session_id);
+
+  rtsp_ctx.video_codec_id = ES_FORMAT_MAX;
+  rtsp_ctx.is_mp2ts = false;
+  rtsp_ctx.rtsp_port = 0;
+  rtsp_ctx.video_track_id = 0;
+  rtsp_ctx.meta_track_id = 0;
+  if (nullptr != rtsp_ctx.rtsp_url) {
+    free(rtsp_ctx.rtsp_url);
+    rtsp_ctx.rtsp_url = nullptr;
+  }
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    rtsp_servers_.replaceValueFor(session_id, rtsp_ctx);
+    ALOGD("%s: session_id:%d rtsp_servers_.size:%d", __func__,
+        session_id, rtsp_servers_.size());
+  }
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::RemoveRTSPAudioLocked(uint32_t session_id) {
+
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
+  ssize_t idx = NAME_NOT_FOUND;
   RTSPContext rtsp_ctx;
-  ssize_t idx = rtsp_servers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_ctx = rtsp_servers_.valueAt(idx);
-    if (nullptr == rtsp_ctx.rtsp_audio_queue) {
-      ALOGE("%s: Audio stream not present in RTSP session!\n",
-            __func__);
-      return NO_INIT;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND == idx) {
+      ALOGE("%s: No RTSP session found!\n", __func__);
+      return BAD_VALUE;
     }
-
-    RtspServerInterface::QueueDInit(&rtsp_ctx.rtsp_audio_queue);
-    rtsp_ctx.rtsp_audio_queue = nullptr;
-    rtsp_ctx.audio_codec_id = ES_FORMAT_MAX;
-    rtsp_ctx.audio_idx = FS_IDX_MAX;
-    rtsp_ctx.audio_channels = CH_CFG_MAX;
-    rtsp_ctx.audio_profile = PROFILE_MAX;
-
-    rtsp_servers_.replaceValueAt(idx, rtsp_ctx);
-  } else {
-    ALOGE("%s: No RTSP session found!\n", __func__);
-    return BAD_VALUE;
+    rtsp_ctx = rtsp_servers_.editValueFor(session_id);
   }
 
+  if (nullptr == rtsp_ctx.rtsp_audio_queue) {
+    ALOGE("%s: Audio stream not present in RTSP session!\n",
+          __func__);
+    return NO_INIT;
+  }
+
+  RtspServerInterface::QueueDInit(&rtsp_ctx.rtsp_audio_queue);
+  rtsp_ctx.rtsp_audio_queue = nullptr;
+  rtsp_ctx.audio_codec_id = ES_FORMAT_MAX;
+  rtsp_ctx.audio_idx = FS_IDX_MAX;
+  rtsp_ctx.audio_channels = CH_CFG_MAX;
+  rtsp_ctx.audio_profile = PROFILE_MAX;
+
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    rtsp_servers_.replaceValueFor(session_id, rtsp_ctx);
+  }
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return NO_ERROR;
 }
 
@@ -2710,17 +3105,24 @@ FS_IDX_et HTTPInterface::FindAudioSampleIndex(size_t audio_rate)
 
 int32_t HTTPInterface::AddRTSPAudioLocked(uint32_t session_id,
                                           const qmmf_audio_track_param &audio) {
+
+  ALOGD("%s: Enter session_id:%d, track_id:%d", __func__, session_id,
+      audio.track_id);
+  ssize_t idx = NAME_NOT_FOUND;
   RTSPContext rtsp_ctx;
-  ssize_t idx = rtsp_servers_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_ctx = rtsp_servers_.valueAt(idx);
-    if (nullptr != rtsp_ctx.rtsp_audio_queue) {
-      ALOGE("%s: Audio stream already present in the RTSP session!\n",
-            __func__);
-      return ALREADY_EXISTS;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    idx = rtsp_servers_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND != idx) {
+      rtsp_ctx = rtsp_servers_.editValueFor(session_id);
+      if (nullptr != rtsp_ctx.rtsp_audio_queue) {
+        ALOGE("%s: Audio stream already present in the RTSP session!\n",
+              __func__);
+        return ALREADY_EXISTS;
+      }
+    } else {
+      memset(&rtsp_ctx, 0, sizeof(rtsp_ctx));
     }
-  } else {
-    memset(&rtsp_ctx, 0, sizeof(rtsp_ctx));
   }
 
   switch (audio.codec) {
@@ -2750,12 +3152,16 @@ int32_t HTTPInterface::AddRTSPAudioLocked(uint32_t session_id,
   rtsp_ctx.is_mp2ts = (audio.output == AUDIO_TRACK_OUTPUT_MPEGTS) ?
       true : false;
 
-  if (NAME_NOT_FOUND != idx) {
-    rtsp_servers_.replaceValueAt(idx, rtsp_ctx);
-  } else {
-    rtsp_servers_.add(session_id, rtsp_ctx);
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    if (NAME_NOT_FOUND != idx) {
+      rtsp_servers_.replaceValueFor(session_id, rtsp_ctx);
+    } else {
+      rtsp_servers_.add(session_id, rtsp_ctx);
+    }
   }
-
+  ALOGD("%s: Exit session_id:%d & track_id:%d", __func__, session_id,
+      audio.track_id);
   return NO_ERROR;
 }
 
@@ -2763,6 +3169,8 @@ int32_t HTTPInterface::AddVidMuxParmsLocked(uint32_t session_id,
                                             uint32_t track_id,
                                             const VideoTrackCreateParam &video,
                                             qmmf_video_track_output output) {
+  ALOGD("%s: Enter session_id:%d & track_id:%d", __func__, session_id,
+      track_id);
   qmmf_muxer_init params;
   MUX_brand_type brand;
   int32_t ret;
@@ -2809,44 +3217,52 @@ int32_t HTTPInterface::AddVidMuxParmsLocked(uint32_t session_id,
       return BAD_VALUE;
   }
 
-  ssize_t param_idx = muxer_params_.indexOfKey(session_id);
-  if (NAME_NOT_FOUND != param_idx) {
-    params = muxer_params_.valueAt(param_idx);
-    if (params.video_stream_present) {
-      ALOGE("%s: Video stream already present in the session muxer!\n",
-            __func__);
-      return ALREADY_EXISTS;
+  {
+    Mutex::Autolock lock(muxer_mutex_);
+    ssize_t param_idx = muxer_params_.indexOfKey(session_id);
+    if (NAME_NOT_FOUND != param_idx) {
+      params = muxer_params_.valueAt(param_idx);
+      if (params.video_stream_present) {
+        ALOGE("%s: Video stream already present in the session muxer!\n",
+              __func__);
+        return ALREADY_EXISTS;
+      }
+      if ((brand != params.brand) && (MUX_BRAND_INVALID != params.brand)) {
+        ALOGE("%s: Muxer cannot support two different brands: %d vs. %d\n",
+              __func__, brand, params.brand);
+        return BAD_VALUE;
+      }
+    } else {
+      memset(&params, 0, sizeof(params));
     }
-    if ((brand != params.brand) && (MUX_BRAND_INVALID != params.brand)) {
-      ALOGE("%s: Muxer cannot support two different brands: %d vs. %d\n",
-            __func__, brand, params.brand);
-      return BAD_VALUE;
+
+    params.brand = brand;
+    params.video_stream.codec_profile = codec_profile;
+    params.video_stream.codec_level = codec_level;
+    params.video_stream.format = format;
+    params.video_stream_present = true;
+    params.video_stream.width = video.width;
+    params.video_stream.height = video.height;
+    params.video_stream.bitrate = video.codec_param.avc.bitrate;
+    params.video_stream.framerate = video.frame_rate;
+    params.video_stream.track_id = track_id;
+
+    if (NAME_NOT_FOUND != param_idx) {
+      muxer_params_.replaceValueAt(param_idx, params);
+    } else {
+      muxer_params_.add(session_id, params);
     }
-  } else {
-    memset(&params, 0, sizeof(params));
   }
-
-  params.brand = brand;
-  params.video_stream.codec_profile = codec_profile;
-  params.video_stream.codec_level = codec_level;
-  params.video_stream.format = format;
-  params.video_stream_present = true;
-  params.video_stream.width = video.width;
-  params.video_stream.height = video.height;
-  params.video_stream.bitrate = video.codec_param.avc.bitrate;
-  params.video_stream.framerate = video.frame_rate;
-  params.video_stream.track_id = track_id;
-
-  if (NAME_NOT_FOUND != param_idx) {
-    muxer_params_.replaceValueAt(param_idx, params);
-  } else {
-    muxer_params_.add(session_id, params);
-  }
-
+  ALOGD("%s: Exit session_id:%d, track_id:%d", __func__, session_id,
+      track_id);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::RemoveVidMuxParmsLocked(uint32_t session_id) {
+
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
+  Mutex::Autolock lock(muxer_mutex_);
+
   qmmf_muxer_init params;
   ssize_t param_idx = muxer_params_.indexOfKey(session_id);
   if (NAME_NOT_FOUND != param_idx) {
@@ -2866,12 +3282,13 @@ int32_t HTTPInterface::RemoveVidMuxParmsLocked(uint32_t session_id) {
     ALOGE("%s: No muxer found for this stream!\n", __func__);
     return BAD_VALUE;
   }
-
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return NO_ERROR;
 }
 
 int32_t HTTPInterface::InitMuxerLocked(uint32_t session_id,
                                        qmmf_muxer_init &init_params) {
+  ALOGD("%s: Enter session_id:%d", __func__, session_id);
   // Add by TS
   uint32_t video_id = 0;
   ifstream in_file;
@@ -2911,6 +3328,7 @@ int32_t HTTPInterface::InitMuxerLocked(uint32_t session_id,
 
   auto ret = mux->Init(init_params);
   if (NO_ERROR == ret) {
+    Mutex::Autolock lock(muxer_mutex_);
     muxers_.add(session_id, mux);
     video_id++;
   } else {
@@ -2925,92 +3343,100 @@ int32_t HTTPInterface::InitMuxerLocked(uint32_t session_id,
   }
   out_file.close();
 
+  ALOGD("%s: Exit session_id:%d", __func__, session_id);
   return ret;
 }
 
-int32_t HTTPInterface::QueueMuxBuffersLocked(uint32_t track_id, uint32_t session_id,
-                                             std::vector<BufferDescriptor> &buffers,
-                                             std::vector<MetaData> &meta_data) {
-  int32 ret = NO_ERROR;
+int32_t HTTPInterface::QueueMuxBuffersLocked(uint32_t track_id,
+                                             uint32_t session_id,
+                                             std::vector<BufferDescriptor>
+                                             &buffers, std::vector<MetaData>
+                                             &meta_data) {
 
-  if (!muxers_.isEmpty()) {
+  MuxInterface *muxer = nullptr;
+  int32 ret = NO_ERROR;
+  {
+    Mutex::Autolock lock(muxer_mutex_);
+    if (muxers_.isEmpty()) {
+      ALOGE("%s: No active muxers!\n", __func__);
+      return NO_INIT;
+    }
     ssize_t idx = muxers_.indexOfKey(session_id);
-    if (NAME_NOT_FOUND != idx) {
-      MuxInterface *mux = muxers_.valueAt(idx);
-      size_t buffer_index = 0;
-      for (auto& iter : buffers) {
-        ret = mux->WriteBuffer(track_id, session_id, (iter),
-                               meta_data[buffer_index]);
-        if (DEAD_OBJECT == ret) {
-          break; //Muxer stopped
-        } else if (NO_ERROR != ret) {
-          ALOGE("%s: Muxer write failed: %d\n", __func__, ret);
-          break;
-        }
-        ++buffer_index;
-      }
-    } else {
+    if (NAME_NOT_FOUND == idx) {
       ALOGE("%s: Muxer for track id: %d not found!\n", __func__, track_id);
       return NO_INIT;
     }
-  } else {
-    ALOGE("%s: No active muxers!\n", __func__);
-    return NO_INIT;
+    muxer = muxers_.valueAt(idx);
   }
 
+  if (muxer != nullptr) {
+    size_t buffer_index = 0;
+    for (auto& iter : buffers) {
+      ret = muxer->WriteBuffer(track_id, session_id, (iter),
+                             meta_data[buffer_index]);
+      if (DEAD_OBJECT == ret) {
+        break; //Muxer stopped
+      } else if (NO_ERROR != ret) {
+        ALOGE("%s: Muxer write failed: %d\n", __func__, ret);
+        break;
+      }
+      ++buffer_index;
+    }
+  }
   return ret;
 }
 
 int32_t HTTPInterface::QueueRTSPBuffersLocked(uint32_t session_id,
-                                              std::vector<BufferDescriptor> &buffers,
-                                              RTSPInput input) {
-  if (!rtsp_servers_.isEmpty()) {
+                                              std::vector<BufferDescriptor>
+                                              &buffers, RTSPInput input) {
+  RTSPContext rtsp_ctx;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    if (rtsp_servers_.isEmpty()) {
+      ALOGE("%s: No active RTSP streams!", __func__);
+      return NO_INIT;
+    }
     ssize_t idx = rtsp_servers_.indexOfKey(session_id);
-    if (NAME_NOT_FOUND != idx) {
-      RTSPContext rtsp_ctx = rtsp_servers_.valueAt(idx);
-
-      for (auto& iter : buffers) {
-        switch (input) {
-          case RTSP_VIDEO:
-          {
-            const char *codec = (VIDEO_FORMAT_H264 == rtsp_ctx.video_codec_id)?
-                "AVC" : "HEVC";
-            RtspServerInterface::QuePushData(codec,
-                                             (uint8_t *) iter.data,
-                                             iter.size,
-                                             iter.timestamp,
-                                             rtsp_ctx.rtsp_video_queue);
-          }
-           break;
-          case RTSP_META:
-            RtspServerInterface::QuePushData("META",
-                                             (uint8_t *) iter.data,
-                                             iter.size,
-                                             iter.timestamp,
-                                             rtsp_ctx.rtsp_meta_queue);
-            break;
-          case RTSP_AUDIO:
-            RtspServerInterface::QuePushData("AAC",
-                                             (uint8_t *) iter.data,
-                                             iter.size,
-                                             iter.timestamp,
-                                             rtsp_ctx.rtsp_audio_queue);
-           break;
-          default:
-            ALOGE("%s: Unsupported rtsp input: %d\n", __func__, input);
-            return BAD_VALUE;
-        }
-      }
-    } else {
-      ALOGE("%s: Session id: %d not found in RTSP server map!\n",
+    if (NAME_NOT_FOUND == idx) {
+       ALOGE("%s: Session id: %d not found in RTSP server map!\n",
             __func__, session_id);
       return NO_INIT;
     }
-  } else {
-    ALOGE("%s: No active RTSP streams!", __func__);
-    return NO_INIT;
+    rtsp_ctx = rtsp_servers_.valueAt(idx);
   }
 
+  for (auto& iter : buffers) {
+    switch (input) {
+      case RTSP_VIDEO:
+      {
+        const char *codec = (VIDEO_FORMAT_H264 == rtsp_ctx.video_codec_id)?
+            "AVC" : "HEVC";
+        RtspServerInterface::QuePushData(codec,
+                                         (uint8_t *) iter.data,
+                                         iter.size,
+                                         iter.timestamp,
+                                         rtsp_ctx.rtsp_video_queue);
+      }
+       break;
+      case RTSP_META:
+        RtspServerInterface::QuePushData("META",
+                                         (uint8_t *) iter.data,
+                                         iter.size,
+                                         iter.timestamp,
+                                         rtsp_ctx.rtsp_meta_queue);
+        break;
+      case RTSP_AUDIO:
+        RtspServerInterface::QuePushData("AAC",
+                                         (uint8_t *) iter.data,
+                                         iter.size,
+                                         iter.timestamp,
+                                         rtsp_ctx.rtsp_audio_queue);
+       break;
+      default:
+        ALOGE("%s: Unsupported rtsp input: %d\n", __func__, input);
+        return BAD_VALUE;
+    }
+  }
   return NO_ERROR;
 }
 
@@ -3080,7 +3506,6 @@ int32_t HTTPInterface::SendVAMMeta(uint32_t session_id, uint32_t track_id,
                                    const char *metaString, size_t size,
                                    int64_t pts) {
   int32_t ret;
-  Mutex::Autolock l(lock_);
   if (0 < track_id) {
     std::vector<BufferDescriptor> buffers;
     BufferDescriptor meta_buffer;
@@ -3098,20 +3523,23 @@ int32_t HTTPInterface::SendVAMMeta(uint32_t session_id, uint32_t track_id,
     ALOGE("%s: VAM track id is invalid!\n", __func__);
     ret = NO_INIT;
   }
-
   return ret;
 }
 
 int32_t HTTPInterface::SetCameraParams(qmmf_camera_parameters params) {
-  Mutex::Autolock l(lock_);
 
-  ssize_t idx = camera_configs_.indexOfKey(params.camera_id);
-  if (NAME_NOT_FOUND == idx) {
-    ALOGE("%s: No camera configuration present for camera: %d\n", __func__,
-          params.camera_id);
-    return NO_INIT;
+  ALOGD("%s: Enter", __func__);
+  CameraConfiguration *config = nullptr;
+  {
+    Mutex::Autolock lock(lock_);
+    ssize_t idx = camera_configs_.indexOfKey(params.camera_id);
+    if (NAME_NOT_FOUND == idx) {
+      ALOGE("%s: No camera configuration present for camera: %d\n", __func__,
+            params.camera_id);
+      return NO_INIT;
+    }
+    config = camera_configs_.valueAt(idx);
   }
-  CameraConfiguration *config = camera_configs_.valueAt(idx);
 
   CameraMetadata meta;
   auto ret = recorder_.GetCameraParam(params.camera_id, meta);
@@ -3120,27 +3548,29 @@ int32_t HTTPInterface::SetCameraParams(qmmf_camera_parameters params) {
     return ret;
   }
 
-  if (params.nr_mode_set) {
-    ret = config->SetNRMode(params.nr_mode, meta);
-    if (NO_ERROR != ret) {
-      ALOGE("%s: Failed to update NR camera parameters!\n", __func__);
-      return ret;
+  if (config != nullptr) {
+    if (params.nr_mode_set) {
+      ret = config->SetNRMode(params.nr_mode, meta);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Failed to update NR camera parameters!\n", __func__);
+        return ret;
+      }
     }
-  }
 
-  if (params.hdr_mode_set) {
-    ret = config->SetHDRMode(params.hdr_mode, meta);
-    if (NO_ERROR != ret) {
-      ALOGE("%s: Failed to update HDR camera parameters!\n", __func__);
-      return ret;
+    if (params.hdr_mode_set) {
+      ret = config->SetHDRMode(params.hdr_mode, meta);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Failed to update HDR camera parameters!\n", __func__);
+        return ret;
+      }
     }
-  }
 
-  if (params.ir_mode_set) {
-    ret = config->SetIRMode(params.ir_mode, meta);
-    if (NO_ERROR != ret) {
-      ALOGE("%s: Failed to update IR camera parameters!\n", __func__);
-      return ret;
+    if (params.ir_mode_set) {
+      ret = config->SetIRMode(params.ir_mode, meta);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Failed to update IR camera parameters!\n", __func__);
+        return ret;
+      }
     }
   }
 
@@ -3149,12 +3579,14 @@ int32_t HTTPInterface::SetCameraParams(qmmf_camera_parameters params) {
     ALOGE("%s: Failed to set camera parameters!\n", __func__);
     return ret;
   }
-
+  ALOGD("%s: Exit", __func__);
   return ret;
 }
 
 int32_t HTTPInterface::CreateOverlay(uint32_t track_id, uint32_t *overlay_id,
                                      struct qmmf_overlay_param_t *ov_params) {
+
+  ALOGD("%s: Enter track_id:%d", __func__, track_id);
   if ((nullptr == ov_params) || (nullptr == overlay_id)) {
       return BAD_VALUE;
   }
@@ -3172,7 +3604,7 @@ int32_t HTTPInterface::CreateOverlay(uint32_t track_id, uint32_t *overlay_id,
   if (NO_ERROR != ret) {
     ALOGE("%s: Overlay create failed: %d", __func__, ret);
   }
-
+  ALOGD("%s: Exit track_id:%d", __func__, track_id);
   return ret;
 }
 
@@ -3214,6 +3646,7 @@ int32_t HTTPInterface::GetOverlay(uint32_t track_id, uint32_t overlay_id,
 
 int32_t HTTPInterface::UpdateOverlay(uint32_t track_id, uint32_t overlay_id,
                                      struct qmmf_overlay_param_t *ov_params) {
+  ALOGD("%s: Enter track_id:%d", __func__, track_id);
   if (nullptr == ov_params) {
     return BAD_VALUE;
   }
@@ -3231,7 +3664,7 @@ int32_t HTTPInterface::UpdateOverlay(uint32_t track_id, uint32_t overlay_id,
   if (NO_ERROR != ret) {
     ALOGE("%s: Overlay update failed: %d", __func__, ret);
   }
-
+  ALOGD("%s: Exit track_id:%d", __func__, track_id);
   return ret;
 }
 
@@ -3266,6 +3699,7 @@ template <typename entryType, class qmmfType, class entry> int32_t LookupValue(
 int32_t HTTPInterface::CreateMultiCamera(const uint32_t *camera_ids,
                                          uint32_t num_camera,
                                          uint32_t *virtual_camera_id) {
+  ALOGD("%s: Enter", __func__);
   if (num_camera <= 1) {
     ALOGE("%s: Invalid num camera(%d)", __func__, num_camera);
     return BAD_VALUE;
@@ -3276,12 +3710,22 @@ int32_t HTTPInterface::CreateMultiCamera(const uint32_t *camera_ids,
   }
 
   auto ret = recorder_.CreateMultiCamera(camera_id_vec, virtual_camera_id);
-  ALOGD("%s: virtual camera id=%d",__func__, *virtual_camera_id);
+  ALOGD("%s: virtual camera id=%d", __func__, *virtual_camera_id);
+
+  qmmf_multi_camera_param_t params = {*virtual_camera_id,
+                                      0 /* MultiCameraConfigType::k360Stitch*/,
+                                      nullptr,
+                                      0};
+  ConfigureMultiCamera(&params);
+  ALOGD("%s: MultiCamera Configured!", __func__);
+  ALOGD("%s: virtual camera id:%d",__func__, *virtual_camera_id);
+  ALOGD("%s: Exit", __func__);
   return ret;
 }
 
 int32_t HTTPInterface::ConfigureMultiCamera(qmmf_multi_camera_param_t *params) {
 
+  ALOGD("%s: Enter", __func__);
   MultiCameraConfigType type = static_cast<MultiCameraConfigType>(params->type);
   auto ret = recorder_.ConfigureMultiCamera(params->virtual_camera_id,
                                             type,
@@ -3289,6 +3733,7 @@ int32_t HTTPInterface::ConfigureMultiCamera(qmmf_multi_camera_param_t *params) {
   if (NO_ERROR != ret) {
     ALOGE("%s: ConfigureMultiCamera failed!", __func__);
   }
+  ALOGD("%s: Exit", __func__);
   return ret;
 }
 
@@ -3553,54 +3998,55 @@ int32_t HTTPInterface::convertQMMF2OvParams(qmmf_overlay_param &ovParams,
 
 void HTTPInterface::AudioTrackCb(uint32_t track_id,
                                  std::vector<BufferDescriptor> buffers,
-                                 __attribute__((unused)) std::vector<MetaData> meta_data) {
+                                 __attribute__((unused)) std::vector<MetaData>
+                                  meta_data) {
   uint32_t session_id = 0;
   bool return_buffer = true;
+  qmmf_audio_track_param status;
   {
-    Mutex::Autolock l(lock_);
+    Mutex::Autolock lock(lock_);
     ssize_t idx = session_map_.indexOfKey(track_id);
     if (NAME_NOT_FOUND == idx) {
       ALOGE("%s: Track id: %d not found in session map!\n", __func__, track_id);
       return;
     }
     session_id = session_map_.valueAt(idx);
-
     idx = audio_tracks_.indexOfKey(track_id);
     if (NAME_NOT_FOUND == idx) {
       ALOGE("%s: Track id: %d status not found!\n", __func__, track_id);
       return;
     }
+    status = audio_tracks_.valueAt(idx);
+  }
 
-    qmmf_audio_track_param status = audio_tracks_.valueAt(idx);
-    switch(status.output) {
-      case AUDIO_TRACK_OUTPUT_MPEGTS:
-      {
-        auto ret = QueueRTSPBuffersLocked(session_id, buffers, RTSP_AUDIO);
-        if (NO_ERROR != ret) {
-          ALOGE("%s: Unable to queue buffers in RTSP server: %d!", __func__,
-                ret);
-        }
-        return_buffer = true;
+  switch(status.output) {
+    case AUDIO_TRACK_OUTPUT_MPEGTS:
+    {
+      auto ret = QueueRTSPBuffersLocked(session_id, buffers, RTSP_AUDIO);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Unable to queue buffers in RTSP server: %d!", __func__,
+              ret);
       }
-        break;
-      case AUDIO_TRACK_OUTPUT_MP4:
-      case AUDIO_TRACK_OUTPUT_3GP:
-      {
-        auto ret = QueueMuxBuffersLocked(track_id, session_id, buffers, meta_data);
-        if (NO_ERROR == ret) {
-          return_buffer = false;
-        } else if (DEAD_OBJECT == ret) {
-          return_buffer = true;
-        } else {
-          ALOGE("%s: Unable to queue buffers in muxer: %d!", __func__,
-                ret);
-        }
-      }
-        break;
-      default:
-        ALOGE("%s: Unsupported track output: %d\n", __func__,
-              status.output);
+      return_buffer = true;
     }
+      break;
+    case AUDIO_TRACK_OUTPUT_MP4:
+    case AUDIO_TRACK_OUTPUT_3GP:
+    {
+      auto ret = QueueMuxBuffersLocked(track_id, session_id, buffers, meta_data);
+      if (NO_ERROR == ret) {
+        return_buffer = false;
+      } else if (DEAD_OBJECT == ret) {
+        return_buffer = true;
+      } else {
+        ALOGE("%s: Unable to queue buffers in muxer: %d!", __func__,
+              ret);
+      }
+    }
+      break;
+    default:
+      ALOGE("%s: Unsupported track output: %d\n", __func__,
+            status.output);
   }
 
   if (return_buffer) {
@@ -3616,7 +4062,7 @@ void HTTPInterface::VideoTrackCb(uint32_t track_id,
                                  std::vector<MetaData> meta_data) {
   uint32_t session_id = 0;
   bool return_buffer = true;
-
+  qmmf_video_track_status status;
   {
     Mutex::Autolock l(lock_);
     ssize_t idx = session_map_.indexOfKey(track_id);
@@ -3625,71 +4071,69 @@ void HTTPInterface::VideoTrackCb(uint32_t track_id,
       return;
     }
     session_id = session_map_.valueAt(idx);
-
     idx = video_tracks_.indexOfKey(track_id);
     if (NAME_NOT_FOUND == idx) {
       ALOGE("%s: Track id: %d status not found!\n", __func__, track_id);
       return;
     }
+    status = video_tracks_.valueAt(idx);
+  }
 
-    qmmf_video_track_status status = video_tracks_.valueAt(idx);
-    switch(status.output) {
-      case TRACK_OUTPUT_RTSP:
-      case TRACK_OUTPUT_MPEGTS:
-      {
-        auto ret = QueueRTSPBuffersLocked(session_id, buffers, RTSP_VIDEO);
-        if (NO_ERROR != ret) {
-          ALOGE("%s: Unable to queue buffers in RTSP server: %d!", __func__,
-                ret);
-        }
+  switch(status.output) {
+    case TRACK_OUTPUT_RTSP:
+    case TRACK_OUTPUT_MPEGTS:
+    {
+      auto ret = QueueRTSPBuffersLocked(session_id, buffers, RTSP_VIDEO);
+      if (NO_ERROR != ret) {
+        ALOGE("%s: Unable to queue buffers in RTSP server: %d!", __func__,
+              ret);
       }
-        break;
-      case TRACK_OUTPUT_VAM:
-      {
-        auto ret = vam_interface_->QueueVAMBuffers(track_id, session_id,
-                                                   buffers, meta_data);
-        if (NO_ERROR == ret) {
-          return_buffer = false;
-        }
+    }
+      break;
+    case TRACK_OUTPUT_VAM:
+    {
+      auto ret = vam_interface_->QueueVAMBuffers(track_id, session_id,
+                                                 buffers, meta_data);
+      if (NO_ERROR == ret) {
+        return_buffer = false;
       }
-        break;
-      case TRACK_OUTPUT_MP4:
-      case TRACK_OUTPUT_3GP:
-      {
+    }
+      break;
+    case TRACK_OUTPUT_MP4:
+    case TRACK_OUTPUT_3GP:
+    {
         auto ret = QueueMuxBuffersLocked(track_id, session_id, buffers, meta_data);
         if (NO_ERROR == ret) {
-          return_buffer = false;
-        } else if (DEAD_OBJECT == ret) {
-          return_buffer = true;
-        } else {
-          ALOGE("%s: Unable to queue buffers in muxer: %d!", __func__,
-                ret);
-        }
-      }
-        break;
-      case TRACK_OUT_DSI:
-         if (!display_started_)
-           break;
-         for (uint32_t i = 0; i < meta_data.size(); i++) {
-           MetaData meta_data_dsi = meta_data[i];
-           if (meta_data_dsi.meta_flag &
-                  static_cast<uint32_t>(MetaParamType::kCamBufMetaData)) {
-             CameraBufferMetaData cam_buf_meta =
-                  meta_data_dsi.cam_buffer_meta_data;
-             PushFrameToDisplay(buffers[i], cam_buf_meta);
-           }
-         }
-       break;
-      case TRACK_OUTPUT_EVENT_LOGGER:
-      {
-        vam_interface_->ProcessVLogBuffers(buffers);
+        return_buffer = false;
+      } else if (DEAD_OBJECT == ret) {
         return_buffer = true;
+      } else {
+        ALOGE("%s: Unable to queue buffers in muxer: %d!", __func__,
+              ret);
       }
-        break;
-      default:
-        ALOGE("%s: Unsupported track output: %d\n", __func__,
-              status.output);
     }
+      break;
+    case TRACK_OUT_DSI:
+      if (!display_started_)
+        break;
+      for (uint32_t i = 0; i < meta_data.size(); i++) {
+         MetaData meta_data_dsi = meta_data[i];
+         if (meta_data_dsi.meta_flag &
+                static_cast<uint32_t>(MetaParamType::kCamBufMetaData)) {
+           CameraBufferMetaData cam_buf_meta =
+                meta_data_dsi.cam_buffer_meta_data;
+           PushFrameToDisplay(buffers[i], cam_buf_meta);
+         }
+       }
+       break;
+    case TRACK_OUTPUT_EVENT_LOGGER:
+    {
+      vam_interface_->ProcessVLogBuffers(buffers);
+      return_buffer = true;
+    }
+    default:
+      ALOGE("%s: Unsupported track output: %d\n", __func__,
+            status.output);
   }
 
   if (return_buffer) {
@@ -3772,28 +4216,10 @@ exit:
 
   pthread_mutex_lock(&snapshot_lock_);
   snapshot_completed_ = true;
-  aec_converged_ = false;
   pthread_cond_signal(&snapshot_cond_);
   pthread_mutex_unlock(&snapshot_lock_);
 
   recorder_.ReturnImageCaptureBuffer(camera_id, buffer);
-}
-
-void HTTPInterface::CameraCb(uint32_t camera_id,
-              const CameraMetadata &result) {
-  if (aec_converged_ == false) {
-    camera_metadata_ro_entry aec_stat;
-    aec_stat = result.find(ANDROID_CONTROL_AE_STATE);
-    if ((aec_stat.count > 0) && ((aec_stat.data.u8[0]
-        == ANDROID_CONTROL_AE_STATE_CONVERGED) || (aec_stat.data.u8[0]
-        == ANDROID_CONTROL_AE_STATE_LOCKED))) {
-      ALOGD("%s:%s: AEC Value Converged for Camera id(%d)", LOG_TAG, __func__,camera_id);
-      aec_converged_ = true;
-      pthread_cond_signal(&aec_converge_cond_);
-    } else {
-      ALOGD("%s:%s: AEC Value still not converged for Camera id(%d)", LOG_TAG, __func__,camera_id);
-    }
-  }
 }
 
 #ifdef QMMF_LE_BUILD
@@ -3802,11 +4228,14 @@ int32_t HTTPInterface::RaveTrackResolutionChangeCb(uint32_t width,
                                       uint32_t bitrate) {
   int32_t status = NO_ERROR;
   qmmf_video_track_param track_parms = rave_track_param_store_;
-  ssize_t rtsp_idx = rtsp_servers_.indexOfKey(track_parms.session_id);
-  if ((NAME_NOT_FOUND == rtsp_idx) || (!ra_get_fpv_started())) {
-      RaveExit();
-      ALOGE("%s: session not found or stoped, rave exit!", __func__);
-      return status;
+  {
+    Mutex::Autolock lock(rtsp_mutex_);
+    ssize_t rtsp_idx = rtsp_servers_.indexOfKey(track_parms.session_id);
+    if ((NAME_NOT_FOUND == rtsp_idx) || (!ra_get_fpv_started())) {
+        RaveExit();
+        ALOGE("%s: session not found or stoped, rave exit!", __func__);
+        return status;
+    }
   }
   track_parms.bitrate = bitrate;
   track_parms.framerate = framerate;
@@ -3889,6 +4318,215 @@ int32_t HTTPInterface::RaveTrackQualityChangeCb(uint32_t framerate,
   }
 }
 #endif
+
+void *HTTPInterface::AudioUdpServer(void *phttp)
+{
+  ALOGE("%s: Enter\n", __func__);
+  HTTPInterface *ctx = static_cast<HTTPInterface *> (phttp);
+  int sockfd;
+  int rec_size;
+  int state = RUNNING;
+  char buf[MICBUFSIZE];
+  sockfd = ctx->InitUdpServer();
+
+  if (sockfd <= 0) {
+      ALOGE("init server error\n");
+      return NULL;
+  }
+
+  while (state) {
+      memset(buf, 0x0, sizeof(buf));
+      rec_size = 0;
+      rec_size = recv(sockfd, buf, MICBUFSIZE, 0);
+
+      if (rec_size < 0){
+          ALOGE("recv error\n");
+          break;
+      }
+
+      ctx->AudioPlayerAcc(buf, rec_size);
+  }
+
+  return NULL;
+}
+
+int32_t HTTPInterface::InitUdpServer()
+{
+  ALOGE("%s: Enter\n!", __func__);
+  int sockfd = -1;
+  int32_t ret = 0;
+  struct sockaddr_in server_addr;
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+  if (sockfd <= 0) {
+      ALOGE("server : can't open stream socket\n");
+      return 0;
+  }
+
+  memset(&server_addr, 0, sizeof(server_addr));
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  server_addr.sin_port = htons(PORT_NUM);
+  ret = bind(sockfd, (struct sockaddr *)(&server_addr), sizeof(server_addr));
+
+  if (ret != 0) {
+      ALOGE("server : can't bind socket\n");
+      return 0;
+  }
+
+  return sockfd;
+}
+
+int32_t HTTPInterface::AudioPlayerAcc(char * buf, int buf_size)
+{
+  ALOGD("%s: Enter\n", __func__);
+  auto ret = 0;
+  uint8 * pucData = NULL;
+  std::vector<qmmf::player::TrackBuffer> buffers;
+  qmmf::player::TrackBuffer tb;
+
+  memset(&tb,0x0,sizeof(tb));
+  buffers.push_back(tb);
+  uint32_t val = 1;
+
+  ret = player_.DequeueInputBuffer(audio_track_id_, buffers);
+
+  if (ret != 0) {
+      ALOGE("%s Failed to DequeueInputBuffer", __func__);
+  }
+
+  pucData = static_cast<uint8*>(buffers[0].data);
+  memcpy(pucData , buf, buf_size);// core dump
+  buffers[0].filled_size = buf_size;
+  buffers[0].time_stamp = 0;
+  ret = player_.QueueInputBuffer(audio_track_id_, buffers,(void*)&val,
+                       sizeof (uint32_t), qmmf::player::TrackMetaBufferType::kNone);
+  if (ret != 0) {
+      ALOGE("%s Failed to QueueInputBuffer", __func__);
+  }
+
+  buffers.clear();
+  return 0;
+}
+
+void HTTPInterface::Audiotrackcb_event(__attribute__((unused))uint32_t track_id,
+        __attribute__((unused))qmmf::player::EventType event_type,
+        __attribute__((unused))void *event_data,
+        __attribute__((unused)) size_t event_data_size) {
+
+  ALOGV("%s: Enter\n", __func__);
+  ALOGV("%s: Exit\n",  __func__);
+}
+
+
+void HTTPInterface::PlayerCb_event(__attribute__((unused))qmmf::player::EventType event_type,
+                      __attribute__((unused))void *event_data,
+                      __attribute__((unused))size_t event_data_size)
+{
+  ALOGV("%s: Enter\n", __func__);
+  ALOGV("%s: Exit\n",  __func__);
+}
+
+
+int32_t HTTPInterface::AudioPlayerConnect()
+{
+  ALOGD("%s: Enter\n", __func__);
+  qmmf::player::PlayerCb player_cb_;
+
+  player_cb_.event_cb = [&] (qmmf::player::EventType event_type, void *event_data, size_t event_data_size) {
+                    PlayerCb_event(event_type, event_data, event_data_size);
+                    };
+
+
+  auto ret = player_.Connect(player_cb_);
+  if (ret != NO_ERROR) {
+    ALOGE("%s Failed to Connect\n", __func__);
+  }
+  return ret;
+}
+
+int32_t HTTPInterface::AudioPlayerPrepare()
+{
+  ALOGD("%s: Enter\n", __func__);
+  int ret = 0;
+
+  audio_track_cb_.event_cb = [&] (uint32_t track_id, qmmf::player::EventType event_type, void *event_data, size_t event_data_size) {
+            Audiotrackcb_event(track_id, event_type, event_data,
+            event_data_size);
+            };
+
+  memset(&audio_track_param_, 0x0, sizeof audio_track_param_);
+  audio_track_param_.codec       = AudioFormat::kAAC;//kAAC
+  audio_track_param_.sample_rate = 48000;
+  audio_track_param_.channels    = 2;
+  audio_track_param_.bit_depth   = 16;
+  audio_track_param_.out_device = AudioOutSubtype::kBuiltIn;
+
+  audio_track_param_.codec_params.aac.bit_rate = 128000;//
+  audio_track_param_.codec_params.aac.format   = AACFormat::kADTS;//
+  audio_track_param_.codec_params.aac.mode     = AACMode::kHEVC_v1;//
+
+
+  ret = player_.CreateAudioTrack(audio_track_id_, audio_track_param_,
+          audio_track_cb_);
+
+  if (ret != 0) {
+      ALOGE("%s Failed to CreateAudioTrack\n", __func__);
+  }
+
+  ret = player_.Prepare();
+
+  if (ret != 0) {
+      ALOGE("%s Failed to Prepare\n", __func__);
+  }
+
+  return ret;
+}
+
+int32_t HTTPInterface::AudioPlayerStart()
+{
+  ALOGD("%s: Enter\n", __func__);
+  pthread_t udpServerTid;
+  auto ret = player_.Start();
+  if (ret != 0) {
+       ALOGE("%s Failed to Start\n", __func__);
+       //return 0;
+  }
+
+  pthread_create(&udpServerTid, NULL, AudioUdpServer , this);
+
+  return 0;
+}
+
+int32_t HTTPInterface::AudioPlayerStop()
+{
+  ALOGD("%s: Enter\n", __func__);
+  auto ret = player_.Stop();
+  if (ret != NO_ERROR) {
+      ALOGE("%s Failed to Stop\n", __func__);
+  }
+  return ret;
+}
+
+int32_t HTTPInterface::AudioPlayerDelete(uint32_t audio_track_id)
+{
+  ALOGD("%s: Enter\n", __func__);
+  auto ret = player_.DeleteAudioTrack(audio_track_id);
+  if (ret != NO_ERROR) {
+    ALOGE("%s Failed to DeleteAudioTrack\n", __func__);
+  }
+  return 0;
+}
+
+int32_t HTTPInterface::AudioPlayerDisconnect()
+{
+  ALOGD("%s: Enter\n", __func__);
+  auto ret = player_.Disconnect();
+  if (ret != NO_ERROR) {
+    ALOGE("%s Failed to Disconnect\n", __func__);
+  }
+  return ret;
+}
 
 void HTTPInterface::RecorderEventCb(EventType event_type,
                                     __attribute__((unused)) void *event_data,

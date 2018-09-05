@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  */
 
@@ -28,6 +28,8 @@
 #include <utils/KeyedVector.h>
 #include <utils/List.h>
 #include <utils/RefBase.h>
+#include <camera/VendorTagDescriptor.h>
+#include <mutex>
 
 #include "qmmf_camera3_types.h"
 #include "qmmf_camera3_internal_types.h"
@@ -56,6 +58,39 @@ namespace qmmf {
 
 namespace cameraadaptor {
 
+#ifdef TARGET_USES_GRALLOC1
+  typedef gralloc1_device_t* mem_alloc_device;
+#else
+  typedef alloc_device_t*    mem_alloc_device;
+#endif
+
+class IAllocDevice {
+ public:
+   virtual ~IAllocDevice() {};
+
+   static IAllocDevice* CreateAllocDevice(hw_module_t const* module);
+
+   mem_alloc_device GetDevice() { return device_; }
+   void SetDevice(mem_alloc_device device) { device_ = device; }
+
+ private:
+   mem_alloc_device          device_;
+};
+
+#ifdef TARGET_USES_GRALLOC1
+class Gralloc1Device : public IAllocDevice {
+ public:
+   Gralloc1Device(hw_module_t const * module);
+   ~Gralloc1Device();
+};
+#else
+class GrallocDevice : public IAllocDevice {
+ public:
+   GrallocDevice(hw_module_t const * module);
+   ~GrallocDevice();
+};
+#endif
+
 class Camera3DeviceClient : public camera3_callback_ops,
                             public camera_module_callbacks_t,
                             public RefBase {
@@ -67,9 +102,9 @@ class Camera3DeviceClient : public camera3_callback_ops,
 
   int32_t OpenCamera(uint32_t idx);
   int32_t BeginConfigure() { return 0; }
-  int32_t EndConfigure(bool isConstrainedHighSpeed = false,
-                       bool isRawOnly = false, uint32_t batch_size = 1,
-                       bool is_pp_enabled = true);
+
+  int32_t EndConfigure(const StreamConfiguration& stream_config
+                       = StreamConfiguration());
 
   int32_t DeleteStream(int streamId, bool cache);
   int32_t CreateStream(const CameraStreamParameters &outputConfiguration);
@@ -79,7 +114,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t CreateDefaultRequest(int templateId, CameraMetadata *request);
   int32_t SubmitRequest(Camera3Request request, bool streaming = false,
                         int64_t *lastFrameNumber = NULL);
-  int32_t SubmitRequestList(List<Camera3Request> requests,
+  int32_t SubmitRequestList(std::list<Camera3Request> requests,
                             bool streaming = false,
                             int64_t *lastFrameNumber = NULL);
   int32_t ReturnStreamBuffer(StreamBuffer buffer);
@@ -87,7 +122,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
 
   int32_t GetCameraInfo(uint32_t idx, CameraMetadata *info);
   int32_t GetNumberOfCameras() { return number_of_cameras_; }
-  const Vector<int32_t> GetRequestIds(){ return current_request_ids_; }
+  const std::vector<int32_t> GetRequestIds(){ return current_request_ids_; }
   int32_t WaitUntilIdle();
 
   int32_t Flush(int64_t *lastFrameNumber = NULL);
@@ -98,7 +133,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
                               const struct hw_module_t **pHmi);
 
  private:
-  Vector<int32_t> current_request_ids_;
+  std::vector<int32_t> current_request_ids_;
   typedef enum State_t {
     STATE_ERROR,
     STATE_NOT_INITIALIZED,
@@ -141,10 +176,12 @@ class Camera3DeviceClient : public camera3_callback_ops,
   int32_t QueryMaxBlobSize(int32_t &maxJpegSizeWidth,
                            int32_t &maxJpegSizeHeight);
 
-  int32_t ConfigureStreams(bool isConstrainedHighSpeed = false,
-                           bool isRawOnly = false,
-                           uint32_t batch_size = 1,bool is_pp_enabled = true);
-  int32_t ConfigureStreamsLocked(bool is_pp_enabled = true);
+  int32_t ConfigureStreams(const StreamConfiguration& stream_config
+                           = StreamConfiguration());
+
+  int32_t ConfigureStreamsLocked(bool is_pp_enabled = true,
+                                 bool is_zzhdr_enabled = false,
+                                 uint32_t fps_index = 0);
 
   void SetErrorState(const char *fmt, ...);
   void SetErrorStateV(const char *fmt, va_list args);
@@ -161,8 +198,6 @@ class Camera3DeviceClient : public camera3_callback_ops,
 
   bool HandlePartialResult(uint32_t frameNumber, const CameraMetadata &partial,
                            const CaptureResultExtras &resultExtras);
-
-  alloc_device_t *GetGrallocDevice() { return gralloc_device_; }
 
   /**Not allowed */
   Camera3DeviceClient(const Camera3DeviceClient &);
@@ -206,7 +241,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   uint32_t number_of_cameras_;
   struct camera_info static_info_;
   CameraMetadata device_info_;
-  alloc_device_t *gralloc_device_;
+  IAllocDevice* alloc_device_interface_;
 
   Vector<int32_t> repeating_requests_;
   int32_t next_request_id_;
@@ -234,6 +269,7 @@ class Camera3DeviceClient : public camera3_callback_ops,
   Camera3PrepareHandler prepare_handler_;
   Camera3InputStream input_stream_;
   uint32_t batch_size_;
+  static std::mutex vendor_tag_mutex_;
 };
 
 }  // namespace cameraadaptor ends here

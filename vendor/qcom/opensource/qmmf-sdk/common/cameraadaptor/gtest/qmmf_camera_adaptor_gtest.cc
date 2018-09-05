@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,8 +31,18 @@
 #include <sys/time.h>
 #include <math.h>
 #include <log/log.h>
-#include <libgralloc/gralloc_priv.h>
+
+#ifdef TARGET_USES_GRALLOC1
+#include <libgralloc1/gralloc_priv.h>
+#else
+#include <qcom/display/gralloc_priv.h>
+#endif
+#ifdef ANDROID_O_OR_ABOVE
+#include "common/utils/qmmf_common_utils.h"
+#else
 #include <QCamera3VendorTags.h>
+#endif
+
 #include "qmmf_camera3_utils.h"
 #include "qmmf_camera_adaptor_gtest.h"
 
@@ -526,9 +536,10 @@ int32_t Camera3Gtest::StoreBuffer(String8 path, uint64_t &idx,
                                   StreamBuffer &buffer, CalcSize &calcSize) {
   int32_t ret = 0;
 
-  alloc_device_t *grallocDevice = device_client_->GetGrallocDevice();
+  mem_alloc_device allocDevice =
+      device_client_->alloc_device_interface_->GetDevice();
 
-  if (NULL != grallocDevice) {
+  if (NULL != allocDevice) {
     FILE *f = fopen(path.string(), "w+");
     if (NULL == f) {
       printf("%s:Unable to open file(%s) \n", __func__, strerror(errno));
@@ -536,7 +547,7 @@ int32_t Camera3Gtest::StoreBuffer(String8 path, uint64_t &idx,
     }
 
     gralloc_module_t const *mapper = reinterpret_cast<gralloc_module_t const *>(
-        grallocDevice->common.module);
+        allocDevice->common.module);
     struct android_ycbcr grallocBuffer;
     if ((BufferFormat::kNV12 == buffer.info.format) ||
         (BufferFormat::kNV21 == buffer.info.format)) {
@@ -2658,7 +2669,10 @@ TEST_F(Camera3Gtest, HFRVideo1080p60FPS) {
   ASSERT_GE(video_stream_id, 0);
   video_request.streamIds.add(video_stream_id);
 
-  ret = device_client_->EndConfigure(true);
+  StreamConfiguration stream_config = StreamConfiguration();
+  stream_config.is_constrained_high_speed = true;
+
+  ret = device_client_->EndConfigure(stream_config);
   ASSERT_EQ(0, ret);
 
   ret = device_client_->CreateDefaultRequest(CAMERA3_TEMPLATE_VIDEO_RECORD,
@@ -2676,7 +2690,7 @@ TEST_F(Camera3Gtest, HFRVideo1080p60FPS) {
   video_request.metadata.update(QCAMERA3_VENDOR_SENSOR_MODE,
                                 &sensor_vendor_mode, 1);
 
-  List<Camera3Request> requests;
+  std::list<Camera3Request> requests;
   requests.push_back(video_request);
 
   ret = device_client_->SubmitRequestList(requests, true, &last_frame_number);
@@ -2767,7 +2781,10 @@ TEST_F(Camera3Gtest, HFRVideo720p120FPS) {
   ASSERT_GE(videoStreamId, 0);
   videoRequest.streamIds.add(videoStreamId);
 
-  ret = device_client_->EndConfigure(true);
+  StreamConfiguration stream_config = StreamConfiguration();
+  stream_config.is_constrained_high_speed = true;
+
+  ret = device_client_->EndConfigure(stream_config);
   ASSERT_EQ(0, ret);
 
   ret = device_client_->CreateDefaultRequest(CAMERA3_TEMPLATE_VIDEO_RECORD,
@@ -2780,7 +2797,7 @@ TEST_F(Camera3Gtest, HFRVideo720p120FPS) {
 
   videoRequest.metadata.update(ANDROID_CONTROL_AE_TARGET_FPS_RANGE, fpsRange,
                                2);
-  List<Camera3Request> requests;
+  std::list<Camera3Request> requests;
   for (int32_t i = 0; i < batchSize; i++) {
     requests.push_back(videoRequest);
   }
@@ -3247,7 +3264,7 @@ TEST_F(Camera3Gtest, SnapshotBurstBracketing) {
 
   Camera3Request previewRequest;
   Camera3Request captureRequest;
-  List<Camera3Request> burstRequests;
+  std::list<Camera3Request> burstRequests;
   int64_t lastFrameNumber;
   int32_t previewStreamId, previewRequestId;
   int32_t snapshotStreamId;

@@ -61,7 +61,7 @@ func Monitor_qmmf_webserver() {
     log.Printf("qmmf-webserver pid:%v\n", pid)
 
     for {
-        // sleep 1s
+
         time.Sleep(1000 * time.Millisecond)
 
         newpid := __exec_get_pid_cmd("ps -ef | grep qmmf-webserver | grep -v grep | awk '{print $1}'")
@@ -70,13 +70,6 @@ func Monitor_qmmf_webserver() {
             log.Printf("qmmf-webserver newpid:%v\n", newpid)
 
             Save_file(TMP_CAMERA_IP_FILE, []byte(CameraIp))
-
-            cmd := Command("/usr/bin/ipc-webserver")
-            s_err := cmd.Start()
-
-            if s_err != nil {
-                log.Printf("s_err:%v\n", s_err)
-            }
 
             os.Exit(0)
             break

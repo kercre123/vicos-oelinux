@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017 The Linux Foundataion. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -54,6 +54,7 @@
 
 #define CAM_PRINT(fmt, args...) do { \
   printf(fmt "\n", ##args); \
+  __android_log_print(ANDROID_LOG_ERROR,TAG,fmt, ##args); \
 } while (0)
 
 #define LIBCAM_LOG_LEVEL_KPI

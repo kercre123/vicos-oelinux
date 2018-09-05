@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "Recorder"
+#define LOG_TAG "Recorder"
 
 #include <binder/IPCThreadState.h>
 
@@ -66,14 +66,14 @@ status_t Recorder::Connect(const RecorderCb& callback) {
 
 status_t Recorder::Disconnect() {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(recorder_client_ != nullptr);
 
   auto ret = recorder_client_->Disconnect();
   if (NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s Disconnect failed!", TAG, __func__);
+    QMMF_ERROR("%s Disconnect failed!", __func__);
   }
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 

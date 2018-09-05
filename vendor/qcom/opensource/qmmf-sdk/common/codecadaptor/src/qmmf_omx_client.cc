@@ -26,10 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "QMMF_OMX_CLIENT"
+#define LOG_TAG "QMMF_OMX_CLIENT"
 
 #include <dlfcn.h>
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 #include "qmmf_omx_client.h"
 
 namespace qmmf {
@@ -43,15 +43,15 @@ const char OmxClient::kOMXGetComponentsOfRoleName[] =
 
 OmxClient::OmxClient():codec_handle_(NULL), omx_context_() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
+  QMMF_INFO("%s: Exit", __func__);
 }
 
 OmxClient::~OmxClient() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
   ReleaseOmxHandle();
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 }
 
 OMX_ERRORTYPE OmxClient::CreateOmxHandle(char* Codecname, void* app_data,
@@ -62,7 +62,7 @@ OMX_ERRORTYPE OmxClient::CreateOmxHandle(char* Codecname, void* app_data,
     omx_context_.library_handle_ = dlopen(kOMXPath, RTLD_NOW);
     if (omx_context_.library_handle_ == nullptr) {
       char const *err_str = dlerror();
-      QMMF_ERROR("%s:%s load: module=%s\n%s \n", TAG, __func__, kOMXPath,
+      QMMF_ERROR("%s load: module=%s\n%s \n", __func__, kOMXPath,
                  err_str ? err_str : "unknown");
       ret = OMX_ErrorComponentNotFound;
       goto exit;
@@ -71,7 +71,7 @@ OMX_ERRORTYPE OmxClient::CreateOmxHandle(char* Codecname, void* app_data,
     omx_context_.omx_get_handle_ = (OMXGetHandle)dlsym(
         omx_context_.library_handle_, kOMXGetHandleName);
     if (nullptr == omx_context_.omx_get_handle_) {
-      QMMF_ERROR("%s:%s load: couldn't find symbol %s\n", TAG, __func__,
+      QMMF_ERROR("%s load: couldn't find symbol %s\n", __func__,
           kOMXGetHandleName);
       ret = OMX_ErrorComponentNotFound;
       goto exit;
@@ -80,7 +80,7 @@ OMX_ERRORTYPE OmxClient::CreateOmxHandle(char* Codecname, void* app_data,
     omx_context_.omx_free_handle_ = (OMXFreeHandle)dlsym(
         omx_context_.library_handle_, kOMXFreeHandleName);
     if (nullptr == omx_context_.omx_free_handle_) {
-      QMMF_ERROR("%s:%s load: couldn't find symbol %s\n", TAG, __func__,
+      QMMF_ERROR("%s load: couldn't find symbol %s\n", __func__,
           kOMXFreeHandleName);
       ret = OMX_ErrorComponentNotFound;
       goto exit;
@@ -89,7 +89,7 @@ OMX_ERRORTYPE OmxClient::CreateOmxHandle(char* Codecname, void* app_data,
     omx_context_.omx_get_components_of_role_ = (OMXGetComponentsOfRole)dlsym(
         omx_context_.library_handle_, kOMXGetComponentsOfRoleName);
     if (NULL == omx_context_.omx_free_handle_) {
-      QMMF_ERROR("%s:%s load: couldn't find symbol %s\n", TAG, __func__,
+      QMMF_ERROR("%s load: couldn't find symbol %s\n", __func__,
           kOMXGetComponentsOfRoleName);
       ret = OMX_ErrorComponentNotFound;
       goto exit;
@@ -98,7 +98,7 @@ OMX_ERRORTYPE OmxClient::CreateOmxHandle(char* Codecname, void* app_data,
   ret = omx_context_.omx_get_handle_(&codec_handle_,
                                      const_cast<char *>(Codecname),
                                      app_data, &callbacks);
-  QMMF_INFO("%s:%s created OMX handle(%p)", TAG, __func__, codec_handle_);
+  QMMF_INFO("%s created OMX handle(%p)", __func__, codec_handle_);
 
   return ret;
 
@@ -114,7 +114,7 @@ exit:
 
 OMX_ERRORTYPE OmxClient::ReleaseOmxHandle() {
 
-  QMMF_INFO("%s:%s: Enter ", TAG, __func__);
+  QMMF_INFO("%s: Enter ", __func__);
   OMX_ERRORTYPE ret = OMX_ErrorNone;
   if(codec_handle_ && (nullptr != omx_context_.omx_free_handle_)) {
     QMMF_INFO("%s: Free OMX handle(%p)", __func__, codec_handle_);
@@ -127,7 +127,7 @@ OMX_ERRORTYPE OmxClient::ReleaseOmxHandle() {
     memset(&omx_context_, 0, sizeof(omx_context_));
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
 
   return ret;
 }
@@ -225,7 +225,7 @@ OMX_ERRORTYPE OmxClient::SendCommand(OMX_COMMANDTYPE cmd, OMX_U32 port_index,
                             cmd_data);
       break;
     default:
-      QMMF_ERROR("%s:%s Unknown omx command", TAG, __func__);
+      QMMF_ERROR("%s Unknown omx command", __func__);
       ret = OMX_ErrorBadParameter;
   }
 

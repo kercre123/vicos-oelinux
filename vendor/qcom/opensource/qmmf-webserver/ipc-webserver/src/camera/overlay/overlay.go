@@ -364,15 +364,10 @@ func __get_resp_ovid(resp *http.Response) (string, bool) {
     return ovid, ret
 }
 
-func __create_overlay(chinfo Channel) (string, bool) {
+func __create_overlay(chinfo Channel, trackid int) (string, bool) {
     v := url.Values{}
 
-    if chinfo.Status == Preview {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RtspId))
-    } else if chinfo.Status == Recording {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RecordingId))
-    }
-
+    v.Set("track_id", strconv.Itoa(trackid))
     v.Add("ov_type", OvTypeList[chinfo.OverlayType])
 
     if chinfo.OverlayType == 0 {
@@ -413,58 +408,46 @@ func __create_overlay(chinfo Channel) (string, bool) {
         v.Add("ov_color", strconv.Itoa(chinfo.OverlayConf.Ov_color))
     } */
 
-    log.Printf("Preview create overlay form:%v \n", v.Encode())
+    log.Printf("Create overlay form:%v \n", v.Encode())
     body := ioutil.NopCloser(strings.NewReader(v.Encode()))
 
     resp := Http_post(__create_overlay_URL, body)
     return __get_resp_ovid(resp)
 }
 
-func Set_overlay(chinfo Channel) bool {
+func Set_overlay(trackid int, ovid string) bool {
     v := url.Values{}
 
-    if chinfo.Status == Preview {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RtspId))
-    } else if chinfo.Status == Recording {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RecordingId))
-    }
-    v.Add("ov_id", chinfo.OvId)
+    v.Set("track_id", strconv.Itoa(trackid))
+    v.Add("ov_id", ovid)
 
-    log.Printf("Preview set overlay form:%v \n", v.Encode())
+    log.Printf("Set overlay form:%v \n", v.Encode())
     body := ioutil.NopCloser(strings.NewReader(v.Encode()))
 
     resp := Http_post(__set_overlay_URL, body)
     return Get_resp_ret(resp)
 }
 
-func __remove_overlay(chinfo Channel) bool {
+func __remove_overlay(trackid int, ovid string) bool {
     v := url.Values{}
 
-    if chinfo.Status == Preview {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RtspId))
-    } else if chinfo.Status == Recording {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RecordingId))
-    }
-    v.Add("ov_id", chinfo.OvId)
+    v.Set("track_id", strconv.Itoa(trackid))
+    v.Add("ov_id", ovid)
 
-    log.Printf("Preview remove overlay form:%v \n", v.Encode())
+    log.Printf("Remove overlay form:%v \n", v.Encode())
     body := ioutil.NopCloser(strings.NewReader(v.Encode()))
 
     resp := Http_post(__remove_overlay_URL, body)
     return Get_resp_ret(resp)
 }
 
-func __delete_overlay(chinfo Channel) bool {
+func __delete_overlay(trackid int, ovid string) bool {
     v := url.Values{}
 
-    if chinfo.Status == Preview {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RtspId))
-    } else if chinfo.Status == Recording {
-        v.Set("track_id", strconv.Itoa(chinfo.TrackIds.RecordingId))
-    }
-    v.Add("ov_id", chinfo.OvId)
+    v.Set("track_id", strconv.Itoa(trackid))
+    v.Add("ov_id", ovid)
 
-    log.Printf("Preview delete overlay form:%v \n", v.Encode())
+    log.Printf("Delete overlay form:%v \n", v.Encode())
     body := ioutil.NopCloser(strings.NewReader(v.Encode()))
 
     resp := Http_post(__delete_overlay_URL, body)
@@ -472,30 +455,31 @@ func __delete_overlay(chinfo Channel) bool {
 }
 
 func __overlay_on(chinfo Channel, ch int) bool {
-    ovid, ret := __create_overlay(chinfo)
-
-    if !ret {
+    // open preview overlay
+    if !Pre_overlay_on(ch) {
         return false
     }
 
-    chinfo.OvId = ovid
-
-    CMap.ChMap_Set(ChList[ch], chinfo)
-
-    if !Set_overlay(chinfo) {
-        return false
+    // open recording overlay
+    if chinfo.Status == Recording {
+        if !Rec_overlay_on(ch) {
+            return false
+        }
     }
     return true
 }
 
 func __overlay_off(chinfo Channel) bool {
-    if !__remove_overlay(chinfo) {
+    if chinfo.Status == Recording {
+        if !Rec_overlay_off(chinfo) {
+            return false
+        }
+    }
+
+    if !Pre_overlay_off(chinfo) {
         return false
     }
 
-    if !__delete_overlay(chinfo) {
-        return false
-    }
     return true
 }
 
@@ -622,4 +606,68 @@ func OverlayHandler(w http.ResponseWriter, r *http.Request) {
     } else if r.Method == "POST" {
         __overlay_post(w, r, chinfo, ch, sess)
     }
+}
+
+func Rec_overlay_on(ch int) bool {
+    chinfo, _ := CMap.ChMap_Get(ChList[ch])
+
+    ovid, ret := __create_overlay(chinfo, chinfo.TrackIds.RecordingId)
+
+    if !ret {
+        return false
+    }
+
+    chinfo.RecOvId = ovid
+
+    CMap.ChMap_Set(ChList[ch], chinfo)
+
+    if !Set_overlay(chinfo.TrackIds.RecordingId, chinfo.RecOvId) {
+        return false
+    }
+
+    return true
+}
+
+func Rec_overlay_off(chinfo Channel) bool {
+    if !__remove_overlay(chinfo.TrackIds.RecordingId, chinfo.RecOvId) {
+        return false
+    }
+
+    if !__delete_overlay(chinfo.TrackIds.RecordingId, chinfo.RecOvId) {
+        return false
+    }
+
+    return true
+}
+
+func Pre_overlay_on(ch int) bool {
+    chinfo, _ := CMap.ChMap_Get(ChList[ch])
+
+    ovid, ret := __create_overlay(chinfo, chinfo.TrackIds.RtspId)
+
+    if !ret {
+        return false
+    }
+
+    chinfo.PreOvId = ovid
+
+    CMap.ChMap_Set(ChList[ch], chinfo)
+
+    if !Set_overlay(chinfo.TrackIds.RtspId, chinfo.PreOvId) {
+        return false
+    }
+
+    return true
+}
+
+func Pre_overlay_off(chinfo Channel) bool {
+    if !__remove_overlay(chinfo.TrackIds.RtspId, chinfo.PreOvId) {
+        return false
+    }
+
+    if !__delete_overlay(chinfo.TrackIds.RtspId, chinfo.PreOvId) {
+        return false
+    }
+
+    return true
 }

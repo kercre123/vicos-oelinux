@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -44,7 +44,7 @@
 
 #include <binder/Parcel.h>
 
-#include "common/qmmf_codec_internal.h"
+#include "common/utils/qmmf_codec_internal.h"
 #include "include/qmmf-sdk/qmmf_codec.h"
 #include "include/qmmf-sdk/qmmf_device.h"
 
@@ -111,6 +111,7 @@ struct AudioBuffer {
 enum class AudioEventType {
   kError,
   kBuffer,
+  kStopped,
 };
 
 union AudioEventData {
@@ -125,6 +126,9 @@ union AudioEventData {
         break;
       case AudioEventType::kBuffer:
         stream << "buffer[" << buffer.ToString() << "]";
+        break;
+      case AudioEventType::kStopped:
+        stream << "stopped[NA]";
         break;
       default:
         stream << "Invalid Key["
@@ -144,6 +148,9 @@ union AudioEventData {
       case AudioEventType::kBuffer:
         buffer.ToParcel(parcel, false);
         break;
+      case AudioEventType::kStopped:
+        // do nothing
+        break;
     }
   }
 
@@ -155,6 +162,9 @@ union AudioEventData {
         break;
       case AudioEventType::kBuffer:
         buffer.FromParcel(parcel, false);
+        break;
+      case AudioEventType::kStopped:
+        // do nothing
         break;
     }
   }
@@ -195,9 +205,9 @@ struct AudioMetadata {
            << "] ";
     stream << "num_channels[" << num_channels << "] ";
     stream << "sample_rate[" << sample_rate << "] ";
-    stream << "sample_size[" << sample_size << "]";
-    stream << "codec[" << codec << "]";
-    stream << "codec_params[" << codec_params.ToString(format) << "]";
+    stream << "sample_size[" << sample_size << "] ";
+    stream << "codec[" << codec << "] ";
+    stream << "codec_params[" << codec_params.ToString(format) << "] ";
     stream << "flags[" << ::std::setbase(16) << flags << ::std::setbase(10)
            << "]";
     return stream.str();
@@ -222,6 +232,9 @@ struct AudioMetadata {
       case AudioFormat::kG711:
         G711ParamsInternal(codec_params.g711).ToParcel(parcel);
         break;
+      case AudioFormat::kMP3:
+        // nothing to write
+        break;
     }
     parcel->writeUint32(flags);
   }
@@ -245,6 +258,9 @@ struct AudioMetadata {
       case AudioFormat::kG711:
         codec_params.g711 = G711ParamsInternal().FromParcel(parcel);
         break;
+      case AudioFormat::kMP3:
+        // nothing to read
+        break;
     }
     flags = parcel.readUint32();
   }
@@ -252,6 +268,7 @@ struct AudioMetadata {
 
 enum class AudioParamType {
   kVolume,
+  kMute,
   kDevice,
   kCustom,
 };
@@ -310,8 +327,9 @@ union AudioParamData {
     ::std::stringstream stream;
     switch (key) {
       case AudioParamType::kVolume:
-        stream << "error[" << volume << "]";
+        stream << "volume[" << volume << "]";
         break;
+      case AudioParamType::kMute:
       case AudioParamType::kDevice:
         stream << "device[" << device.ToString() << "]";
         break;
@@ -333,6 +351,7 @@ union AudioParamData {
       case AudioParamType::kVolume:
         parcel->writeInt32(volume);
         break;
+      case AudioParamType::kMute:
       case AudioParamType::kDevice:
         device.ToParcel(parcel);
         break;
@@ -348,6 +367,7 @@ union AudioParamData {
       case AudioParamType::kVolume:
         volume = parcel.readInt32();
         break;
+      case AudioParamType::kMute:
       case AudioParamType::kDevice:
         device.FromParcel(parcel);
         break;

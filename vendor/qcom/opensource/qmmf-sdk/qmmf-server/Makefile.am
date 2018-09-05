@@ -5,10 +5,7 @@ qmmf_server_SOURCES  = qmmf_server_main.cc
 
 qmmf_server_CPPFLAGS = -I$(top_srcdir)/include
 qmmf_server_CPPFLAGS += -I$(top_srcdir)/
-
-qmmf_server_CPPFLAGS += -I$(LIBGRALLOC)
 qmmf_server_CPPFLAGS += -I$(MMCORE_CFLAGS)
-qmmf_server_CPPFLAGS += -I${WORKSPACE}/display/display-hal/sdm/include/
 
 qmmf_server_LDFLAGS  = -lutils -lcutils -llog -lbinder
 qmmf_server_LDADD    = ../common/audio/src/service/libqmmf_audio_service.la

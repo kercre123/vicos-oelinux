@@ -59,6 +59,7 @@ class SystemKeytone {
   enum class SystemMessageType {
     kMessageError,
     kMessageBuffer,
+    kMessageStopped,
   };
 
   struct SystemMessage {
@@ -74,6 +75,7 @@ class SystemKeytone {
 
   void ErrorHandler(const int32_t error);
   void BufferHandler(const ::qmmf::common::audio::AudioBuffer& buffer);
+  void StoppedHandler();
 
   ::qmmf::common::audio::AudioEndPoint* end_point_;
   SystemIon ion_;

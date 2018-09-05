@@ -101,7 +101,7 @@ static vector<string> parseParanthesis(const char *valueStr)
         }
         p++;
         /* find closing parenthesis */
-        while (*p != ')' && *p != '\0') {
+        while (*p != ')' && *p != '\0' && (idx < VALUE_SIZE_MAX - 1)) {
             buf[idx] = *p;
             idx++;
             p++;
@@ -386,6 +386,22 @@ void CameraParams::setISO(const string& value)
     params_cast(priv_)->set(KEY_QC_ISO_MODE, value.c_str());
 }
 
+std::vector<std::string> CameraParams::getSupportedSharpnessMode() const{
+	std::vector<std::string> value;
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+	return value;
+}
+
+std::string CameraParams::getSharpnessMode() const{
+	std::string value;
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+	return value;
+}
+
+void CameraParams::setSharpnessMode(const std::string& value){
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+}
+
 Range CameraParams::getSupportedSharpness() const
 {
     Range range;
@@ -433,6 +449,41 @@ void CameraParams::setBrightness(int value)
     snprintf(valStr, VALUE_SIZE_MAX, "%d", value);
     params_cast(priv_)->set(KEY_QC_BRIGHTNESS, valStr);
 }
+
+
+
+vector<string> CameraParams::getSupportedToneMapMode() const
+{
+    vector<string> tonemap_modes;
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+    return tonemap_modes;
+}
+
+string CameraParams::getToneMapMode() const
+{
+    string str;
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+    return str;
+}
+
+void CameraParams::setToneMapMode(const string& value)
+{
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+	return;
+}
+
+
+Tonemap_RBG CameraParams::getContrastTone() const{
+	Tonemap_RBG value;
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+	return value;
+}
+
+void CameraParams::setContrastTone(Tonemap_RBG& tonemap)
+{
+	CAM_PRINT("%s API is not available for this target \n",__func__);
+}
+
 
 Range CameraParams::getSupportedContrast() const
 {
@@ -653,6 +704,24 @@ int32_t CameraParams::getFrameGainValue(ICameraFrame* frame)
 {
 	CAM_ERR("%s:%d getFrameGainValue is not implemented for HAL1\n",__func__,__LINE__);
    	return 0;
+}
+
+uint64_t CameraParams::getFrameRollingShutterSkew(ICameraFrame* frame)
+{
+    CAM_ERR("%s:%d getFrameExposureTime is not implemented for HAL1\n",__func__,__LINE__);
+    return 0;
+}
+
+uint64_t CameraParams::getFrameReadoutTimestamp(ICameraFrame* frame)
+{
+	CAM_ERR("%s:%d getFrameExposureTime is not implemented for HAL1\n",__func__,__LINE__);
+	return 0;
+}
+
+uint64_t CameraParams::getFrameReadoutDuration(ICameraFrame* frame)
+{
+	CAM_ERR("%s:%d getFrameExposureTime is not implemented for HAL1\n",__func__,__LINE__);
+	return 0;
 }
 } /* namespace camera */
 

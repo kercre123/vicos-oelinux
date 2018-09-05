@@ -49,11 +49,13 @@ class SystemTestWav
   ~SystemTestWav();
 
   int32_t Configure(const ::std::string& filename_prefix, size_t* buffer_size);
+  int32_t Configure(const ::std::string& filename_prefix);
 
   int32_t Open();
   void Close();
 
   int32_t Read(void* buffer);
+  int32_t Write(void* buffer, const size_t buffer_size);
 
  private:
   struct __attribute__((packed)) WavRiffHeader {
@@ -136,9 +138,11 @@ class SystemTestWav
 
   ::std::string filename_;
   WavHeader header_;
+  ::std::ofstream output_;
   ::std::ifstream input_;
   ::std::streampos input_start_position_;
-  int32_t input_data_size_;
+  int32_t data_size_;
+  int32_t direction_;
 
   // disable copy, assignment, and move
   SystemTestWav(const SystemTestWav&) = delete;

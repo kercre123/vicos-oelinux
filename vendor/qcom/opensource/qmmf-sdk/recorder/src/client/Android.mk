@@ -27,6 +27,8 @@ LOCAL_SHARED_LIBRARIES += libqmmf_camera_adaptor libbinder
 
 LOCAL_MODULE = libqmmf_recorder_client
 
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(QMMF_SDK_TOP_SRCDIR)/include
+
 include $(BUILD_SHARED_LIBRARY)
 
 endif # BUILD_QMMMF

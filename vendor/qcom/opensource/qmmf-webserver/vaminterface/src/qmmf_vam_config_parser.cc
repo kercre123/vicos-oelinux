@@ -32,12 +32,62 @@ extern "C"{
 #include <configuration_parser_apis.h>
 }
 #include "qmmf_vam_config_parser.h"
+#include <dlfcn.h>
 
 namespace qmmf {
 
 namespace vaminterface {
 
-VAMConfigParser::VAMConfigParser() : parser_handle_(NULL) {}
+
+typedef enum JSONVAStatus (*parser_init_t)(void **);
+typedef enum JSONVAStatus (*parser_deinit_t)(void *);
+typedef enum JSONVAStatus (*parser_clear_t)(void *);
+typedef enum JSONVAStatus (*parser_parse_doc_t)(
+                            void *, const char *, struct JSONConfiguration **);
+
+void *parser_lib_handle = nullptr;
+parser_init_t configuration_parser_init = nullptr;
+parser_deinit_t configuration_parser_deinit = nullptr;
+parser_clear_t configuration_parser_clear = nullptr;
+parser_parse_doc_t configuration_parser_parse_doc = nullptr;
+
+void initPareserLib() {
+  if (parser_lib_handle) {
+    return;
+  }
+
+#ifdef ANDROID
+  void *lptr = dlopen("libjson_apis.so", RTLD_NOW);
+#else
+  void *lptr = dlopen("libjson_apis.so.0", RTLD_NOW);
+#endif
+  if (!lptr) {
+    ALOGE("%s: can't load libjson_apis library", __func__);
+    return;
+  }
+
+  configuration_parser_init =
+          (parser_init_t)dlsym(lptr, "configuration_parser_init");
+  configuration_parser_deinit =
+          (parser_deinit_t)dlsym(lptr, "configuration_parser_deinit");
+  configuration_parser_clear =
+          (parser_clear_t)dlsym(lptr, "configuration_parser_clear");
+  configuration_parser_parse_doc=
+          (parser_parse_doc_t)dlsym(lptr, "configuration_parser_parse_doc");
+
+  if (configuration_parser_init &&
+      configuration_parser_deinit &&
+      configuration_parser_clear  &&
+      configuration_parser_parse_doc) {
+      parser_lib_handle = lptr;
+  } else {
+    dlclose(lptr);
+  }
+}
+
+VAMConfigParser::VAMConfigParser() : parser_handle_(NULL) {
+  initPareserLib();
+}
 
 VAMConfigParser::~VAMConfigParser() {
   if (NULL != parser_handle_) {
@@ -48,6 +98,11 @@ VAMConfigParser::~VAMConfigParser() {
 
 int32_t VAMConfigParser::Init() {
   int32_t ret = NO_ERROR;
+
+  if (!parser_lib_handle) {
+    ALOGE("%s: Failed to load libjson_apis library", __func__);
+    return NAME_NOT_FOUND;
+  }
 
   auto status = configuration_parser_init(&parser_handle_);
   if (JSON_VA_OK != status) {
@@ -104,6 +159,11 @@ int32_t VAMConfigParser::ParseConfig(const char *json_config,
   struct JSONConfiguration *config = NULL;
   vaapi_zone zones[VAAPI_ZONE_MAX];
 
+  if (!parser_lib_handle) {
+    ALOGE("%s: Failed to load libjson_apis library", __func__);
+    return NAME_NOT_FOUND;
+  }
+
   if (NULL == parser_handle_) {
     ALOGE("%s: Parser not initialized!\n", __func__);
     return NO_INIT;
@@ -151,6 +211,7 @@ int32_t VAMConfigParser::ParseConfig(const char *json_config,
     size_t name_size = sizeof(result.rules[0].name);
     for (size_t i = 0; i < result.rule_size; i++) {
       result.rules[i].minimum_size = config->atomic_rules[i].min_size;
+      result.rules[i].scene_type = config->atomic_rules[i].scene_type;
       result.rules[i].sensitivity = config->atomic_rules[i].sensitivity;
       memset(result.rules[i].id, '\0', id_size);
       strncpy(result.rules[i].id, config->atomic_rules[i].id, id_size - 1);

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -49,6 +49,7 @@ using ::qmmf::common::audio::AudioBuffer;
 using ::qmmf::common::audio::AudioEventHandler;
 using ::qmmf::common::audio::AudioEventType;
 using ::qmmf::common::audio::AudioEventData;
+using ::qmmf::common::audio::AudioParamType;
 
 #define NUMBER_OF_SINK_BUFFERS 4
 
@@ -63,7 +64,9 @@ class AudioSink {
 
   ~AudioSink();
 
-  status_t CreateTrackSink(uint32_t track_id, AudioTrackParams& param);
+  status_t CreateTrackSink(uint32_t track_id,
+                           AudioTrackParams& param,
+                           TrackCb& callback);
 
   const ::std::shared_ptr<AudioTrackSink>& GetTrackSink(uint32_t track_id);
 
@@ -72,6 +75,11 @@ class AudioSink {
   status_t StopTrackSink(uint32_t track_id);
 
   status_t DeleteTrackSink(uint32_t track_id);
+
+  status_t SetAudioTrackSinkParams(uint32_t track_id,
+                                   CodecParamType param_type,
+                                   void* param,
+                                   uint32_t param_size);
 
  private:
   AudioSink();
@@ -89,7 +97,7 @@ class AudioTrackSink : public ::qmmf::avcodec::ICodecSource {
 
   ~AudioTrackSink();
 
-  status_t Init(AudioTrackParams& param);
+  status_t Init(AudioTrackParams& param, TrackCb& callback);
 
   status_t StartSink();
 
@@ -100,6 +108,10 @@ class AudioTrackSink : public ::qmmf::avcodec::ICodecSource {
   status_t ResumeSink();
 
   status_t DeleteSink();
+
+  status_t SetAudioSinkParams(CodecParamType param_type,
+                              void* param,
+                              uint32_t param_size);
 
   void AddBufferList(::android::Vector<::qmmf::avcodec::CodecBuffer>& list);
 
@@ -122,10 +134,11 @@ class AudioTrackSink : public ::qmmf::avcodec::ICodecSource {
   int32_t FillSinkBuffer(BufferDescriptor& codec_buffer);
 
   void ErrorHandler(const int32_t error);
-
   void BufferHandler(const AudioBuffer& buffer);
+  void StoppedHandler();
 
   AudioTrackParams       track_params_;
+  TrackCb                callback_;
   AudioEndPoint*         end_point_;
 
   // For decoded frame
@@ -133,10 +146,10 @@ class AudioTrackSink : public ::qmmf::avcodec::ICodecSource {
   TSQueue<::qmmf::avcodec::CodecBuffer>            output_free_buffer_queue_;
   TSQueue<::qmmf::avcodec::CodecBuffer>            output_occupy_buffer_queue_;
 
-  ::android::Mutex                  wait_for_frame_lock_;
-  ::android::Condition              wait_for_frame_;
+  std::mutex                        wait_for_frame_lock_;
+  QCondition                        wait_for_frame_;
   int32_t                           ion_device_;
-  ::android::Mutex                  queue_lock_;
+  std::mutex                        queue_lock_;
 
   // For Sink
   int32_t sink_buffer_size_;
@@ -148,9 +161,9 @@ class AudioTrackSink : public ::qmmf::avcodec::ICodecSource {
   ::android::Vector<IonHandleData>  ion_handle_data;
 
   TSQueue<AudioBuffer>              sink_buffer_queue_;
-  ::android::Mutex                  sink_queue_lock_;
-  ::android::Mutex                  wait_for_sink_queue_lock_;
-  ::android::Condition              wait_for_sink_frame_;
+  std::mutex                        sink_queue_lock_;
+  std::mutex                        wait_for_sink_queue_lock_;
+  QCondition                        wait_for_sink_frame_;
   bool                              stopplayback_;
   bool                              paused_;
   uint32_t                          decoded_frame_number_;

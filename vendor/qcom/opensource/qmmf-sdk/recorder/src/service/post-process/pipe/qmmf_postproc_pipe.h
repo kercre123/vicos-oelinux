@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 
+#include "common/utils/qmmf_condition.h"
 #include "../node/qmmf_postproc_node.h"
 #include "../factory/qmmf_postproc_factory.h"
 
@@ -49,9 +50,11 @@ struct PipeIOParam {
   uint32_t scanline;
   uint32_t frame_rate;
   int32_t format;
-  uint32_t image_quality;
   int32_t gralloc_flags;
   uint32_t buffer_count;
+  uint32_t max_internal_buffers;
+  bool frame_skip;
+  bool exif_en;
 };
 
 enum class PostProcPipeState {
@@ -63,7 +66,7 @@ enum class PostProcPipeState {
   READYTOSTOP,
 };
 
-class PostProcPipe : public virtual  RefBase {
+class PostProcPipe {
 
  public:
 
@@ -73,6 +76,10 @@ class PostProcPipe : public virtual  RefBase {
 
    status_t CreatePipe(const PipeIOParam &pipe_out_param,
        const std::vector<uint32_t> &plugins, PipeIOParam &pipe_in_param);
+
+   status_t DeletePipe();
+
+   status_t Configure(const std::string &config_json_data);
 
    status_t AddConsumer(sp<IBufferConsumer>& consumer);
 
@@ -84,6 +91,8 @@ class PostProcPipe : public virtual  RefBase {
 
    status_t Stop();
 
+   status_t Abort();
+
    sp<IBufferConsumer>& GetConsumerIntf();
 
    void PipeNotifyBufferReturn(StreamBuffer& buffer);
@@ -94,7 +103,7 @@ class PostProcPipe : public virtual  RefBase {
 
    void UnlinkPipe(sp<IBufferConsumer>& consumer);
 
-   sp<PostProcNode> FindInternalNode(const PostProcIOParam &output);
+   std::shared_ptr<PostProcNode> FindInternalNode(const PostProcIOParam &output);
 
    bool IsRAWFormat(const BufferFormat &format);
 
@@ -114,15 +123,21 @@ class PostProcPipe : public virtual  RefBase {
 
    bool SupportsJPEGFormat(const std::set<BufferFormat> &formats);
 
+   static const uint32_t         kWaitAbortTimeout = 2000000000; // 2 sec.
+
    PostProcPipeState             state_;
 
-   std::vector<sp<PostProcNode>> pipe_;
+   std::vector<std::shared_ptr<PostProcNode>> pipe_;
 
    IPostProc*                    context_;
 
-   sp<PostProcFactory>           factory_;
+   std::shared_ptr<PostProcFactory> factory_;
 
    bool                          use_hal_jpeg_;
+
+   bool                          abort_done_;
+   QCondition                    abort_signal_;
+   std::mutex                    abort_lock_;
 
 };
 

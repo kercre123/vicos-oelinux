@@ -29,20 +29,25 @@
 
 #pragma once
 
+#include <map>
+#include <vector>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <set>
+
+#include <hardware/gralloc.h>
 #include <utils/KeyedVector.h>
+#include <sdm/core/core_interface.h>
+#include <sdm/utils/locker.h>
 
 #include "qmmf-sdk/qmmf_display_params.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 #include "display/src/service/qmmf_display_common.h"
 #include "display/src/service/qmmf_remote_cb.h"
 #include "display/src/service/qmmf_display_sdm_buffer_allocator.h"
 #include "display/src/service/qmmf_display_sdm_buffer_sync_handler.h"
 #include "display/src/service/qmmf_display_sdm_debugger.h"
-#include "sdm/include/core/core_interface.h"
-#include "sdm/include/utils/locker.h"
-#include <map>
-#include <vector>
-#include <hardware/gralloc.h>
 
 namespace qmmf {
 
@@ -110,10 +115,11 @@ class DisplayImpl : public DisplayEventHandler
 
  protected:
   inline void SetRect(const SurfaceRect &source, LayerRect *target);
-  Layer* AllocateLayer(DisplayHandle display_handle, uint32_t* surface_id);
-  void FreeLayer(DisplayHandle display_handle, const uint32_t surface_id);
+  Layer* AllocateLayer(DisplayHandle display_handle, uint32_t* surface_id,
+      uint32_t z_order);
+  status_t FreeLayer(DisplayHandle display_handle, const uint32_t surface_id);
   Layer* GetLayer(DisplayHandle display_handle, const uint32_t surface_id);
-  LayerStack* GetLayerStack(DisplayHandle display_handle,
+  LayerStack* GetLayerStack(DisplayType display_type,
       bool queued_buffers_only);
 
   // DisplayEventHandler methods
@@ -129,50 +135,128 @@ class DisplayImpl : public DisplayEventHandler
 
  private:
 
-  Mutex                        mLock;
-  pthread_mutex_t thread_lock_;
-  pthread_t                    pid_;
-  Locker     vsync_callback_locker_;
+  std::mutex       thread_lock_;
+  ::std::thread*   handle_vsync_thread_;
+  Locker           vsync_callback_locker_;
+  bool             running_;
 
   /**Not allowed */
   DisplayImpl();
   DisplayImpl(const DisplayImpl&);
   DisplayImpl& operator=(const DisplayImpl&);
-  bool running_;
-  static void* HandleVSync(void *ptr);
+
+  static void HandleVSyncThreadEntry(DisplayImpl* display_impl);
+  void HandleVSync();
   static DisplayImpl* instance_;
   DisplayBufferAllocator buffer_allocator_;
   DisplayBufferSyncHandler buffer_sync_handler_;
   static CoreInterface* core_intf_;
   alloc_device_t *gralloc_device_;
 
-  typedef struct Buff_Info {
-    bool  queued;
-    bool  dequed;
-    bool  commited;
-  }Buff_Info;
+  enum class BufferStates {
+    kStateFree      = 1, // x1 = 0, x2 = 0, x3 = 0
+    kStateDequeued  = 2, // x1 = 1, x2 = 0, x3 = 0
+    kStateQueued    = 3, // x1 = 0, x2 = 1, x3 = 0
+    kStateCommitted = 4, // x1 = 0, x2 = 1, x3 = 1
+    kInvalid        = 0x7FFFFFFF, // (!x1 & x2) | (!x2 & !x3) = 1
+  };
+
+  class BufferState {
+   public:
+    BufferState(const BufferStates state) {
+      current_state_ = state;
+      dequeued_  = GetDequeuedState(state);
+      queued_    = GetQueuedState(state);
+      committed_ = GetCommitedState(state);
+    }
+
+    inline BufferStates GetState() {return current_state_;}
+    BufferStates SetState(const BufferStates state) {
+      if (IsStateTransitionValid(current_state_, state)) {
+        dequeued_  = GetDequeuedState(state);
+        queued_    = GetQueuedState(state);
+        committed_ = GetCommitedState(state);
+        current_state_ = state;
+      }
+      return current_state_;
+    }
+   private:
+    bool  dequeued_;   // x1
+    bool  queued_;     // x2
+    bool  committed_;  // x3
+    BufferStates current_state_;
+    inline bool GetDequeuedState(const BufferStates state) {
+      if (state == BufferStates::kStateDequeued)
+        return true;
+      else
+        return false;
+    }
+
+    inline bool GetQueuedState(const BufferStates state) {
+      if (state == BufferStates::kStateQueued ||
+          state == BufferStates::kStateCommitted)
+        return true;
+      else
+        return false;
+    }
+
+    inline bool GetCommitedState(const BufferStates state) {
+      if (state == BufferStates::kStateCommitted)
+        return true;
+      else
+        return false;
+    }
+
+    bool IsStateTransitionValid(const BufferStates old_state,
+                                const BufferStates new_state) {
+      if (old_state == BufferStates::kInvalid)
+        return false;
+      else if (old_state == BufferStates::kStateDequeued
+               && new_state == BufferStates::kStateQueued)
+        return true;
+      else if (old_state == BufferStates::kStateQueued
+               && new_state == BufferStates::kStateCommitted)
+        return true;
+      else if (old_state == BufferStates::kStateCommitted
+               && new_state == BufferStates::kStateFree)
+        return true;
+      else if (old_state == BufferStates::kStateFree
+               && new_state == BufferStates::kStateDequeued)
+        return true;
+      else
+        return false;
+    }
+  };
 
   typedef struct SurfaceInfo {
-    void* mmapbuf;
-    Layer* layer;
-    std::map<int32_t, BufferInfo*> buffer_info;
-    std::map<int32_t, Buff_Info*> buf_id_use;
-    bool buffer_internal;
-  }SurfaceInfo;
+    Layer*                           layer;
+    // map of buffer id and buffer info
+    std::map<int32_t, BufferInfo*>   buffer_info;
+    // map of buffer id and buffer state
+    std::map<int32_t, BufferState*>  buffer_state;
+    bool                             allocate_buffer_mode;
+  } SurfaceInfo;
 
-  typedef std::map<uint32_t, SurfaceInfo*> SurfaceinfoMap;
-  typedef struct DisplayInfo {
-    DisplayType       display_type;
-    DisplayInterface* display_intf;
-    uint32_t          layer_count;
-    uint32_t          num_of_clients;
-    sp<RemoteCallBack>           remote_cb_;
-    SurfaceinfoMap surfaceinfo_;
-  }DisplayInfo;
+  typedef struct DisplayClientInfo {
+    DisplayType                      display_type;
+    uint32_t                         num_of_client_layers;
+    sp<RemoteCallBack>               remote_cb;
+  } DisplayClientInfo;
 
-  DisplayHandle current_handle_;
-  bool vsync_state_;
-  std::map<DisplayHandle, DisplayInfo*> displayinfo_;
+  typedef struct DisplayTypeInfo {
+    std::map<uint32_t, uint32_t>     z_order_surface_id_map;
+    uint32_t                         num_of_clients;
+    DisplayInterface*                display_intf;
+  } DisplayTypeInfo;
+
+  bool                                         vsync_state_;
+  DisplayHandle                                current_handle_;
+  uint32_t                                     unique_surface_id_;
+  std::mutex                                   api_lock_;
+  std::mutex                                   layer_lock_;
+  std::map<DisplayHandle, DisplayClientInfo*>  display_client_info_map_;
+  std::map<DisplayType, DisplayTypeInfo*>      display_type_info_map_;
+  std::map<uint32_t, SurfaceInfo*>             surface_info_map_;
 };
 
 }; // namespace display

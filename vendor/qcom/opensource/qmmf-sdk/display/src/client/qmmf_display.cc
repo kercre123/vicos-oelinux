@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define TAG "Display"
+#define LOG_TAG "Display"
 
 #include "qmmf-sdk/qmmf_display.h"
 #include "qmmf-sdk/qmmf_display_params.h"
@@ -54,7 +54,7 @@ Display::~Display() {
 
 status_t Display::Connect() {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(display_client_ != nullptr);
 
   auto ret = display_client_->Connect();
@@ -66,19 +66,19 @@ status_t Display::Connect() {
 
 status_t Display::Disconnect() {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   auto ret = display_client_->Disconnect();
   if(NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s Disconnect failed!", TAG, __func__);
+    QMMF_ERROR("%s Disconnect failed!", __func__);
   }
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::CreateDisplay(DisplayType type, DisplayCb& cb) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(cb.VSyncCb != nullptr);
 
   auto ret = display_client_->CreateDisplay(type, cb);
@@ -86,27 +86,27 @@ status_t Display::CreateDisplay(DisplayType type, DisplayCb& cb) {
     QMMF_ERROR("%s: CreateDisplay failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::DestroyDisplay(DisplayType type) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(display_client_ != nullptr);
 
   auto ret = display_client_->DestroyDisplay(type);
   if(NO_ERROR != ret) {
-    QMMF_ERROR("%s:%s DestroyDisplay failed!", TAG, __func__);
+    QMMF_ERROR("%s DestroyDisplay failed!", __func__);
   }
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::CreateSurface(const SurfaceConfig &surface_config,
   uint32_t* surface_id) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(&surface_config != NULL);
   assert(surface_id != NULL);
 
@@ -116,27 +116,27 @@ status_t Display::CreateSurface(const SurfaceConfig &surface_config,
     QMMF_ERROR("%s: CreateSurface failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::DestroySurface(const uint32_t surface_id) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
 
   auto ret = display_client_->DestroySurface(surface_id);
   if(NO_ERROR != ret) {
     QMMF_ERROR("%s: DestroySurface failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::DequeueSurfaceBuffer(const uint32_t surface_id,
         SurfaceBuffer &surface_buffer) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(&surface_buffer != NULL);
 
   auto ret = display_client_->DequeueSurfaceBuffer(surface_id, surface_buffer);
@@ -144,7 +144,7 @@ status_t Display::DequeueSurfaceBuffer(const uint32_t surface_id,
     QMMF_ERROR("%s: DequeueSurfaceBuffer failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: EXIT", TAG, __func__);
+  QMMF_INFO("%s: EXIT", __func__);
   return ret;
 }
 
@@ -152,7 +152,7 @@ status_t Display::QueueSurfaceBuffer(const uint32_t surface_id,
       const SurfaceBuffer &surface_buffer,
       const SurfaceParam &surface_param) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(&surface_buffer != NULL);
   assert(&surface_param != NULL);
 
@@ -162,14 +162,14 @@ status_t Display::QueueSurfaceBuffer(const uint32_t surface_id,
     QMMF_ERROR("%s: QueueSurfaceBuffer failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::GetDisplayParam(DisplayParamType param_type, void *param,
       size_t param_size) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(param != NULL);
   assert(param_size != 0);
 
@@ -178,14 +178,14 @@ status_t Display::GetDisplayParam(DisplayParamType param_type, void *param,
     QMMF_ERROR("%s: GetDisplayParam failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::SetDisplayParam(DisplayParamType param_type,
       const void *param, size_t param_size) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(param != NULL);
   assert(param_size != 0);
 
@@ -195,14 +195,14 @@ status_t Display::SetDisplayParam(DisplayParamType param_type,
     QMMF_ERROR("%s: SetDisplayParam failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::DequeueWBSurfaceBuffer(const uint32_t surface_id,
       SurfaceBuffer &surface_buffer) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(&surface_buffer != NULL);
 
   auto ret = display_client_->DequeueWBSurfaceBuffer(surface_id,
@@ -211,14 +211,14 @@ status_t Display::DequeueWBSurfaceBuffer(const uint32_t surface_id,
     QMMF_ERROR("%s: DequeueWBSurfaceBuffer failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 
 status_t Display::QueueWBSurfaceBuffer(const uint32_t surface_id,
       const SurfaceBuffer &surface_buffer) {
 
-  QMMF_INFO("%s:%s: Enter", TAG, __func__);
+  QMMF_INFO("%s: Enter", __func__);
   assert(&surface_buffer != NULL);
 
   auto ret = display_client_->QueueWBSurfaceBuffer(surface_id,
@@ -227,7 +227,7 @@ status_t Display::QueueWBSurfaceBuffer(const uint32_t surface_id,
     QMMF_ERROR("%s: QueueWBSurfaceBuffer failed!", __func__);
   }
 
-  QMMF_INFO("%s:%s: Exit", TAG, __func__);
+  QMMF_INFO("%s: Exit", __func__);
   return ret;
 }
 

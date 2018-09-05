@@ -129,14 +129,13 @@ const std::string WHITE_BALANCE_TWILIGHT = "twilight";
 const std::string WHITE_BALANCE_SHADE = "shade";
 const std::string WHITE_BALANCE_MANUAL_CCT = "manual-cct";
 
-#if defined(_HAL3_CAMERA_)
- /* Sharpness values*/
-const std::string EDGE_OFF = "off";
-const std::string EDGE_FAST = "fast";
-const std::string EDGE_HIGH_QUALITY = "highquality";
-const std::string EDGE_ZERO_SHUTTER_LAG = "zsl";
+ /* Sharpness values*/   // Used in HAL3 based implementation
+const std::string SHARPNESS_MODE_EDGE_OFF = "off";
+const std::string SHARPNESS_MODE_EDGE_FAST = "fast";
+const std::string SHARPNESS_MODE_EDGE_HIGH_QUALITY = "highquality";
+const std::string SHARPNESS_MODE_EDGE_ZERO_SHUTTER_LAG = "zsl";
 
-/* ToneMap values*/
+/* ToneMap values*/      // Used in HAL3 based implementation
 const std::string TONEMAP_CONTRAST_CURVE = "contrast";
 const std::string TONEMAP_FAST = "fast";
 const std::string TONEMAP_HIGH_QUALITY = "highquality";
@@ -160,7 +159,7 @@ typedef struct {
    size_t tonemap_points_cnt;
    cam_tonemap_curve_t curves[3];
 }Tonemap_RBG;
-#endif
+
 
 enum StatsLoggingMask {
     STATS_NO_LOG           = 0,
@@ -370,9 +369,11 @@ public:
      * @param value
      */
     void setISO(const std::string& value);
-#if defined(_HAL3_CAMERA_)
+
     /**
      * get a list of supported Sharpness modes
+     *
+     * (HAL3 only)
      *
      * @return vector<string> : Sharpness values
      */
@@ -381,12 +382,16 @@ public:
     /**
      * get current value of Sharpness mode
      *
+     * (HAL3 only)
+     *
      * @return std::string
      */
     std::string getSharpnessMode() const;
 
     /**
      * set Sharpness mode value
+     *
+     * (HAL3 only)
      *
      * @param value
      */
@@ -395,12 +400,16 @@ public:
     /**
      * get a list of supported ToneMap modes
      *
+     * (HAL3 only)
+     *
      * @return vector<string> : Sharpness values
      */
     std::vector<std::string> getSupportedToneMapMode() const;
 
     /**
      * get current value of ToneMap mode
+     *
+     * (HAL3 only)
      *
      * @return std::string
      */
@@ -409,12 +418,16 @@ public:
     /**
      * set ToneMap mode value
      *
+     * (HAL3 only)
+     *
      * @param value
      */
     void setToneMapMode(const std::string& value);    
-#endif
+
     /**
      * get a range of supported sharpness values
+     *
+     *(HAL3 only)
      *
      * @return Range : sharpness range
      */
@@ -462,14 +475,16 @@ public:
      */
     Range getSupportedContrast() const;
 
-#if defined(_HAL3_CAMERA_)
+
     /**
-     * get current contrast tone value
+     *get current contrast tone value
      *
-     * @return Tonemap_RBG
+     *(HAL3 only)
+     *
+     *@return Tonemap_RBG
      */
     Tonemap_RBG getContrastTone() const;
-#endif
+
     /**
      * get current contrast value
      *
@@ -477,14 +492,15 @@ public:
      */
     int getContrast() const;
 
-#if defined(_HAL3_CAMERA_)
     /**
      * set contrast tone value
+     *
+     * (HAL3 only)
      *
      * @param value
      */
     void setContrastTone(Tonemap_RBG& tonemap);
-#endif
+
     /**
      * set contrast value
      *
@@ -685,7 +701,9 @@ public:
 	uint64_t getFrameReadoutDuration(ICameraFrame* frame);
 
 private:
-
+#if defined(_HAL3_CAMERA_)
+    std::vector<Range> getHFRFpsRange() const;
+#endif
     /**
      * private implementation and storage handle for parameters
      */

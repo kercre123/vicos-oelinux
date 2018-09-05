@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,21 +27,21 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderAudioRawTrackSource"
+#define LOG_TAG "RecorderAudioRawTrackSource"
 
 #include "recorder/src/service/qmmf_audio_track_source.h"
 
-#include <condition_variable>
 #include <cstdint>
 #include <cstring>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 #include <vector>
 
 #include "common/audio/inc/qmmf_audio_definitions.h"
 #include "common/audio/inc/qmmf_audio_endpoint.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 #include "recorder/src/service/qmmf_recorder_common.h"
 #include "recorder/src/service/qmmf_recorder_ion.h"
 
@@ -54,12 +54,14 @@ using ::qmmf::common::audio::AudioBuffer;
 using ::qmmf::common::audio::AudioEndPoint;
 using ::qmmf::common::audio::AudioEndPointType;
 using ::qmmf::common::audio::AudioEventHandler;
-using ::qmmf::common::audio::AudioMetadata;
 using ::qmmf::common::audio::AudioEventType;
 using ::qmmf::common::audio::AudioEventData;
-using ::std::condition_variable;
+using ::qmmf::common::audio::AudioMetadata;
+using ::qmmf::common::audio::AudioParamCustomData;
+using ::qmmf::common::audio::AudioParamType;
 using ::std::mutex;
 using ::std::queue;
+using ::std::string;
 using ::std::thread;
 using ::std::unique_lock;
 using ::std::vector;
@@ -70,28 +72,29 @@ AudioRawTrackSource::AudioRawTrackSource(const AudioTrackParams& params)
     : track_params_(params),
       end_point_(nullptr),
       thread_(nullptr) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: params[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: params[%s]", __func__,
                params.ToString().c_str());
 }
 
 AudioRawTrackSource::~AudioRawTrackSource() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 status_t AudioRawTrackSource::Init() {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
   int32_t result;
+  AudioMetadata metadata{};
 
   if (end_point_ != nullptr) {
-    QMMF_ERROR("%s: %s() endpoint already exists", TAG, __func__);
+    QMMF_ERROR("%s() endpoint already exists", __func__);
     return ::android::ALREADY_EXISTS;
   }
 
   end_point_ = new AudioEndPoint;
   if (end_point_ == nullptr) {
-    QMMF_ERROR("%s: %s() could not instantiate endpoint", TAG, __func__);
+    QMMF_ERROR("%s() could not instantiate endpoint", __func__);
     return ::android::NO_MEMORY;
   }
 
@@ -105,18 +108,19 @@ status_t AudioRawTrackSource::Init() {
         case AudioEventType::kBuffer:
           BufferHandler(event_data.buffer);
           break;
+        case AudioEventType::kStopped:
+          // TODO
+          break;
       }
     };
 
   result = end_point_->Connect(audio_handler);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Connect failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Connect failed: %d[%s]", __func__,
                result, strerror(result));
     goto error_free;
   }
 
-  AudioMetadata metadata;
-  memset(&metadata, 0x0, sizeof metadata);
   metadata.format = AudioFormat::kPCM;
   metadata.num_channels = track_params_.params.channels;
   metadata.sample_rate = track_params_.params.sample_rate;
@@ -130,23 +134,32 @@ status_t AudioRawTrackSource::Init() {
                                    metadata);
   }
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Configure failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Configure failed: %d[%s]", __func__,
                result, strerror(result));
     goto error_disconnect;
+  }
+
+  if (strlen(track_params_.params.profile) > 0) {
+    auto ret = SetParameter("audio_stream_profile",
+                            track_params_.params.profile);
+    if (ret != NO_ERROR) {
+      QMMF_ERROR("%s: Failed to enable profile: %d", __func__, ret);
+      return ret;
+    }
   }
 
   int32_t buffer_size;
   result = end_point_->GetBufferSize(&buffer_size);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->GetBufferSize failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->GetBufferSize failed: %d[%s]", __func__,
                result, strerror(result));
     goto error_disconnect;
   }
-  QMMF_INFO("%s: %s() buffer_size is %d", TAG, __func__, buffer_size);
+  QMMF_INFO("%s() buffer_size is %d", __func__, buffer_size);
 
   result = ion_.Allocate(kNumberOfBuffers, buffer_size);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() ion->Allocate failed: %d[%s]", TAG, __func__, result,
+    QMMF_ERROR("%s() ion->Allocate failed: %d[%s]", __func__, result,
                strerror(result));
     goto error_deallocate;
   }
@@ -167,18 +180,18 @@ error_free:
 }
 
 status_t AudioRawTrackSource::DeInit() {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
   int32_t result;
 
   result = ion_.Deallocate();
   if (result < 0)
-    QMMF_ERROR("%s: %s() ion->Deallocate failed: %d[%s]", TAG, __func__, result,
+    QMMF_ERROR("%s() ion->Deallocate failed: %d[%s]", __func__, result,
                strerror(result));
 
   result = end_point_->Disconnect();
   if (result < 0)
-    QMMF_ERROR("%s: %s() endpoint->Disconnect failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Disconnect failed: %d[%s]", __func__,
                result, strerror(result));
 
   delete end_point_;
@@ -188,17 +201,17 @@ status_t AudioRawTrackSource::DeInit() {
 }
 
 status_t AudioRawTrackSource::StartTrack() {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
 
   if (thread_ != nullptr) {
-    QMMF_ERROR("%s: %s() track already started", TAG, __func__);
+    QMMF_ERROR("%s() track already started", __func__);
     return ::android::ALREADY_EXISTS;
   }
 
   int32_t result = end_point_->Start();
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Start failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Start failed: %d[%s]", __func__,
                result, strerror(result));
     return ::android::FAILED_TRANSACTION;
   }
@@ -208,8 +221,8 @@ status_t AudioRawTrackSource::StartTrack() {
 
   thread_ = new thread(AudioRawTrackSource::ThreadEntry, this);
   if (thread_ == nullptr) {
-    QMMF_ERROR("%s: %s() could not instantiate thread", TAG, __func__);
-    end_point_->Stop(false);
+    QMMF_ERROR("%s() could not instantiate thread", __func__);
+    end_point_->Stop();
     return ::android::NO_MEMORY;
   }
 
@@ -217,7 +230,7 @@ status_t AudioRawTrackSource::StartTrack() {
 }
 
 status_t AudioRawTrackSource::StopTrack() {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
 
   AudioMessage message;
@@ -226,11 +239,11 @@ status_t AudioRawTrackSource::StopTrack() {
   message_lock_.lock();
   messages_.push(message);
   message_lock_.unlock();
-  signal_.notify_one();
+  signal_.Signal();
 
-  int32_t result = end_point_->Stop(false);
+  int32_t result = end_point_->Stop();
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Stop failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Stop failed: %d[%s]", __func__,
                result, strerror(result));
     return ::android::FAILED_TRANSACTION;
   }
@@ -248,7 +261,7 @@ status_t AudioRawTrackSource::StopTrack() {
 }
 
 status_t AudioRawTrackSource::PauseTrack() {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
 
   AudioMessage message;
@@ -257,11 +270,11 @@ status_t AudioRawTrackSource::PauseTrack() {
   message_lock_.lock();
   messages_.push(message);
   message_lock_.unlock();
-  signal_.notify_one();
+  signal_.Signal();
 
   int32_t result = end_point_->Pause();
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Pause failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Pause failed: %d[%s]", __func__,
                result, strerror(result));
     return ::android::FAILED_TRANSACTION;
   }
@@ -270,12 +283,12 @@ status_t AudioRawTrackSource::PauseTrack() {
 }
 
 status_t AudioRawTrackSource::ResumeTrack() {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
 
   int32_t result = end_point_->Resume();
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->Resume failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->Resume failed: %d[%s]", __func__,
                result, strerror(result));
     return ::android::FAILED_TRANSACTION;
   }
@@ -286,17 +299,36 @@ status_t AudioRawTrackSource::ResumeTrack() {
   message_lock_.lock();
   messages_.push(message);
   message_lock_.unlock();
-  signal_.notify_one();
+  signal_.Signal();
+
+  return ::android::NO_ERROR;
+}
+
+status_t AudioRawTrackSource::SetParameter(const string& key,
+                                           const string& value) {
+  QMMF_VERBOSE("%s() INPARAM: key[%s]", __func__, key.c_str());
+  QMMF_VERBOSE("%s() INPARAM: value[%s]", __func__, value.c_str());
+
+  AudioParamCustomData data;
+  data.key = key;
+  data.value = value;
+
+  int32_t result = end_point_->SetParam(AudioParamType::kCustom, data);
+  if (result < 0) {
+    QMMF_ERROR("%s() endpoint->SetParam failed: %d[%s]", __func__,
+               result, strerror(result));
+    return ::android::FAILED_TRANSACTION;
+  }
 
   return ::android::NO_ERROR;
 }
 
 status_t AudioRawTrackSource::ReturnTrackBuffer(
     const std::vector<BnBuffer> &buffers) {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
   for (const BnBuffer& buffer : buffers)
-    QMMF_VERBOSE("%s: %s() INPARAM: bn_buffer[%s]", TAG, __func__,
+    QMMF_VERBOSE("%s() INPARAM: bn_buffer[%s]", __func__,
                  buffer.ToString().c_str());
 
   for (const BnBuffer& buffer : buffers) {
@@ -307,27 +339,27 @@ status_t AudioRawTrackSource::ReturnTrackBuffer(
     message_lock_.lock();
     messages_.push(message);
     message_lock_.unlock();
-    signal_.notify_one();
+    signal_.Signal();
   }
 
   return ::android::NO_ERROR;
 }
 
 void AudioRawTrackSource::ErrorHandler(const int32_t error) {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
-  QMMF_VERBOSE("%s: %s() INPARAM: type[%d]", TAG, __func__, error);
+  QMMF_VERBOSE("%s() INPARAM: type[%d]", __func__, error);
 
-  QMMF_ERROR("%s: %s() received error from endpoint: %d[%s]", TAG, __func__,
+  QMMF_ERROR("%s() received error from endpoint: %d[%s]", __func__,
                error, strerror(error));
   assert(false);
   // TODO(kwestfie@codeaurora.org): send notification to application instead
 }
 
 void AudioRawTrackSource::BufferHandler(const AudioBuffer& buffer) {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer.ToString().c_str());
 
   AudioMessage message;
@@ -337,17 +369,17 @@ void AudioRawTrackSource::BufferHandler(const AudioBuffer& buffer) {
   message_lock_.lock();
   messages_.push(message);
   message_lock_.unlock();
-  signal_.notify_one();
+  signal_.Signal();
 }
 
 void AudioRawTrackSource::ThreadEntry(AudioRawTrackSource* source) {
-  QMMF_DEBUG("%s: %s() TRACE: track_id", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE: track_id", __func__);
 
   source->Thread();
 }
 
 void AudioRawTrackSource::Thread() {
-  QMMF_DEBUG("%s: %s() TRACE: track_id[%u]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE: track_id[%u]", __func__,
              track_params_.track_id);
   queue<AudioBuffer> buffers;
   queue<BnBuffer> bn_buffers;
@@ -358,7 +390,7 @@ void AudioRawTrackSource::Thread() {
   ion_.GetList(&initial_buffers);
   result = end_point_->SendBuffers(initial_buffers);
   if (result < 0) {
-    QMMF_ERROR("%s: %s() endpoint->SendBuffers failed: %d[%s]", TAG, __func__,
+    QMMF_ERROR("%s() endpoint->SendBuffers failed: %d[%s]", __func__,
                result, strerror(result));
     assert(false);
     // TODO(kwestfie@codeaurora.org): send notification to application instead
@@ -372,7 +404,7 @@ void AudioRawTrackSource::Thread() {
     // wait until there is something to do
     if (bn_buffers.empty() && buffers.empty() && messages_.empty()) {
       unique_lock<mutex> lk(message_lock_);
-      signal_.wait(lk);
+      signal_.Wait(lk);
     }
 
     // process the next pending message
@@ -382,39 +414,39 @@ void AudioRawTrackSource::Thread() {
 
       switch (message.type) {
         case AudioMessageType::kMessagePause:
-          QMMF_DEBUG("%s: %s-MessagePause() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessagePause() TRACE", __func__);
           paused = true;
           break;
 
         case AudioMessageType::kMessageResume:
-          QMMF_DEBUG("%s: %s-MessageResume() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessageResume() TRACE", __func__);
           paused = false;
           break;
 
         case AudioMessageType::kMessageStop:
-          QMMF_DEBUG("%s: %s-MessageStop() TRACE", TAG, __func__);
+          QMMF_DEBUG("%s-MessageStop() TRACE", __func__);
           paused = false;
           stop_received = true;
           break;
 
         case AudioMessageType::kMessageBuffer:
-          QMMF_DEBUG("%s: %s-MessageBuffer() TRACE", TAG, __func__);
-          QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s] to queue[%u]",
-                       TAG, __func__, message.buffer.ToString().c_str(),
+          QMMF_DEBUG("%s-MessageBuffer() TRACE", __func__);
+          QMMF_VERBOSE("%s() INPARAM: buffer[%s] to queue[%u]",
+                       __func__, message.buffer.ToString().c_str(),
                        buffers.size());
           buffers.push(message.buffer);
-          QMMF_VERBOSE("%s: %s() buffers queue is now %u deep",
-                       TAG, __func__, buffers.size());
+          QMMF_VERBOSE("%s() buffers queue is now %u deep",
+                       __func__, buffers.size());
           break;
 
         case AudioMessageType::kMessageBnBuffer:
-          QMMF_DEBUG("%s: %s-MessageBnBuffer() TRACE", TAG, __func__);
-          QMMF_VERBOSE("%s: %s() INPARAM: bn_buffer[%s] to queue[%u]",
-                       TAG, __func__, message.bn_buffer.ToString().c_str(),
+          QMMF_DEBUG("%s-MessageBnBuffer() TRACE", __func__);
+          QMMF_VERBOSE("%s() INPARAM: bn_buffer[%s] to queue[%u]",
+                       __func__, message.bn_buffer.ToString().c_str(),
                        bn_buffers.size());
           bn_buffers.push(message.bn_buffer);
-          QMMF_VERBOSE("%s: %s() bn_buffers queue is now %u deep",
-                       TAG, __func__, bn_buffers.size());
+          QMMF_VERBOSE("%s() bn_buffers queue is now %u deep",
+                       __func__, bn_buffers.size());
           break;
       }
       messages_.pop();
@@ -424,8 +456,8 @@ void AudioRawTrackSource::Thread() {
     // process buffers from endpoint
     if (!buffers.empty() && !paused && keep_running) {
       AudioBuffer buffer = buffers.front();
-      QMMF_VERBOSE("%s: %s() track[%u] processing next buffer[%s] from queue[%u]",
-                   TAG, __func__, track_params_.track_id,
+      QMMF_VERBOSE("%s() track[%u] processing next buffer[%s] from queue[%u]",
+                   __func__, track_params_.track_id,
                    buffer.ToString().c_str(), buffers.size());
 
       BnBuffer bn_buffer;
@@ -433,47 +465,47 @@ void AudioRawTrackSource::Thread() {
       std::vector<BnBuffer> bn_buffers;
       bn_buffers.push_back(bn_buffer);
 
-      MetaData meta_data;
-      memset(&meta_data, 0x0, sizeof meta_data);
+      MetaData meta_data{};
       meta_data.meta_flag = static_cast<uint32_t>(MetaParamType::kNone);
       std::vector<MetaData> meta_buffers;
       meta_buffers.push_back(meta_data);
       track_params_.data_cb(bn_buffers, meta_buffers);
 
-      if (stop_received &&
-          buffer.flags & static_cast<uint32_t>(BufferFlags::kFlagEOS))
-        keep_running = false;
-
       buffers.pop();
-      QMMF_VERBOSE("%s: %s() buffers queue is now %u deep",
-                   TAG, __func__, buffers.size());
+      QMMF_VERBOSE("%s() buffers queue is now %u deep",
+                   __func__, buffers.size());
     }
 
     // process buffers from client
     if (!bn_buffers.empty() && !paused && keep_running) {
       BnBuffer bn_buffer = bn_buffers.front();
-      QMMF_VERBOSE("%s: %s() track[%u] processing next bn_buffer[%s] from queue[%u]",
-                   TAG, __func__, track_params_.track_id,
+      QMMF_VERBOSE("%s() track[%u] processing next bn_buffer[%s] from queue[%u]",
+                   __func__, track_params_.track_id,
                    bn_buffer.ToString().c_str(), bn_buffers.size());
 
-      AudioBuffer buffer;
-      ion_.Import(bn_buffer, &buffer);
+      if (stop_received &&
+          bn_buffer.flag & static_cast<uint32_t>(BufferFlags::kFlagEOS)) {
+        keep_running = false;
+      } else {
+        AudioBuffer buffer;
+        ion_.Import(bn_buffer, &buffer);
 
-      memset(buffer.data, 0x00, buffer.capacity);
-      buffer.size = 0;
-      buffer.timestamp = 0;
+        memset(buffer.data, 0x00, buffer.capacity);
+        buffer.size = 0;
+        buffer.timestamp = 0;
 
-      int32_t result = end_point_->SendBuffers({buffer});
-      if (result < 0) {
-        QMMF_ERROR("%s: %s() endpoint->SendBuffers failed: %d[%s]", TAG,
-                   __func__, result, strerror(result));
-        assert(false);
-        // TODO(kwestfie@codeaurora.org): send notification to application
+        int32_t result = end_point_->SendBuffers({buffer});
+        if (result < 0) {
+          QMMF_ERROR("%s() endpoint->SendBuffers failed: %d[%s]",
+                     __func__, result, strerror(result));
+          assert(false);
+          // TODO(kwestfie@codeaurora.org): send notification to application
+        }
       }
 
       bn_buffers.pop();
-      QMMF_VERBOSE("%s: %s() bn_buffers queue is now %u deep",
-                   TAG, __func__, bn_buffers.size());
+      QMMF_VERBOSE("%s() bn_buffers queue is now %u deep",
+                   __func__, bn_buffers.size());
     }
   }
 }

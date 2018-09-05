@@ -110,7 +110,6 @@ typedef enum VAMDatabaseCommand_t {
     FRDB_GET_FEATURE_IDS_FOR_DISPLAY_NAME,
     FRDB_GET_ENROLL_INFO,
     FRDB_GET_ENROLL_IMAGE_DATA,
-    FRDB_REMOVE_ENROLLED_IMAGE,
 } VAMDatabaseCommand;
 
 typedef struct VAMDatabaseCmdParams_t {

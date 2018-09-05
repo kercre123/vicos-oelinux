@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,7 +39,7 @@
 #include "common/audio/inc/qmmf_audio_definitions.h"
 #include "common/audio/src/service/qmmf_audio_service_interface.h"
 #include "common/audio/src/service/qmmf_audio_common.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 namespace qmmf {
 namespace common {
@@ -57,7 +57,7 @@ class AudioEndPointClient {
                     const AudioMetadata& metadata);
 
   int32_t Start();
-  int32_t Stop(const bool flush);
+  int32_t Stop();
   int32_t Pause();
   int32_t Resume();
 
@@ -71,6 +71,7 @@ class AudioEndPointClient {
   // callbacks from service
   void NotifyErrorEvent(const int32_t error);
   void NotifyBufferEvent(const AudioBuffer& buffer);
+  void NotifyStoppedEvent();
 
  private:
   class DeathNotifier : public ::android::IBinder::DeathRecipient {
@@ -112,6 +113,7 @@ class ServiceCallbackHandler : public BnAudioServiceCallback {
   // methods of BnAudioServiceCallback
   void NotifyErrorEvent(const int32_t error);
   void NotifyBufferEvent(const AudioBuffer& buffer);
+  void NotifyStoppedEvent();
 
   AudioEndPointClient *client_;
 };

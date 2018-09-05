@@ -192,7 +192,6 @@
         FRDB_GET_FEATURE_IDS_FOR_DISPLAY_NAME   = 105- Input params: 'db_id'. For the provided display name, returns a list of all feature ids
         FRDB_GET_ENROLL_INFO                    = 106- Input params: 'db_id'. Returns the enrollment information in JSON format for the requested image with image id 'db_id'
         FRDB_GET_ENROLL_IMAGE_DATA              = 107- Input params: 'db_id'. Returns the image data for the requested image with image id 'db_id'
-        FRDB_REMOVE_ENROLLED_IMAGE              = 108- Input params: 'db_id'. Removes the enrollment information for the requested image with image id 'db_id'
    * db_id - An event/frame/rule/enroll ID parameter used by some of the DB queries
    * db_event_type - An event type parameter used by some of the DB queries
    * db_max_event_cnt - The maximum number of event entries to be returned by the database

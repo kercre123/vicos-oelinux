@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -66,9 +66,13 @@ class VideoDecoderCore {
 
   status_t StartTrackDecoder(uint32_t track_id);
 
-  status_t StopTrackDecoder(uint32_t track_id, bool do_flush);
+  status_t StopTrackDecoder(uint32_t track_id,
+                            const PictureParam& params,
+                            BufferDescriptor* grab_buffer);
 
-  status_t PauseTrackDecoder(uint32_t track_id);
+  status_t PauseTrackDecoder(uint32_t track_id,
+                             const PictureParam& params,
+                             BufferDescriptor* grab_buffer);
 
   status_t ResumeTrackDecoder(uint32_t track_id);
 
@@ -81,6 +85,8 @@ class VideoDecoderCore {
 
   status_t SetTrackTrickMode(uint32_t track_id, TrickModeSpeed speed,
                              TrickModeDirection dir);
+
+  status_t SetPosition(uint32_t track_id, int64_t seek_time);
 
  private:
 
@@ -116,9 +122,11 @@ class VideoTrackDecoder : public ::qmmf::avcodec::ICodecSource {
 
   status_t StartDecoder();
 
-  status_t StopDecoder(bool do_flush);
+  status_t StopDecoder(const PictureParam& params,
+                       BufferDescriptor* grab_buffer);
 
-  status_t PauseDecoder();
+  status_t PauseDecoder(const PictureParam& params,
+                        BufferDescriptor* grab_buffer);
 
   status_t ResumeDecoder();
 
@@ -128,6 +136,8 @@ class VideoTrackDecoder : public ::qmmf::avcodec::ICodecSource {
   status_t DeleteDecoder();
 
   status_t SetTrickMode(TrickModeSpeed speed, TrickModeDirection dir);
+
+  status_t SetPosition(int64_t seek_time);
 
   status_t GetBuffer(BufferDescriptor& stream_buffer,
                      void* client_data) override;
@@ -178,18 +188,19 @@ class VideoTrackDecoder : public ::qmmf::avcodec::ICodecSource {
   uint32_t                             output_buffer_count_;
   uint32_t                             output_buffer_size_;
 
-  Mutex                   wait_for_empty_frame_lock_;
-  Condition               wait_for_empty_frame_;
-  Mutex                   wait_for_frame_lock_;
-  Condition               wait_for_frame_;
+  std::mutex              wait_for_empty_frame_lock_;
+  QCondition              wait_for_empty_frame_;
+  std::mutex              wait_for_frame_lock_;
+  QCondition              wait_for_frame_;
   int32_t                 ion_device_;
-  Mutex                   queue_lock_;
+  std::mutex              queue_lock_;
 
 #ifdef DUMP_VIDEO_BITSTREAM
   int32_t                 file_fd_video_;
 #endif
   time_point<high_resolution_clock>   prev_time_;
   uint32_t                            player_decode_profile_;
+  bool                                stop_received_;
 };
 
 };  // namespace player

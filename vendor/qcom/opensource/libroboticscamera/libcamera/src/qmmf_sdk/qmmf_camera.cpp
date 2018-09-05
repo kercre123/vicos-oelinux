@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017 The Linux Foundataion. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -625,7 +625,7 @@ void qmmfCAMERA::stopPreview()
 	CAM_INFO("%s:%d: Enter : P_on = %d  , V_on = %d ",__func__,__LINE__, isPreviewRunning_,isVideoRunning_);
 
 	if (isPreviewRunning_ != true){
-		CAM_ERR("%s:%d Error: Recording not started",__func__,__LINE__);
+		CAM_ERR("%s:%d Error: Preview not started",__func__,__LINE__);
 		return;
 	}
 
@@ -810,7 +810,7 @@ status_t qmmfCAMERA::qmmfStopCamera() {
 
   auto ret = recorder_.StopCamera(camera_id_);
   if(ret != 0) {
-    CAM_INFO("%s:%s StopCamera Failed!!", TAG, __func__);
+    CAM_ERR("%s:%s StopCamera Failed!!", TAG, __func__);
 	return ret;
   }
 
@@ -1240,6 +1240,8 @@ int QMMFTrack::init(qmmfCAMERA *qmmf_camera_ptr,  \
 	track_params_.camera_id = camera_id;
 	session_id_ = session_id;
 	track_id_ = track_id;
+    if (track_id_ != CAMERA_QMMF_TRACK_PREVIEW)
+        track_params_.low_power_mode = false;
 	*(track_params_ptr) = &track_params_;
 	if (track_params_ptr == NULL) {
 		CAM_ERR("%s:%d : Error ",__func__,__LINE__);

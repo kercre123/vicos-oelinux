@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -116,12 +116,9 @@ class AudioEndPoint {
   //
   // Notifies the endpoint to stop streaming audio.
   //
-  // flush (input): indicates that all bufferes committed to the endpoint be
-  //                streamed to the device before stopping.
-  //
   // Returns error code.
   //
-  int32_t Stop(const bool flush);
+  int32_t Stop();
 
   //
   // Notifies the endpoint to pause the stream.  Committed buffers will be

@@ -25,6 +25,16 @@ __BEGIN_DECLS
 #define BT_PROFILE_VENDOR_ID "vendor"
 #define BT_PROFILE_WIPOWER_VENDOR_ID "wipower"
 
+/** Bluetooth Device Name */
+typedef struct {
+    uint8_t name[249];
+} __attribute__((packed))bt_lename_t;
+
+typedef struct{
+    int len;
+    void *val;
+}btvendor_lename_t;
+
 /** Callback when bredr cleanup is done.
  */
 typedef void (*  btvendor_bredr_cleanup_callback)(bool status);
@@ -34,12 +44,19 @@ typedef void (*  btvendor_bredr_cleanup_callback)(bool status);
 typedef void (*  btvendor_ssr_cleanup_callback)(void);
 
 
+/** Bluetooth ACL connection state changed with reason callback */
+typedef void (*btvendor_acl_state_changed_with_reason_callback)(bt_status_t status,
+                                                       bt_bdaddr_t *remote_bd_addr,
+                                                       bt_acl_state_t state,
+                                                       uint8_t reason,
+                                                       uint8_t transport_type);
 /** BT-Vendor callback structure. */
 typedef struct {
     /** set to sizeof(BtVendorCallbacks) */
     size_t      size;
     btvendor_bredr_cleanup_callback  bredr_cleanup_cb;
     btvendor_ssr_cleanup_callback    ssr_cleanup_cb;
+    btvendor_acl_state_changed_with_reason_callback acl_state_changed_with_reason_cb;
 } btvendor_callbacks_t;
 
 /** Represents the standard BT-Vendor interface.
@@ -62,6 +79,11 @@ typedef struct {
 
     /** Closes the interface. */
     void  (*cleanup)( void );
+
+    void (*setLeBtName)(btvendor_lename_t* name);
+
+    /** Sets the Scan Mode with parameter to ignore LE Scan mode*/
+    void (*setScanMode)(bt_scan_mode_t mode, bool ignoreLeScanModes);
 
 } btvendor_interface_t;
 

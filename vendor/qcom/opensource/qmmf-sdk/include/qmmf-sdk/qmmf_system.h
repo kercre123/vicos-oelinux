@@ -76,13 +76,17 @@ class System {
   // Enables the sound trigger framework, which begins listening for the
   // trigger utterance.
   //
+  // Whether or not to capture audio after the hotword or the hotword
+  // itself is indicated in the configuration parameters.
+  //
   // A callback must be registered along with sound trigger enablement.
   // This callback is used by the system for trigger event notification and
   // sound trigger framework-specific errors (asynchronous).
   //
   // The sound trigger framework has only two states:  enabled and disabled.
   // The notion of multiple sound trigger sesions does not exist.
-  status_t EnableSoundTrigger(const TriggerCb& callback);
+  status_t EnableSoundTrigger(const TriggerConfig& config,
+                              const TriggerCb& callback);
 
   // Disables the sound trigger framework.
   status_t DisableSoundTrigger();
@@ -113,6 +117,10 @@ class System {
   status_t PlayTone(const ::std::vector<DeviceId>& devices,
                     const Tone& tone,
                     const ToneCb& callback);
+
+  // Enables or disables the mute status of the specified device.  Affects all
+  // tracks associated with that device.
+  status_t Mute(const DeviceId device, const bool mute);
 
 private:
   SystemClient* system_client_;

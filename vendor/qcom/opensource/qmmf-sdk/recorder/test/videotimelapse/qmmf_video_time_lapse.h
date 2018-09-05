@@ -44,7 +44,6 @@
 #include <unistd.h>
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <fstream>
 #include <functional>
 #include <future>
@@ -55,25 +54,36 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <qcom/display/gralloc_priv.h>
 
 #include <qmmf-sdk/qmmf_avcodec.h>
 #include <qmmf-sdk/qmmf_codec.h>
 #include <qmmf-sdk/qmmf_recorder.h>
 #include <qmmf-sdk/qmmf_recorder_params.h>
 
+#include "common/utils/qmmf_condition.h"
+
+using namespace qmmf;
+
 typedef struct ion_allocation_data IonHandleData;
 
 static const std::string yuv_snapshot_file_name_preamble =
     "/data/misc/qmmf/video_time_lapse_sanpshot_";
+static const std::string jpeg_snapshot_file_name_preamble =
+    "/data/misc/qmmf/photo_time_lapse_sanpshot_";
 static const std::string video_time_lapse_file_name_preamble =
     "/data/misc/qmmf/video_time_lapse_";
 
 // Prop to enable YUV snapshot dumping from YUV track
 #define PROP_DUMP_YUV_SNAPSHOT "persist.qmmf.time.lapse.dumpyuv"
 
-enum class TimeLapseMode {
+enum class TimeLapseType {
   kVideoTimeLapse,
   kPhotoTimeLapse,
+  kStitchedVideoTimeLapse,
+  kSideBySideVideoTimeLapse,
+  kStitchedPhotoTimeLapse,
+  kSideBySidePhotoTimeLapse,
 };
 
 enum class VideoEncodeFormat {
@@ -88,7 +98,8 @@ enum class ImageEncodeFormat {
 
 struct TimeLapseParams {
   uint32_t camera_id;
-  uint32_t time_lapse_mode;
+  uint32_t camera_id_2;
+  uint32_t time_lapse_type;
   uint32_t time_lapse_interval;  // [ms.]
   uint32_t width;
   uint32_t height;
@@ -103,7 +114,7 @@ typedef std::function<void(qmmf::BufferDescriptor&)> ReturnBufferCB;
 class EncoderSource : public qmmf::avcodec::ICodecSource {
  public:
   EncoderSource(ReturnBufferCB& return_buffer_cb, const uint32_t fps,
-                uint32_t buffer_size);
+                uint32_t buffer_size, const uint32_t width, const uint32_t height);
   ~EncoderSource();
   int32_t GetBuffer(qmmf::BufferDescriptor& codec_buffer,
                     void* client_data) override;
@@ -111,20 +122,25 @@ class EncoderSource : public qmmf::avcodec::ICodecSource {
                        void* client_data) override;
   int32_t NotifyPortEvent(qmmf::avcodec::PortEventType event_type,
                           void* event_data) override;
-  void ConsumeBuffer(qmmf::BufferDescriptor& buffer);
+  void ConsumeBuffer(qmmf::BufferDescriptor& buffer,
+                     qmmf::recorder::MetaData& meta_data);
   void SetEOS();
   int32_t BufferStatus();
+  int32_t FromQmmfToHalFormat(qmmf::BufferFormat& buffer_format);
 
  private:
   std::atomic<bool> atomic_eos_;
   std::mutex wait_for_frame_lock_;
-  std::condition_variable wait_for_frame_;
+  QCondition wait_for_frame_;
   std::list<qmmf::BufferDescriptor> input_free_buffer_list_;
   std::list<qmmf::BufferDescriptor> input_occupy_buffer_list_;
   ReturnBufferCB return_buffer_cb_;
   uint64_t time_stamp_;
   uint32_t buffer_size_;
   uint32_t encode_fps_;
+  uint32_t encode_width_;
+  uint32_t encode_height_;
+  int32_t  buffer_format_;
   static const uint32_t kEOSFlag;
 };  // Class EncoderSource
 
@@ -144,7 +160,7 @@ class EncoderSink : public qmmf::avcodec::ICodecSource {
  private:
   std::ofstream output_file_;
   std::mutex wait_for_frame_lock_;
-  std::condition_variable wait_for_frame_;
+  QCondition wait_for_frame_;
   std::vector<qmmf::BufferDescriptor> output_list_;
   std::list<qmmf::BufferDescriptor> output_free_buffer_list_;
   std::list<qmmf::BufferDescriptor> output_occupy_buffer_list_;
@@ -171,6 +187,10 @@ class TimeLapse {
                      qmmf::recorder::MetaData meta_data);
   void DumpYUVSnapShot(const qmmf::BufferDescriptor& buffer);
   void ReturnYUVSnapshotBuffer(qmmf::BufferDescriptor& buffer);
+  int32_t TakeJPEGSnapshot();
+  void JPEGSnapshotCb(uint32_t camera_id, uint32_t image_sequence_count,
+                     qmmf::BufferDescriptor buffer,
+                     qmmf::recorder::MetaData meta_data);
   int32_t StartCamera();
   int32_t StopCamera();
   int32_t CreateSession();
@@ -186,7 +206,7 @@ class TimeLapse {
   int32_t DeleteLPMTrack();
   bool ResolutionSupported(uint32_t width, uint32_t height);
 
-  enum class VideoTimeLapseMode {
+  enum class TimeLapseMode {
     kModeOne,
     kModeTwo,
   };
@@ -197,9 +217,12 @@ class TimeLapse {
   std::shared_ptr<EncoderSink> encoder_sink_;
   android::CameraMetadata static_info_;
   TimeLapseParams params_;
-  VideoTimeLapseMode video_time_lapse_mode_;
+  TimeLapseMode time_lapse_mode_;
+  qmmf::recorder::MultiCameraConfigType multicam_type_;
+  qmmf::recorder::CameraStartParam multicam_start_params_;
   std::thread time_lapse_thread_;
   uint32_t session_id_;
+  uint32_t cam_id_;
   int32_t ion_device_;
   uint64_t snapshot_count_;
   static const uint32_t kLPMTrackId;
@@ -207,10 +230,13 @@ class TimeLapse {
   static const uint32_t kLPMTrackHeight;
   static const uint32_t kThresholdTime;
   static const uint32_t kSanpShotBufferReturnedWaitTimeOut;
+  static const uint32_t kJPEGImageQuality;
   std::atomic<bool> atomic_stop_;
   std::promise<int32_t> snapshot_buffer_returned_promise_;
   std::future<int32_t> snapshot_buffer_returnerd_future_;
+  bool video_encode_;
   bool is_dump_yuv_snapshot_enabled_;
+  bool multicam_mode_;
   std::queue<qmmf::BufferDescriptor> yuv_sanpshot_queue_;
   std::vector<qmmf::BufferDescriptor> input_buffer_list_;
   std::vector<qmmf::BufferDescriptor> output_buffer_list_;

@@ -33,13 +33,14 @@
 
 #include "qmmf_video_time_lapse.h"
 
-const uint32_t kDefaultCameraId = 0;
+const uint32_t kDefaultCameraId1 = 0;
+const uint32_t kDefaultCameraId2 = 1;
 const uint32_t kDefaultTimeLapseInterval = 500;
 const uint32_t kDefaultWidth = 3840;
 const uint32_t kDefaultHeight = 2160;
 const uint32_t kDefaultFPS = 30;
-const uint32_t kDefaultTimeLpaseMode =
-    static_cast<uint32_t>(TimeLapseMode::kVideoTimeLapse);
+const uint32_t kDefaultTimeLpaseType =
+    static_cast<uint32_t>(TimeLapseType::kVideoTimeLapse);
 const uint32_t kDefaultVideoEncodeFormat =
     static_cast<uint32_t>(VideoEncodeFormat::kAVC);
 const uint32_t kDefaultImageEncodeFormat =
@@ -47,8 +48,9 @@ const uint32_t kDefaultImageEncodeFormat =
 const uint32_t kDefaultRecDuration = 120;
 
 enum Arguments : char {
-  kCameraId = 'c',
-  kTimeLapseMode = 'm',
+  kCameraId1 = 'c',
+  kCameraId2 = 'b',
+  kTimeLapseType = 't',
   kTimeLapseInterval = 'i',
   kWidth = 'w',
   kHeight = 'h',
@@ -58,9 +60,11 @@ enum Arguments : char {
   kRecDuration = 'd',
 };
 
-const char kArgs[] = {Arguments::kCameraId,
+const char kArgs[] = {Arguments::kCameraId1,
                       ':',
-                      Arguments::kTimeLapseMode,
+                      Arguments::kCameraId2,
+                      ':',
+                      Arguments::kTimeLapseType,
                       ':',
                       Arguments::kTimeLapseInterval,
                       ':',
@@ -85,8 +89,9 @@ struct UsageDescription {
 };
 
 const UsageDescription kDescription[] = {
-    {Arguments::kCameraId, "camera_id ", kDefaultCameraId},
-    {Arguments::kTimeLapseMode, "time_lapse_mode ", kDefaultTimeLpaseMode},
+    {Arguments::kCameraId1, "camera_id_1 ", kDefaultCameraId1},
+    {Arguments::kCameraId2, "camera_id_2 ", kDefaultCameraId2},
+    {Arguments::kTimeLapseType, "time_lapse_type ", kDefaultTimeLpaseType},
     {Arguments::kTimeLapseInterval, "time_lapse_interval [ms.] ",
      kDefaultTimeLapseInterval},
     {Arguments::kWidth, "width ", kDefaultWidth},
@@ -123,7 +128,8 @@ void print_usage() {
 
 void print_params(const TimeLapseParams &params) {
   printf("CameraId: %u\n", params.camera_id);
-  printf("Time Lapse Mode: %u\n", params.time_lapse_mode);
+  printf("CameraId2: %u\n", params.camera_id_2);
+  printf("Time Lapse Type: %u\n", params.time_lapse_type);
   printf("Time lapse interval: %u[ms]\n", params.time_lapse_interval);
   printf("Width: %u\n", params.width);
   printf("Height: %u\n", params.height);
@@ -140,8 +146,9 @@ int main(int argc, char *argv[]) {
   int32_t ret;
 
   TimeLapseParams params = {
-      kDefaultCameraId,
-      kDefaultTimeLpaseMode,
+      kDefaultCameraId1,
+      kDefaultCameraId2,
+      kDefaultTimeLpaseType,
       kDefaultTimeLapseInterval,
       kDefaultWidth,
       kDefaultHeight,
@@ -159,7 +166,7 @@ int main(int argc, char *argv[]) {
 
     while ((opt = getopt(argc, argv, kArgs)) != -1) {
       switch (opt) {
-        case Arguments::kCameraId:
+        case Arguments::kCameraId1:
           val = atoi(optarg);
           if (0 > val) {
             printf("%s: Invalid Camera ID: %d\n", __func__, val);
@@ -167,14 +174,22 @@ int main(int argc, char *argv[]) {
           }
           params.camera_id = static_cast<decltype(params.camera_id)>(val);
           break;
-        case Arguments::kTimeLapseMode:
+        case Arguments::kCameraId2:
           val = atoi(optarg);
           if (0 > val) {
-            printf("%s: Invalid Time Lapse Mode: %d\n", __func__, val);
+            printf("%s: Invalid Camera ID: %d\n", __func__, val);
             exit(EXIT_FAILURE);
           }
-          params.time_lapse_mode =
-              static_cast<decltype(params.time_lapse_mode)>(val);
+          params.camera_id_2= static_cast<decltype(params.camera_id_2)>(val);
+          break;
+        case Arguments::kTimeLapseType:
+          val = atoi(optarg);
+          if (0 > val) {
+            printf("%s: Invalid Time Lapse Type: %d\n", __func__, val);
+            exit(EXIT_FAILURE);
+          }
+          params.time_lapse_type =
+              static_cast<decltype(params.time_lapse_type)>(val);
           break;
         case Arguments::kTimeLapseInterval:
           val = atoi(optarg);

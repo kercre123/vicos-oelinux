@@ -55,19 +55,19 @@ using namespace android;
 #define DEFAULT_360_RECORD_DURATION     "120"
 
 // Prop to enable YUV data dumping from YUV track
-#define PROP_DUMP_360_YUV_FRAMES        "persist.qmmf.360.gtest.dump.yuv"
+#define PROP_DUMP_360_YUV_FRAMES        "persist.qmmf.rec.gtest.dumpyuv"
 // Prop to enable encoded bitstream data dumping
-#define PROP_DUMP_360_BITSTREAM         "persist.qmmf.360.gtest.dump.stm"
+#define PROP_DUMP_360_BITSTREAM         "persist.qmmf.rec.gtest.dumpstrm"
 // Prop to enable JPEG (BLOB) dumping
-#define PROP_DUMP_360_JPEG              "persist.qmmf.360.gtest.dump.jpg"
+#define PROP_DUMP_360_JPEG              "persist.qmmf.rec.gtest.dumpjpeg"
 // Prop to enable RAW Snapshot dumping
-#define PROP_DUMP_360_RAW               "persist.qmmf.360.gtest.dump.raw"
+#define PROP_DUMP_360_RAW               "persist.qmmf.rec.gtest.dumpraw"
 // Prop to set frequency of YUV data dumping
-#define PROP_DUMP_360_YUV_FREQ          "persist.qmmf.360.gtest.dump.frq"
+#define PROP_DUMP_360_YUV_FREQ          "persist.qmmf.rec.gtest.dumpfreq"
 // Prop to set no of iterations
-#define PROP_360_N_ITERATIONS           "persist.qmmf.360.gtest.iter"
+#define PROP_360_N_ITERATIONS           "persist.qmmf.rec.gtest.iter"
 // Prop to set recording duration in seconds
-#define PROP_360_RECORD_DURATION        "persist.qmmf.360.gtest.rec.dur"
+#define PROP_360_RECORD_DURATION        "persist.qmmf.rec.gtest.recdur"
 
 typedef struct Stream360DumpInfo {
   VideoFormat           format;
@@ -94,8 +94,8 @@ class Dump360BitStream {
   bool IsUsed() {return (is_enabled_ && file_fds_.size());}
 
   int32_t GetFileFd(const uint32_t count)
-                   {assert(count > 0);
-                    assert(count <= file_fds_.size());
+                   {EXPECT_TRUE(count > 0);
+                    EXPECT_TRUE(count <= file_fds_.size());
                     return file_fds_[count-1];}
 
   void Enable(const bool enable) {is_enabled_ = enable;}
@@ -143,6 +143,11 @@ class Recorder360Gtest : public ::testing::Test {
   void VideoTrackYUVDataCb(uint32_t session_id, uint32_t track_id,
                            std::vector<BufferDescriptor> buffers,
                            std::vector<MetaData> meta_buffers);
+
+  void VideoTrackYUVTwoDataCb(uint32_t session_id,
+                              uint32_t track_id,
+                              std::vector<BufferDescriptor> buffers,
+                              std::vector<MetaData> meta_buffers);
 
   void VideoTrackOneEncDataCb(uint32_t session_id, uint32_t track_id,
                               std::vector<BufferDescriptor> buffers,

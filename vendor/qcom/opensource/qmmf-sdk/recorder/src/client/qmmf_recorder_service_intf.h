@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -93,6 +93,7 @@ enum QMMF_RECORDER_SERVICE_CMDS {
   RECORDER_REMOVE_OVERLAYOBJECT,
   RECORDER_CREATE_MULTICAMERA,
   RECORDER_CONFIGURE_MULTICAMERA,
+  RECORDER_GET_VENDOR_TAG_DESCRIPTOR,
 };
 
 struct BnBuffer {
@@ -303,6 +304,8 @@ class IRecorderService : public IInterface {
                                         const MultiCameraConfigType type,
                                         const void *param,
                                         const uint32_t param_size) = 0;
+
+  virtual status_t GetVendorTagDescriptor(sp<VendorTagDescriptor> &desc) = 0;
 };
 
 enum RECORDER_SERVICE_CB_CMDS{

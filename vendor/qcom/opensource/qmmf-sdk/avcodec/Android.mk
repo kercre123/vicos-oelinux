@@ -34,7 +34,7 @@ LOCAL_C_INCLUDES += $(TOP)/system/media/camera/include
 
 LOCAL_SRC_FILES := test/sample/qmmf_avcodec_test.cc
 
-LOCAL_SHARED_LIBRARIES += libqmmf_av_codec
+LOCAL_SHARED_LIBRARIES += libqmmf_av_codec libqmmf_utils
 
 LOCAL_MODULE = qmmf_av_codec_test
 
@@ -50,7 +50,11 @@ LOCAL_C_INCLUDES += $(TOP)/system/media/camera/include
 
 LOCAL_SRC_FILES := test/gtest/qmmf_avcodec_gtest.cc
 
-LOCAL_SHARED_LIBRARIES += libqmmf_av_codec
+LOCAL_SHARED_LIBRARIES += libqmmf_av_codec libqmmf_utils
+
+ifeq ($(LOCAL_VENDOR_MODULE),true)
+LOCAL_VENDOR_MODULE := false
+endif
 
 LOCAL_MODULE = qmmf_av_codec_gtest
 
@@ -66,7 +70,7 @@ LOCAL_C_INCLUDES += $(TOP)/system/media/camera/include
 
 LOCAL_SRC_FILES := test/sample/qmmf_audio_decode_test.cc
 
-LOCAL_SHARED_LIBRARIES += libqmmf_av_codec
+LOCAL_SHARED_LIBRARIES += libqmmf_av_codec libqmmf_utils
 
 LOCAL_MODULE = qmmf_av_codec_audio_decode_test
 

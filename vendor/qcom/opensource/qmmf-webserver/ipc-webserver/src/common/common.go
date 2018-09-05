@@ -91,9 +91,6 @@ const (
     // media dir
     MEDIA_DIR string = "/data/misc/qmmf/"
 
-    // vam enroll id
-    ENROLL_ID_FILE = Webserver_dir + "/vam/enroll_id"
-
     // image id
     IMAGE_ID_FILE = Webserver_dir + "/image/image_id"
 
@@ -110,7 +107,7 @@ const (
     TMP_IMAGE_ID_FILE = Webserver_dir + "/image_id"
 
     // tmp cameraip file
-    TMP_CAMERA_IP_FILE string = "/var/run/cameraip"
+    TMP_CAMERA_IP_FILE string = Webserver_dir + "/cameraip"
 
     // Audio config file
     AUDIO_CONFIG_FILE string = Webserver_dir + "/audio_config"
@@ -172,7 +169,7 @@ var MaxChannelNum int = 1
 var MaxRtspNum int = 1
 var MaxRtspSessNum int = 1
 var MaxRecNum int = 1
-var CameraRes int = 8294400
+var CameraRes int = 8601600
 
 type resolution_info struct {
     Width  int
@@ -236,9 +233,6 @@ var client = &http.Client{}
 
 // Camera ip
 var CameraIp string = "192.168.1.111"
-
-// Enroll id
-var EnrollId int = 0
 
 // Camera ID
 var CameraID int =0
@@ -640,6 +634,12 @@ func SetCameraID(value int) {
 
 func SetVAMResolution(width int, height int) {
     VAMResolution = resolution_info{width,height}
+}
+
+func ClearResolutionData() {
+    ResolutionOption = []resolution_info{}
+    ResolutionConf = []int{}
+    ResolutionList = []string{}
 }
 
 func Save_file(path string, body []byte) {

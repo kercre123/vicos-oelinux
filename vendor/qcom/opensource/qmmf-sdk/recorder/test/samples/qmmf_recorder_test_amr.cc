@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define TAG "RecorderTestAmr"
+#define LOG_TAG "RecorderTestAmr"
 
 #include "recorder/test/samples/qmmf_recorder_test_amr.h"
 
@@ -40,9 +40,12 @@
 #include <mutex>
 #include <string>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "include/qmmf-sdk/qmmf_codec.h"
 #include "include/qmmf-sdk/qmmf_recorder_params.h"
-#include "common/qmmf_log.h"
+#include "common/utils/qmmf_log.h"
 
 using ::qmmf::AudioFormat;
 using ::qmmf::BufferDescriptor;
@@ -74,31 +77,34 @@ static const char kWideBandHeader[] = { 0x23,
                                         0x0A};
 
 RecorderTestAmr::RecorderTestAmr() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 RecorderTestAmr::~RecorderTestAmr() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
 }
 
 int32_t RecorderTestAmr::Configure(const string& filename_prefix,
                                    const uint32_t track_id,
                                    const AudioTrackCreateParam& params) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: filename_prefix[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: filename_prefix[%s]", __func__,
                filename_prefix.c_str());
-  QMMF_VERBOSE("%s: %s() INPARAM: track_id[%u]", TAG, __func__, track_id);
-  QMMF_VERBOSE("%s: %s() INPARAM: params[%s]", TAG, __func__,
+  QMMF_VERBOSE("%s() INPARAM: track_id[%u]", __func__, track_id);
+  QMMF_VERBOSE("%s() INPARAM: params[%s]", __func__,
                params.ToString().c_str());
   lock_guard<mutex> lock(lock_);
 
   if (params.format != AudioFormat::kAMR) {
-    QMMF_ERROR("%s: %s() non-AMR format given: %d", TAG, __func__,
+    QMMF_ERROR("%s() non-AMR format given: %d", __func__,
                static_cast<int>(params.format));
     return -EINVAL;
   }
 
   filename_ = filename_prefix;
+  filename_.append("_");
+  filename_.append(to_string(getpid()));
+  filename_.append("_");
   filename_.append(to_string(track_id));
   filename_.append(kFilenameSuffix);
 
@@ -108,17 +114,17 @@ int32_t RecorderTestAmr::Configure(const string& filename_prefix,
 }
 
 int32_t RecorderTestAmr::Open() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   lock_guard<mutex> lock(lock_);
 
   if (filename_.empty()) {
-    QMMF_ERROR("%s: %s() called in unconfigured state", TAG, __func__);
+    QMMF_ERROR("%s() called in unconfigured state", __func__);
     return -EPERM;
   }
 
   output_.open(filename_.c_str(), ios::out | ios::binary | ios::trunc);
   if (!output_.is_open()) {
-    QMMF_ERROR("%s: %s() error opening file[%s]", TAG, __func__,
+    QMMF_ERROR("%s() error opening file[%s]", __func__,
                filename_.c_str());
     return -EBADF;
   }
@@ -136,7 +142,7 @@ int32_t RecorderTestAmr::Open() {
   output_.write(header, size);
   streampos after = output_.tellp();
   if (after - before != size) {
-    QMMF_ERROR("%s: %s() failed to write AMR header", TAG, __func__);
+    QMMF_ERROR("%s() failed to write AMR header", __func__);
     return -EIO;
   }
 
@@ -144,7 +150,7 @@ int32_t RecorderTestAmr::Open() {
 }
 
 void RecorderTestAmr::Close() {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
+  QMMF_DEBUG("%s() TRACE", __func__);
   lock_guard<mutex> lock(lock_);
 
   if (output_.is_open())
@@ -152,17 +158,17 @@ void RecorderTestAmr::Close() {
 }
 
 int32_t RecorderTestAmr::Write(const BufferDescriptor& buffer) {
-  QMMF_DEBUG("%s: %s() TRACE", TAG, __func__);
-  QMMF_VERBOSE("%s: %s() INPARAM: buffer[%s]", TAG, __func__,
+  QMMF_DEBUG("%s() TRACE", __func__);
+  QMMF_VERBOSE("%s() INPARAM: buffer[%s]", __func__,
                buffer.ToString().c_str());
   lock_guard<mutex> lock(lock_);
 
   if (buffer.size == 0) {
-    QMMF_WARN("%s: %s() buffer size is 0", TAG, __func__);
+    QMMF_WARN("%s() buffer size is 0", __func__);
     return 0;
   }
   if (!output_.is_open()) {
-    QMMF_WARN("%s: %s() handle is not open, skipping", TAG, __func__);
+    QMMF_WARN("%s() handle is not open, skipping", __func__);
     return 0;
   }
 
@@ -170,8 +176,8 @@ int32_t RecorderTestAmr::Write(const BufferDescriptor& buffer) {
   output_.write(reinterpret_cast<const char*>(buffer.data), buffer.size);
   streampos after = output_.tellp();
   if (after - before != buffer.size)
-    QMMF_WARN("%s: %s() failed to write AAC data: size[%u] written[%llu]",
-              TAG, __func__, buffer.size, after - before);
+    QMMF_WARN("%s() failed to write AAC data: size[%u] written[%llu]",
+              __func__, buffer.size, after - before);
 
   return 0;
 }
