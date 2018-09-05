@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -722,6 +722,9 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac);
 /* WDA_GET_RX_ADDR3_IDX ******************************************************/
 #  define WDA_GET_RX_ADDR3_IDX(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->addr3Idx)
 
+/* WDA_GET_RX_ADDR1_IDX ******************************************************/
+#  define WDA_GET_RX_ADDR1_IDX(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->addr1Idx)
+
 /* WDA_GET_RX_CH *************************************************************/
 #  define WDA_GET_RX_CH(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->rxChannel)
 
@@ -794,6 +797,8 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac);
 
 #define WLANWDA_HO_IS_AN_AMPDU                    0x4000
 #define WLANWDA_HO_LAST_MPDU_OF_AMPDU             0x400
+
+#define WDA_MAX_MGMT_MPDU_LEN             2000
 
 /* WDA_IS_RX_AN_AMPDU ********************************************************/
 #  define WDA_IS_RX_AN_AMPDU(pRxMeta)       \

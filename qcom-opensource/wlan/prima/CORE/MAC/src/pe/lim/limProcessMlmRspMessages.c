@@ -961,7 +961,7 @@ limProcessMlmReassocCnf(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
      */
     if (pMac->ft.ftPEContext.pFTPreAuthReq)
     {
-        limLog(pMac, LOG1, "%s: Freeing pFTPreAuthReq= %p", __func__,
+        limLog(pMac, LOG1, "%s: Freeing pFTPreAuthReq= %pK", __func__,
                pMac->ft.ftPEContext.pFTPreAuthReq);
         if (pMac->ft.ftPEContext.pFTPreAuthReq->pbssDescription)
         {
@@ -4140,7 +4140,7 @@ void limProcessSwitchChannelRsp(tpAniSirGlobal pMac,  void *body)
     channelChangeReasonCode = psessionEntry->channelChangeReasonCode;
     // initialize it back to invalid id
     psessionEntry->channelChangeReasonCode = 0xBAD;
-    limLog(pMac, LOG1, FL("channelChangeReasonCode %d"),channelChangeReasonCode);
+    limLog(pMac, LOGE, FL("channelChangeReasonCode %d status %d"),channelChangeReasonCode, pChnlParams->status);
     switch(channelChangeReasonCode)
     {
         case LIM_SWITCH_CHANNEL_REASSOC:
@@ -4180,6 +4180,10 @@ void limProcessSwitchChannelRsp(tpAniSirGlobal pMac,  void *body)
                 }
                 pMac->lim.gpchangeChannelCallback(pMac, status, pMac->lim.gpchangeChannelData, psessionEntry);
             }
+            break;
+        case LIM_SWITCH_CHANNEL_SAP_ECSA:
+            lim_send_sme_ap_channel_switch_resp(pMac,
+                                                psessionEntry, pChnlParams);
             break;
         default:
             break;

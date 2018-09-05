@@ -108,6 +108,9 @@ v_U8_t ccpRSNOui08[ HDD_RSN_OUI_SIZE ] = { 0x00, 0x0F, 0xAC, 0x05 };
 
 #define BEACON_FRAME_IES_OFFSET 12
 
+/* The time after add bss, in which SAP should start ECSA to move to SCC */
+#define ECSA_SCC_CHAN_CHANGE_DEFER_INTERVAL 1500
+
 #ifdef WLAN_FEATURE_11W
 void hdd_indicateUnprotMgmtFrame(hdd_adapter_t *pAdapter,
                             tANI_U32 nFrameLength,
@@ -1019,7 +1022,7 @@ static void hdd_SendNewAPChannelInfo(struct net_device *dev, hdd_adapter_t *pAda
     if (descriptor == NULL)
     {
         hddLog(LOGE,
-            "%s: pCsrRoamInfo->pBssDesc=%p",
+            "%s: pCsrRoamInfo->pBssDesc=%pK",
             __func__, descriptor);
         return;
     }
@@ -1539,6 +1542,8 @@ static eHalStatus hdd_DisConnectHandler( hdd_adapter_t *pAdapter, tCsrRoamInfo *
     //TxTimeoutCount need to reset in case of disconnect handler
     pAdapter->hdd_stats.hddTxRxStats.continuousTxTimeoutCount = 0;
 
+    wlan_hdd_check_and_stop_mon(pAdapter, false);
+
     INIT_COMPLETION(pAdapter->disconnect_comp_var);
     /* If only STA mode is on */
     if((pHddCtx->concurrency_mode <= 1) &&
@@ -1576,7 +1581,7 @@ static eHalStatus hdd_DisConnectHandler( hdd_adapter_t *pAdapter, tCsrRoamInfo *
        wlan_hdd_decr_active_session(pHddCtx, pAdapter->device_mode);
     }
     spin_unlock_bh(&pAdapter->lock_for_active_session);
-
+    vos_flush_delayed_work(&pHddCtx->ecsa_chan_change_work);
     hdd_clearRoamProfileIe( pAdapter );
 
     hdd_wmm_init( pAdapter );
@@ -2104,6 +2109,35 @@ void hdd_PerformRoamSetKeyComplete(hdd_adapter_t *pAdapter)
         hddLog(LOGE, "%s: Set Key complete failure", __func__);
     }
     pHddStaCtx->roam_info.deferKeyComplete = FALSE;
+}
+
+/**
+ * hdd_schedule_ecsa_chan_change_work() - schedule ecsa chan change work
+ * @hal: hal context
+ * @sta_session_id: sta session id
+ *
+ * Return: void.
+ */
+static void
+hdd_schedule_ecsa_chan_change_work(hdd_context_t *hdd_ctx,
+                                                  uint8_t sta_session_id)
+{
+   v_TIME_t conn_start_time;
+   int32_t time_diff;
+
+   conn_start_time = sme_get_connect_strt_time(hdd_ctx->hHal, sta_session_id);
+   time_diff = vos_timer_get_system_time() - conn_start_time;
+
+   if (time_diff < 0)
+       time_diff = ECSA_SCC_CHAN_CHANGE_DEFER_INTERVAL;
+   else if (time_diff > ECSA_SCC_CHAN_CHANGE_DEFER_INTERVAL)
+       time_diff = 0;
+   else
+       time_diff = ECSA_SCC_CHAN_CHANGE_DEFER_INTERVAL - time_diff;
+
+   hddLog(LOG1, FL("schedule ecsa_chan_change_work after %d ms"), time_diff);
+   schedule_delayed_work(&hdd_ctx->ecsa_chan_change_work,
+                          msecs_to_jiffies(time_diff));
 }
 
 static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCsrRoamInfo *pRoamInfo,
@@ -2659,10 +2693,18 @@ static eHalStatus hdd_AssociationCompletionHandler( hdd_adapter_t *pAdapter, tCs
                 hddLog(VOS_TRACE_LEVEL_INFO,"Restart Sap as SAP channel is %d "
                        "and STA channel is %d", pHostapdAdapter->sessionCtx.ap.operatingChannel,
                        (int)pRoamInfo->pBssDesc->channelId);
-                hdd_hostapd_stop(pHostapdAdapter->dev);
-                if (pHddCtx->cfg_ini->enable_sap_auth_offload)
-                  hdd_force_scc_restart_sap(pHostapdAdapter,
-                      pHddCtx, (int)pRoamInfo->pBssDesc->channelId);
+                if (pHddCtx->cfg_ini->force_scc_with_ecsa)
+                {
+                    hdd_schedule_ecsa_chan_change_work(pHddCtx,
+                                                       pAdapter->sessionId);
+                }
+                else
+                {
+                    hdd_hostapd_stop(pHostapdAdapter->dev);
+                    if (pHddCtx->cfg_ini->enable_sap_auth_offload)
+                       hdd_force_scc_restart_sap(pHostapdAdapter,
+                             pHddCtx, (int)pRoamInfo->pBssDesc->channelId);
+                }
 
              }
         }
@@ -3742,7 +3784,7 @@ void iw_full_power_cbfn (void *pContext, eHalStatus status)
     if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
     {
         hddLog(VOS_TRACE_LEVEL_ERROR,
-             "%s: Bad param, pAdapter [%p]",
+             "%s: Bad param, pAdapter [%pK]",
                __func__, pAdapter);
         return;
     }
@@ -3894,6 +3936,12 @@ eHalStatus hdd_smeRoamCallback( void *pContext, tCsrRoamInfo *pRoamInfo, tANI_U3
 #endif
             }
            break;
+        case eCSR_ROAM_LOSTLINK_DETECTED:
+             {
+                 if (wlan_hdd_check_and_stop_mon(pAdapter, false))
+                     halStatus = eHAL_STATUS_FAILURE;
+             }
+             break;
         case eCSR_ROAM_LOSTLINK:
         case eCSR_ROAM_DISASSOCIATED:
             {
@@ -4321,6 +4369,7 @@ static tANI_S32 hdd_ProcessGENIE(hdd_adapter_t *pAdapter,
     tDot11fIERSN dot11RSNIE;
     tDot11fIEWPA dot11WPAIE;
     tANI_U32 i;
+    tANI_U32 status;
     tANI_U8 *pRsnIe;
     tANI_U16 RSNIeLen;
     tPmkidCacheInfo PMKIDCache[4]; // Local transfer memory
@@ -4346,10 +4395,17 @@ static tANI_S32 hdd_ProcessGENIE(hdd_adapter_t *pAdapter,
         pRsnIe = gen_ie + 2;
         RSNIeLen = gen_ie_len - 2;
         // Unpack the RSN IE
-        dot11fUnpackIeRSN((tpAniSirGlobal) halHandle,
+        status = dot11fUnpackIeRSN((tpAniSirGlobal) halHandle,
                             pRsnIe,
                             RSNIeLen,
                             &dot11RSNIE);
+        if (DOT11F_FAILED(status))
+        {
+            hddLog(LOGE,
+                       FL("Parse failure in hdd_ProcessGENIE (0x%08x)"),
+                       status);
+            return -EINVAL;
+        }
         // Copy out the encryption and authentication types
         hddLog(LOG1, FL("%s: pairwise cipher suite count: %d"),
                 __func__, dot11RSNIE.pwise_cipher_suite_count );
@@ -4714,6 +4770,9 @@ int __iw_set_essid(struct net_device *dev,
     if( SIR_MAC_MAX_SSID_LENGTH < wrqu->essid.length )
         return -EINVAL;
     pRoamProfile = &pWextState->roamProfile;
+
+    if (wlan_hdd_check_and_stop_mon(pAdapter, true))
+        return -EINVAL;
 
     /*Try disconnecting if already in connected state*/
     status = wlan_hdd_try_disconnect(pAdapter);
