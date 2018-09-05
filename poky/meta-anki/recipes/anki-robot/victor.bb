@@ -49,6 +49,12 @@ USERADD_PARAM_${PN} += "; -u 1000 -g 1000 -s /bin/false system"
 
 do_package_qa[noexec] = "1"
 
+do_clean_append() {
+    dir = bb.data.expand("${S}", d)
+    os.chdir(dir)
+    os.system('git clean -Xfd')
+}
+
 do_compile () {
    cd ${S}
    source ./project/victor/envsetup.sh
