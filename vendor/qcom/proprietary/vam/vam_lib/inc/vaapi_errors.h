@@ -7,9 +7,8 @@
 #ifndef _VAMERROR_H_
 #define _VAMERROR_H_
 
-enum VAMErrors
-{
-    VAM_OK=0,
+enum VAMErrors {
+    VAM_OK = 0,
     VAM_FAIL,
     VAM_NOTFOUND,
     VAM_TIMEOUT,
@@ -37,4 +36,4 @@ enum VAMErrors
     VAM_STR_OVERSIZE
 };
 
-#endif // #define _VAMERROR_H_
+#endif  // #define _VAMERROR_H_

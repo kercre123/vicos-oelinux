@@ -518,10 +518,7 @@ JSONVAStatus MetadataParser::ParseDoc(const char* doc, MetadataFrame & metadata)
     }
     if (root.isMember("camera_id")){
         //printf("camera_id: %p\n", root["camera_id"].asString().c_str());
-        if (root["camera_id"].asString().c_str()>0)
-            metadata.camera_id.uuid = string(root["camera_id"].asString().c_str());
-        else
-            metadata.camera_id.uuid = string(" ");
+        metadata.camera_id.uuid = root["camera_id"].asString();
     }
     else
         metadata.camera_id.uuid = " ";

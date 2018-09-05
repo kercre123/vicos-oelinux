@@ -10,22 +10,23 @@
 #include <vam_engine_api.h>
 #include <VAMUtilities.h>
 #include "VAMEngineBase.h"
+#include <string>
 
-class VAMEngine_DynEngine: public VAMEngineBase
-{
-public:
-    VAMEngine_DynEngine(const std::string libName, const struct vaapi_source_info &sourceInfo);
+class VAMEngine_DynEngine: public VAMEngineBase {
+ public:
+    VAMEngine_DynEngine(const std::string libName,
+                        const struct vaapi_source_info &sourceInfo);
     ~VAMEngine_DynEngine();
 
     virtual int enrollObj(vaapi_enrollment_info *enroll_info);
     virtual int disenrollObj(const char *id);
     virtual bool isEventSupported(vaapi_event_type type);
 
-protected:
+ protected:
     virtual int _addRule(vaapi_rule *pRule);
     virtual int _rmRule(std::string configID);
 
-private:
+ private:
     virtual int _workerFunc(struct vaapi_frame_info *p);
 
     void *_pEngineLibHandle;

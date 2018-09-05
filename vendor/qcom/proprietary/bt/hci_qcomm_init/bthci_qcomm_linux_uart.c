@@ -280,7 +280,7 @@ int bt_hci_pfal_init_transport ( bt_hci_transport_device_type bt_hci_transport_d
   trans_fd = open(bt_hci_transport_device.name, (O_RDWR | O_NOCTTY));
 
   while ((-1 == trans_fd) && (retry < 7)) {
-    BTHCI_QCOMM_ERROR("init_transport: Cannot open %s: %s.\nRetry after 2 seconds...\n",
+    BTHCI_QCOMM_ERROR("init_transport: Cannot open %s: %s\n. Retry after 2 seconds",
         bt_hci_transport_device.name, strerror(errno));
     usleep(2000000);
     trans_fd = open(bt_hci_transport_device.name, (O_RDWR | O_NOCTTY));

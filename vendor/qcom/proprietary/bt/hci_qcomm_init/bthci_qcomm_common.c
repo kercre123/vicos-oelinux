@@ -333,7 +333,7 @@ void bt_hci_qcomm_vs_event
 					pEventBuffer[19], pEventBuffer[20], pEventBuffer[21], pEventBuffer[22], pEventBuffer[31], pEventBuffer[32],
 					pEventBuffer[33], pEventBuffer[34]);
 
-			printf("Binary file: %s\n", binary_filename);
+			printf("Binary file: %s", binary_filename);
         }
         else if ( nLength > 12  // make sure we have enough event bytes
              && (pEventBuffer[0] ==  0xFF)  /* VS Event */

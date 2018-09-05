@@ -1,4 +1,4 @@
-SUBDIRS=audiorecorder
+SUBDIRS=audiorecorder gsat-app
 
 DIST_SUBDIRS=$(SUBDIRS)
 
