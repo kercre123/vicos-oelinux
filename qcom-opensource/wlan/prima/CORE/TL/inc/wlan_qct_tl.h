@@ -3429,6 +3429,16 @@ void WLANTL_RegisterFwdEapol(v_PVOID_t pvosGCtx,
 void WLANTL_SetARPFWDatapath(void * pvosGCtx, bool flag);
 
 /**
+ * WLANTL_GetSAPStaRSSi() - get RSSI for the SAP client
+ * @pvosGCtx: global vos context
+ * @ucSTAId: station id to get rssi for
+ * @rssi: pointer to fill station rssi value
+ *
+ * Return: void
+ */
+void WLANTL_GetSAPStaRSSi(void * pvosGCtx, uint8_t ucSTAId, s8 *rssi);
+
+/**
  * WLANTL_SetKeySeqCounter() - set sequence key counter
  * @pvosGCtx: global vos context
  * @counter: key sequence counter
