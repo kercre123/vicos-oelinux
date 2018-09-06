@@ -1,0 +1,30 @@
+*filter
+
+# default deny incoming traffic
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT DROP [0:0]
+
+#drop invalid packets on the ground
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+
+# Allow inbound responses to outgoing traffic
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
+# Accept traffic on localhost
+-A INPUT -i lo -j ACCEPT
+-A OUTPUT -o lo -j ACCEPT
+
+# Accept all OUTPUT
+-A OUTPUT -p ALL -o wlan0 -j ACCEPT
+
+# Accept 443 traffic (vic-gateway)
+-A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
+
+# Allow ping
+-A INPUT -p icmp -m icmp --icmp-type 8 -m conntrack --ctstate NEW -j ACCEPT
+
+# userdev-only allow ssh access
+-A INPUT -p tcp -m tcp -m tcp --dport 22 -j ACCEPT
+
+COMMIT
