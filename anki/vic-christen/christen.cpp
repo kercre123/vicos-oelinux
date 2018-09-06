@@ -10,11 +10,13 @@
  *
  **/
 
+#include <algorithm>
 #include <iostream>
 #include <random>
 #include <string>
 
 #include <fcntl.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <cutils/properties.h>
@@ -22,11 +24,25 @@
 const std::string kRobotNamePropertyKey = "anki.robot.name";
 const std::string kProductNamePropertyKey = "ro.anki.product.name";
 const std::string kDefaultProductName = "Vector";
+const uint32_t kRtsHeaderVersion = 2;
 
 const std::string kSwitchboardBlockDevice = "/dev/block/bootdevice/by-name/switchboard";
 const size_t kSwitchboardDataBlockLen = 262144; // 256 * 1024 bytes -- (256kb)
 
 static uint8_t sBlockBuffer[kSwitchboardDataBlockLen] = {0};
+
+
+// The robot shall be named "<ProductName> XYXY" where
+// X is a random letter and Y is a random digit.
+// In some fonts, '0' and 'O' look alike, so they are excluded.
+// In addition, we exclude 'I' and 'L' for the same reason.
+
+static const std::vector<char> kLetters = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J',
+                                           'K', 'M', 'N', 'P', 'R', 'S', 'T', 'U', 'V',
+                                           'W', 'X', 'Y', 'Z'
+                                          };
+static const std::vector<char> kDigits =  {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
+
 
 /* Reference: vic-switchboard definitions
  *  Structs describing the internal format of block device data that we care about
@@ -117,17 +133,47 @@ writen(int fd, const void *vptr, size_t n)
   return (n);
 }
 
+static bool IsRobotNameValid(const std::string& robotName, const std::string& productName)
+{
+  if (robotName.length() < 11) {
+    return false;
+  }
+
+  std::string productNamePlusSpace = productName + " ";
+  if (robotName.find(productNamePlusSpace) != 0) {
+    return false;
+  }
+
+  std::string::size_type offset = productNamePlusSpace.length();
+
+  for (int i = 0 ; i < 2 ; i++) {
+    if (std::end(kLetters) == std::find(std::begin(kLetters), std::end(kLetters), robotName[offset + (2 * i)])) {
+      return false;
+    }
+    if (std::end(kDigits) == std::find(std::begin(kDigits), std::end(kDigits), robotName[offset + (2 * i) + 1])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /// Check sBlockBuffer for valid switchboard magic bytes.
 /// @return true if data in sBlockBuffer is valid switchboard data, otherwise return false
-static bool IsSwitchboardDataValid()
+static bool IsSwitchboardDataValid(const std::string& productName)
 {
   // check magic
   struct RtsHeader *header = reinterpret_cast<struct RtsHeader*>(sBlockBuffer);
   uint8_t* m = header->magic;
 
   if (m[0] == 'A' && m[1] == 'N' && m[2] == 'K' && m[3] == 'I' &&
-      m[4] == 'B' && m[5] == 'I' && m[6] == 'T' && m[7] == 'S') {
-    // data is valid
+      m[4] == 'B' && m[5] == 'I' && m[6] == 'T' && m[7] == 'S' &&
+      header->version == kRtsHeaderVersion) {
+
+    if (header->hasName) {
+      std::string robotName = std::string(header->name, 0, sizeof(header->name) - 1);
+      return IsRobotNameValid(robotName, productName);
+    }
     return true;
   } else {
     // invalid data (not written by an Anki process)
@@ -138,7 +184,7 @@ static bool IsSwitchboardDataValid()
 /// Read data from switchboard partition info sBlockBuffer.
 /// @return 0 if data was read successfully or -1 on failure.
 /// errno may be set on failure.
-static int ReadSwitchboardData()
+static int ReadSwitchboardData(const std::string& productName)
 {
   int fd = open(kSwitchboardBlockDevice.c_str(), O_RDONLY);
   if (fd == -1) {
@@ -160,12 +206,12 @@ static int ReadSwitchboardData()
     return -1;
   }
 
-  return IsSwitchboardDataValid() ? 0 : -1;
+  return IsSwitchboardDataValid(productName) ? 0 : -1;
 }
 
 /// Write switchboard data to disk with the specified robit name
 /// @return 0 on success, -1 on failure
-static int WriteSwitchboardData(const std::string robotName)
+static int WriteSwitchboardData(const std::string robotName, const std::string productName)
 {
   int fd = open(kSwitchboardBlockDevice.c_str(), O_WRONLY);
   if (fd == -1) {
@@ -174,7 +220,7 @@ static int WriteSwitchboardData(const std::string robotName)
 
   struct RtsHeader* header = reinterpret_cast<struct RtsHeader*>(sBlockBuffer);
 
-  if (!IsSwitchboardDataValid()) {
+  if (!IsSwitchboardDataValid(productName)) {
     // Fill out enough valid data to write name
     header->magic[0] = 'A';
     header->magic[1] = 'N';
@@ -184,10 +230,11 @@ static int WriteSwitchboardData(const std::string robotName)
     header->magic[5] = 'I';
     header->magic[6] = 'T';
     header->magic[7] = 'S';
-    header->version = 2; // Always set format version = 2 (factory compatability)
+    header->version = kRtsHeaderVersion; // Always set format version = 2 (factory compatability)
   }
   
   header->hasName = true;
+  (void) memset(header->name, 0, sizeof(header->name));
   (void) robotName.copy(header->name, sizeof(header->name) - 1);
 
   ssize_t bytesWritten = writen(fd, sBlockBuffer, sizeof(sBlockBuffer));
@@ -207,7 +254,7 @@ static std::string GetRobotName()
   if (!header->hasName) {
     return "";
   } else {
-    return std::string(header->name);
+    return std::string(header->name, 0, sizeof(header->name) - 1);
   }
 }
 
@@ -215,30 +262,18 @@ static std::string GetRobotName()
 /// @return generated robot name
 static std::string GenerateRobotName(const std::string& product_name)
 {
-  // The robot shall be named "<ProductName> XYXY" where
-  // X is a random letter and Y is a random digit.
-  // In some fonts, '0' and 'O' look alike, so they are excluded.
-  // In addition, we exclude '1', 'I', and 'L' for the same reason.
-
-  std::vector<char> letters = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J',
-                               'K', 'M', 'N', 'P', 'R', 'S', 'T', 'U', 'V',
-                               'W', 'X', 'Y', 'Z'
-                              };
-  std::vector<char> digits =  {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-
-
   std::random_device rd;
   std::mt19937 gen(rd());
 
   // 198 = 22 * 9.  This should allow for a uniform distribution of values
-  // when we select from either the letters or digits vectors.
+  // when we select from either the kLetters or kDigits vectors.
   std::uniform_int_distribution<> dis(1, 198);
 
   std::string robot_id;
   for (int i = 0 ; i < 2 ; i++) {
-    char letter = letters[dis(gen) % letters.size()];
+    char letter = kLetters[dis(gen) % kLetters.size()];
     robot_id.push_back(letter);
-    char digit = digits[dis(gen) % digits.size()];
+    char digit = kDigits[dis(gen) % kDigits.size()];
     robot_id.push_back(digit);
   }
 
@@ -248,9 +283,20 @@ static std::string GenerateRobotName(const std::string& product_name)
 
 int main(int argc, char *argv[])
 {
-  std::string robotName;
+  std::string productName;
+  {
+    char prop_value[PROPERTY_VALUE_MAX] = {0};
+    (void) property_get(kProductNamePropertyKey.c_str(), prop_value, kDefaultProductName.c_str());
+    if (prop_value[0] == '\0') {
+      // Fatal Error.  No product name.
+      std::cerr << "Fatal: No product name found" << std::endl;
+      return 1;
+    }
+    productName = std::string(prop_value);
+  }
 
-  int rc = ReadSwitchboardData();
+  std::string robotName;
+  int rc = ReadSwitchboardData(productName);
   if (rc == 0) {
     std::string existingRobotName = GetRobotName();
     if (!existingRobotName.empty()) {
@@ -259,17 +305,10 @@ int main(int argc, char *argv[])
   }
 
   if (robotName.empty()) {
-    char prop_value[PROPERTY_VALUE_MAX] = {0};
-    (void) property_get(kProductNamePropertyKey.c_str(), prop_value, kDefaultProductName.c_str());
-    if (prop_value[0] == '\0') {
-      // Fatal Error.  No product name.
-      std::cerr << "Fatal: No product name found" << std::endl;
-      return 1;
-    }
-    robotName = GenerateRobotName(std::string(prop_value));
+    robotName = GenerateRobotName(productName);
 
     // update switchboard data
-    rc = WriteSwitchboardData(robotName);
+    rc = WriteSwitchboardData(robotName, productName);
     if (rc == -1) {
       std::cerr << "Fatal: Failed to save robot name" << std::endl;
       return 1;
