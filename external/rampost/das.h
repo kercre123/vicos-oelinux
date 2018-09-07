@@ -7,7 +7,7 @@
 #define DAS_WARN 3
 #define DAS_ERROR 4
 
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 1
 
 
 #define DAS_LOG(level, event, fmt, ...) do { if (level >= DEBUG_LEVEL) { \
