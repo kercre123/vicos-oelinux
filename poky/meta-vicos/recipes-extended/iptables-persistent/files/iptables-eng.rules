@@ -32,6 +32,9 @@
 # adb-over-tcp
 -A INPUT -p tcp -m tcp -m tcp --dport 5555 -j ACCEPT
 
+# rsync (dev-deployment)
+-A INPUT -p tcp -m tcp -m tcp --dport 1873 -j ACCEPT
+
 # dev-webservices
 -A INPUT -p tcp -m tcp -m multiport --dports 8887,8888,8889,8890 -j ACCEPT
 
