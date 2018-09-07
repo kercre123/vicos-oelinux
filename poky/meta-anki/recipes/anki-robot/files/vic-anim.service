@@ -15,6 +15,8 @@ Restart=no
 ExecStartPre=-/bin/systemctl stop vic-bootAnim.service
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-anim $VIC_ANIM_OPTS
 Nice=-2
+Group=anki
+UMask=0002
 
 [Install]
 WantedBy=anki-robot.target

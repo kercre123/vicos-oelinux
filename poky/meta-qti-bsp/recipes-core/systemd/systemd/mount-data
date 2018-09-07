@@ -50,9 +50,14 @@ make_userdata() {
     touch $CONNMAN_DONE_TOKEN
   fi
 
+  chown -R net:anki /data/lib/connman
+  chmod -R 770 /data/lib/connman
   mkdir -p /data/misc/bluetooth
   chown -R bluetooth:bluetooth /data/misc/bluetooth
   chmod -R 770 /data/misc/bluetooth
+  mkdir -p /data/data/com.anki.victor
+  chown -R anki:anki /data/data/com.anki.victor
+  chmod -R 770 /data/data/com.anki.victor
 }
 
 

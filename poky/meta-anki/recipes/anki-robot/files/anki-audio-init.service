@@ -10,6 +10,7 @@ IgnoreSIGPIPE=no
 KillMode=process
 RemainAfterExit=yes
 ExecStart=/etc/initscripts/anki-audio-init
+Group=anki
 
 [Install]
 WantedBy=anki-robot.target

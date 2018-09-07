@@ -9,6 +9,8 @@ Type=simple
 Restart=no
 RemainAfterExit=no
 ExecStart=/anki/bin/vic-bootAnim
+Group=anki
+UMask=0002
 
 [Install]
 WantedBy=sysinit.target

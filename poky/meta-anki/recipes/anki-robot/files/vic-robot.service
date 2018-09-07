@@ -10,6 +10,8 @@ After=vic-init.service
 EnvironmentFile=/anki/etc/vic-robot.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-robot $VIC_ROBOT_OPTS
 Restart=no
+Group=anki
+UMask=0002
 
 # Robot process runs at top priority
 Nice=-20

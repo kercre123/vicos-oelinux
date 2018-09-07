@@ -13,6 +13,8 @@ ConditionFileIsExecutable=/anki/bin/vic-dasmgr
 EnvironmentFile=/anki/etc/vic-dasmgr.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-dasmgr $VIC_DASMGR_OPTS
 Restart=no
+Group=anki
+UMask=0002
 
 [Install]
 WantedBy=anki-robot.target
