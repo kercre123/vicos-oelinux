@@ -11,6 +11,8 @@ EnvironmentFile=/anki/etc/vic-neuralnets.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-neuralnets $VIC_VISION_CONFIG $VIC_DNN_MODELS $VIC_DNN_CACHE
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
+Group=anki
+UMask=0002
 
 [Install]
 WantedBy=anki-robot.target

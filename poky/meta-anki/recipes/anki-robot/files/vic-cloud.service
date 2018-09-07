@@ -14,6 +14,8 @@ EnvironmentFile=/anki/etc/vic-cloud.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-cloud $VIC_CLOUD_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
+Group=anki
+UMask=0002
 
 [Install]
 WantedBy=anki-robot.target

@@ -12,6 +12,8 @@ ConditionFileIsExecutable=/anki/bin/vic-crashuploader
 EnvironmentFile=/anki/etc/vic-crashuploader.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-crashuploader $VIC_CRASHUPLOADER_OPTS
 Restart=always
+Group=anki
+UMask=0002
 
 [Install]
 WantedBy=anki-robot.target

@@ -16,6 +16,8 @@ EnvironmentFile=/anki/etc/vic-webserver.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-webserver $VIC_WEBSERVER_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
+Group=anki
+UMask=0002
 
 [Install]
 WantedBy=anki-robot.target
