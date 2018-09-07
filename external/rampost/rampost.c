@@ -116,16 +116,11 @@ int error_exit(RampostErr err) {
 }
 
 #include "anki_dev_unit.h"
-#include "lowbattery.h"
 #include "error_801.h"
 
 
 void show_dev_unit(void) {
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
-}
-
-void show_low_battery(void) {
-  lcd_draw_frame2((uint16_t*)low_battery, low_battery_len);
 }
 
 void show_error_801(void) {
@@ -160,27 +155,6 @@ BatteryState confirm_battery_level(void) {
 }
 
 
-void send_shutdown_message(void) {
-  static uint64_t lastMsgTime = 0;
-  uint64_t now = steady_clock_now();
-
-  if (now - lastMsgTime > SHUTDOWN_FRAME_INTERVAL) {
-    DAS_LOG(DAS_INFO, "send_shutdown_message", "PAYLOAD_SHUT_DOWN");
-    hal_send_frame(PAYLOAD_SHUT_DOWN, NULL, 0);
-    lastMsgTime = now;
-    hal_get_next_frame(FRAME_WAIT_MS);
-  }
-}
-
-void show_lowbat_and_shutdown(void) {
-  uint64_t start = steady_clock_now();
-  uint64_t now;
-  show_low_battery();
-  for (now = steady_clock_now(); now-start < LOW_BATTERY_TIME; now=steady_clock_now()) continue;
-  while (true) send_shutdown_message();
-}
-
-
 void force_syscon_resync(void) {
   uint8_t ALL_EFFS[256];
   memset(ALL_EFFS, 0xFF, sizeof(ALL_EFFS));
@@ -200,7 +174,6 @@ int main(int argc, const char* argv[]) {
   bool show_801 = false;
   bool hal_failure = false;
   bool is_dev_unit = false;
-  bool is_battery_low = false;
   bool force_update = false;
   const char* dfu_file = NULL;
 
@@ -268,7 +241,7 @@ int main(int argc, const char* argv[]) {
       case battery_LEVEL_GOOD:
         break;
       case battery_LEVEL_TOOLOW:
-        is_battery_low = true;
+        DAS_LOG(DAS_INFO, "battery_level_low", "Battery reads low");
         break;
       case battery_BOOTLOADER:
         DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
@@ -292,15 +265,12 @@ int main(int argc, const char* argv[]) {
     show_error_801();
     blank_on_exit = false;
   }
-  else if (is_battery_low) {
-    show_lowbat_and_shutdown();
-  }
   else if (is_dev_unit) {
     show_dev_unit();
     blank_on_exit = false; // Exit without blanking the display
   }
 
   cleanup(blank_on_exit);
-  bool has_error = show_801 || is_battery_low;
+  bool has_error = show_801;
   return has_error;
 }
