@@ -1,6 +1,8 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/systemd:"
 
 SRC_URI += "file://1001-systemd-Disable-unused-mount-points.patch"
+SRC_URI += "file://1004-capabilities-keep-bounding-set-in-non-inverted-forma.patch"
+SRC_URI += "file://1005-capabilities-added-support-for-ambient-capabilities.patch"
 SRC_URI += "file://mountpartitions.rules"
 SRC_URI += "file://systemd-udevd.service"
 SRC_URI += "file://ffbm.target"
