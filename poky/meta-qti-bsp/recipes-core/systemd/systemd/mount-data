@@ -55,8 +55,15 @@ make_userdata() {
   if [ ! -f $ROBOT_KEY ]; then
     mkdir -p /data/etc
     openssl genrsa -out $ROBOT_KEY 2048
+    chown net:anki $ROBOT_KEY
     chmod 440 $ROBOT_KEY
   fi
+  mkdir -p /data/data/com.anki.victor
+  chown -R anki:anki /data/data/com.anki.victor
+  chmod -R 770 /data/data/com.anki.victor
+  mkdir -p /data/vic-gateway
+  chown -R net:anki /data/vic-gateway
+  chmod -R 770 /data/vic-gateway
 }
 mount_userdata() {
     user-data-locker | cryptsetup -q --key-file - luksOpen $USER_DATA_PARTITION userdata

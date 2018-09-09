@@ -11,6 +11,8 @@ EnvironmentFile=/anki/etc/vic-robot.env
 ExecStart=/anki/bin/vic-robot $VIC_ROBOT_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
+Group=anki
+UMask=0002
 
 # Robot process runs at top priority
 Nice=-20

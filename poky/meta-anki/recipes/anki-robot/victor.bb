@@ -34,17 +34,21 @@ GROUPADD_PARAM_${PN} += "; -g 2902 robot"
 GROUPADD_PARAM_${PN} += "; -g 2903 engine"
 GROUPADD_PARAM_${PN} += "; -g 2904 bluetooth"
 GROUPADD_PARAM_${PN} += "; -g 2905 ankinet"
-GROUPADD_PARAM_${PN} += "; -g 2906 cloud"
+GROUPADD_PARAM_${PN} += "; -g 888 cloud"
 GROUPADD_PARAM_${PN} += "; -g 2907 camera"
 GROUPADD_PARAM_${PN} += "; -g 1000 system"
+
+# VIC-1951: group 3003 already exists as the inet group (AID_NET 3003)
+# Since we have ANDROID_PARANOID_NETWORKING enabled in the kernel, non-admin users
+# must be in this group in order to create TCP/UDP sockets
 
 # Add users
 USERADD_PARAM_${PN} =  "  -u 2901 -g 2901 -s /bin/false anki"
 USERADD_PARAM_${PN} += "; -u 2902 -g 2902 -G 2901,1000 -s /bin/false robot"
 USERADD_PARAM_${PN} += "; -u 2903 -g 2903 -G 2901,1000 -s /bin/false engine"
 USERADD_PARAM_${PN} += "; -u 2904 -g 2904 -G 2901,1000 -s /bin/false bluetooth"
-USERADD_PARAM_${PN} += "; -u 2905 -g 2905 -G 2901,1000 -s /bin/false net"
-USERADD_PARAM_${PN} += "; -u 2906 -g 2906 -G 2901,1000 -s /bin/false cloud"
+USERADD_PARAM_${PN} += "; -u 2905 -g 2905 -G 2901,1000,3003 -s /bin/false net"
+USERADD_PARAM_${PN} += "; -u 888  -g 888  -G 2901,1000,3003 -s /bin/false cloud"
 USERADD_PARAM_${PN} += "; -u 1000 -g 1000 -s /bin/false system"
 
 do_package_qa[noexec] = "1"
@@ -81,10 +85,12 @@ do_install () {
     # Remove "other" permission and remove unnecessary exec on everything in /anki
     # BRC: Setting this here is a dirty hack, we should correctly set permissions in a
     # cmake install step.
-    chmod -R 640 ${D}/anki
-    chmod 750 ${D}/anki
-    chmod 750 ${D}/anki/{data,etc,lib}
-    chmod -R 750 ${D}/anki/bin
+    chmod -R 644 ${D}/anki
+    chmod 755 ${D}/anki
+    chmod 755 ${D}/anki/{data,etc,lib}
+    chmod -R 755 ${D}/anki/bin
+    chmod -R 755 ${D}/anki/lib
+    chown -R 2901:2901 ${D}/anki
 }
 
 FILES_${PN} += "anki/"
