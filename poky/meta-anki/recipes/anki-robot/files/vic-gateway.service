@@ -4,8 +4,8 @@ SourcePath=/anki/bin/vic-gateway
 PartOf=anki-robot.target
 
 Requires=vic-gateway-cert.service
-Wants=vic-engine.service vic-switchboard.service
-After=vic-gateway-cert.service vic-engine.service vic-switchboard.service
+Wants=vic-engine.service vic-cloud.service vic-switchboard.service
+After=vic-gateway-cert.service vic-engine.service vic-cloud.service vic-switchboard.service
 
 [Service]
 EnvironmentFile=/anki/etc/vic-gateway.env
