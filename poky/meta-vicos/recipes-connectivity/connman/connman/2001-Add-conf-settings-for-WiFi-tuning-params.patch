@@ -1,0 +1,235 @@
+From c83592b6bd3daad2efe5555ec43eda0e2bc0262a Mon Sep 17 00:00:00 2001
+From: Brian Chapados <chapados@anki.com>
+Date: Wed, 22 Aug 2018 16:26:56 -0700
+Subject: [PATCH 2/2] Add conf settings for WiFi tuning params
+
+We need an easy way to tune AutoScan, BackgroundScan and Favorite retries.
+This change exposes those params through entries in the main.conf file.
+
+Conflicts:
+	plugins/wifi.c
+	src/main.c
+---
+ include/setting.h |  2 ++
+ plugins/wifi.c    | 29 +++++++++++++++++-----
+ src/main.c        | 74 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 99 insertions(+), 6 deletions(-)
+
+diff --git a/include/setting.h b/include/setting.h
+index a882021..5440714 100644
+--- a/include/setting.h
++++ b/include/setting.h
+@@ -31,6 +31,8 @@ extern "C" {
+ bool connman_setting_get_bool(const char *key);
+ char **connman_setting_get_string_list(const char *key);
+ unsigned int *connman_setting_get_uint_list(const char *key);
++unsigned int connman_setting_get_integer(const char *key);
++char* connman_setting_get_string(const char *key);
+ 
+ unsigned int connman_timeout_input_request(void);
+ unsigned int connman_timeout_browser_launch(void);
+diff --git a/plugins/wifi.c b/plugins/wifi.c
+index 34c16df..c40d8ea 100644
+--- a/plugins/wifi.c
++++ b/plugins/wifi.c
+@@ -59,6 +59,7 @@
+ 
+ #include <gsupplicant/gsupplicant.h>
+ 
++
+ #define CLEANUP_TIMEOUT   8	/* in seconds */
+ #define INACTIVE_TIMEOUT  12	/* in seconds */
+ #define FAVORITE_MAXIMUM_RETRIES 2
+@@ -916,7 +917,7 @@ static void wifi_remove(struct connman_device *device)
+ 	if (wifi->scan_params)
+ 		g_supplicant_free_scan_params(wifi->scan_params);
+ 
+-	g_free(wifi->autoscan);
++	g_free(wifi->autoscan); wifi->autoscan = NULL;
+ 	g_free(wifi->identifier);
+ 	g_free(wifi);
+ }
+@@ -1440,8 +1441,14 @@ static struct autoscan_params *parse_autoscan_params(const char *params)
+ 
+ static void setup_autoscan(struct wifi_data *wifi)
+ {
+-	if (!wifi->autoscan)
+-		wifi->autoscan = parse_autoscan_params(AUTOSCAN_DEFAULT);
++	if (!wifi->autoscan) {
++                const char* params = connman_setting_get_string("WifiAutoScanParams");
++                if (params) {
++                    wifi->autoscan = parse_autoscan_params(params);
++                } else {
++                    wifi->autoscan = parse_autoscan_params(AUTOSCAN_DEFAULT);
++                }
++        }
+ 
+ 	start_autoscan(wifi->device);
+ }
+@@ -2083,8 +2090,14 @@ static void ssid_init(GSupplicantSSID *ssid, struct connman_network *network)
+ 	ssid->use_wps = connman_network_get_bool(network, "WiFi.UseWPS");
+ 	ssid->pin_wps = connman_network_get_string(network, "WiFi.PinWPS");
+ 
+-	if (connman_setting_get_bool("BackgroundScanning"))
+-		ssid->bgscan = BGSCAN_DEFAULT;
++	if (connman_setting_get_bool("BackgroundScanning")) {
++                const char* params = connman_setting_get_string("WifiBackgroundScanParams");
++                if (params) {
++                    ssid->bgscan = params;
++                } else {
++                    ssid->bgscan = BGSCAN_DEFAULT;
++                }
++        }
+ }
+ 
+ static int network_connect(struct connman_network *network)
+@@ -2344,7 +2357,11 @@ static bool handle_4way_handshake_failure(GSupplicantInterface *interface,
+ 	wifi->retries++;
+ 
+ 	if (connman_service_get_favorite(service)) {
+-		if (wifi->retries < FAVORITE_MAXIMUM_RETRIES)
++                int fav_max_retries = connman_setting_get_integer("WifiFavoriteMaxRetries");
++                if (fav_max_retries == 0) {
++                        fav_max_retries = FAVORITE_MAXIMUM_RETRIES;
++                }
++		if (wifi->retries < fav_max_retries)
+ 			return true;
+ 	}
+ 
+diff --git a/src/main.c b/src/main.c
+index b78a046..962d224 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -79,6 +79,10 @@ static struct {
+ 	bool enable_6to4;
+ 	char *vendor_class_id;
+ 	bool enable_online_check;
++	bool auto_connect_roaming_services;
++        char *wifi_autoscan_params;
++        char *wifi_bgscan_params;
++        unsigned int wifi_favorite_max_retries;
+ } connman_settings  = {
+ 	.bg_scan = true,
+ 	.pref_timeservers = NULL,
+@@ -96,6 +100,10 @@ static struct {
+ 	.enable_6to4 = false,
+ 	.vendor_class_id = NULL,
+ 	.enable_online_check = true,
++	.auto_connect_roaming_services = false,
++        .wifi_autoscan_params = NULL,
++        .wifi_bgscan_params = NULL,
++        .wifi_favorite_max_retries = 0,
+ };
+ 
+ #define CONF_BG_SCAN                    "BackgroundScanning"
+@@ -114,6 +122,10 @@ static struct {
+ #define CONF_ENABLE_6TO4                "Enable6to4"
+ #define CONF_VENDOR_CLASS_ID            "VendorClassID"
+ #define CONF_ENABLE_ONLINE_CHECK        "EnableOnlineCheck"
++#define CONF_AUTO_CONNECT_ROAMING_SERVICES "AutoConnectRoamingServices"
++#define CONF_WIFI_AUTOSCAN_PARAMS       "WifiAutoScanParams"
++#define CONF_WIFI_BGSCAN_PARAMS         "WifiBackgroundScanParams"
++#define CONF_WIFI_FAVORITE_MAX_RETRIES  "WifiFavoriteMaxRetries"
+ 
+ static const char *supported_options[] = {
+ 	CONF_BG_SCAN,
+@@ -132,6 +144,10 @@ static const char *supported_options[] = {
+ 	CONF_ENABLE_6TO4,
+ 	CONF_VENDOR_CLASS_ID,
+ 	CONF_ENABLE_ONLINE_CHECK,
++	CONF_AUTO_CONNECT_ROAMING_SERVICES,
++        CONF_WIFI_AUTOSCAN_PARAMS,
++        CONF_WIFI_BGSCAN_PARAMS,
++        CONF_WIFI_FAVORITE_MAX_RETRIES,
+ 	NULL
+ };
+ 
+@@ -255,6 +271,9 @@ static void parse_config(GKeyFile *config)
+ 	char **str_list;
+ 	char **tethering;
+         char *vendor_class_id;
++        char *wifi_autoscan_params;
++        char *wifi_autoscan_params;
++        int wifi_favorite_max_retries;
+ 	gsize len;
+ 	int timeout;
+ 
+@@ -408,6 +427,34 @@ static void parse_config(GKeyFile *config)
+ 	}
+ 
+ 	g_clear_error(&error);
++
++	boolean = __connman_config_get_bool(config, "General",
++				CONF_AUTO_CONNECT_ROAMING_SERVICES, &error);
++	if (!error)
++		connman_settings.auto_connect_roaming_services = boolean;
++
++	g_clear_error(&error);
++
++	wifi_autoscan_params = __connman_config_get_string(config, "General",
++					            CONF_WIFI_AUTOSCAN_PARAMS, &error);
++	if (!error)
++		connman_settings.wifi_autoscan_params = wifi_autoscan_params;
++
++	g_clear_error(&error);
++
++	wifi_bgscan_params = __connman_config_get_string(config, "General",
++					            CONF_WIFI_BGSCAN_PARAMS, &error);
++	if (!error)
++		connman_settings.wifi_bgscan_params = wifi_bgscan_params;
++
++	g_clear_error(&error);
++
++	wifi_favorite_max_retries = g_key_file_get_integer(config, "General",
++					            CONF_WIFI_FAVORITE_MAX_RETRIES, &error);
++	if (!error)
++		connman_settings.wifi_favorite_max_retries = wifi_favorite_max_retries;
++
++	g_clear_error(&error);
+ }
+ 
+ static int config_init(const char *file)
+@@ -585,6 +632,12 @@ const char *connman_option_get_string(const char *key)
+ 	if (g_str_equal(key, CONF_VENDOR_CLASS_ID))
+ 		return connman_settings.vendor_class_id;
+ 
++	if (g_str_equal(key, CONF_WIFI_AUTOSCAN_PARAMS))
++		return connman_settings.wifi_autoscan_params;
++
++	if (g_str_equal(key, CONF_WIFI_BGSCAN_PARAMS))
++		return connman_settings.wifi_bgscan_params;
++
+ 	if (g_strcmp0(key, "wifi") == 0) {
+ 		if (!option_wifi)
+ 			return "nl80211,wext";
+@@ -595,6 +648,27 @@ const char *connman_option_get_string(const char *key)
+ 	return NULL;
+ }
+ 
++const char *connman_setting_get_string(const char *key)
++{
++	if (g_str_equal(key, CONF_VENDOR_CLASS_ID))
++		return connman_settings.vendor_class_id;
++
++	if (g_str_equal(key, CONF_WIFI_AUTOSCAN_PARAMS))
++		return connman_settings.wifi_autoscan_params;
++
++	if (g_str_equal(key, CONF_WIFI_BGSCAN_PARAMS))
++		return connman_settings.wifi_bgscan_params;
++
++	return NULL;
++}
++
++unsigned int connman_setting_get_integer(const char *key)
++{
++	if (g_str_equal(key, CONF_WIFI_FAVORITE_MAX_RETRIES))
++		return connman_settings.wifi_favorite_max_retries;
++        return 0;
++}
++
+ bool connman_setting_get_bool(const char *key)
+ {
+ 	if (g_str_equal(key, CONF_BG_SCAN))
+-- 
+2.1.2
+

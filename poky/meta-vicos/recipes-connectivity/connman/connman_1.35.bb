@@ -4,6 +4,7 @@ SRC_URI  = "${KERNELORG_MIRROR}/linux/network/${BPN}/${BP}.tar.xz \
             file://0001-plugin.h-Change-visibility-to-default-for-debug-symb.patch \
             file://0001-connman.service-stop-systemd-resolved-when-we-use-co.patch \
             file://connman \
+            file://connman-main.conf \
             file://no-version-scripts.patch \
             file://includes.patch \
             file://0001-session-Keep-track-of-addr-in-fw_snat-session.patch \
@@ -12,6 +13,7 @@ SRC_URI  = "${KERNELORG_MIRROR}/linux/network/${BPN}/${BP}.tar.xz \
             file://0002-inet-Implement-subnet-route-creation-deletion-in-ipr.patch \
             file://0003-inet-Implement-APIs-for-creating-and-deleting-subnet.patch \
             file://0004-session-Use-subnet-route-creation-and-deletion-APIs.patch \
+            file://2000-Skip-calling-xtables_insmod.patch \
             "
 SRC_URI_append_libc-musl = " file://0002-resolve-musl-does-not-implement-res_ninit.patch \
                              "
