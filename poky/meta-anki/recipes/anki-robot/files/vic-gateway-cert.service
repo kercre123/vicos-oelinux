@@ -14,5 +14,9 @@ User=net
 Group=anki
 UMask=0002
 
+# VIC-1951: Temporarily add CAP_DAC_READ_SEARCH to enable running as
+# lower priv than root until we determine which file access is required.
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_DAC_READ_SEARCH
+
 [Install]
 WantedBy=anki-robot.target
