@@ -44,6 +44,10 @@
 #include <log/log_read.h>
 #include <private/android_filesystem_config.h>
 #include <private/android_logger.h>
+#include <errno.h>
+#include <syslog.h>
+
+extern char *program_invocation_short_name;
 
 // For gettid.
 #if defined(__linux__) && !defined(__ANDROID__)
@@ -141,14 +145,62 @@ static int __write_to_log_initialize()
     }
 #endif
 
+    openlog(program_invocation_short_name, LOG_PID, LOG_USER);
     return ret;
+}
+
+// Convert kernel log priority number into an Android Logger priority number
+static int convertAndroidPrioToSyslogPrio(int pri) {
+  switch(pri) {
+  case ANDROID_LOG_FATAL:
+    return LOG_EMERG;
+  case ANDROID_LOG_ERROR:
+    return LOG_ERR;
+  case ANDROID_LOG_WARN:
+    return LOG_WARNING;
+  case ANDROID_LOG_INFO:
+    return LOG_INFO;
+  case ANDROID_LOG_UNKNOWN:
+  case ANDROID_LOG_VERBOSE:
+  case ANDROID_LOG_DEBUG:
+    return LOG_DEBUG;
+  }
+
+  return ANDROID_LOG_INFO;
 }
 
 static int __write_to_log_daemon(log_id_t log_id, struct iovec *vec, size_t nr)
 {
     ssize_t ret;
+    int forward_to_logd = 0;
+
+    /* Forward DASMSG and LOG_ID_EVENTS to logd */
+    switch (log_id) {
+    case LOG_ID_MAIN:
+    case LOG_ID_RADIO:
+    case LOG_ID_SYSTEM:
+    case LOG_ID_CRASH:
+    case LOG_ID_KERNEL:
+      syslog(convertAndroidPrioToSyslogPrio(*(unsigned int*)vec[0].iov_base), "%d %s: %s",
+             gettid(), vec[1].iov_base, vec[2].iov_base);
+
+      /* Send to logd if this is a DASMSG */
+      if((vec[2].iov_len >= 1 && strncmp(vec[2].iov_base, "@", 1) == 0)) {
+        forward_to_logd = 1;
+      }
+      break;
+    case LOG_ID_EVENTS:
+    default:
+      forward_to_logd = 1;
+    }
+
+    if(!forward_to_logd) {
+      return 1;
+    }
+
 #if FAKE_LOG_DEVICE
     int log_fd;
+
 
     if (/*(int)log_id >= 0 &&*/ (int)log_id < (int)LOG_ID_MAX) {
         log_fd = log_fds[(int)log_id];
@@ -339,6 +391,8 @@ const char *android_log_id_to_name(log_id_t log_id)
  */
 void __android_log_close()
 {
+
+  closelog();
 #if FAKE_LOG_DEVICE
     int i;
 #endif
