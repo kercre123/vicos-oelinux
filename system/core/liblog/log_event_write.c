@@ -19,6 +19,7 @@
 
 #include <log/log.h>
 #include <log/logger.h>
+#include <syslog.h>
 
 #define MAX_EVENT_PAYLOAD 512
 #define MAX_SUBTAG_LEN 32
