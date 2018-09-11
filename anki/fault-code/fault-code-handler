@@ -52,6 +52,8 @@ fi
 
 echo $FAULT_CODE > $PROGRESS_FILE
 
+echo "@robot.fault_code$FAULT_CODE"
+
 logv "FAULT_CODE=$FAULT_CODE"
 
 STOP_DASMGR_ONLY=0
