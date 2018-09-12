@@ -1,6 +1,7 @@
 FLAGS = \
 	-std=gnu++14 \
 	-D_GNU_SOURCE \
+	-DUSE_ANDROID_LOGGING \
 	-Os \
 	-Wall \
 	-Werror \
@@ -21,8 +22,9 @@ FLAGS = \
 	-pie \
 	-fPIE
 
-user-data-locker: user-data-locker.cpp
-	${CXX} ${CXXFLAGS} $(FLAGS) -o $@ $^
+user-data-locker: user-data-locker.cpp keymaster.cpp log.cpp
+	${CXX} ${CXXFLAGS} $(FLAGS) -o $@ $^ -ldl -llog
+
 
 clean:
 	rm user-data-locker
