@@ -30,6 +30,8 @@
 Description=mount-data
 SourcePath=/etc/initscripts/mount-data
 Before=connman.service chronyd.service
+Wants=dev-qseecom.device
+After=dev-qseecom.device
 
 [Service]
 Restart=no
