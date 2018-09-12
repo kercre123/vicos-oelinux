@@ -42,6 +42,10 @@ case "$1" in
         fi
         echo 600 > /proc/sys/net/unix/max_dgram_qlen
         start-stop-daemon -S -b -a /sbin/logd
+	while [ ! -e /dev/socket/logd ] ; do sleep 1 ; done
+	while [ ! -e /dev/socket/logdr ] ; do sleep 1 ; done
+	while [ ! -e /dev/socket/logdw ] ; do sleep 1 ; done
+	chown system.system /dev/socket/logd*
         echo "done"
         ;;
   stop)
