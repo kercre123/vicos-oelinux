@@ -1,0 +1,39 @@
+From 286e37f8f36c88edd52eea4c7dc2dd0ce460ee58 Mon Sep 17 00:00:00 2001
+From: Jouni Malinen <j@w1.fi>
+Date: Sun, 11 Dec 2016 18:39:12 +0200
+Subject: [PATCH] Interworking: Clear SCANNING state if no network selected
+
+Commit 192ad3d7307473f14c049c1ea724e292a3f8ae24 ('Interworking: Clear
+SCANNING state if no match found') did this for the case where no
+network matched credentials, but left the SCANNING state in place if
+there were a match, but automatic connection was not enabled. Extend
+this to cover the case where INTERWORKING_SELECT is not followed by a
+connection attempt so that wpa_state is not left indefinitely to
+SCANNING.
+
+This fixes a hwsim test case failure in the following sequence:
+ap_anqp_sharing scan_trigger_failure
+
+Signed-off-by: Jouni Malinen <j@w1.fi>
+(cherry picked from commit a5c723adcf48e8f4cd74f1162a8f2602f3f54040)
+---
+ wpa_supplicant/interworking.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/wpa_supplicant/interworking.c b/wpa_supplicant/interworking.c
+index 1fb40c7..5c0e109 100644
+--- a/wpa_supplicant/interworking.c
++++ b/wpa_supplicant/interworking.c
+@@ -2530,7 +2530,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
+ 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_SELECTED MACSTR,
+ 			MAC2STR(selected->bssid));
+ 		interworking_connect(wpa_s, selected, 0);
+-	}
++	} else if (wpa_s->wpa_state == WPA_SCANNING)
++		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+ }
+ 
+ 
+-- 
+2.1.2
+
