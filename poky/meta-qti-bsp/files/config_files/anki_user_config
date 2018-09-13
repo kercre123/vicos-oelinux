@@ -8,6 +8,14 @@
 # poky/meta-anki/recipes/anki-robot/victor.bb
 #
 # Daemons ownership and permissions
+#
+# ================================
+# vicos specific utilities
+# ================================
+
+# assign root:disk ownership, with sgid disk for block partition access
+bin/emr-cat                 0   6   2755
+
 # ================================
 # Bluetooth stuff
 # ================================
