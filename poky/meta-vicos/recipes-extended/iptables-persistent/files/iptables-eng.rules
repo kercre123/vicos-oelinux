@@ -44,5 +44,6 @@
 
 # wwise profiler
 -A INPUT -p tcp -m tcp -m multiport --dports 24024,24025,24026 -j ACCEPT
+-A INPUT -p udp --dport 24024 -j ACCEPT
 
 COMMIT
