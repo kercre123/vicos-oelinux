@@ -2,9 +2,15 @@
 # Include the robot settings
 #
 # Anki stuff
+IMAGE_INSTALL += "animfail"
+IMAGE_INSTALL += "ankibluetoothd"
 IMAGE_INSTALL += "anki-audio-init"
 IMAGE_INSTALL += "anki-robot-target"
 IMAGE_INSTALL += "anki-version"
+IMAGE_INSTALL += "ankiinit"
+IMAGE_INSTALL += "ankiwifi"
+IMAGE_INSTALL += "emr-cat"
+IMAGE_INSTALL += "update-engine"
 IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES', 'ipv6', 'ip6tables-persistent', '', d)}"
 IMAGE_INSTALL += "iptables-persistent"
 #
@@ -39,3 +45,9 @@ IMAGE_INSTALL += "lvm2"
 IMAGE_INSTALL += "cryptsetup"
 IMAGE_INSTALL += "user-data-locker"
 IMAGE_INSTALL += "fault-code"
+
+IMAGE_INSTALL += "encoders"
+IMAGE_INSTALL += "bt-property"
+IMAGE_INSTALL += "libbt-vendor"
+IMAGE_INSTALL += "audiohal"
+IMAGE_INSTALL += "fluoride"
