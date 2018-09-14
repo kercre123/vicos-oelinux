@@ -46,6 +46,8 @@ IMAGE_INSTALL += "cryptsetup"
 IMAGE_INSTALL += "user-data-locker"
 IMAGE_INSTALL += "fault-code"
 
+IMAGE_INSTALL += "lib-robotics-camera"
+IMAGE_INSTALL += "lib-robotics-camera-dev"
 IMAGE_INSTALL += "encoders"
 IMAGE_INSTALL += "bt-property"
 IMAGE_INSTALL += "libbt-vendor"
