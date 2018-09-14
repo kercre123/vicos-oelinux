@@ -1,5 +1,6 @@
 # Camera Open Source packages
 include ${BASEMACHINE}/${BASEMACHINE}-anki-robot-image.inc
+require include/mdm-bootimg.inc
 
 ROOTFS_POSTPROCESS_COMMAND += '${@bb.utils.contains("IMAGE_FEATURES", "read-only-rootfs", "read_only_robot_rootfs_hook; ", "",d)}'
 
