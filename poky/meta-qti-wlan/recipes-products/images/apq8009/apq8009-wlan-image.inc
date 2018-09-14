@@ -1,7 +1,6 @@
 # WLAN open source Packages
 IMAGE_INSTALL += "wcnss"
 IMAGE_INSTALL += "wlan-opensource"
-IMAGE_INSTALL += "qcacld-utils"
 
 # if 'wifi' is set as a feature, we get Poky's own wpa_supplicant
 IMAGE_INSTALL += "${@bb.utils.contains('DISTRO_FEATURES','wifi', '', 'wpa-supplicant-qcacld', d)}"
