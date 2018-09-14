@@ -5,6 +5,8 @@
 IMAGE_INSTALL += "anki-audio-init"
 IMAGE_INSTALL += "anki-robot-target"
 IMAGE_INSTALL += "anki-version"
+IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES', 'ipv6', 'ip6tables-persistent', '', d)}"
+IMAGE_INSTALL += "iptables-persistent"
 #
 # Victor stuff
 IMAGE_INSTALL += "vic-anim"
