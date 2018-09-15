@@ -16,6 +16,11 @@ EXTERNALSRC = "${WORKSPACE}/anki/victor"
 export SSH_AUTH_SOCK
 export ANKI_BUILD_VERSION
 
+# Prevent yocto from splitting out debug files for this recipe
+INHIBIT_PACKAGE_DEBUG_SPLIT = '1'
+# Victor's CMake build process already strips libs & exes, don't strip again.
+INHIBIT_PACKAGE_STRIP = '1'
+
 # Must inherit qperf if using the USER_BUILD flag
 inherit useradd qperf
 
