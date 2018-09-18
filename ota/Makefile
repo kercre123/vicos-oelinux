@@ -28,6 +28,7 @@ OTAKEY ?= ota_prod.key
 OTAPASS ?= file:ota_test.pass
 OTAENC ?= 1
 ANKIDEV ?= 1
+REBOOT_AFTER_INSTALL ?= 0
 
 ifeq ($(ANKIDEV), 0)
  MANIFEST_VERSION = 0.9.2
@@ -87,6 +88,7 @@ $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	echo "update_version=$(UPDATE_VERSION)"     >> $@
 	echo "ankidev=$(ANKIDEV)"                   >> $@
 	echo "num_images=2"                         >> $@
+	echo "reboot_after_install=$(REBOOT_AFTER_INSTALL)" >> $@
 	echo "[BOOT]"                               >> $@
 	echo "encryption=$(OTAENC)"                 >> $@
 	echo "delta=0"                              >> $@
