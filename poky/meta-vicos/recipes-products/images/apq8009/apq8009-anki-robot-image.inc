@@ -1,5 +1,11 @@
 #
 # Include the robot settings
 #
-IMAGE_INSTALL += "iptables-persistent"
-IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES', 'ipv6', 'ip6tables-persistent', '', d)}"
+IMAGE_INSTALL += "cryptsetup"
+IMAGE_INSTALL += "libatomic"
+IMAGE_INSTALL += "libdevmapper"
+IMAGE_INSTALL += "libsamplerate0"
+IMAGE_INSTALL += "libsndfile1"
+IMAGE_INSTALL += "lvm2"
+IMAGE_INSTALL += "rng-tools"
+IMAGE_INSTALL += "alsa-utils"
