@@ -1,0 +1,12 @@
+# Force a reboot soon after boot to stress test the rebooting process
+
+[Unit]
+Description=Reboot the robot within a few minutes of boot
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+
+[Timer]
+OnBootSec=180
+
+[Install]
+WantedBy=multi-user.target
