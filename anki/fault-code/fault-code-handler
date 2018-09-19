@@ -71,14 +71,14 @@ case $FAULT_CODE in
     ON_FAULT_RESTART=0
     ;;
 915)
-    logv "kill -SEGV vic-engine"
+    logv "kill -ILL vic-engine"
     PID=$(pidof vic-engine)
-    [ $? -eq 0 ] && kill -SEGV $PID
+    [ $? -eq 0 ] && kill -ILL $PID
     ;;
 917)
-    logv "kill -SEGV vic-anim"
+    logv "kill -ILL vic-anim"
     PID=$(pidof vic-anim)
-    [ $? -eq 0 ] && kill -SEGV $PID
+    [ $? -eq 0 ] && kill -ILL $PID
     ;;
 *)
     ;;
