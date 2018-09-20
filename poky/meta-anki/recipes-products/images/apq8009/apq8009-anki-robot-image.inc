@@ -51,3 +51,5 @@ IMAGE_INSTALL += "libbt-vendor"
 IMAGE_INSTALL += "audiohal"
 IMAGE_INSTALL += "fluoride"
 IMAGE_INSTALL += "rb-camera"
+
+IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'reboot-stresser', d)}"

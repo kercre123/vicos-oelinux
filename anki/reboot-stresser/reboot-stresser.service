@@ -1,0 +1,17 @@
+# Service to reboot the robot
+
+[Unit]
+Description=Robot Stress Rebooter
+After=fake-hwclock.service
+Requires=fake-hwclock.service
+ConditionFileNotEmpty=!/run/inhibit_reboot
+ConditionFileNotEmpty=!/data/inhibit_reboot
+
+[Service]
+Type=simple
+TimeoutStartSec=180
+Environment=REBOOT_STRESSER_MAX_SLEEP=120
+EnvironmentFile=-/data/etc/reboot-stresser.env
+ExecStartPre=/bin/bash -c 'sleep $(( RANDOM % REBOOT_STRESSER_MAX_SLEEP ))'
+ExecStart=/sbin/reboot
+
