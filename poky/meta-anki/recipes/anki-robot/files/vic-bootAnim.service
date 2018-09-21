@@ -2,6 +2,7 @@
 Description=Victor Boot Animator
 SourcePath=/anki/bin/vic-bootAnim
 DefaultDependencies=no
+ConditionPathExists=!/dev/rampost_error
 
 [Service]
 Type=simple
