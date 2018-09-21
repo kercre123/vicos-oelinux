@@ -84,6 +84,7 @@ void set_body_leds(int success, int inRecovery) {
 }
 
 #define CMDLINE_FILE "/proc/cmdline"
+#define SEMAPHORE_FILE "/dev/rampost_error"
 #define MAX_COMMANDLINE_CHARS 512
 #define RECOVERY_MODE_INDICATOR "anki.unbrick"
 
@@ -124,6 +125,14 @@ void show_dev_unit(void) {
 }
 
 void show_error_801(void) {
+  int fd = open(SEMAPHORE_FILE, O_CREAT|O_WRONLY, 00640);
+  if (fd >= 0) {
+    write(fd, "ERROR 801\n", 10);
+    close(fd);
+  }
+  else {
+    DAS_LOG(DAS_ERROR, "semaphore", "Couldn't write semaphore file \"%s\": %d", SEMAPHORE_FILE, fd);
+  }
   lcd_draw_frame2((uint16_t*)error_801, error_801_len);
 }
 
