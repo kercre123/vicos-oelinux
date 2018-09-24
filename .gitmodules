@@ -1,3 +1,6 @@
 [submodule "anki/victor"]
 	path = anki/victor
 	url = git@github.com:anki/victor.git
+[submodule "msm-4.9"]
+	path = kernel/msm-4.9
+	url = git@github.com:anki/vic-os--kernel-msm-4.9
