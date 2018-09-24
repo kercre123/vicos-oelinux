@@ -36,7 +36,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <errno.h>
+#if 0 /* XXX: breaks build otherwise */
 #include <linux/android_pmem.h>
+#endif
 #include <fcntl.h>
 #include "mm_jpeg_dbg.h"
 

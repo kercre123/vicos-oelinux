@@ -426,7 +426,7 @@ int main(int argc, char *argv[])
       case RESULT_NEW_SESSION: {
        struct msm_v4l2_event_data *ret_data =
         (struct msm_v4l2_event_data *)proc_ret.ret_to_hal.ret_event.u.data;
-       if( ret_data->status == MSM_CAMERA_CMD_SUCESS) {
+       if( ret_data->status == MSM_CAMERA_CMD_SUCCESS) {
         hal_ds_fd = malloc(sizeof(read_fd_info_t));
         if (!hal_ds_fd) {
           /* Shouldn't end directly, need to shutdown MCT thread */

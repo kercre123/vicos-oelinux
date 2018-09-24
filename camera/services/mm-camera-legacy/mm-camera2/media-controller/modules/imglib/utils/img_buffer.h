@@ -10,7 +10,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <errno.h>
+#if 0 /* breaks the build */
 #include <linux/android_pmem.h>
+#endif
 #include <fcntl.h>
 
 /** img_buffer_t:

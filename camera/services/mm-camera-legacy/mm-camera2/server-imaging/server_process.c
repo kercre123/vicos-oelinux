@@ -290,7 +290,7 @@ serv_proc_ret_t server_process_hal_event(struct v4l2_event *event)
   }
 
 process_done:
-  ret_data->status = MSM_CAMERA_CMD_SUCESS;
+  ret_data->status = MSM_CAMERA_CMD_SUCCESS;
   return ret;
 
 error_return:
@@ -399,7 +399,7 @@ serv_proc_ret_t server_process_hal_ds_packet(const int fd,
     ALOGV("[%s: dbgHang] - UnMap buffer --->>> exit", __func__);
   }
 
-  ret_data->status = MSM_CAMERA_BUF_MAP_SUCESS;
+  ret_data->status = MSM_CAMERA_BUF_MAP_SUCCESS;
   return ret;
 
 error_return:
@@ -466,7 +466,7 @@ serv_proc_ret_t server_process_mct_msg(const int fd, const unsigned int session)
       ret_data->v4l2_event_id     = msg->id;
 
       ret_data->status         = (mct_ret.u.serv_msg_ret.error == TRUE) ?
-        MSM_CAMERA_CMD_SUCESS : MSM_CAMERA_ERR_CMD_FAIL;
+        MSM_CAMERA_CMD_SUCCESS : MSM_CAMERA_ERR_CMD_FAIL;
     } else if (mct_ret.u.serv_msg_ret.msg.msg_type == SERV_MSG_DS) {
       /* Note we just processed a Domain Socket mapping,
        * need to send an event to HAL */
