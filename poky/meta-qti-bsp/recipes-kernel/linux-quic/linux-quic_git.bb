@@ -1,4 +1,4 @@
-KBRANCH ?= "anki/msm/linux-3.18"
+KBRANCH ?= "anki/msm/linux-4.9"
 
 require recipes-kernel/linux/linux-yocto.inc
 
@@ -8,7 +8,7 @@ PN = "linux-quic"
 
 SRCREV ?= "${AUTOREV}"
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
-EXTERNALSRC = "${WORKSPACE}/kernel/msm-3.18"
+EXTERNALSRC = "${WORKSPACE}/kernel/msm-4.9"
 
 LINUX_VERSION_EXTENSION_msm-perf = "-perf"
 LINUX_VERSION_EXTENSION_msm-user = "-perf"
@@ -17,7 +17,7 @@ LINUX_VERSION_EXTENSION_msm= ""
 FILESEXTRAPATHS_prepend := "${THISDIR}/meta/cfg/${LINUX_KERNEL_TYPE}/${KMACHINE}:"
 SRC_URI += "file://defconfig"
 
-LINUX_VERSION ?= "3.18.66"
+LINUX_VERSION ?= "4.9"
 
 DEPENDS += "openssl-native util-linux-native"
 DEPENDS += "dtbtool-native mkbootimg-native"
