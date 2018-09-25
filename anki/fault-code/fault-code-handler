@@ -57,6 +57,7 @@ echo "@robot.fault_code$FAULT_CODE"
 logv "FAULT_CODE=$FAULT_CODE"
 
 STOP_DASMGR_ONLY=0
+KILL_CAMERA_AFTER_STOPPING_ROBOT=0
 
 # handle error-code specific actions
 case $FAULT_CODE in
@@ -79,6 +80,13 @@ case $FAULT_CODE in
     logv "kill -ILL vic-anim"
     PID=$(pidof vic-anim)
     [ $? -eq 0 ] && kill -ILL $PID
+    ;;
+98[0-1])
+    # These codes indicate issues with the camera
+    # These issues are typically caused by mm-anki-camera hanging
+    # when we try to stop the camera stream on vic-engine
+    # stop. We have to manually kill it and start it again.
+    KILL_CAMERA_AFTER_STOPPING_ROBOT=1
     ;;
 *)
     ;;
@@ -127,6 +135,12 @@ else
     logv "display fault code"
     [ -x /anki/bin/vic-faultCodeDisplay ] && /anki/bin/vic-faultCodeDisplay "${FAULT_CODE}"
 fi    
+
+if [ $KILL_CAMERA_AFTER_STOPPING_ROBOT -eq 1 ]; then
+  logv "kill and restart mm-anki-camera"
+  systemctl kill -s 9 mm-anki-camera
+  systemctl start mm-anki-camera
+fi
 
 rm -f $PROGRESS_FILE
 
