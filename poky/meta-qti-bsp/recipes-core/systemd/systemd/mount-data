@@ -30,6 +30,7 @@
 UNBRICK_KEY="anki.unbrick"
 WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
+KEY_FILE="/run/userdata.key"
 CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 ROBOT_KEY=/data/etc/robot.pem
 USER_DATA_PARTITION=/dev/block/bootdevice/by-name/userdata
@@ -37,10 +38,38 @@ USER_DATA_PARTITION=/dev/block/bootdevice/by-name/userdata
 make_userdata() {
   if $1; then
     echo "Remaking /data" > /dev/kmsg
-    user-data-locker reset | cryptsetup -q --key-file - luksFormat $USER_DATA_PARTITION
-    user-data-locker | cryptsetup -q --key-file - luksOpen $USER_DATA_PARTITION userdata
+    user-data-locker reset > $KEY_FILE
+    rc=$?
+    if [ $rc -ne 0 ]; then
+       echo "user-data-locker reset returned $rc"
+       return $rc
+    fi
+    cryptsetup -q --key-file $KEY_FILE luksFormat $USER_DATA_PARTITION
+    rc=$?
+    if [ $rc -ne 0 ]; then
+	echo "cryptsetup luksFormat returned $rc"
+	return $rc
+    fi
+    cryptsetup -q --key-file $KEY_FILE luksOpen $USER_DATA_PARTITION userdata
+    rc=$?
+    if [ $rc -ne 0 ]; then
+	echo "cryptsetup luksOpen returned $rc"
+	return $rc
+    fi
     mkfs.ext4 /dev/mapper/userdata
+    rc=$?
+    if [ $rc -ne 0 ]; then
+	echo "mkfs.ext4 returned $rc"
+	cryptsetup luksClose userdata
+	return $rc
+    fi
     mount /data
+    rc=$?
+    if [ $rc -ne 0 ]; then
+	echo "mount /data returned $rc"
+	cryptsetup luksClose userdata
+	return $rc
+    fi
   fi
   # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
   # determine that /data is mounted and it isn't well integrated into systemd so making it here is the easiest way
@@ -64,11 +93,40 @@ make_userdata() {
   mkdir -p /data/vic-gateway
   chown -R net:anki /data/vic-gateway
   chmod -R 770 /data/vic-gateway
+
 }
+
 mount_userdata() {
-    user-data-locker | cryptsetup -q --key-file - luksOpen $USER_DATA_PARTITION userdata
+    # If the partition has not already been formatted for LUKS, don't bother trying
+    # to mount it.
+    if ! cryptsetup -v isLuks $USER_DATA_PARTITION; then
+	return 1
+    fi
+
+    # Get the passphrase (key) using TrustZone
+    user-data-locker > $KEY_FILE
+    rc=$?
+    if [ $rc -ne 0 ]; then
+	echo "user-data-locker returned $rc"
+	return $rc
+    fi
+
+    # Open the encrypted partition
+    cryptsetup -q --key-file $KEY_FILE luksOpen $USER_DATA_PARTITION userdata
+    rc=$?
+    if [ $rc -ne 0 ]; then
+       echo "cryptsetup luksOpen returned $rc"
+       return $rc
+    fi
+
+    # Try to mount the /data partition
     mount /data
-    return $?
+    rc=$?
+    if [ $rc -ne 0 ]; then
+	echo "mount /data returned $rc"
+	cryptsetup luksClose userdata
+    fi
+    return $rc
 }
 
 
@@ -80,13 +138,24 @@ case "$1" in
       mount -o size=64M -t tmpfs none /data/
       make_userdata false
     else
-      if ! mount_userdata; then
-        make_userdata true
-        sync
+      mount_userdata
+      rc=$?
+      if [ $rc -ne 0 ]; then
+          make_userdata true
+          rc=$?
+          sync
+          if [ $rc -eq 0 ]; then
+              dmesg > /data/format-data.log
+              echo "-----------------------------" >> /data/format-data.log
+              journalctl -u mount-data >> /data/format-data.log
+          fi
       fi
-      mkdir -p /data/misc/bluetooth
-      chown -R bluetooth:bluetooth /data/misc/bluetooth
-      chmod -R 770 /data/misc/bluetooth
+      rm -rf $KEY_FILE
+      if [ $rc -eq 0 ]; then
+          mkdir -p /data/misc/bluetooth
+          chown -R bluetooth:bluetooth /data/misc/bluetooth
+          chmod -R 770 /data/misc/bluetooth
+      fi
     fi
     ;;
 
@@ -95,7 +164,7 @@ case "$1" in
     sync
     umount /data
     if test -e $WIPE_COOKIE; then
-      cryptsetup luksClose $USER_DATA_PARTITION
+      cryptsetup luksClose userdata
       user-data-locker reset
       blkdiscard -s $USER_DATA_PARTITION
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
