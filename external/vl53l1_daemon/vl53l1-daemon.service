@@ -1,0 +1,9 @@
+[Unit]
+Description=VL53L1 ToF sensor daemon
+SourcePath=/usr/bin/vl53l1_daemon
+Before=vic-robot.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/vl53l1_daemon
