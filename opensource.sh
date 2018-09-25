@@ -5,13 +5,17 @@ cp -rf poky opensource/
 rm -rf opensource/poky/*-prop
 rm -rf opensource/poky/meta-anki
 
-cp -rf android_compat opensource/
 cp -rf kernel opensource/
 cp -rf qcom-opensource opensource/
 cp -rf system opensource/
 cp -rf frameworks opensource/
 cp -rf filesystems opensource/
 cp -rf mdm-init opensource/
+
+mkdir -p opensource/android_compat/device/qcom
+cp -rf android_compat/build opensource/android_compat/
+cp -rf android_compat/device/qcom/msm8909 opensource/android_compat/device/qcom
+cp -rf android_compat/device/qcom/common opensource/android_compat/device/qcom
 
 mkdir -p opensource/hardware
 cp -rf hardware/libhardware opensource/hardware
