@@ -49,7 +49,8 @@ def die(code, text):
 def get_manifest(fileobj):
     "Returns config parsed from INI file in filelike object"
     config = configparser.ConfigParser()
-    config['META'] = {'ankidev': 0}
+    config['META'] = {'ankidev': 0,
+                      'reboot_after_install': 0}
     config['BOOT'] = {'encryption': 0}
     config['SYSTEM'] = {'encryption': 0}
     config.readfp(fileobj)
@@ -176,6 +177,10 @@ parser.add_argument('--old', action='store', required=True,
                     help="File with the old version to update from")
 parser.add_argument('--new', action='store', required=True,
                     help="File with the new version to update to")
+parser.add_argument('--out', action='store', default=None, required=False,
+                    help="Path to hold the delta OTA")
+parser.add_argument('--reboot-after-install', action='store', default=None, required=False,
+                    help="Override value of reboot_after_install")
 args = parser.parse_args()
 
 cleanup_working_dirs()
@@ -188,8 +193,18 @@ new_manifest_ver = extract_full_ota(args.new, "new", private_pass)
 new_manifest = get_manifest(open(os.path.join("new", "manifest.ini"), "r"))
 ankidev = new_manifest.get("META", "ankidev")
 
-delta_ota_name = "vicos-{0}_to_{1}.ota".format(old_manifest_ver,
-                                               new_manifest_ver)
+reboot_after_install = args.reboot_after_install
+if reboot_after_install == None:
+    reboot_after_install = new_manifest.get("META", "reboot_after_install")
+
+default_delta_ota_name = "vicos-{0}_to_{1}.ota".format(old_manifest_ver,
+                                                       new_manifest_ver)
+
+delta_ota_name = args.out
+if os.path.isdir(delta_ota_name):
+    delta_ota_name = os.path.join(delta_ota_name, default_delta_ota_name)
+if not delta_ota_name:
+    delta_ota_name = default_delta_ota_name
 
 delta_env = os.environ.copy()
 delta_env["LD_LIBRARY_PATH"] = os.path.join(SCRIPT_PATH, "lib64")
@@ -232,6 +247,7 @@ delta_manifest = configparser.ConfigParser()
 delta_manifest['META'] = {'manifest_version': '1.0.0',
                           'update_version': new_manifest_ver,
                           'ankidev': ankidev,
+                          'reboot_after_install': reboot_after_install,
                           'num_images': '1'}
 delta_manifest['DELTA'] = {'base_version': old_manifest_ver,
                            'compression': 'gz',
