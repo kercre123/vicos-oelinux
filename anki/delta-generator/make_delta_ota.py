@@ -176,6 +176,8 @@ parser.add_argument('--old', action='store', required=True,
                     help="File with the old version to update from")
 parser.add_argument('--new', action='store', required=True,
                     help="File with the new version to update to")
+parser.add_argument('--out', action='store', default=None, required=False,
+                    help="Path to hold the delta OTA")
 args = parser.parse_args()
 
 cleanup_working_dirs()
@@ -188,8 +190,14 @@ new_manifest_ver = extract_full_ota(args.new, "new", private_pass)
 new_manifest = get_manifest(open(os.path.join("new", "manifest.ini"), "r"))
 ankidev = new_manifest.get("META", "ankidev")
 
-delta_ota_name = "vicos-{0}_to_{1}.ota".format(old_manifest_ver,
-                                               new_manifest_ver)
+default_delta_ota_name = "vicos-{0}_to_{1}.ota".format(old_manifest_ver,
+                                                       new_manifest_ver)
+
+delta_ota_name = args.out
+if os.path.isdir(delta_ota_name):
+    delta_ota_name = os.path.join(delta_ota_name, default_delta_ota_name)
+if not delta_ota_name:
+    delta_ota_name = default_delta_ota_name
 
 delta_env = os.environ.copy()
 delta_env["LD_LIBRARY_PATH"] = os.path.join(SCRIPT_PATH, "lib64")
