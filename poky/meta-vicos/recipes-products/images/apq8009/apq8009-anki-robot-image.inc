@@ -9,3 +9,6 @@ IMAGE_INSTALL += "libsndfile1"
 IMAGE_INSTALL += "lvm2"
 IMAGE_INSTALL += "rng-tools"
 IMAGE_INSTALL += "alsa-utils"
+
+IMAGE_INSTALL += "syslog-ng"
+IMAGE_INSTALL += "logrotate"
