@@ -2,7 +2,6 @@
 SRC_URI += "file://mount-data"
 SRC_URI += "file://mount-factory-data"
 SRC_URI += "file://mount-data.service"
-SRC_URI += "file://qseecom.rules"
 
 DEPENDS += "emr-cat blkdiscard user-data-locker"
 
@@ -41,9 +40,8 @@ do_install_append () {
    ln -sf ${sysconfdir}/systemd/system/setup_localtime_link.service \
                ${D}${sysconfdir}/systemd/system/multi-user.target.wants/setup_localtime_link.service
   install -d ${D}${sysconfdir}/udev/rules.d
-  install -m 0644 ${WORKDIR}/qseecom.rules ${D}${sysconfdir}/udev/rules.d/qseecom.rules
 
 }
 
 FILES_${PN} += "/etc/initscripts"
-FILES_${PN} += "${sysconfdir}/udev/rules.d/qseecom.rules"
+
