@@ -108,6 +108,9 @@ EXTRA_OECONF_BASE = "\
     --enable-cheaders=c_global \
 "
 
+#
+# <anki> VIC-6026 Enable build-id on libc.so & co </anki>
+#
 EXTRA_OECONF_INITIAL = "\
     --disable-libmudflap \
     --disable-libgomp \
@@ -116,6 +119,7 @@ EXTRA_OECONF_INITIAL = "\
     --with-system-zlib \
     --disable-lto \
     --disable-plugin \
+    --enable-linker-build-id \
     --enable-decimal-float=no \
 "
 
