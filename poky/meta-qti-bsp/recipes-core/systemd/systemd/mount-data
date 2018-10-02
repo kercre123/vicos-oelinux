@@ -32,14 +32,12 @@ WIPE_COOKIE="/run/wipe-data"
 TOM_LOG="/factory/log1"
 CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 ROBOT_KEY=/data/etc/robot.pem
-USER_DATA_PARTITION=/dev/block/bootdevice/by-name/userdata
+
 
 make_userdata() {
   if $1; then
     echo "Remaking /data" > /dev/kmsg
-    user-data-locker reset | cryptsetup -q --key-file - luksFormat $USER_DATA_PARTITION
-    user-data-locker | cryptsetup -q --key-file - luksOpen $USER_DATA_PARTITION userdata
-    mkfs.ext4 /dev/mapper/userdata
+    mkfs.ext4 /dev/block/bootdevice/by-name/userdata
     mount /data
   fi
   # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
@@ -65,11 +63,6 @@ make_userdata() {
   chown -R net:anki /data/vic-gateway
   chmod -R 770 /data/vic-gateway
 }
-mount_userdata() {
-    user-data-locker | cryptsetup -q --key-file - luksOpen $USER_DATA_PARTITION userdata
-    mount /data
-    return $?
-}
 
 
 case "$1" in
@@ -80,7 +73,7 @@ case "$1" in
       mount -o size=64M -t tmpfs none /data/
       make_userdata false
     else
-      if ! mount_userdata; then
+      if ! mount /data; then
         make_userdata true
         sync
       fi
@@ -95,9 +88,7 @@ case "$1" in
     sync
     umount /data
     if test -e $WIPE_COOKIE; then
-      cryptsetup luksClose $USER_DATA_PARTITION
-      user-data-locker reset
-      blkdiscard -s $USER_DATA_PARTITION
+      blkdiscard -s /dev/block/bootdevice/by-name/userdata
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
       echo WIPE > /dev/block/bootdevice/by-name/userdata
     fi
