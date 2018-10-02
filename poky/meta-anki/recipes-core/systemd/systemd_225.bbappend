@@ -3,7 +3,7 @@ SRC_URI += "file://mount-data"
 SRC_URI += "file://mount-factory-data"
 SRC_URI += "file://mount-data.service"
 
-DEPENDS += "emr-cat blkdiscard user-data-locker"
+DEPENDS += "emr-cat blkdiscard"
 
 # Place systemd-udevd.service in /etc/systemd/system
 do_install_append () {
