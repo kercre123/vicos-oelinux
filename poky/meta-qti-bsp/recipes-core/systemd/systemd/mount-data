@@ -35,6 +35,12 @@ USERDATA_DUMP_FILE="/run/userdata-dump.txt"
 CONNMAN_DONE_TOKEN=/data/lib/connman/.mount-data
 ROBOT_KEY=/data/etc/robot.pem
 USER_DATA_PARTITION=/dev/block/bootdevice/by-name/userdata
+MOUNT_OPTIONS="defaults,noexec,nosuid,nodev,noatime"
+
+mount_data_from_mapped_userdata() {
+    mount -o $MOUNT_OPTIONS --source /dev/mapper/userdata --target /data
+    return $?
+}
 
 make_userdata() {
   if $1; then
@@ -64,7 +70,7 @@ make_userdata() {
 	cryptsetup luksClose userdata
 	return $rc
     fi
-    mount /data
+    mount_data_from_mapped_userdata
     rc=$?
     if [ $rc -ne 0 ]; then
 	echo "mount /data returned $rc"
@@ -131,7 +137,7 @@ mount_userdata() {
     echo "dump of /dev/mapper/userdata" >> $USERDATA_DUMP_FILE
     hexdump -n 4096 -C /dev/mapper/userdata >> $USERDATA_DUMP_FILE
     dumpe2fs /dev/mapper/userdata >> $USERDATA_DUMP_FILE
-    mount /data
+    mount_data_from_mapped_userdata
     rc=$?
     if [ $rc -ne 0 ]; then
 	echo "mount /data returned $rc"
