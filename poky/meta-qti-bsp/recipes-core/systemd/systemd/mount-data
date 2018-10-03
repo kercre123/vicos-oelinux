@@ -182,8 +182,8 @@ case "$1" in
     echo "Unmounting /data"
     sync
     umount /data
+    cryptsetup luksClose userdata
     if test -e $WIPE_COOKIE; then
-      cryptsetup luksClose userdata
       user-data-locker reset
       blkdiscard -s $USER_DATA_PARTITION
       blkdiscard -s /dev/block/bootdevice/by-name/switchboard
