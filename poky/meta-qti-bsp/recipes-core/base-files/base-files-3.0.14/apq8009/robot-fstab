@@ -12,7 +12,6 @@ tmpfs                /dev/shm        tmpfs     defaults,nodev,nosuid,noexec     
 
 PARTLABEL=modem      /firmware       vfat      defaults,noexec,nosuid,nodev,noatime,ro        0  0
 PARTLABEL=persist    /persist        ext4      defaults,noexec,nosuid,nodev,noatime,noauto    0  0
-/dev/mapper/userdata /data           ext4      defaults,noexec,nosuid,nodev,noatime,noauto    0  0
 PARTLABEL=oem        /factory        ext4      defaults,noexec,nosuid,nodev,noatime,ro,nofail 0  0
 
-# /persist /data and /factory are also managed by mount-data.serivce on boot up
+# /data is mounted exclusively by mount-data.service on boot up

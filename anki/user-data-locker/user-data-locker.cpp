@@ -14,44 +14,36 @@
  **/
 
 #include <cctype>
+#include <iomanip>
 #include <iostream>
 #include <random>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include <fcntl.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "keymaster.h"
+#include "log.h"
+
+const std::vector<uint8_t> kDataToSign = { 0x61, 0x6e, 0x6b, 0x69, 0x64, 0x61, 0x74, 0x61 };
 const std::string kUserDataLockerBlockDevice = "/dev/block/bootdevice/by-name/switchboard";
 const size_t kUserDataLockerBlockLen = 262144; // 256kb should be more than enough
-const uint32_t kUserDataLockerVersion = 1;
+const uint32_t kUserDataLockerVersion = 2;
 static uint8_t sBlockBuffer[kUserDataLockerBlockLen] = {0};
 
-const std::string kSerialNumberPath = "/sys/devices/soc0/serial_number";
-const size_t kSerialNumberLength = 9;
-static char sSerialNumber[kSerialNumberLength] = {0};
-
-const size_t kPassPhraseLength = 65;
+const size_t kMaxKeyBlobLength = 8192;
 
 struct __attribute__((packed)) UserDataLockerInfo {
   uint8_t magic[8];
   uint32_t version;
-  bool hasPassPhrase;
-  char passPhrase[kPassPhraseLength + 1];
+  bool hasKeyBlob;
+  uint32_t keyBlobLength;
+  uint8_t keyBlob[kMaxKeyBlobLength];
 };
-
-
-void xordata(size_t length, char *src, char *dest, size_t key_length, char *key)
-{
-  size_t i,j;
-  for (i=0, j=0; i<length; i++, j++) {
-    if (j>=key_length) {
-      j=0;
-    }
-    dest[i] = src[i] ^ key[j];
-  }
-}
 
 /// Read "n" bytes from a descriptor.
 /// adapted from Stevens, "Unix Network Programming"
@@ -81,16 +73,6 @@ ssize_t readn(int fd, void *vptr, size_t n)
   return (n - nleft);         /* return >= 0 */
 }
 
-/// readn bytes from a descriptor and then xor it
-ssize_t readn_xor(int fd, void *vptr, size_t n, size_t key_length, char *key)
-{
-  ssize_t bytesRead = readn(fd, vptr, n);
-  if (bytesRead >= 0) {
-    xordata((size_t) bytesRead, (char *) vptr, (char *) vptr, key_length, key);
-  }
-  return bytesRead;
-}
-
 /// Write "n" bytes to a descriptor
 /// adapted from Stevens, "Unix Network Programming"
 ssize_t
@@ -118,20 +100,6 @@ writen(int fd, const void *vptr, size_t n)
   return (n);
 }
 
-/// XOR data and then writen it to a descriptor
-ssize_t
-writen_xor(int fd, const void* vptr, size_t n, size_t key_length, char *key)
-{
-  char* xorbuf = (char *) malloc(n);
-  if (!xorbuf) {
-    return -1;
-  }
-  xordata(n, (char *) vptr, xorbuf, key_length, key);
-  ssize_t bytesWritten = writen(fd, xorbuf, n);
-  free(xorbuf); xorbuf = nullptr;
-  return bytesWritten;
-}
-
 static bool IsUserDataLockerInfoValid()
 {
   // check magic
@@ -141,13 +109,8 @@ static bool IsUserDataLockerInfoValid()
   if (m[0] == 'A' && m[1] == 'N' && m[2] == 'K' && m[3] == 'I' &&
       m[4] == 'U' && m[5] == 'D' && m[6] == 'L' && m[7] == 'I' &&
       info->version == kUserDataLockerVersion) {
-    if (info->hasPassPhrase) {
-      for (size_t i = 0 ; i < kPassPhraseLength; i++) {
-        if (!std::isalnum(static_cast<unsigned char>(info->passPhrase[i]))) {
-          return false;
-        }
-      }
-      return true;
+    if (info->hasKeyBlob && !info->keyBlobLength) {
+      return false;
     }
     return true;
   } else {
@@ -168,7 +131,7 @@ static int ReadUserDataLocker()
     return -1;
   }
 
-  ssize_t bytesRead = readn_xor(fd, sBlockBuffer, sizeof(sBlockBuffer), sizeof(sSerialNumber), sSerialNumber);
+  ssize_t bytesRead = readn(fd, sBlockBuffer, sizeof(sBlockBuffer));
 
   int r = close(fd);
   if ((bytesRead <= 0) || (r == -1)) {
@@ -183,23 +146,7 @@ static int ReadUserDataLocker()
   return IsUserDataLockerInfoValid() ? 0 : -1;
 }
 
-static int ReadSerialNumber()
-{
-  int fd = open(kSerialNumberPath.c_str(), O_RDONLY);
-  if (fd == -1) {
-    return -1;
-  }
-
-  ssize_t bytesRead = readn(fd, sSerialNumber, sizeof(sSerialNumber));
-  int r = close(fd);
-  if ((bytesRead <= 0) || (r == -1)) {
-    return -1;
-  }
-
-  return 0;
-}
-
-static int WriteUserDataLocker(const std::string& passPhrase)
+static int WriteUserDataLocker(const std::vector<uint8_t>& keyBlob)
 {
   int fd = open(kUserDataLockerBlockDevice.c_str(), O_WRONLY);
   if (fd == -1) {
@@ -225,13 +172,13 @@ static int WriteUserDataLocker(const std::string& passPhrase)
     info->version = kUserDataLockerVersion;
   }
 
-  info->hasPassPhrase = !passPhrase.empty();
-  if (info->hasPassPhrase) {
-    (void) passPhrase.copy(info->passPhrase, sizeof(info->passPhrase) - 1);
+  info->hasKeyBlob = !keyBlob.empty();
+  if (info->keyBlob) {
+    info->keyBlobLength = std::min(keyBlob.size(), sizeof(info->keyBlob));
+    memcpy(info->keyBlob, keyBlob.data(), info->keyBlobLength);
   }
 
-  ssize_t bytesWritten = writen_xor(fd, sBlockBuffer, sizeof(sBlockBuffer),
-                                    kSerialNumberLength, sSerialNumber);
+  ssize_t bytesWritten = writen(fd, sBlockBuffer, sizeof(sBlockBuffer));
 
   int r = close(fd);
   if ((bytesWritten <= 0) || (r == -1)) {
@@ -241,62 +188,104 @@ static int WriteUserDataLocker(const std::string& passPhrase)
   return 0;
 }
 
-static std::string GenerateRandomPassPhrase(std::string::size_type length)
-{
-  // Per `man cryptsetup`, we want to only use 7-bit ASCII printable values
-  // for the passphrase.  Furthermore, to keep things simple, we only use
-  // characters from the [A-Za-z0-9] set.  This should still provide sufficient
-  // entropy to make the passphrase prohibitively expensive to crack.
-  static auto& chars = "0123456789"
-      "abcdefghijklmnopqrstuvwxyz"
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<std::string::size_type> pick(0, sizeof(chars) - 2);
-
-
-  std::string passPhrase;
-  passPhrase.reserve(length);
-
-  for (std::string::size_type i = 0 ; i < length ; i++) {
-    passPhrase.push_back(chars[pick(gen)]);
-  }
-
-  return passPhrase;
-}
-
-static std::string GetPassPhrase()
+static std::vector<uint8_t> GetKeyBlob()
 {
   struct UserDataLockerInfo* info = reinterpret_cast<struct UserDataLockerInfo*>(sBlockBuffer);
-  if (!info->hasPassPhrase) {
-    return "";
+  if (info->hasKeyBlob) {
+    std::vector<uint8_t> keyBlob(info->keyBlob, info->keyBlob + info->keyBlobLength);
+    return keyBlob;
   } else {
-    return std::string(info->passPhrase, kPassPhraseLength);
+    std::vector<uint8_t> empty;
+    return empty;
   }
 }
+
+static std::string GetPassPhraseFromSignature(const std::vector<uint8_t>& signature)
+{
+  std::ostringstream oss;
+  oss << std::hex << std::setfill('0');
+  std::vector<uint8_t>::const_iterator it;
+
+  for (it = signature.begin(); it != signature.end(); it++) {
+    oss << std::setw(2) << static_cast<unsigned>(*it);
+  }
+
+  return oss.str();
+}
+
+//
+// How does this all work?
+//
+// "Reset" (aka Generating a key blob)
+// 1. We ask Qualcomm's TrustZone to load the KeyMaster TrustLet (TODO: point to the keymaster trustlet)
+// 2. The KeyMaster TrustLet runs securely inside the chip's TrustZone
+// 3. We ask the KeyMaster TrustLet to generate an RSA key pair (1024bit)
+// 4. KeyMaster returns a key blob to us containing the public key and an
+//    encrypted form of the private key.  Only TrustZone can decrypt and
+//    use the private key for operations.    (TODO: Investigate how this is encrypted by TZ)
+// 5. We store this key blob on the switchboard partition for use in subsequent
+//    runs.
+// 6. We take a fixed array of bytes and ask the KeyMaster trustlet to digitally sign it using the key blob
+// 7. The KeyMaster TrustLet securely decrypts the private key from the key
+//    blob and uses it to produce a signature
+// 8. We convert this signature into a 256 hexadecimal character string and return it (This is the passphrase we use for deriving the key in cryptsetup)
+//
+// "Read" (aka just sign the data)
+// 1. We ask Qualcomm's TrustZone to load the KeyMaster TrustLet
+// 2. The KeyMaster TrustLet runs securely inside the chip's TrustZone
+// 3. We load the key blob from the switchboard partition that we saved up in step 5.
+// 4. Follow steps 6 through 8 above
+//
+// It is expected that the 256 hexadecimal character string will be used as a passphrase
+// for cryptsetup when it establishes a LUKS volume on the "data" partition.  With LUKS,
+// cryptsetup will generate a master key for encrypting the volume.  The master key is
+// then encrypted using our passphrase.
+//
+// How is this secure?
+// If an attacker got a hold of the robot, they could extract the key blob and discover the
+// data that we digitally sign.  However, without the robot's TrustZone, they cannot create
+// the same digital signature of the data.  Without the digital signature, they
+// don't have the passphrase that is used to decrypt the "data" partition.
 
 int main(int argc, char** argv)
 {
-  int r = ReadSerialNumber();
-  if (r < 0) {
-    return 1;
-  }
+  setAndroidLoggingTag("udl");
+  enableAndroidLogging(true);
 
+  KeyMaster keyMaster;
   std::string passPhrase;
 
   if (argc > 1 && !strcmp(argv[1], "reset")) {
-    passPhrase = GenerateRandomPassPhrase(kPassPhraseLength);
-    r = WriteUserDataLocker(passPhrase);
+    std::vector<uint8_t> keyBlob;
+    int r = keyMaster.GenerateKeyBlob(keyBlob);
     if (r < 0) {
       return 2;
     }
-  } else {
-    r = ReadUserDataLocker();
+    std::vector<uint8_t> signature;
+    r = keyMaster.SignData(keyBlob, kDataToSign, signature);
     if (r < 0) {
       return 3;
     }
-    passPhrase = GetPassPhrase();
+    passPhrase = GetPassPhraseFromSignature(signature);
+    r = WriteUserDataLocker(keyBlob);
+    if (r < 0) {
+      return 4;
+    }
+  } else {
+    int r = ReadUserDataLocker();
+    if (r < 0) {
+      return 5;
+    }
+    std::vector<uint8_t> keyBlob = GetKeyBlob();
+    if (keyBlob.empty()) {
+      return 6;
+    }
+    std::vector<uint8_t> signature;
+    r = keyMaster.SignData(keyBlob, kDataToSign, signature);
+    if (r < 0) {
+      return 7;
+    }
+    passPhrase = GetPassPhraseFromSignature(signature);
   }
 
   std::cout << passPhrase;
