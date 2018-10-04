@@ -82,6 +82,20 @@ do_compile () {
    else
      ./project/victor/scripts/victor_build_release.sh
    fi
+
+  #
+  # VIC-6026: Publish OS debug symbols into victor lib
+  #
+  # These files will be picked up as artifacts of the build and
+  # sent to backtrace for crash reporting.
+  #
+  SRCDIR="${WORKSPACE}/poky/build/tmp-glibc/work/armv7a-vfp-neon-oe-linux-gnueabi/glibc/2.22-r0/package/lib/.debug"
+  DSTDIR="${BUILDSRC}/lib"
+  LIBS="ld-2.22.so libc-2.22.so libdl-2.22.so libm-2.22.so libpthread-2.22.so libresolv-2.22.so librt-2.22.so"
+  for lib in ${LIBS} ; do
+    install ${SRCDIR}/${lib} ${DSTDIR}/${lib}.full
+  done
+
 }
 
 do_install () {
