@@ -45,6 +45,13 @@ fi
 # remove anything that is not a number
 FAULT_CODE=${FAULT_CODE//[^0-9]/}
 
+# Ignore zero
+# Nobody should be writing 0 to the fifo, so it probably means 
+# the fifo was closed after processes were shutdown
+if [ $FAULT_CODE -eq 0 ]; then
+  exit 0
+fi
+
 if [ -f $PROGRESS_FILE ]; then
     logv "$(basename $0) in progress"
     exit 0
