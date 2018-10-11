@@ -10,8 +10,4 @@ do_install_append() {
   install -m 644 ${WORKDIR}/settings ${D}/var/lib/connman/
 }
 
-do_package_qa() {
-  bbwarn "Anki_robots wifi configuration must be removed before shipping"
-}
-
 FILES_${PN} += "/var/lib/connman"
