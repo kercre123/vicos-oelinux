@@ -18,7 +18,8 @@ UMask=0002
 
 # BRC: VIC-1951 temporarily add CAP_DAC_READ_SEARCH to enable running as
 # lower priv than root until we determine which file access is required.
-AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_DAC_READ_SEARCH
+# BRC: VIC-8849 CAP_SYS_BOOT required to allow reboot (after update check)
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_DAC_READ_SEARCH CAP_SYS_BOOT
 
 [Install]
 WantedBy=anki-robot.target
