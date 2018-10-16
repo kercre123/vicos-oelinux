@@ -181,12 +181,22 @@ parser.add_argument('--out', action='store', default=None, required=False,
                     help="Path to hold the delta OTA")
 parser.add_argument('--reboot-after-install', action='store', default=None, required=False,
                     help="Override value of reboot_after_install")
+parser.add_argument('--ota-pass', action='store', default=None, required=False,
+                    help="Path to file with private ota password")
+parser.add_argument('--ota-key', action='store', default=None, required=False,
+                    help="Path to file with private key")
+parser.add_argument('--ota-key-pass', action='store', default=None, required=False,
+                    help="Passphrase for private key")
 args = parser.parse_args()
 
 cleanup_working_dirs()
 
 private_pass = os.getenv('OTAPASS',
                          os.path.join(TOPLEVEL, "ota", "ota_test.pass"))
+
+if args.ota_pass:
+    private_pass = args.ota_pass
+
 
 old_manifest_ver = extract_full_ota(args.old, "old", private_pass)
 new_manifest_ver = extract_full_ota(args.new, "new", private_pass)
@@ -265,7 +275,13 @@ with open("manifest.ini", "w") as manifest:
 
 private_key = os.getenv('OTAKEY',
                         os.path.join(TOPLEVEL, "ota", "ota_prod.key"))
+if args.ota_key:
+    private_key = args.ota_key
+
 private_key_pass = os.getenv('OTA_KEY_PASS', "")
+if args.ota_key_pass:
+    private_key_pass = args.ota_key_pass
+
 create_signature_status = create_signature("manifest.ini",
                                            "manifest.sha256",
                                            private_key,
