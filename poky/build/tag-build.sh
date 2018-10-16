@@ -3,11 +3,8 @@
 set -e
 set -u
 
-BUILD_ETC=poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/machine-robot-image/1.0-r0/rootfs/etc
-
-BASE=`cat ${BUILD_ETC}/os-version-base`
-CODE=`cat ${BUILD_ETC}/os-version-code`
-TAGNAME="${BASE}.${CODE}"
+SCRIPT_PATH=$(dirname $([ -L $0 ] && echo "$(dirname $0)/$(readlink -n $0)" || echo $0))
+TAGNAME=`${SCRIPT_PATH}/get-ota-version-from-build.sh`
 
 # Check to see if the victor submodule pointer has been modified
 VICTOR_DIR=anki/victor
