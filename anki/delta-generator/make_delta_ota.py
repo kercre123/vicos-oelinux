@@ -251,7 +251,7 @@ delta_manifest['META'] = {'manifest_version': '1.0.0',
                           'num_images': '1'}
 delta_manifest['DELTA'] = {'base_version': old_manifest_ver,
                            'compression': 'gz',
-                           'encryption': os.getenv('OTAENC', '1'),
+                           'encryption': '1',
                            'wbits': '31',
                            'bytes': os.path.getsize('delta.bin'),
                            'sha256': sha256_file('delta.bin'),
