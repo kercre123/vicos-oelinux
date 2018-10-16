@@ -201,7 +201,7 @@ default_delta_ota_name = "vicos-{0}_to_{1}.ota".format(old_manifest_ver,
                                                        new_manifest_ver)
 
 delta_ota_name = args.out
-if os.path.isdir(delta_ota_name):
+if delta_ota_name and os.path.isdir(delta_ota_name):
     delta_ota_name = os.path.join(delta_ota_name, default_delta_ota_name)
 if not delta_ota_name:
     delta_ota_name = default_delta_ota_name
