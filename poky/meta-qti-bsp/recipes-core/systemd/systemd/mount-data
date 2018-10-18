@@ -106,6 +106,10 @@ make_userdata() {
   mkdir -p /data/misc/bluetooth
   chown -R bluetooth:bluetooth /data/misc/bluetooth
   chmod -R 770 /data/misc/bluetooth
+  #panics
+  mkdir -p /data/panics
+  chown -R anki:anki /data/panics
+  chmod -R 770 /data/panics
 }
 
 mount_tmp_userdata() {
