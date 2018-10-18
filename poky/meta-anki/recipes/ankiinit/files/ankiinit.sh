@@ -59,4 +59,7 @@ if [ -e /data/maintenance_reboot ]; then
     mv /data/maintenance_reboot /run/after_maintenance_reboot
 fi
 
+#Enable Ramoops
+modprobe ramoops
+
 exit 0
