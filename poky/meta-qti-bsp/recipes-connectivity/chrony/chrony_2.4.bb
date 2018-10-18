@@ -31,6 +31,7 @@ LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=751419260aa954499f7abaabaa882bbe"
 
 SRC_URI = "https://download.tuxfamily.org/chrony/chrony-${PV}.tar.gz \
+    file://0001-Emit-a-DAS-event-when-time-is-synchronized.patch \
     file://chrony.conf \
     file://chronyd \
     file://chronyd.service \
@@ -69,6 +70,8 @@ PACKAGECONFIG[scfilter] = "--enable-scfilter,--without-seccomp"
 DISABLE_STATIC = ""
 
 LDFLAGS += "-lpthread"
+
+DEPENDS += "liblog"
 
 do_configure() {
     ./configure --sysconfdir=${sysconfdir} --bindir=${bindir} --sbindir=${sbindir} \
