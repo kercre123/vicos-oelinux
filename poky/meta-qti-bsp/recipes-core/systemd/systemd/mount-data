@@ -41,47 +41,43 @@ mount_data_from_mapped_userdata() {
     return $?
 }
 
-make_userdata() {
-  if $1; then
-    echo "Remaking /data" > /dev/kmsg
-    user-data-locker reset > $KEY_FILE
-    rc=$?
-    if [ $rc -ne 0 ]; then
-       echo "user-data-locker reset returned $rc"
-       return $rc
-    fi
-    cryptsetup -q --key-file $KEY_FILE luksFormat $USER_DATA_PARTITION
-    rc=$?
-    if [ $rc -ne 0 ]; then
-	echo "cryptsetup luksFormat returned $rc"
-	return $rc
-    fi
-    cryptsetup -q --key-file $KEY_FILE luksOpen $USER_DATA_PARTITION userdata
-    rc=$?
-    if [ $rc -ne 0 ]; then
-	echo "cryptsetup luksOpen returned $rc"
-	return $rc
-    fi
-    mkfs.ext4 /dev/mapper/userdata
-    rc=$?
-    if [ $rc -ne 0 ]; then
-	echo "mkfs.ext4 returned $rc"
-	cryptsetup luksClose userdata
-	return $rc
-    fi
-    mount_data_from_mapped_userdata
-    rc=$?
-    if [ $rc -ne 0 ]; then
-	echo "mount /data returned $rc"
-	cryptsetup luksClose userdata
-	return $rc
-    fi
+make_cryptdata() {
+  echo "Remaking /data" > /dev/kmsg
+  user-data-locker reset > $KEY_FILE
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    echo "user-data-locker reset returned $rc"
+    return $rc
   fi
-  # This doesn't really seem to belong in this script but the usb service is using this directory's existance to
-  # determine that /data is mounted and it isn't well integrated into systemd so making it here is the easiest way
-  # to make it work.
-  mkdir -p /data/usb
-  mkdir -p /data/misc/camera
+  cryptsetup -q --key-file $KEY_FILE luksFormat $USER_DATA_PARTITION
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    echo "cryptsetup luksFormat returned $rc"
+    return $rc
+  fi
+  cryptsetup -q --key-file $KEY_FILE luksOpen $USER_DATA_PARTITION userdata
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    echo "cryptsetup luksOpen returned $rc"
+    return $rc
+  fi
+  mkfs.ext4 /dev/mapper/userdata
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    echo "mkfs.ext4 returned $rc"
+    cryptsetup luksClose userdata
+    return $rc
+  fi
+  mount_data_from_mapped_userdata
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    echo "mount /data returned $rc"
+    cryptsetup luksClose userdata
+    return $rc
+  fi
+}
+
+make_userdata() {
   if [ ! -e $CONNMAN_DONE_TOKEN ]; then
     mkdir -p /data/lib/connman/
     cp -rf /var/lib/connman/* /data/lib/connman
@@ -93,28 +89,44 @@ make_userdata() {
     chown net:anki $ROBOT_KEY
     chmod 440 $ROBOT_KEY
   fi
+
+  #usb
+  mkdir -p /data/usb
+  #camera
+  mkdir -p /data/misc/camera
+  #data
   mkdir -p /data/data/com.anki.victor
   chown -R anki:anki /data/data/com.anki.victor
   chmod -R 770 /data/data/com.anki.victor
+  #vic-gateway
   mkdir -p /data/vic-gateway
   chown -R net:anki /data/vic-gateway
   chmod -R 770 /data/vic-gateway
+  #bluetooth
+  mkdir -p /data/misc/bluetooth
+  chown -R bluetooth:bluetooth /data/misc/bluetooth
+  chmod -R 770 /data/misc/bluetooth
+}
 
+mount_tmp_userdata() {
+  mount -o size=64M -t tmpfs none /data/
+  rc=$?
+  return $rc
 }
 
 mount_userdata() {
     # If the partition has not already been formatted for LUKS, don't bother trying
     # to mount it.
     if ! cryptsetup -v isLuks $USER_DATA_PARTITION; then
-	return 1
+      return 1
     fi
 
     # Get the passphrase (key) using TrustZone
     user-data-locker > $KEY_FILE
     rc=$?
     if [ $rc -ne 0 ]; then
-	echo "user-data-locker returned $rc"
-	return $rc
+      echo "user-data-locker returned $rc"
+      return $rc
     fi
 
     # Open the encrypted partition
@@ -129,8 +141,8 @@ mount_userdata() {
     mount_data_from_mapped_userdata
     rc=$?
     if [ $rc -ne 0 ]; then
-	echo "mount /data returned $rc"
-	cryptsetup luksClose userdata
+      echo "mount /data returned $rc"
+      cryptsetup luksClose userdata
     fi
     return $rc
 }
@@ -141,27 +153,26 @@ case "$1" in
     hexdump -e '"%c"' -n 4 /dev/block/bootdevice/by-name/userdata | egrep -q WIPE && echo "1" > /run/data_cleared
     if grep $UNBRICK_KEY /proc/cmdline > /dev/null; then
       echo "Mount-data in UNBRICK MODE" > /dev/kmsg
-      mount -o size=64M -t tmpfs none /data/
-      make_userdata false
+      mount_tmp_userdata
+      mounted=$?
     else
       mount_userdata
-      rc=$?
-      if [ $rc -ne 0 ]; then
-          make_userdata true
-          rc=$?
-          sync
-          if [ $rc -eq 0 ]; then
-              dmesg > /data/format-data.log
-              echo "-----------------------------" >> /data/format-data.log
-              journalctl -u mount-data >> /data/format-data.log
-          fi
+      mounted=$?
+      if [ $mounted -ne 0 ]; then
+        make_cryptdata
+        rc=$?
+        sync
+        if [ $rc -eq 0 ]; then
+          dmesg > /data/format-data.log
+          echo "-----------------------------" >> /data/format-data.log
+          journalctl -u mount-data >> /data/format-data.log
+        fi
       fi
       rm -rf $KEY_FILE
-      if [ $rc -eq 0 ]; then
-          mkdir -p /data/misc/bluetooth
-          chown -R bluetooth:bluetooth /data/misc/bluetooth
-          chmod -R 770 /data/misc/bluetooth
-      fi
+    fi
+
+    if [ $mounted -eq 0 ]; then
+      make_userdata
     fi
     ;;
 
