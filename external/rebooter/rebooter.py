@@ -25,8 +25,18 @@ minimum_uptime = int(os.getenv("REBOOTER_MINIMUM_UPTIME", 4 * 60 * 60))  # 4 hr
 inhibitor_delay = int(os.getenv("REBOOTER_INHIBITOR_DELAY", 17))  # 17 seconds
 verbose_logging = os.getenv("REBOOTER_VERBOSE_LOGGING", False)
 
+#
+# Return milliseconds since boot for use as hardware timestamp
+#
+def das_uptime_ms():
+  try:                                   
+    up, _ = [float(field) for field in open("/proc/uptime").read().split()]  
+  except (IOError, ValueError):
+    return 0             
+  return long(up*1000)
+
 def das_event(name, s1 = "", s2 = "", s3 = "", s4 = "", i1 = "", i2 = "", i3 = "", i4 = ""):
-    fmt = "\n@{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\n"
+    fmt = "\n@{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\n"
     s1 = s1.rstrip().replace('\r', '\\r').replace('\n', '\\n')
     s2 = s2.rstrip().replace('\r', '\\r').replace('\n', '\\n')
     s3 = s3.rstrip().replace('\r', '\\r').replace('\n', '\\n')
@@ -35,7 +45,7 @@ def das_event(name, s1 = "", s2 = "", s3 = "", s4 = "", i1 = "", i2 = "", i3 = "
     i2 = i2.rstrip().replace('\r', '\\r').replace('\n', '\\n')
     i3 = i3.rstrip().replace('\r', '\\r').replace('\n', '\\n')
     i4 = i4.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    sys.stdout.write(fmt.format(name, s1, s2, s3, s4, i1, i2, i3, i4))
+    sys.stdout.write(fmt.format(name, s1, s2, s3, s4, i1, i2, i3, i4, das_uptime_ms()))
     sys.stdout.flush()
 
 def log_das_event_for_failure(reason):
