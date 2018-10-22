@@ -5,7 +5,7 @@
 # Copyright 2018    Anki, Inc.
 # Accepts fault code string on stdin and invokes associated actions, including:
 #
-# - stops anki-robot.target (victor.target) 
+# - stops anki-robot.target (victor.target)
 # - display fault code on face
 # - (optional) restart anki-robot.target
 #
@@ -46,7 +46,7 @@ fi
 FAULT_CODE=${FAULT_CODE//[^0-9]/}
 
 # Ignore zero
-# Nobody should be writing 0 to the fifo, so it probably means 
+# Nobody should be writing 0 to the fifo, so it probably means
 # the fifo was closed after processes were shutdown
 if [ $FAULT_CODE -eq 0 ]; then
   exit 0
@@ -59,7 +59,8 @@ fi
 
 echo $FAULT_CODE > $PROGRESS_FILE
 
-echo "@robot.fault_code$FAULT_CODE"
+# Log source, event, i1 to DAS
+/anki/bin/vic-log-event fault-code-handler robot.fault_code '' '' '' '' ${FAULT_CODE}
 
 logv "FAULT_CODE=$FAULT_CODE"
 
@@ -69,9 +70,9 @@ KILL_CAMERA_AFTER_STOPPING_ROBOT=0
 # handle error-code specific actions
 case $FAULT_CODE in
 70[0-2])
-    # These codes indicate shutdown modes that require vic-robot to stay alive 
+    # These codes indicate shutdown modes that require vic-robot to stay alive
     # in order to tell syscon to shutdown. In theory you can try to kill all of
-    # the other processes, but there may not be enough time since power could 
+    # the other processes, but there may not be enough time since power could
     # be cut by syscon at any moment so instead we just kill vic-dasmgr to make
     # sure the power_off DAS message is recorded and backed up.
     logv "Shutting down. Stopping vic-dasmgr only."
@@ -141,7 +142,7 @@ else
     # display error code
     logv "display fault code"
     [ -x /anki/bin/vic-faultCodeDisplay ] && /anki/bin/vic-faultCodeDisplay "${FAULT_CODE}"
-fi    
+fi
 
 if [ $KILL_CAMERA_AFTER_STOPPING_ROBOT -eq 1 ]; then
   logv "kill and restart mm-anki-camera"
@@ -163,4 +164,3 @@ if [ $ON_FAULT_RESTART -eq 1 ]; then
 fi
 
 logv "fault-code-handler: done"
-
