@@ -41,7 +41,7 @@ mount_data_from_mapped_userdata() {
     return $?
 }
 
-make_cryptdata() {
+make_and_mount_cryptdata() {
   echo "Remaking /data" > /dev/kmsg
   user-data-locker reset > $KEY_FILE
   rc=$?
@@ -163,10 +163,10 @@ case "$1" in
       mount_userdata
       mounted=$?
       if [ $mounted -ne 0 ]; then
-        make_cryptdata
-        rc=$?
+        make_and_mount_cryptdata
+        mounted=$?
         sync
-        if [ $rc -eq 0 ]; then
+        if [ $mounted -eq 0 ]; then
           dmesg > /data/format-data.log
           echo "-----------------------------" >> /data/format-data.log
           journalctl -u mount-data >> /data/format-data.log
@@ -175,9 +175,8 @@ case "$1" in
       rm -rf $KEY_FILE
     fi
 
-    if [ $mounted -eq 0 ]; then
-      make_userdata
-    fi
+    # Always create userdata
+    make_userdata
     ;;
 
   stop )
