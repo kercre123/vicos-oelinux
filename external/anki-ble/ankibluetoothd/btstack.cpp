@@ -126,6 +126,7 @@ enum class BluetoothGattConnectionStatus {
     GettingGattDb,
     RegisteringForNotifications,
     Connected,
+    Disconnecting
 };
 
 static std::string BluetoothGattConnectionStatusToString(const BluetoothGattConnectionStatus status)
@@ -148,6 +149,9 @@ static std::string BluetoothGattConnectionStatusToString(const BluetoothGattConn
       break;
     case BluetoothGattConnectionStatus::Connected:
       return "Connected";
+      break;
+    case BluetoothGattConnectionStatus::Disconnecting:
+      return "Disconnecting";
       break;
     default:
       return std::to_string(static_cast<int>(status));
@@ -247,6 +251,7 @@ static bt_status_t DisconnectOutboundConnectionById(const int conn_id)
   bt_bdaddr_t bda = {0};
   auto search = FindOutboundConnectionById(conn_id);
   if (search != sOutboundConnections.end()) {
+    search->second.status = BluetoothGattConnectionStatus::Disconnecting;
     DeregisterForNotifications(conn_id, search->second.connection);
     bt_bdaddr_t_from_string(search->second.connection.address, &bda);
   }
@@ -805,6 +810,10 @@ void btgattc_open_cb(int conn_id, int status, int clientIf, bt_bdaddr_t* bda)
       if (search->second.status == BluetoothGattConnectionStatus::Connecting) {
         search->second.status = BluetoothGattConnectionStatus::DiscoveringServices;
         bt_status = sBtGattInterface->client->search_service(conn_id, nullptr);
+      } else if (search->second.status == BluetoothGattConnectionStatus::Disconnecting) {
+        logv("%s(..., bda = %s) is Disconnecting.  Will drop this connection",
+             __FUNCTION__, address.c_str());
+        sTaskExecutor.Wake(std::bind(&DisconnectGattPeerByAddress, address));
       } else {
         logw("%s(conn_id = %d, clientIf = %d, bda = %s) - Unexpected connection status = %s",
              __FUNCTION__, conn_id, clientIf, address.c_str(),
@@ -2147,6 +2156,7 @@ bool DisconnectGattPeer(int conn_id)
 
   auto search = FindOutboundConnectionById(conn_id);
   if (search != sOutboundConnections.end()) {
+    search->second.status = BluetoothGattConnectionStatus::Disconnecting;
     DeregisterForNotifications(conn_id, search->second.connection);
     bt_bdaddr_t bda = {0};
     bt_bdaddr_t_from_string(search->second.connection.address, &bda);
@@ -2175,6 +2185,7 @@ void DisconnectGattPeerByAddress(const std::string& address)
   if (search != sOutboundConnections.end()) {
     BluetoothGattConnection& connection = search->second.connection;
     conn_id = connection.conn_id;
+    search->second.status = BluetoothGattConnectionStatus::Disconnecting;
     DeregisterForNotifications(conn_id, connection);
     EraseGattQueueItemsByConnId(conn_id);
   }
@@ -2228,7 +2239,18 @@ bool ConnectToBLEPeripheral(const std::string& address, const bool is_direct)
   }
   auto search = sOutboundConnections.find(address);
   if (search != sOutboundConnections.end()) {
-    return true;
+    if (search->second.status == BluetoothGattConnectionStatus::Disconnecting) {
+      /* If we are in the process of Disconnecting, treat this the same as if we didn't
+       * find anything in sOutboundConnections.
+       */
+      logv("%s(address = %s) - status is Disconnecting, so will restart the connection flow",
+           __FUNCTION__, address.c_str());
+    } else {
+      /* If we are in any other state, besides Disconnecting, then a connection is in
+       * progress and we can just return true.
+       */
+      return true;
+    }
   }
   BluetoothGattConnectionInfo info(address);
   sOutboundConnections[address] = info;
