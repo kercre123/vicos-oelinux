@@ -16,7 +16,6 @@
 
 #define SPINE_TTY "/dev/ttyHS0"
 
-#include <stdint.h>
 typedef uint32_t crc_t;
 
 crc_t calc_crc(const uint8_t* buf, int len);
@@ -99,9 +98,6 @@ static struct HalGlobals {
 #if EXTENDED_SPINE_DEBUG
 #define DEBUG_LEVEL 0
 #endif
-
-
-typedef int SpineErr;
 
 
 /************* SERIAL INTERFACE ***************/

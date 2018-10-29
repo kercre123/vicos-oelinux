@@ -2,24 +2,11 @@
 #define SPINE_HAL_H
 
 #include <stdint.h>
+typedef int SpineErr;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-/* typedef enum SpineErr_t { */
-/*   err_OK, */
-/*   err_BAD_CHECKSUM = 0x8001, */
-/*   err_INVALID_FRAME_LEN, */
-/*   err_UNKNOWN_MSG, */
-/*   err_CANT_OPEN_FILE, */
-/*   err_TERMIOS_FAIL, */
-/*   err_BAD_ARGUMENT, */
-/*   err_ALREADY_OPEN, */
-/*   err_FILE_READ_ERROR, */
-/* } SpineErr; */
-
 
 #define HAL_SERIAL_POLL_INTERVAL_US 200
 

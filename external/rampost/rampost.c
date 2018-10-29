@@ -8,6 +8,7 @@
 #include <string.h>
 #include <termios.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <sys/ioctl.h>
 #include <assert.h>
 
@@ -18,17 +19,13 @@
 #include "dfu.h"
 #include "das.h"
 
-#define REACTION_TIME  ((uint64_t)(30 * NSEC_PER_SEC))
-#define LOW_BATTERY_TIME ((uint64_t)(15 * NSEC_PER_SEC)) // Per VIC-4663
 #define FRAME_WAIT_MS 500
-#define SHUTDOWN_FRAME_INTERVAL ((uint64_t)(0.5 * NSEC_PER_SEC))
 
 enum {
   app_DEVICE_OPEN_ERROR = 1,
   app_IO_ERROR,
   app_VALIDATION_ERROR,
   app_MEMORY_ERROR,
-
 };
 
 /******** TIMING UTILITIES ********/
@@ -104,42 +101,73 @@ int recovery_mode_check(void) {
 
 void cleanup(bool blank_display)
 {
-  if( blank_display) {
+  if (blank_display) {
     lcd_set_brightness(0);
     lcd_device_sleep();
   }
   lcd_gpio_teardown();
 }
 
-int error_exit(RampostErr err) {
-  cleanup(true);
-  exit(err);
-}
-
 #include "anki_dev_unit.h"
+#include "low_battery.h"
+#include "too_hot.h"
 #include "error_801.h"
+#include "error_802.h"
+#define MAX_ERROR_STR_LEN (16)
+#define ERROR_HAL_ERROR (802)
+#define ERROR_DFU_ERROR (801)
 
-
-void show_dev_unit(void) {
+static inline void show_dev_unit(void) {
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
 }
 
-void show_error_801(void) {
+static inline void show_low_battery(void) {
+  lcd_draw_frame2((uint16_t*)low_battery, low_battery_len);
+}
+
+static inline void show_too_hot(void) {
+  lcd_draw_frame2((uint16_t*)too_hot, too_hot_len);
+}
+
+static void write_semaphore(const char* const text, const int length) {
   int fd = open(SEMAPHORE_FILE, O_CREAT|O_WRONLY, 00640);
   if (fd >= 0) {
-    write(fd, "ERROR 801\n", 10);
+    write(fd, text, length);
     close(fd);
   }
   else {
-    DAS_LOG(DAS_ERROR, "semaphore", "Couldn't write semaphore file \"%s\": %d", SEMAPHORE_FILE, fd);
+    DAS_LOG(DAS_ERROR, "semaphore",
+            "Couldn't write semaphore file \"%s\": %d for error \"%s\"", SEMAPHORE_FILE, fd, text);
   }
-  lcd_draw_frame2((uint16_t*)error_801, error_801_len);
 }
 
+static void show_error(const int error_code) {
+  char error_str[MAX_ERROR_STR_LEN];
+  const int wlen = snprintf(error_str, MAX_ERROR_STR_LEN, "ERROR %d\n", error_code);
+  write_semaphore(error_str, wlen);
+
+  switch(error_code) {
+    case 801:
+      lcd_draw_frame2((uint16_t*)error_801, error_801_len);
+      break;
+    case 802:
+      lcd_draw_frame2((uint16_t*)error_802, error_802_len);
+      break;
+    default:
+      DAS_LOG(DAS_ERROR, "show_error", "No image for error %d", error_code);
+  }
+}
+
+int error_exit(RampostErr err) {
+  show_error(ERROR_HAL_ERROR);
+  cleanup(false);
+  exit(err);
+}
 
 typedef enum {
   battery_LEVEL_GOOD,
   battery_LEVEL_TOOLOW,
+  battery_TOO_HOT,
   battery_BOOTLOADER,
   battery_TIMEOUT
 } BatteryState;
@@ -153,11 +181,17 @@ BatteryState confirm_battery_level(void) {
     else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) return battery_BOOTLOADER;
     else if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
       static const float kBatteryScale = 2.8f / 2048.f;
-      const int16_t counts = ((struct BodyToHead*)(hdr+1))->battery.main_voltage;
+      struct BodyToHead* const b2h = (struct BodyToHead*)(hdr+1);
+      const int16_t counts = b2h->battery.main_voltage;
       const float volts = counts*kBatteryScale;
+
       DAS_LOG(DAS_EVENT, "battery_level", "%0.3f", volts);
+      DAS_LOG(DAS_EVENT, "battery_temperature", "%d", b2h->battery.temperature);
+
+      if (b2h->battery.temperature > 45) return battery_TOO_HOT;
+      if (b2h->battery.flags & POWER_ON_CHARGER) return battery_LEVEL_GOOD;
       if (volts > 3.55f) return battery_LEVEL_GOOD;
-      else return battery_LEVEL_TOOLOW;
+      return battery_LEVEL_TOOLOW;
     }
   }
   return battery_TIMEOUT;
@@ -177,11 +211,14 @@ void force_syscon_resync(void) {
 
 /************ MAIN *******************/
 int main(int argc, const char* argv[]) {
+  static const char* const LOW_BAT = "low bat";
+  static const char* const TOO_HOT = "too hot";
+  int error_code = 0;
+  SpineErr spine_error = 0;
   bool success = false;
   bool in_recovery_mode = false;
-  bool blank_on_exit = true;
-  bool show_801 = false;
-  bool hal_failure = false;
+  bool is_low_battery = false;
+  bool is_too_hot = false;
   bool is_dev_unit = false;
   bool force_update = false;
   const char* dfu_file = NULL;
@@ -217,9 +254,9 @@ int main(int argc, const char* argv[]) {
 
   in_recovery_mode = recovery_mode_check();
 
-  int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
-  if (errCode) {
-    hal_failure = true;
+  spine_error = hal_init(SPINE_TTY, SPINE_BAUD);
+  if (spine_error) {
+    error_code = ERROR_HAL_ERROR;
   }
   else {
     force_syscon_resync();
@@ -235,26 +272,30 @@ int main(int argc, const char* argv[]) {
       if (result == err_SYSCON_VERSION_GOOD) {
         //hooray!
       }
-      else if (result != err_OK ) {
+      else if (result > err_OK) {
         DAS_LOG(DAS_ERROR, "dfu_error", "DFU Error %d", result);
-        show_801 = true;
+        if (result < err_DFU_ERASE_ERROR) error_code = ERROR_HAL_ERROR;
+        else error_code = ERROR_DFU_ERROR;
       }
     }
   }
-  if (hal_failure) {
-    show_801 = true;
-  }
-  else {
+
+  if (!error_code) {
     BatteryState bat_state = confirm_battery_level();
     switch (bat_state) {
       case battery_LEVEL_GOOD:
         break;
       case battery_LEVEL_TOOLOW:
-        DAS_LOG(DAS_INFO, "battery_level_low", "Battery reads low");
+        DAS_LOG(DAS_EVENT, "battery_level_low", "%d", bat_state);
+        is_low_battery = true;
+        break;
+      case battery_TOO_HOT:
+        DAS_LOG(DAS_EVENT, "battery_too_hot", "%d", bat_state);
+        is_too_hot = true;
         break;
       case battery_BOOTLOADER:
         DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
-        show_801 = true; //should be impossible.
+        error_code = ERROR_DFU_ERROR; //should be impossible.
         break;
       case battery_TIMEOUT:
         DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check timed out!");
@@ -263,23 +304,32 @@ int main(int argc, const char* argv[]) {
 
     //set LEDS only after we expect syscon is good
     set_body_leds(success, in_recovery_mode);
-
   }
 
-  lcd_device_init(); // We'll be displaying something
-  lcd_set_brightness(5);
-
-  //Skip everything else on syscon error!
-  if (show_801) {
-    show_error_801();
-    blank_on_exit = false;
+  if (error_code || is_dev_unit || is_low_battery || is_too_hot) {
+    lcd_device_init(); // We'll be displaying something
+    lcd_set_brightness(5);
+    //Skip everything else on syscon error!
+    if (error_code) {
+      show_error(error_code);
+    }
+    else if (is_low_battery) {
+      show_low_battery();
+      write_semaphore(LOW_BAT, strlen(LOW_BAT));
+    }
+    else if (is_too_hot) {
+      show_too_hot();
+      write_semaphore(TOO_HOT, strlen(TOO_HOT));
+    }
+    else if (is_dev_unit) {
+      show_dev_unit();
+    }
+    cleanup(false);
   }
-  else if (is_dev_unit) {
-    show_dev_unit();
-    blank_on_exit = false; // Exit without blanking the display
+  else {
+    cleanup(true);
   }
 
-  cleanup(blank_on_exit);
-  bool has_error = show_801;
-  return has_error;
+  DAS_LOG(DAS_EVENT, "rampost.exit", "%d", error_code);
+  return error_code;
 }
