@@ -11,9 +11,9 @@ ConditionFileNotEmpty=!/run/vic-switchboard/disable-update-engine
 
 [Service]
 Type=simple
-TimeoutStartSec=1830
+TimeoutStartSec=3630
 Environment=TERM=dumb
-Environment=UPDATE_ENGINE_MAX_SLEEP=1800
+Environment=UPDATE_ENGINE_MAX_SLEEP=3600
 Environment=UPDATE_ENGINE_ENABLED=False
 Environment=UPDATE_ENGINE_ALLOW_DOWNGRADE=False
 Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
