@@ -62,7 +62,7 @@
 				pins = "gpio58","gpio94";
 				//bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
-				output-enable; output-high; 
+				output-enable; output-high;
 			};
 		};
 
@@ -219,11 +219,11 @@
 			};
 			spi0_cs0_sleep: spi0_cs0_sleep {
 				mux {
-					pins = "gpio18";
+					pins = "gpio18", "gpio55";  // GPIO 55 is not technically part of SPI0 but we need to disable the bias and for the LCD (on SPI0) so we do it here.
 					function = "gpio";
 				};
 				config {
-					pins = "gpio18";
+					pins = "gpio18", "gpio55";
 					drive-strength = <2>;
 					bias-disable;
 				};
