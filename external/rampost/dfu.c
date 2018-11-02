@@ -121,11 +121,19 @@ const uint8_t* dfu_get_version()
 
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
 
-
+  // Worst case, version should be returned 3 packets later. we're waiting for a full 200 here
   hdr = hal_wait_for_frame(PAYLOAD_VERSION, FRAME_WAIT_MS*2);
   if (hdr) {
-    memcpy(gInstalledVersion, ((struct VersionInfo*)(hdr + 1))->app_version, VERSTRING_LEN);
-    return gInstalledVersion;
+    if (hdr->payload_type == PAYLOAD_VERSION) {
+      memcpy(gInstalledVersion, ((struct VersionInfo*)(hdr + 1))->app_version, VERSTRING_LEN);
+      return gInstalledVersion;
+    }
+    else {
+      DAS_LOG(DAS_WARN, "dfu.request_version.nack", "%d", *(Ack*)(hdr + 1));
+    }
+  }
+  else {
+    DAS_LOG(DAS_WARN, "dfu.request_version.no_response", "Assuming erased");
   }
 
   //Any other response, including NAK from bootloader, we assume erased and continue.

@@ -530,7 +530,7 @@ const void* hal_get_a_frame(uint8_t* frame_buffer, int buffer_len) {
 
 
 
-const void* hal_get_next_frame(int32_t timeout_ms)
+const void* hal_get_next_frame(const int32_t timeout_ms)
 {
   uint64_t expiry = steady_clock_now() + (timeout_ms * 1000000LL);
 
@@ -543,7 +543,7 @@ const void* hal_get_next_frame(int32_t timeout_ms)
   return NULL;
 }
 
-const void* hal_wait_for_frame(uint16_t type, int32_t timeout_ms)
+const void* hal_wait_for_frame(const uint16_t type, const int32_t timeout_ms)
 {
   uint64_t expiry = steady_clock_now() + (timeout_ms * 1000000LL);
   const struct SpineMessageHeader* hdr = NULL;
@@ -552,6 +552,23 @@ const void* hal_wait_for_frame(uint16_t type, int32_t timeout_ms)
     hdr = hal_get_next_frame(timeout_ms);
     if (hdr && hdr->payload_type == type) {
       return hdr;
+    }
+  }
+  return NULL;
+}
+
+const void* hal_wait_for_frame_or_nack(const uint16_t type, const int32_t timeout_ms)
+{
+  uint64_t expiry = steady_clock_now() + (timeout_ms * 1000000LL);
+  const struct SpineMessageHeader* hdr = NULL;
+
+  while (steady_clock_now() < expiry) {
+    hdr = hal_get_next_frame(timeout_ms);
+    if (hdr && hdr->payload_type == type) {
+      return hdr;
+    }
+    else if (hdr && hdr->payload_type == PAYLOAD_ACK) {
+      if (*(Ack*)(hdr + 1) < 0) return hdr;
     }
   }
   return NULL;

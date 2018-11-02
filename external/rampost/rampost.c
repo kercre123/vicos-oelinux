@@ -264,8 +264,11 @@ int main(int argc, const char* argv[]) {
     uint64_t timeout = steady_clock_now() + 1 * NSEC_PER_SEC;
     const struct SpineMessageHeader* hdr;
     do {
-      hdr= hal_get_next_frame(1); //clear backlog
+      hdr = hal_get_next_frame(1); //clear backlog already in UART RX FIFO
     } while (hdr && steady_clock_now() < timeout);
+    // If we haven't seen anything yet, try to make sure we're receiving something
+    if (!hdr) hdr = hal_get_next_frame(10);
+    if (hdr) DAS_LOG(DAS_EVENT, "before_dfu.got_frame", "%c%c", hdr->payload_type&0xff, hdr->payload_type >> 8);
 
     if (dfu_file != NULL) { // A DFU file has been specified
       RampostErr result = dfu_sequence(dfu_file, force_update);
