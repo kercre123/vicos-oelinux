@@ -1,0 +1,10 @@
+[Unit]
+SourcePath=/usr/bin/ankitrace
+Description=Anki tracing Service
+Requires=multi-user.target
+After=multi-user.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/ankitrace -s
+ExecStop=/usr/bin/ankitrace -q
