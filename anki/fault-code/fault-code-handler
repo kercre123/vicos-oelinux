@@ -20,6 +20,7 @@ set -u
 : ${VERBOSE:=0}
 
 PROGRESS_FILE="/run/fault_code.pending"
+TRACE_PATH="/data/ankitrace/faults"
 
 function logv () {
     if [ $VERBOSE -eq 1 ]; then echo "$1"; fi
@@ -55,6 +56,10 @@ fi
 if [ -f $PROGRESS_FILE ]; then
     logv "$(basename $0) in progress"
     exit 0
+fi
+
+if [ -f /usr/bin/ankitrace ]; then
+   /usr/bin/ankitrace -r $TRACE_PATH/$FAULT_CODE
 fi
 
 echo $FAULT_CODE > $PROGRESS_FILE

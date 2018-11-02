@@ -1,0 +1,94 @@
+#!/bin/bash
+export LTTNG_HOME="/data/ankitrace"
+export LTTNG_URL="$LTTNG_HOME/trace"
+export TRACE_ACTIVE="/run/ankitrace.active"
+export LTTNG="/usr/bin/lttng"
+
+function trace_start {
+    mkdir -p $LTTNG_HOME
+    /sbin/modprobe lttng-tracer
+    $LTTNG create --snapshot --set-url=$LTTNG_URL
+    $LTTNG enable-channel -k --subbuf-size=512K channel0
+    $LTTNG enable-channel -u --subbuf-size=128K channel0
+    $LTTNG enable-event -u anki_ust* -c channel0
+    $LTTNG enable-event -k -a --syscall  -c channel0
+    $LTTNG enable-event -k sched_switch -c channel0
+    $LTTNG enable-event -k timer_hrtimer_start -c channel0
+    $LTTNG enable-event -k timer_hrtimer_expire_entry -c channel0
+    $LTTNG enable-event -k timer_start -c channel0
+    $LTTNG enable-event -k power_* -c channel0
+    $LTTNG enable-event -k irq_handler_entry -c channel0
+    $LTTNG enable-event -k irq_softirq_raise -c channel0
+    $LTTNG enable-event -k asoc_snd* -c channel0
+    $LTTNG enable-event -k compaction* -c channel0
+    $LTTNG enable-event -k writeback* -c channel0
+    $LTTNG enable-event -k workqueue* -c channel0
+    $LTTNG enable-event -k mm_vmscan* -c channel0
+    $LTTNG enable-event -k lttng_logger -c channel0
+    $LTTNG start
+    /bin/touch $TRACE_ACTIVE
+}
+
+function trace_quit {
+    if [ -f $TRACE_ACTIVE ]; then
+      $LTTNG stop
+      $LTTNG destroy -a
+      /bin/rm -f $TRACE_ACTIVE
+    else
+        echo "Invalid Action: Tracing not active"
+        exit 1
+    fi
+}
+
+function trace_record {
+    TIMESTAMP=`date +%Y%m%d-%H%M`
+    TRACE_PATH=$1
+    if [ -f $TRACE_ACTIVE ]; then
+      mkdir -p $TRACE_PATH
+      $LTTNG stop
+      $LTTNG snapshot record
+      /bin/tar -cvzf $TRACE_PATH/ankitrace-${TIMESTAMP}.tgz $LTTNG_URL
+      /bin/rm -rf $LTTNG_URL
+      $LTTNG start
+    else
+        echo "Invalid Action: Tracing not active"
+        exit 1
+    fi
+}
+
+while getopts "hsqr:" opt; do
+    case ${opt} in
+        h)
+            echo "Usage:"
+            echo "    ankitrace -h           Display help message."
+            echo "    ankitrace -s           Start trace daemon."
+            echo "    ankitrace -q           Quit trace daemon."
+            echo "    ankitrace -r <PATH>    Record trace data."
+            exit 0
+            ;;
+        s)
+            trace_start
+            exit 0
+            ;;
+        q)
+            trace_quit
+            exit 0
+            ;;
+        r)
+            trace_record ${OPTARG}
+            exit 0
+            ;;
+        \?)
+            echo "Invalid Option: -$OPTARG"
+            exit 1
+            ;;
+        esac
+    done
+
+
+case "$subcommand" in
+    \?)
+        echo "Invalid Command: -$subcommand" 1>$2
+        exit 1
+        ;;
+esac

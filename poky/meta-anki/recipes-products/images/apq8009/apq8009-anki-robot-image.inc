@@ -55,3 +55,5 @@ IMAGE_INSTALL += "rb-camera"
 # Developer stuff
 IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'anki-crash-log', d)}"
 IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'reboot-stresser', d)}"
+IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'ankitrace', d)}"
+IMAGE_INSTALL += "${@base_conditional('DEV', '1', 'ankitrace', '', d)}"
