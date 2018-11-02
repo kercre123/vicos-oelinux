@@ -1,0 +1,8 @@
+[Unit]
+Description=Anki Crash Log Socket
+
+[Socket]
+ListenFIFO=/run/anki-crash-log
+
+[Install]
+WantedBy=sockets.target

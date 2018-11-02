@@ -1,0 +1,12 @@
+[Unit]
+Description=Anki Crash Log Service
+SourcePath=/bin/anki-crash-log
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Restart=no
+RemainAfterExit=no
+EnvironmentFile=-/anki/etc/anki-crash-log.env
+ExecStart=/bin/anki-crash-log
+StandardInput=socket

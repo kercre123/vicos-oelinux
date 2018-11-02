@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# anki-crash-log
+#
+# Accepts path to crash dump from stdin and generates matching log.
+#
+# Copyright 2018    Anki, Inc.
+#
+set -eu
+
+: ${MESSAGES="/var/log/messages"}
+: ${TAIL="/bin/tail -100"}
+
+function log () {
+  /bin/logger -p user.info -t anki-crash-log -- "$1"
+}
+
+function loge () {
+  /bin/logger -p user.err -t anki-crash-log -- "$1"
+}
+
+log "start"
+
+# Read path to crash dump from stdin
+read -t 1 DUMP
+
+if [ -z ${DUMP+x} ]; then
+  loge "error: empty or invalid dump"
+  exit -1
+fi
+
+if [ ! -f ${DUMP} ]; then
+  loge "error: can't find ${DUMP}"
+  exit -1
+fi
+
+if [ ! -r ${MESSAGES} ]; then
+  loge "error: can't read ${MESSAGES}"
+  exit -1
+fi
+
+log "${TAIL} ${MESSAGES} > ${DUMP}.log"
+${TAIL} ${MESSAGES} > ${DUMP}.log
+
+log "done"
+
