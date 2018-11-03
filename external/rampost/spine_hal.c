@@ -99,7 +99,6 @@ static struct HalGlobals {
 #define DEBUG_LEVEL 0
 #endif
 
-
 /************* SERIAL INTERFACE ***************/
 
 static void hal_serial_close()
@@ -119,7 +118,7 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
 
   DAS_LOG(DAS_INFO, "spine.open_serial", "opening serial port %s", devicename);
 
-  gHal.fd = open(devicename, O_RDWR, O_NONBLOCK);
+  gHal.fd = open(devicename, O_RDWR);
   if (gHal.fd < 0) {
     DAS_LOG(DAS_ERROR, "spine.cannot_open", "Cannot open %s", devicename);
     return err_CANT_OPEN_FILE;

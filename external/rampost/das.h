@@ -9,7 +9,7 @@
 #define DAS_WARN 3
 #define DAS_ERROR 4
 
-#define DEBUG_LEVEL 2
+#define DEBUG_LEVEL 1
 
 static inline long long uptime_ms(void) {
   struct timespec tp;
