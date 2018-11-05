@@ -175,10 +175,6 @@ static void msm_vb2_stop_stream(struct vb2_queue *q)
 			vb2_buffer_done(vb2_buf, VB2_BUF_STATE_DONE);
 			msm_vb2->in_freeq = 0;
 		}
-
-	// Wait for all buffers to be given back to vb2 by vb2_buffer_done		
-	vb2_wait_for_all_buffers(q);
-	
 	spin_unlock_irqrestore(&stream->stream_lock, flags);
 	read_unlock_irqrestore(&session->stream_rwlock, rl_flags);
 }
