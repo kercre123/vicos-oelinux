@@ -94,10 +94,7 @@ static struct HalGlobals {
 } gHal;
 
 
-#define EXTENDED_SPINE_DEBUG 0
-#if EXTENDED_SPINE_DEBUG
-#define DEBUG_LEVEL 0
-#endif
+#define EXTENDED_SPINE_DEBUG 1
 
 
 /************* SERIAL INTERFACE ***************/
@@ -229,7 +226,7 @@ static const char* ascii[]={
 "f0 ","f1 ","f2 ","f3 ","f4 ","f5 ","f6 ","f7 ",
 "f8 ","f9 ","fa ","fb ","fc ","fd ","fe ","ff "};
 
-#define open_logfile() creat("serial.log",00777)
+#define open_logfile() creat("/dev/serial.log",00777)
 void serial_log(int dir, const uint8_t* buf, int len)
 {
   static int lastdir = 1;
@@ -415,14 +412,14 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
 {
   size_t rx_len = gHal.rx_cursor;
 
-  // Is there at least a header worth of data to process?
-  if (rx_len < SPINE_HEADER_LEN) {
+  // Are there the minimum number of bytes for a full message to process?
+  if (rx_len < SPINE_HEADER_LEN + SPINE_CRC_LEN) {
     return 0;
   }
 
   // Start from the beginning of the rx buffer
   uint8_t* rx = gHal.buf_rx;
-  int last_test_idx = rx_len - SPINE_SYNC_LEN;
+  int last_test_idx = rx_len - (SPINE_SYNC_LEN-1);
   int sync_index;
   for(sync_index = 0; sync_index < last_test_idx; sync_index++) {
     const uint8_t* test_bytes = rx+sync_index;
@@ -439,7 +436,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
     // throw away all data except unchecked bytes
     DAS_LOG(DAS_DEBUG, "spine.no_sync", "No sync");
     hal_discard_rx_bytes(sync_index);
-    return -1;
+    return 0;  //There must < 4 bytes remaining in buffer
   }
 
   //advance our working pointer to start of sync
@@ -469,7 +466,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   //At this point we have a valid message header.
 
   // Not enough data to validate payload + CRC
-  if (rx_len < payload_len + SPINE_CRC_LEN) {
+  if (rx_len < SPINE_HEADER_LEN + payload_len + SPINE_CRC_LEN) {
     // partial frame: wait for more data
     hal_discard_rx_bytes(sync_index);
     return 0;
