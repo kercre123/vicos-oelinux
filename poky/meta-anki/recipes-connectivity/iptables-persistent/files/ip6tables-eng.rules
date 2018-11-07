@@ -39,8 +39,8 @@
 -A INPUT -p tcp -m tcp -m tcp --dport 1873 -j ACCEPT
 
 # webots
--A INPUT -p tcp -m multiport --dports 5103 -j ACCEPT
--A INPUT -p udp -m multiport --dports 5103 -j ACCEPT
+-A INPUT -p tcp -m tcp --dport 5103 -j ACCEPT
+-A INPUT -p udp -m udp --dport 5103 -j ACCEPT
 
 # dev webservices
 -A INPUT -p tcp -m tcp -m multiport --dports 8887,8888,8889,8890 -j ACCEPT
