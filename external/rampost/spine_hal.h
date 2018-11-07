@@ -40,6 +40,8 @@ enum RobotMode { //todo: mode is a dummy value. If ever needed, this should be i
 
 void hal_set_mode(int new_mode);
 
+void hal_exit(void);
+
 #ifdef __cplusplus
 }
 #endif

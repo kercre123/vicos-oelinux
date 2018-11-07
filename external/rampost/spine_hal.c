@@ -89,13 +89,14 @@ static struct HalGlobals {
   uint32_t rx_cursor;
   uint32_t rx_size;
 
-  int logFd;
+  FILE* logFd;
 
 } gHal;
 
 
 #define EXTENDED_SPINE_DEBUG 0
 #if EXTENDED_SPINE_DEBUG
+#undef DEBUG_LEVEL
 #define DEBUG_LEVEL 0
 #endif
 
@@ -194,7 +195,7 @@ static ssize_t hal_receive_data(const uint8_t* bytes, size_t len)
     return len;
 }
 
-#ifdef EXTENDED_SPINE_DEBUG
+#if EXTENDED_SPINE_DEBUG
 static const char* ascii[]={
 "00 ","01 ","02 ","03 ","04 ","05 ","06 ","07 ",
 "08 ","09 ","0a ","0b ","0c ","0d ","0e ","0f ",
@@ -229,20 +230,25 @@ static const char* ascii[]={
 "f0 ","f1 ","f2 ","f3 ","f4 ","f5 ","f6 ","f7 ",
 "f8 ","f9 ","fa ","fb ","fc ","fd ","fe ","ff "};
 
-#define open_logfile() creat("serial.log",00777)
+#define open_logfile() fopen("/dev/serial.log", "w")
 void serial_log(int dir, const uint8_t* buf, int len)
 {
   static int lastdir = 1;
-  if (dir!=lastdir) {
-      lastdir = dir;
-      if (dir==0) { write(gHal.logFd, "--- OUT ---\n", 12);}
-      else { write(gHal.logFd, "--- IN  ---\n", 12); }
-  }
   int i;
-  for (i=0;i<len;i++) {
-     write(gHal.logFd,ascii[buf[i]],3);
+  if (dir!=lastdir) {
+      const uint64_t now = steady_clock_now();
+      const uint8_t* now_ptr = (uint8_t*)(&now);
+      lastdir = dir;
+      if (dir==0) { fwrite("\n--- OUT --- ", 13, 1, gHal.logFd);}
+      else { fwrite("\n--- IN  --- ", 13, 1, gHal.logFd); }
+      for (i=0; i<sizeof(uint64_t); i++) {
+        fwrite(ascii[now_ptr[i]],3,1,gHal.logFd);
+      }
+      fwrite("\n", 1, 1, gHal.logFd);
   }
-  write(gHal.logFd,"\n",1);
+  for (i=0;i<len;i++) {
+     fwrite(ascii[buf[i]],3,1,gHal.logFd);
+  }
 }
 #else
 #define open_logfile() NULL //no-op
@@ -275,10 +281,12 @@ static ssize_t hal_spine_io()
       r = 0;
     }
     else {
+#if EXTENDED_SPINE_DEBUG
       unsigned char ermsg[]="RE00";
       ermsg[2]=(r>>8)&0xFF;
       ermsg[2]=(r)&0xFF;
       serial_log(1,ermsg, 4);
+#endif
     }
   }
   return r;
@@ -291,10 +299,12 @@ int hal_serial_send(const uint8_t* buffer, int len)
   while (len>0) {
     ssize_t wr = write(gHal.fd, buffer, len);
     if (wr<=0) {
+#if EXTENDED_SPINE_DEBUG
       unsigned char ermsg[]="ER00";
       ermsg[2]=(wr>>8)&0xFF;
       ermsg[2]=(wr)&0xFF;
       serial_log(0,ermsg,4);
+#endif
       DAS_LOG(DAS_ERROR, "spine.write_error", "Serial write error=%d", wr);
       return wr;
     }
@@ -591,6 +601,12 @@ void hal_set_mode(int new_mode)
 {
   DAS_LOG(DAS_INFO, "spine.set_mode", "Sending Mode Change %x", PAYLOAD_MODE_CHANGE);
   hal_send_frame(PAYLOAD_MODE_CHANGE, NULL, 0);
+}
+
+void hal_exit(void){
+#if EXTENDED_SPINE_DEBUG
+  fclose(gHal.logFd);
+#endif
 }
 
 #ifdef STANDALONE_TEST
