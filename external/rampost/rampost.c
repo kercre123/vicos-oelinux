@@ -333,6 +333,8 @@ int main(int argc, const char* argv[]) {
     cleanup(true);
   }
 
+  hal_exit();
+
   DAS_LOG(DAS_EVENT, "rampost.exit", "%d", error_code);
   return error_code;
 }
