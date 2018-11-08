@@ -1,6 +1,7 @@
 #Include the robot settings
 IMAGE_INSTALL += "anki-audio-init"
 IMAGE_INSTALL += "anki-robot-target"
+IMAGE_INSTALL += "wipe-all-wifi-configs"
 IMAGE_INSTALL += "vic-anim"
 IMAGE_INSTALL += "vic-cloud"
 IMAGE_INSTALL += "vic-dasmgr"
