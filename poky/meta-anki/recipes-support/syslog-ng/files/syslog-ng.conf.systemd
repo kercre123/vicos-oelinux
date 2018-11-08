@@ -21,7 +21,7 @@ source s_src { systemd_journal(); unix-stream("/dev/syslog"); internal(); };
 
 # TEMPLATE
 template t_common {
-  template("$MONTH-$DAY $HOUR:$MIN:$SEC.$MSEC $PRIORITY $PROGRAM $PID $MSG\n");
+  template("$MONTH-$DAY $R_HOUR:$R_MIN:$R_SEC.$R_MSEC $PRIORITY $PROGRAM $PID $MSG\n");
   template_escape(no);
 };
 
