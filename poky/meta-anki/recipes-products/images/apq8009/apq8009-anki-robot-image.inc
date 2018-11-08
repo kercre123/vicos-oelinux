@@ -13,6 +13,7 @@ IMAGE_INSTALL += "emr-cat"
 IMAGE_INSTALL += "update-engine"
 IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES', 'ipv6', 'ip6tables-persistent', '', d)}"
 IMAGE_INSTALL += "iptables-persistent"
+IMAGE_INSTALL += "wipe-all-wifi-configs"
 #
 # Victor stuff
 IMAGE_INSTALL += "vic-anim"
