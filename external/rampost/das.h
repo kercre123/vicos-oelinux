@@ -9,7 +9,7 @@
 #define DAS_WARN 3
 #define DAS_ERROR 4
 
-#define DEBUG_LEVEL 2
+#define DEBUG_LEVEL 1
 
 static inline long long uptime_ms(void) {
   struct timespec tp;
@@ -23,9 +23,10 @@ static inline long long uptime_ms(void) {
 }
 
 #define DAS_LOG(level, event, fmt, ...) do { if (level >= DEBUG_LEVEL) { \
+  const long long log_time = uptime_ms(); \
   printf("\n@rampost.%s\x1f", event); \
   printf(fmt, ##__VA_ARGS__); \
-  printf("\x1f\x1f\x1f\x1f\x1f\x1f\x1f\x1f%lld\n", uptime_ms()); \
+  printf("\x1f\x1f\x1f\x1f\x1f\x1f\x1f\x1f%lld\n", log_time); \
 }} while(0)
 
 #endif
