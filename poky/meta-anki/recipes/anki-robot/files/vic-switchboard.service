@@ -7,12 +7,18 @@ Wants=ankibluetoothd.service vic-engine.service vic-cloud.service
 After=ankibluetoothd.service vic-engine.service vic-cloud.service
 
 [Service]
+PermissionsStartOnly=true
 EnvironmentFile=/anki/etc/vic-switchboard.env
+ExecStartPre=/bin/chown net:anki /dev/block/bootdevice/by-name/switchboard
+ExecStartPre=/bin/mkdir -p /run/vic-switchboard
+ExecStartPre=/bin/chown -R net:anki /run/vic-switchboard
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-switchboard $VIC_SWITCHBOARD_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
+User=net
 Group=anki
 UMask=0002
+AmbientCapabilities=CAP_SYS_BOOT
 
 [Install]
 WantedBy=anki-robot.target
