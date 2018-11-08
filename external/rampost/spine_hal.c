@@ -100,7 +100,6 @@ static struct HalGlobals {
 #define DEBUG_LEVEL 0
 #endif
 
-
 /************* SERIAL INTERFACE ***************/
 
 static void hal_serial_close()
@@ -120,11 +119,15 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
 
   DAS_LOG(DAS_INFO, "spine.open_serial", "opening serial port %s", devicename);
 
-  gHal.fd = open(devicename, O_RDWR, O_NONBLOCK);
+  gHal.fd = open(devicename, O_RDWR);
   if (gHal.fd < 0) {
     DAS_LOG(DAS_ERROR, "spine.cannot_open", "Cannot open %s", devicename);
     return err_CANT_OPEN_FILE;
   }
+
+  DAS_LOG(DAS_INFO, "spine.configure_serial_port", "configuring port %s (fd=%d)", devicename, gHal.fd);
+
+  usleep(10000); // Sleep due to kernel bug which prevents flush from working imeediately after open
 
   /* Configure device */
   {
@@ -141,15 +144,18 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
 
     cfg.c_cflag |= (CS8 | CSTOPB);    // Use N82 bit words
 
-    DAS_LOG(DAS_INFO, "spine.configure_serial_port", "configuring port %s (fd=%d)", devicename, gHal.fd);
 
     if (tcsetattr(gHal.fd, TCSANOW, &cfg)) {
       hal_serial_close();
       DAS_LOG(DAS_ERROR, "spine.termios_fail", "tcsetattr() failed");
       return err_TERMIOS_FAIL;
     }
+
+    if (tcflush(gHal.fd, TCIOFLUSH)) {
+      DAS_LOG(DAS_ERROR, "spine.tcflush_fail", "Failed to flush with TCIOFLUSH");
+    }
   }
-  DAS_LOG(DAS_INFO, "spine.serial_port_ok", "Serial port is okay");
+  DAS_LOG(DAS_DEBUG, "spine.serial_port_ok", "Serial port is okay");
   return err_OK;
 }
 
@@ -166,7 +172,7 @@ ssize_t hal_select() {
   if(s == 0)
   {
     selectTimeoutCount++;
-    DAS_LOG(DAS_ERROR, "spine.select_timeout", "No serial data for %d sec", selectTimeoutCount);
+    DAS_LOG(DAS_INFO, "spine.select_timeout", "No serial data for %d sec", selectTimeoutCount);
   }
   else {
     selectTimeoutCount=0;
@@ -183,7 +189,7 @@ static ssize_t hal_receive_data(const uint8_t* bytes, size_t len)
     size_t remaining = rx_buffer_space();
 
     if (len > remaining) {
-      DAS_LOG(DAS_WARN, "spine.receive_data_overflow", "%u", len - remaining);
+      DAS_LOG(DAS_ERROR, "spine.receive_data_overflow", "%u", len - remaining);
       gHal.rx_cursor = 0;
         // BRC: add a flag to indicate a reset (for using in parsing?)
     }
@@ -425,14 +431,14 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
 {
   size_t rx_len = gHal.rx_cursor;
 
-  // Is there at least a header worth of data to process?
-  if (rx_len < SPINE_HEADER_LEN) {
+  // Are there the minimum number of bytes for a full message to process?
+  if (rx_len < SPINE_HEADER_LEN + SPINE_CRC_LEN) {
     return 0;
   }
 
   // Start from the beginning of the rx buffer
   uint8_t* rx = gHal.buf_rx;
-  int last_test_idx = rx_len - SPINE_SYNC_LEN;
+  int last_test_idx = rx_len - (SPINE_SYNC_LEN-1);
   int sync_index;
   for(sync_index = 0; sync_index < last_test_idx; sync_index++) {
     const uint8_t* test_bytes = rx+sync_index;
@@ -449,7 +455,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
     // throw away all data except unchecked bytes
     DAS_LOG(DAS_DEBUG, "spine.no_sync", "No sync");
     hal_discard_rx_bytes(sync_index);
-    return -1;
+    return 0;  //There must < 4 bytes remaining in buffer
   }
 
   //advance our working pointer to start of sync
@@ -479,7 +485,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   //At this point we have a valid message header.
 
   // Not enough data to validate payload + CRC
-  if (rx_len < payload_len + SPINE_CRC_LEN) {
+  if (rx_len < SPINE_HEADER_LEN + payload_len + SPINE_CRC_LEN) {
     // partial frame: wait for more data
     hal_discard_rx_bytes(sync_index);
     return 0;
@@ -490,7 +496,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   crc_t expected_crc = *((crc_t*)(payload_start + payload_len));
   crc_t true_crc = calc_crc(payload_start, payload_len);
   if (expected_crc != true_crc) {
-    DAS_LOG(DAS_INFO, "spine.crc_error", "calc %08x vs data %08x", true_crc, expected_crc);
+    DAS_LOG(DAS_WARN, "spine.crc_error", "calc %08x vs data %08x", true_crc, expected_crc);
     //restart after SYNC
     hal_discard_rx_bytes(sync_index + SPINE_SYNC_LEN);
     return -1;
@@ -594,6 +600,7 @@ void hal_send_frame(PayloadId type, const void* data, int len)
     hal_serial_send(hdr, SPINE_HEADER_LEN);
     hal_serial_send(data, len);
     hal_serial_send((uint8_t*)&crc, sizeof(crc));
+    tcdrain(gHal.fd);
   }
 }
 

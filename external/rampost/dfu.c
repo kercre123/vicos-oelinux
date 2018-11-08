@@ -44,16 +44,17 @@ void show_error(RampostErr err) {
 static void DAS_PRINTHEX(const int level, const char* event, const uint8_t* bytes, int len)
 {
   if (level >= DEBUG_LEVEL) {
+    const long long log_time = uptime_ms();
     int i;
-    printf("@rampost.%s\t", event);
+    printf("\n@rampost.%s\x1f", event);
     for (i = 0; i < len; i++) {
       printf("%02x", bytes[i]);
     }
-    printf(" [");
+    printf("\x1f");
     for (i = 0; i < len; i++) {
       printf("%c", isprint(bytes[i]) ? bytes[i] : '*');
     }
-    printf("]\n");
+    printf("\x1f\x1f\x1f\x1f\x1f\x1f\x1f%lld\n", log_time);
   }
 }
 
@@ -122,7 +123,7 @@ const uint8_t* dfu_get_version()
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
 
   // Worst case, version should be returned 3 packets later. we're waiting for a full 200 here
-  hdr = hal_wait_for_frame(PAYLOAD_VERSION, FRAME_WAIT_MS*2);
+  hdr = hal_wait_for_frame_or_nack(PAYLOAD_VERSION, FRAME_WAIT_MS*2);
   if (hdr) {
     if (hdr->payload_type == PAYLOAD_VERSION) {
       memcpy(gInstalledVersion, ((struct VersionInfo*)(hdr + 1))->app_version, VERSTRING_LEN);
