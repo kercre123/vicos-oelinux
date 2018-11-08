@@ -9,6 +9,7 @@ SRC_URI  = "${KERNELORG_MIRROR}/linux/network/${BPN}/${BP}.tar.xz \
             file://1000-Skip-calling-xtables_insmod.patch \
             file://1001-Add-conf-settings-for-WiFi-tuning-params.patch \
             file://1002-Disable-NTP-by-default.patch \
+            file://1003-Allow-the-net-user-to-access-connman-over-DBus.patch \
             "
 SRC_URI_append_libc-musl = " file://0002-resolve-musl-does-not-implement-res_ninit.patch \
                              "
