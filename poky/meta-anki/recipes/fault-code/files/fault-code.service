@@ -1,6 +1,6 @@
 [Unit]
 Description=Process fault codes written to /run/fault_code
-SourcePath=/bin/read-fault
+SourcePath=/bin/fault-code-handler
 DefaultDependencies=no
 
 [Service]

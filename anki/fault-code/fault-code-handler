@@ -10,6 +10,7 @@
 # - (optional) restart anki-robot.target
 #
 
+# Exit on unset variable
 set -u
 
 : ${ON_FAULT_RESTART:=0}
@@ -21,12 +22,23 @@ set -u
 
 PROGRESS_FILE="/run/fault_code.pending"
 TRACE_PATH="/data/ankitrace/faults"
+LOGGER="/bin/logger -t fault-code-handler"
 
-function logv () {
-    if [ $VERBOSE -eq 1 ]; then echo "$1"; fi
+function log () {
+  ${LOGGER} -p user.info -- "$1"
 }
 
-logv "fault-code-handler: start"
+function loge () {
+  ${LOGGER} -p user.err -- "$1"
+}
+
+function logv () {
+  if [ $VERBOSE -eq 1 ]; then
+    ${LOGGER} -p user.debug -- "$1"
+  fi
+}
+
+log "fault-code-handler start"
 
 # Read up to 7 chars (max code is UINT16_MAX, newline, null) from stdin with a 1 sec timeout
 # If run from systemd, stdin will be our fault_code FIFO socket
@@ -34,27 +46,30 @@ read -r -n 7 -t 1 FAULT_CODE
 
 if [ $? -ne 0 ]; then
     # read error
-    logv "error: read failed"
-    exit -1
-fi
-
-if [ -z ${FAULT_CODE+x} ]; then
-    logv "error: empty or invalid fault code"
+    loge "Unable to read fault code"
     exit -1
 fi
 
 # remove anything that is not a number
 FAULT_CODE=${FAULT_CODE//[^0-9]/}
 
+if [ -z ${FAULT_CODE} ]; then
+    loge "Empty or invalid fault code"
+    exit -1
+fi
+
+log "Handle fault code ${FAULT_CODE}"
+
 # Ignore zero
 # Nobody should be writing 0 to the fifo, so it probably means
 # the fifo was closed after processes were shutdown
 if [ $FAULT_CODE -eq 0 ]; then
+  log "Nothing to do"
   exit 0
 fi
 
 if [ -f $PROGRESS_FILE ]; then
-    logv "$(basename $0) in progress"
+    log "$(basename $0) already in progress"
     exit 0
 fi
 
@@ -67,20 +82,18 @@ echo $FAULT_CODE > $PROGRESS_FILE
 # Log source, event, i1 to DAS
 /anki/bin/vic-log-event fault-code-handler robot.fault_code '' '' '' '' ${FAULT_CODE}
 
-logv "FAULT_CODE=$FAULT_CODE"
-
 STOP_DASMGR_ONLY=0
 KILL_CAMERA_AFTER_STOPPING_ROBOT=0
 
 # handle error-code specific actions
-case $FAULT_CODE in
+case ${FAULT_CODE} in
 70[0-2])
     # These codes indicate shutdown modes that require vic-robot to stay alive
     # in order to tell syscon to shutdown. In theory you can try to kill all of
     # the other processes, but there may not be enough time since power could
     # be cut by syscon at any moment so instead we just kill vic-dasmgr to make
     # sure the power_off DAS message is recorded and backed up.
-    logv "Shutting down. Stopping vic-dasmgr only."
+    log "Shutting down. Stopping vic-dasmgr only."
     STOP_DASMGR_ONLY=1
     ON_FAULT_RESTART=0
     ;;
@@ -119,28 +132,28 @@ function wait_until_services_stopped() {
     done
 
     if [ ${#RUNNING_PROCS[*]} -gt 0 ]; then
-        logv "kill remaining processes"
+        log "Kill remaining processes"
         systemctl kill "${RUNNING_PROCS[@]}"
     fi
 }
 
 if [ $STOP_DASMGR_ONLY -eq 1 ]; then
-    logv "stop vic-dasmgr"
+    log "Stop vic-dasmgr"
     ANKI_SERVICES=( "vic-dasmgr" )
     systemctl stop vic-dasmgr
     wait_until_services_stopped
 else
-    logv "stop anki-robot.target"
+    log "Stop anki-robot.target"
     systemctl stop anki-robot.target
     wait_until_services_stopped
 
     # display error code
-    logv "display fault code"
+    log "Display fault code ${FAULT_CODE}"
     [ -x /anki/bin/vic-faultCodeDisplay ] && /anki/bin/vic-faultCodeDisplay "${FAULT_CODE}"
 fi
 
 if [ $KILL_CAMERA_AFTER_STOPPING_ROBOT -eq 1 ]; then
-  logv "kill and restart mm-anki-camera"
+  log "Kill and restart mm-anki-camera"
   systemctl kill -s 9 mm-anki-camera
   systemctl start mm-anki-camera
 fi
@@ -149,13 +162,13 @@ rm -f $PROGRESS_FILE
 
 if [ $ON_FAULT_RESTART -eq 1 ]; then
     if [ $TIMEOUT_RESTART_SEC -gt 0 ]; then
-        logv "display fault code for $TIMEOUT_RESTART_SEC"
+        log "Sleep for ${TIMEOUT_RESTART_SEC}"
         sleep $TIMEOUT_RESTART_SEC
     fi
 
     # restart processes
-    logv "restart anki-robot.target"
+    log "Restart anki-robot.target"
     systemctl restart anki-robot.target
 fi
 
-logv "fault-code-handler: done"
+log "fault-code-handler done"
