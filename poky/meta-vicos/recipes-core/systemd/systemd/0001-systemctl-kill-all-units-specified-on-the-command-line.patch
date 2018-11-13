@@ -1,0 +1,31 @@
+From 961b7e38298c0a628d601175a5e5242934d3d6ed Mon Sep 17 00:00:00 2001
+From: Clinton Roy <clinton.roy@gmail.com>
+Date: Sat, 20 Aug 2016 08:59:02 +1000
+Subject: [PATCH] systemctl: kill all units specified on the command line, not
+ just the first one.
+
+Conflicts:
+	src/systemctl/systemctl.c
+---
+ src/systemctl/systemctl.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
+index 3cb5f61..fc0bf2d 100644
+--- a/src/systemctl/systemctl.c
++++ b/src/systemctl/systemctl.c
+@@ -3114,9 +3114,9 @@ static int kill_unit(sd_bus *bus, char **args) {
+                                 "KillUnit",
+                                 &error,
+                                 NULL,
+-                                "ssi", *names, arg_kill_who, arg_signal);
++                                "ssi", *name, arg_kill_who, arg_signal);
+                 if (q < 0) {
+-                        log_error("Failed to kill unit %s: %s", *names, bus_error_message(&error, q));
++                        log_error("Failed to kill unit %s: %s", *name, bus_error_message(&error, q));
+                         if (r == 0)
+                                 r = q;
+                 }
+-- 
+2.1.2
+
