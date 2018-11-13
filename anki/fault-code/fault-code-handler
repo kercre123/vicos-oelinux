@@ -75,8 +75,9 @@ fi
 
 echo $FAULT_CODE > $PROGRESS_FILE
 
-if [ -f /usr/bin/ankitrace ]; then
-   /usr/bin/ankitrace -r $TRACE_PATH/$FAULT_CODE
+if [ -x /usr/bin/ankitrace ]; then
+  #record lttng trace to temp storage
+  /usr/bin/ankitrace -r
 fi
 
 # Log source, event, i1 to DAS
@@ -165,6 +166,11 @@ else
     # display error code
     log "Display fault code ${FAULT_CODE}"
     [ -x /anki/bin/vic-faultCodeDisplay ] && /anki/bin/vic-faultCodeDisplay "${FAULT_CODE}"
+
+    if [ -x /usr/bin/ankitrace ]; then
+      #archive trace
+      /usr/bin/ankitrace -z $TRACE_PATH/$FAULT_CODE
+    fi
 fi
 
 if [ $KILL_CAMERA_AFTER_STOPPING_ROBOT -eq 1 ]; then

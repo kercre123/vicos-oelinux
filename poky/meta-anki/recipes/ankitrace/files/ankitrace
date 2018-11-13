@@ -1,11 +1,13 @@
 #!/bin/bash
 export LTTNG_HOME="/data/ankitrace"
 export LTTNG_URL="$LTTNG_HOME/trace"
-export TRACE_ACTIVE="/run/ankitrace.active"
+export TRACE_ACTIVE="$LTTNG_HOME/active"
+export TRACE_CAPTURE="$LTTNG_HOME/capture"
 export LTTNG="/usr/bin/lttng"
 
 function trace_start {
-    mkdir -p $LTTNG_HOME
+    /bin/mkdir -p $LTTNG_HOME
+    /bin/mkdir -p $LTTNG_URL
     /sbin/modprobe lttng-tracer
     $LTTNG create --snapshot --set-url=$LTTNG_URL
     $LTTNG enable-channel -k --subbuf-size=512k --num-subbuf=2 channel0
@@ -13,10 +15,7 @@ function trace_start {
     $LTTNG enable-event -u anki_ust* -c channel0
     $LTTNG enable-event -k -a --syscall  -c channel0
     $LTTNG enable-event -k sched_switch -c channel0
-    $LTTNG enable-event -k timer_hrtimer_start -c channel0
-    $LTTNG enable-event -k timer_hrtimer_expire_entry -c channel0
-    $LTTNG enable-event -k timer_start -c channel0
-    $LTTNG enable-event -k power_* -c channel0
+    $LTTNG enable-event -k power_cpu_frequency -c channel0
     $LTTNG enable-event -k irq_handler_entry -c channel0
     $LTTNG enable-event -k irq_softirq_raise -c channel0
     $LTTNG enable-event -k asoc_snd* -c channel0
@@ -41,29 +40,43 @@ function trace_quit {
 }
 
 function trace_record {
-    TIMESTAMP=`date +%Y%m%d-%H%M`
+    if [ ! -f $TRACE_CAPTURE ]; then
+      /bin/touch $TRACE_CAPTURE
+      $LTTNG stop
+      $LTTNG snapshot record --name=ankitrace
+      $LTTNG start
+    fi
+}
+
+function trace_clear {
+    /bin/rm -rf $LTTNG_URL
+    /bin/rm -f $TRACE_CAPTURE
+    /bin/mkdir -p $LTTNG_URL
+}
+
+function trace_tar {
     TRACE_PATH=$1
     if [ -f $TRACE_ACTIVE ]; then
-      mkdir -p $TRACE_PATH
-      $LTTNG stop
-      $LTTNG snapshot record
-      /bin/tar -cvzf $TRACE_PATH/ankitrace-${TIMESTAMP}.tgz $LTTNG_URL
-      /bin/rm -rf $LTTNG_URL
-      $LTTNG start
+      trace_record
+      /bin/mkdir -p $TRACE_PATH
+      /bin/mv $LTTNG_URL/ankitrace* $TRACE_PATH/
+      trace_clear
     else
         echo "Invalid Action: Tracing not active"
         exit 1
     fi
 }
 
-while getopts "hsqr:" opt; do
+while getopts "hsqcrz:" opt; do
     case ${opt} in
         h)
             echo "Usage:"
             echo "    ankitrace -h           Display help message."
             echo "    ankitrace -s           Start trace daemon."
             echo "    ankitrace -q           Quit trace daemon."
-            echo "    ankitrace -r <PATH>    Record trace data."
+            echo "    ankitrace -r           Record trace to memory"
+            echo "    ankitrace -c           Clear trace record"
+            echo "    ankitrace -z <PATH>    Archive to PATH and clear capture."
             exit 0
             ;;
         s)
@@ -74,8 +87,16 @@ while getopts "hsqr:" opt; do
             trace_quit
             exit 0
             ;;
+        c)
+            trace_clear
+            exit 0
+            ;;
         r)
-            trace_record ${OPTARG}
+            trace_record
+            exit 0
+            ;;
+        z)
+            trace_tar ${OPTARG}
             exit 0
             ;;
         \?)
