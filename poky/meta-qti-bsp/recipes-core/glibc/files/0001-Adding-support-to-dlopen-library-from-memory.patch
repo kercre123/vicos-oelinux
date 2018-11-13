@@ -1,0 +1,1162 @@
+From 54dda0da89c9e7ed3f7c80b9a91ebd0c48dde1f6 Mon Sep 17 00:00:00 2001
+From: Vinayak Soni <soniv@codeaurora.org>
+Date: Wed, 6 Dec 2017 17:21:30 -0800
+Subject: [PATCH] Adding support to dlopen library from memory
+
+Add support to enable dlopen from an fd using dlopen_fd api.
+---
+ dlfcn/Versions                                |   2 +-
+ dlfcn/dlerror.c                               |   1 +
+ dlfcn/dlfcn.h                                 |   4 +
+ dlfcn/dlopen.c                                |  56 +-
+ elf/dl-load.c                                 | 728 +++++++++++++++++++++++++-
+ elf/dl-open.c                                 | 138 ++++-
+ elf/rtld.c                                    |   1 +
+ include/dlfcn.h                               |   3 +
+ sysdeps/generic/ldsodefs.h                    |  14 +
+ sysdeps/unix/sysv/linux/aarch64/libdl.abilist |   1 +
+ 10 files changed, 940 insertions(+), 8 deletions(-)
+
+diff --git a/dlfcn/Versions b/dlfcn/Versions
+index 97902f0..a3e7533 100644
+--- a/dlfcn/Versions
++++ b/dlfcn/Versions
+@@ -3,7 +3,7 @@ libdl {
+     dladdr; dlclose; dlerror; dlopen; dlsym;
+   }
+   GLIBC_2.1 {
+-    dlopen; dlvsym;
++    dlopen; dlvsym; dlopen_fd;
+   }
+   GLIBC_2.3.3 {
+     dladdr1; dlinfo;
+diff --git a/dlfcn/dlerror.c b/dlfcn/dlerror.c
+index 5d3bd03..4730ef7 100644
+--- a/dlfcn/dlerror.c
++++ b/dlfcn/dlerror.c
+@@ -231,6 +231,7 @@ libdl_hidden_data_def (_dlfcn_hook)
+ static struct dlfcn_hook _dlfcn_hooks =
+   {
+     .dlopen = __dlopen,
++    .dlopen_fd = __dlopen_fd,
+     .dlclose = __dlclose,
+     .dlsym = __dlsym,
+     .dlvsym = __dlvsym,
+diff --git a/dlfcn/dlfcn.h b/dlfcn/dlfcn.h
+index d6b689f..b7c29eb 100644
+--- a/dlfcn/dlfcn.h
++++ b/dlfcn/dlfcn.h
+@@ -55,6 +55,10 @@ __BEGIN_DECLS
+    passed to `dlsym' to get symbol values from it.  */
+ extern void *dlopen (const char *__file, int __mode) __THROWNL;
+
++/* Map an already open shared object using file descriptor; return a handle
++   that can be passed to `dlsym' to get symbol values from it.  */
++extern void *dlopen_fd (int __fd, int __mode, const char * __file) __THROWNL;
++
+ /* Unmap and close a shared object opened by `dlopen'.
+    The handle cannot be used again after calling `dlclose'.  */
+ extern int dlclose (void *__handle) __THROWNL __nonnull ((1));
+diff --git a/dlfcn/dlopen.c b/dlfcn/dlopen.c
+index 8bf2752..267315d 100644
+--- a/dlfcn/dlopen.c
++++ b/dlfcn/dlopen.c
+@@ -29,7 +29,16 @@ dlopen (const char *file, int mode)
+ {
+   return __dlopen (file, mode, RETURN_ADDRESS (0));
+ }
++
++
++void *
++dlopen_fd (int fd, int mode, const char *file)
++{
++  return __dlopen_fd (fd, mode, file, RETURN_ADDRESS (0));
++}
++
+ static_link_warning (dlopen)
++static_link_warning (dlopen_fd)
+
+ #else
+
+@@ -42,6 +51,8 @@ struct dlopen_args
+   void *new;
+   /* Address of the caller.  */
+   const void *caller;
++  /* File descriptor of the opened shared object  */
++  int fd;
+ };
+
+
+@@ -63,10 +74,16 @@ dlopen_doit (void *a)
+		     | __RTLD_SPROF))
+     GLRO(dl_signal_error) (0, NULL, NULL, _("invalid mode parameter"));
+
+-  args->new = GLRO(dl_open) (args->file ?: "", args->mode | __RTLD_DLOPEN,
+-			     args->caller,
+-			     args->file == NULL ? LM_ID_BASE : NS,
+-			     __dlfcn_argc, __dlfcn_argv, __environ);
++  if (args->fd == -1)
++    args->new = GLRO(dl_open) (args->file ?: "", args->mode | __RTLD_DLOPEN,
++			       args->caller,
++			       args->file == NULL ? LM_ID_BASE : NS,
++			       __dlfcn_argc, __dlfcn_argv, __environ);
++  else
++    args->new = GLRO(dl_open_fd) (args->fd, args->mode | __RTLD_DLOPEN, args->file,
++				  args->caller,
++				  args->file == NULL ? LM_ID_BASE : NS,
++				  __dlfcn_argc, __dlfcn_argv, __environ);
+ }
+
+
+@@ -80,6 +97,7 @@ __dlopen (const char *file, int mode DL_CALLER_DECL)
+
+   struct dlopen_args args;
+   args.file = file;
++  args.fd = -1;
+   args.mode = mode;
+   args.caller = DL_CALLER;
+
+@@ -95,9 +113,39 @@ __dlopen (const char *file, int mode DL_CALLER_DECL)
+   return args.new;
+ # endif
+ }
++
++
++void *
++__dlopen_fd (int fd, int mode, const char *file DL_CALLER_DECL)
++{
++# ifdef SHARED
++  if (__glibc_unlikely (_dlfcn_hook != NULL))
++    return _dlfcn_hook->dlopen_fd (fd, mode, file, DL_CALLER);
++# endif
++
++  struct dlopen_args args;
++  args.file = file;
++  args.fd = fd;
++  args.mode = mode;
++  args.caller = DL_CALLER;
++
++# ifdef SHARED
++  return _dlerror_run (dlopen_doit, &args) ? NULL : args.new;
++# else
++  if (_dlerror_run (dlopen_doit, &args))
++    return NULL;
++
++  __libc_register_dl_open_hook ((struct link_map *) args.new);
++  __libc_register_dlfcn_hook ((struct link_map *) args.new);
++  return args.new;
++# endif
++}
++
+ # ifdef SHARED
+ #  include <shlib-compat.h>
+ strong_alias (__dlopen, __dlopen_check)
+ versioned_symbol (libdl, __dlopen_check, dlopen, GLIBC_2_1);
++strong_alias (__dlopen_fd, __dlopen_fd_check)
++versioned_symbol (libdl, __dlopen_fd_check, dlopen_fd, GLIBC_2_1);
+ # endif
+ #endif
+diff --git a/elf/dl-load.c b/elf/dl-load.c
+index 07a21d7..a69d790 100644
+--- a/elf/dl-load.c
++++ b/elf/dl-load.c
+@@ -2181,9 +2181,735 @@ _dl_map_object (struct link_map *loader, const char *name,
+	_dl_signal_error (errno, name, NULL,
+			  N_("cannot open shared object file"));
+     }
++  void *stack_end = __libc_stack_end;
++  return _dl_map_object_from_fd (name, fd, &fb, realname, loader, type, mode,
++				 &stack_end, nsid);
++}
++
++/* Open a file and verify it is an ELF file for this architecture.  We
++   ignore only ELF files for other architectures.  Non-ELF files and
++   ELF files with different header information cause fatal errors since
++   this could mean there is something wrong in the installation and the
++   user might want to know about this.  */
++static int
++open_verify_fd (const char *name, int fd_, struct filebuf *fbp, struct link_map *loader,
++	     int whatcode, int mode, bool *found_other_class, bool free_name)
++{
++  /* This is the expected ELF header.  */
++#define ELF32_CLASS ELFCLASS32
++#define ELF64_CLASS ELFCLASS64
++#ifndef VALID_ELF_HEADER
++# define VALID_ELF_HEADER(hdr,exp,size)	(memcmp (hdr, exp, size) == 0)
++# define VALID_ELF_OSABI(osabi)		(osabi == ELFOSABI_SYSV)
++# define VALID_ELF_ABIVERSION(osabi,ver) (ver == 0)
++#elif defined MORE_ELF_HEADER_DATA
++  MORE_ELF_HEADER_DATA;
++#endif
++  static const unsigned char expected[EI_NIDENT] =
++  {
++    [EI_MAG0] = ELFMAG0,
++    [EI_MAG1] = ELFMAG1,
++    [EI_MAG2] = ELFMAG2,
++    [EI_MAG3] = ELFMAG3,
++    [EI_CLASS] = ELFW(CLASS),
++    [EI_DATA] = byteorder,
++    [EI_VERSION] = EV_CURRENT,
++    [EI_OSABI] = ELFOSABI_SYSV,
++    [EI_ABIVERSION] = 0
++  };
++  static const struct
++  {
++    ElfW(Word) vendorlen;
++    ElfW(Word) datalen;
++    ElfW(Word) type;
++    char vendor[4];
++  } expected_note = { 4, 16, 1, "GNU" };
++  /* Initialize it to make the compiler happy.  */
++  const char *errstring = NULL;
++  int errval = 0;
++
++#ifdef SHARED
++  /* Give the auditing libraries a chance.  */
++  if (__glibc_unlikely (GLRO(dl_naudit) > 0) && whatcode != 0
++      && loader->l_auditing == 0)
++    {
++      struct audit_ifaces *afct = GLRO(dl_audit);
++      for (unsigned int cnt = 0; cnt < GLRO(dl_naudit); ++cnt)
++	{
++	  if (afct->objsearch != NULL)
++	    {
++	      name = afct->objsearch (name, &loader->l_audit[cnt].cookie,
++				      whatcode);
++	      if (name == NULL)
++		/* Ignore the path.  */
++		return -1;
++	    }
++
++	  afct = afct->next;
++	}
++    }
++#endif
++
++  /* Open the file.  We always open files read-only.  */
++  int fd = -1;
++
++  if (fd_ != -1)
++	fd=fd_;
++  else
++	fd = __open (name, O_RDONLY | O_CLOEXEC);
++
++  if (fd != -1)
++    {
++      ElfW(Ehdr) *ehdr;
++      ElfW(Phdr) *phdr, *ph;
++      ElfW(Word) *abi_note;
++      unsigned int osversion;
++      size_t maplength;
++
++      /* We successfully opened the file.  Now verify it is a file
++	 we can use.  */
++      __set_errno (0);
++      fbp->len = 0;
++      assert (sizeof (fbp->buf) > sizeof (ElfW(Ehdr)));
++      /* Read in the header.  */
++      do
++	{
++	  ssize_t retlen = __libc_read (fd, fbp->buf + fbp->len,
++					sizeof (fbp->buf) - fbp->len);
++	  if (retlen <= 0)
++	    break;
++	  fbp->len += retlen;
++	}
++      while (__glibc_unlikely (fbp->len < sizeof (ElfW(Ehdr))));
++
++      /* This is where the ELF header is loaded.  */
++      ehdr = (ElfW(Ehdr) *) fbp->buf;
++
++      /* Now run the tests.  */
++      if (__glibc_unlikely (fbp->len < (ssize_t) sizeof (ElfW(Ehdr))))
++	{
++	  errval = errno;
++	  errstring = (errval == 0
++		       ? N_("file too short") : N_("cannot read file data"));
++	call_lose:
++	  if (free_name)
++	    {
++	      char *realname = (char *) name;
++	      name = strdupa (realname);
++	      free (realname);
++	    }
++	  lose (errval, fd, name, NULL, NULL, errstring, NULL, 0);
++	}
++
++      /* See whether the ELF header is what we expect.  */
++      if (__glibc_unlikely (! VALID_ELF_HEADER (ehdr->e_ident, expected,
++						EI_ABIVERSION)
++			    || !VALID_ELF_ABIVERSION (ehdr->e_ident[EI_OSABI],
++						      ehdr->e_ident[EI_ABIVERSION])
++			    || memcmp (&ehdr->e_ident[EI_PAD],
++				       &expected[EI_PAD],
++				       EI_NIDENT - EI_PAD) != 0))
++	{
++	  /* Something is wrong.  */
++	  const Elf32_Word *magp = (const void *) ehdr->e_ident;
++	  if (*magp !=
++#if BYTE_ORDER == LITTLE_ENDIAN
++	      ((ELFMAG0 << (EI_MAG0 * 8)) |
++	       (ELFMAG1 << (EI_MAG1 * 8)) |
++	       (ELFMAG2 << (EI_MAG2 * 8)) |
++	       (ELFMAG3 << (EI_MAG3 * 8)))
++#else
++	      ((ELFMAG0 << (EI_MAG3 * 8)) |
++	       (ELFMAG1 << (EI_MAG2 * 8)) |
++	       (ELFMAG2 << (EI_MAG1 * 8)) |
++	       (ELFMAG3 << (EI_MAG0 * 8)))
++#endif
++	      )
++	    errstring = N_("invalid ELF header");
++	  else if (ehdr->e_ident[EI_CLASS] != ELFW(CLASS))
++	    {
++	      /* This is not a fatal error.  On architectures where
++		 32-bit and 64-bit binaries can be run this might
++		 happen.  */
++	      *found_other_class = true;
++	      goto close_and_out;
++	    }
++	  else if (ehdr->e_ident[EI_DATA] != byteorder)
++	    {
++	      if (BYTE_ORDER == BIG_ENDIAN)
++		errstring = N_("ELF file data encoding not big-endian");
++	      else
++		errstring = N_("ELF file data encoding not little-endian");
++	    }
++	  else if (ehdr->e_ident[EI_VERSION] != EV_CURRENT)
++	    errstring
++	      = N_("ELF file version ident does not match current one");
++	  /* XXX We should be able so set system specific versions which are
++	     allowed here.  */
++	  else if (!VALID_ELF_OSABI (ehdr->e_ident[EI_OSABI]))
++	    errstring = N_("ELF file OS ABI invalid");
++	  else if (!VALID_ELF_ABIVERSION (ehdr->e_ident[EI_OSABI],
++					  ehdr->e_ident[EI_ABIVERSION]))
++	    errstring = N_("ELF file ABI version invalid");
++	  else if (memcmp (&ehdr->e_ident[EI_PAD], &expected[EI_PAD],
++			   EI_NIDENT - EI_PAD) != 0)
++	    errstring = N_("nonzero padding in e_ident");
++	  else
++	    /* Otherwise we don't know what went wrong.  */
++	    errstring = N_("internal error");
++
++	  goto call_lose;
++	}
++
++      if (__glibc_unlikely (ehdr->e_version != EV_CURRENT))
++	{
++	  errstring = N_("ELF file version does not match current one");
++	  goto call_lose;
++	}
++      if (! __glibc_likely (elf_machine_matches_host (ehdr)))
++	goto close_and_out;
++      else if (__glibc_unlikely (ehdr->e_type != ET_DYN
++				 && ehdr->e_type != ET_EXEC))
++	{
++	  errstring = N_("only ET_DYN and ET_EXEC can be loaded");
++	  goto call_lose;
++	}
++      else if (__glibc_unlikely (ehdr->e_type == ET_EXEC
++				 && (mode & __RTLD_OPENEXEC) == 0))
++	{
++	  /* BZ #16634. It is an error to dlopen ET_EXEC (unless
++	     __RTLD_OPENEXEC is explicitly set).  We return error here
++	     so that code in _dl_map_object_from_fd does not try to set
++	     l_tls_modid for this module.  */
++
++	  errstring = N_("cannot dynamically load executable");
++	  goto call_lose;
++	}
++      else if (__glibc_unlikely (ehdr->e_phentsize != sizeof (ElfW(Phdr))))
++	{
++	  errstring = N_("ELF file's phentsize not the expected size");
++	  goto call_lose;
++	}
++
++      maplength = ehdr->e_phnum * sizeof (ElfW(Phdr));
++      if (ehdr->e_phoff + maplength <= (size_t) fbp->len)
++	phdr = (void *) (fbp->buf + ehdr->e_phoff);
++      else
++	{
++	  phdr = alloca (maplength);
++	  __lseek (fd, ehdr->e_phoff, SEEK_SET);
++	  if ((size_t) __libc_read (fd, (void *) phdr, maplength) != maplength)
++	    {
++	    read_error:
++	      errval = errno;
++	      errstring = N_("cannot read file data");
++	      goto call_lose;
++	    }
++	}
++
++      if (__glibc_unlikely (elf_machine_reject_phdr_p
++			    (phdr, ehdr->e_phnum, fbp->buf, fbp->len,
++			     loader, fd)))
++	goto close_and_out;
++
++      /* Check .note.ABI-tag if present.  */
++      for (ph = phdr; ph < &phdr[ehdr->e_phnum]; ++ph)
++	if (ph->p_type == PT_NOTE && ph->p_filesz >= 32 && ph->p_align >= 4)
++	  {
++	    ElfW(Addr) size = ph->p_filesz;
++
++	    if (ph->p_offset + size <= (size_t) fbp->len)
++	      abi_note = (void *) (fbp->buf + ph->p_offset);
++	    else
++	      {
++		abi_note = alloca (size);
++		__lseek (fd, ph->p_offset, SEEK_SET);
++		if (__libc_read (fd, (void *) abi_note, size) != size)
++		  goto read_error;
++	      }
++
++	    while (memcmp (abi_note, &expected_note, sizeof (expected_note)))
++	      {
++#define ROUND(len) (((len) + sizeof (ElfW(Word)) - 1) & -sizeof (ElfW(Word)))
++		ElfW(Addr) note_size = 3 * sizeof (ElfW(Word))
++				       + ROUND (abi_note[0])
++				       + ROUND (abi_note[1]);
++
++		if (size - 32 < note_size)
++		  {
++		    size = 0;
++		    break;
++		  }
++		size -= note_size;
++		abi_note = (void *) abi_note + note_size;
++	      }
++
++	    if (size == 0)
++	      continue;
++
++	    osversion = (abi_note[5] & 0xff) * 65536
++			+ (abi_note[6] & 0xff) * 256
++			+ (abi_note[7] & 0xff);
++	    if (abi_note[4] != __ABI_TAG_OS
++		|| (GLRO(dl_osversion) && GLRO(dl_osversion) < osversion))
++	      {
++	      close_and_out:
++		__close (fd);
++		__set_errno (ENOENT);
++		fd = -1;
++	      }
++
++	    break;
++	  }
++    }
++
++  return fd;
++}
++
++/* Try to open NAME in one of the directories in *DIRSP.
++   Return the fd, or -1.  If successful, fill in *REALNAME
++   with the malloc'd full directory name.  If it turns out
++   that none of the directories in *DIRSP exists, *DIRSP is
++   replaced with (void *) -1, and the old value is free()d
++   if MAY_FREE_DIRS is true.  */
++
++static int
++open_path_fd (const char *name, int fd_, size_t namelen, int mode,
++	   struct r_search_path_struct *sps, char **realname,
++	   struct filebuf *fbp, struct link_map *loader, int whatcode,
++	   bool *found_other_class)
++{
++  struct r_search_path_elem **dirs = sps->dirs;
++  char *buf;
++  int fd = -1;
++  const char *current_what = NULL;
++  int any = 0;
++
++  if (__glibc_unlikely (dirs == NULL))
++    /* We're called before _dl_init_paths when loading the main executable
++       given on the command line when rtld is run directly.  */
++    return -1;
++
++  buf = alloca (max_dirnamelen + max_capstrlen + namelen);
++  do
++    {
++      struct r_search_path_elem *this_dir = *dirs;
++      size_t buflen = 0;
++      size_t cnt;
++      char *edp;
++      int here_any = 0;
++      int err;
++
++      /* If we are debugging the search for libraries print the path
++	 now if it hasn't happened now.  */
++      if (__glibc_unlikely (GLRO_dl_debug_mask & DL_DEBUG_LIBS)
++	  && current_what != this_dir->what)
++	{
++	  current_what = this_dir->what;
++	  print_search_path (dirs, current_what, this_dir->where);
++	}
++
++      edp = (char *) __mempcpy (buf, this_dir->dirname, this_dir->dirnamelen);
++      for (cnt = 0; fd == -1 && cnt < ncapstr; ++cnt)
++	{
++	  /* Skip this directory if we know it does not exist.  */
++	  if (this_dir->status[cnt] == nonexisting)
++	    continue;
++
++	  buflen =
++	    ((char *) __mempcpy (__mempcpy (edp, capstr[cnt].str,
++					    capstr[cnt].len),
++				 name, namelen)
++	     - buf);
++
++	  /* Print name we try if this is wanted.  */
++	  if (__glibc_unlikely (GLRO_dl_debug_mask & DL_DEBUG_LIBS))
++	    _dl_debug_printf ("  trying file=%s\n", buf);
++
++	  fd = open_verify_fd (buf, fd_, fbp, loader, whatcode, mode,
++			    found_other_class, false);
++	  if (this_dir->status[cnt] == unknown)
++	    {
++	      if (fd != -1)
++		this_dir->status[cnt] = existing;
++	      /* Do not update the directory information when loading
++		 auditing code.  We must try to disturb the program as
++		 little as possible.  */
++	      else if (loader == NULL
++		       || GL(dl_ns)[loader->l_ns]._ns_loaded->l_auditing == 0)
++		{
++		  /* We failed to open machine dependent library.  Let's
++		     test whether there is any directory at all.  */
++		  struct stat64 st;
++
++		  buf[buflen - namelen - 1] = '\0';
++
++		  if (__xstat64 (_STAT_VER, buf, &st) != 0
++		      || ! S_ISDIR (st.st_mode))
++		    /* The directory does not exist or it is no directory.  */
++		    this_dir->status[cnt] = nonexisting;
++		  else
++		    this_dir->status[cnt] = existing;
++		}
++	    }
++
++	  /* Remember whether we found any existing directory.  */
++	  here_any |= this_dir->status[cnt] != nonexisting;
++
++	  if (fd != -1 && __glibc_unlikely (mode & __RTLD_SECURE)
++	      && __libc_enable_secure)
++	    {
++	      /* This is an extra security effort to make sure nobody can
++		 preload broken shared objects which are in the trusted
++		 directories and so exploit the bugs.  */
++	      struct stat64 st;
++
++	      if (__fxstat64 (_STAT_VER, fd, &st) != 0
++		  || (st.st_mode & S_ISUID) == 0)
++		{
++		  /* The shared object cannot be tested for being SUID
++		     or this bit is not set.  In this case we must not
++		     use this object.  */
++		  __close (fd);
++		  fd = -1;
++		  /* We simply ignore the file, signal this by setting
++		     the error value which would have been set by `open'.  */
++		  errno = ENOENT;
++		}
++	    }
++	}
++
++      if (fd != -1)
++	{
++	  *realname = (char *) malloc (buflen);
++	  if (*realname != NULL)
++	    {
++	      memcpy (*realname, buf, buflen);
++	      return fd;
++	    }
++	  else
++	    {
++	      /* No memory for the name, we certainly won't be able
++		 to load and link it.  */
++	      __close (fd);
++	      return -1;
++	    }
++	}
++      if (here_any && (err = errno) != ENOENT && err != EACCES)
++	/* The file exists and is readable, but something went wrong.  */
++	return -1;
++
++      /* Remember whether we found anything.  */
++      any |= here_any;
++    }
++  while (*++dirs != NULL);
++
++  /* Remove the whole path if none of the directories exists.  */
++  if (__glibc_unlikely (! any))
++    {
++      /* Paths which were allocated using the minimal malloc() in ld.so
++	 must not be freed using the general free() in libc.  */
++      if (sps->malloced)
++	free (sps->dirs);
++
++      /* rtld_search_dirs and env_path_list are attribute_relro, therefore
++	 avoid writing into it.  */
++      if (sps != &rtld_search_dirs && sps != &env_path_list)
++	sps->dirs = (void *) -1;
++    }
++
++  return -1;
++}
++
++/* Map in the shared object file NAME.  */
++
++struct link_map *
++internal_function
++_dl_map_object_fd (struct link_map *loader, const char *name, int fd_,
++		int type, int trace_mode, int mode, Lmid_t nsid)
++{
++  int fd;
++  char *realname;
++  char *name_copy;
++  struct link_map *l;
++  struct filebuf fb;
++
++  assert (nsid >= 0);
++  assert (nsid < GL(dl_nns));
++
++  /* Look for this name among those already loaded.  */
++  for (l = GL(dl_ns)[nsid]._ns_loaded; l; l = l->l_next)
++    {
++      /* If the requested name matches the soname of a loaded object,
++	 use that object.  Elide this check for names that have not
++	 yet been opened.  */
++      if (__glibc_unlikely ((l->l_faked | l->l_removed) != 0))
++	continue;
++      if (!_dl_name_match_p (name, l))
++	{
++	  const char *soname;
++
++	  if (__glibc_likely (l->l_soname_added)
++	      || l->l_info[DT_SONAME] == NULL)
++	    continue;
++
++	  soname = ((const char *) D_PTR (l, l_info[DT_STRTAB])
++		    + l->l_info[DT_SONAME]->d_un.d_val);
++	  if (strcmp (name, soname) != 0)
++	    continue;
++
++	  /* We have a match on a new name -- cache it.  */
++	  add_name_to_object (l, soname);
++	  l->l_soname_added = 1;
++	}
++
++      /* We have a match.  */
++      return l;
++    }
++
++  /* Display information if we are debugging.  */
++  if (__glibc_unlikely (GLRO_dl_debug_mask & DL_DEBUG_FILES)
++      && loader != NULL)
++    _dl_debug_printf ((mode & __RTLD_CALLMAP) == 0
++		      ? "\nfile=%s [%lu];  needed by %s [%lu]\n"
++		      : "\nfile=%s [%lu];  dynamically loaded by %s [%lu]\n",
++		      name, nsid, DSO_FILENAME (loader->l_name), loader->l_ns);
++
++#ifdef SHARED
++  /* Give the auditing libraries a chance to change the name before we
++     try anything.  */
++  if (__glibc_unlikely (GLRO(dl_naudit) > 0)
++      && (loader == NULL || loader->l_auditing == 0))
++    {
++      struct audit_ifaces *afct = GLRO(dl_audit);
++      for (unsigned int cnt = 0; cnt < GLRO(dl_naudit); ++cnt)
++	{
++	  if (afct->objsearch != NULL)
++	    {
++	      name = afct->objsearch (name, &loader->l_audit[cnt].cookie,
++				      LA_SER_ORIG);
++	      if (name == NULL)
++		{
++		  /* Do not try anything further.  */
++		  fd = -1;
++		  goto no_file;
++		}
++	    }
++
++	  afct = afct->next;
++	}
++    }
++#endif
++
++  /* Will be true if we found a DSO which is of the other ELF class.  */
++  bool found_other_class = false;
++
++  if (strchr (name, '/') == NULL)
++    {
++      /* Search for NAME in several places.  */
++
++      size_t namelen = strlen (name) + 1;
++
++      if (__glibc_unlikely (GLRO_dl_debug_mask & DL_DEBUG_LIBS))
++	_dl_debug_printf ("find library=%s [%lu]; searching\n", name, nsid);
++
++      fd = -1;
++
++      /* When the object has the RUNPATH information we don't use any
++	 RPATHs.  */
++      if (loader == NULL || loader->l_info[DT_RUNPATH] == NULL)
++	{
++	  /* This is the executable's map (if there is one).  Make sure that
++	     we do not look at it twice.  */
++	  struct link_map *main_map = GL(dl_ns)[LM_ID_BASE]._ns_loaded;
++	  bool did_main_map = false;
++
++	  /* First try the DT_RPATH of the dependent object that caused NAME
++	     to be loaded.  Then that object's dependent, and on up.  */
++	  for (l = loader; l; l = l->l_loader)
++	    if (cache_rpath (l, &l->l_rpath_dirs, DT_RPATH, "RPATH"))
++	      {
++		fd = open_path_fd (name, fd_, namelen, mode,
++				&l->l_rpath_dirs,
++				&realname, &fb, loader, LA_SER_RUNPATH,
++				&found_other_class);
++		if (fd != -1)
++		  break;
++
++		did_main_map |= l == main_map;
++	      }
++
++	  /* If dynamically linked, try the DT_RPATH of the executable
++	     itself.  NB: we do this for lookups in any namespace.  */
++	  if (fd == -1 && !did_main_map
++	      && main_map != NULL && main_map->l_type != lt_loaded
++	      && cache_rpath (main_map, &main_map->l_rpath_dirs, DT_RPATH,
++			      "RPATH"))
++	    fd = open_path_fd (name, fd_, namelen, mode,
++			    &main_map->l_rpath_dirs,
++			    &realname, &fb, loader ?: main_map, LA_SER_RUNPATH,
++			    &found_other_class);
++	}
++
++      /* Try the LD_LIBRARY_PATH environment variable.  */
++      if (fd == -1 && env_path_list.dirs != (void *) -1)
++	fd = open_path_fd (name, fd_, namelen, mode, &env_path_list,
++			&realname, &fb,
++			loader ?: GL(dl_ns)[LM_ID_BASE]._ns_loaded,
++			LA_SER_LIBPATH, &found_other_class);
++
++      /* Look at the RUNPATH information for this binary.  */
++      if (fd == -1 && loader != NULL
++	  && cache_rpath (loader, &loader->l_runpath_dirs,
++			  DT_RUNPATH, "RUNPATH"))
++	fd = open_path_fd (name, fd_, namelen, mode,
++			&loader->l_runpath_dirs, &realname, &fb, loader,
++			LA_SER_RUNPATH, &found_other_class);
++
++#ifdef USE_LDCONFIG
++
++      if (fd == -1
++	  && (__glibc_likely ((mode & __RTLD_SECURE) == 0)
++	      || ! __libc_enable_secure)
++	  && __glibc_likely (GLRO(dl_inhibit_cache) == 0))
++	{
++	  /* Check the list of libraries in the file /etc/ld.so.cache,
++	     for compatibility with Linux's ldconfig program.  */
++	  char *cached = _dl_load_cache_lookup (name);
+
++	  if (cached != NULL)
++	    {
++	      // XXX Correct to unconditionally default to namespace 0?
++	      l = (loader
++		   ?: GL(dl_ns)[LM_ID_BASE]._ns_loaded
++# ifdef SHARED
++		   ?: &GL(dl_rtld_map)
++# endif
++		  );
++
++	      /* If the loader has the DF_1_NODEFLIB flag set we must not
++		 use a cache entry from any of these directories.  */
++	      if (__glibc_unlikely (l->l_flags_1 & DF_1_NODEFLIB))
++		{
++		  const char *dirp = system_dirs;
++		  unsigned int cnt = 0;
++
++		  do
++		    {
++		      if (memcmp (cached, dirp, system_dirs_len[cnt]) == 0)
++			{
++			  /* The prefix matches.  Don't use the entry.  */
++			  free (cached);
++			  cached = NULL;
++			  break;
++			}
++
++		      dirp += system_dirs_len[cnt] + 1;
++		      ++cnt;
++		    }
++		  while (cnt < nsystem_dirs_len);
++		}
++
++	      if (cached != NULL)
++		{
++		  fd = open_verify_fd (cached, fd_,
++				    &fb, loader ?: GL(dl_ns)[nsid]._ns_loaded,
++				    LA_SER_CONFIG, mode, &found_other_class,
++				    false);
++		  if (__glibc_likely (fd != -1))
++		    realname = cached;
++		  else
++		    free (cached);
++		}
++	    }
++	}
++#endif
++
++      /* Finally, try the default path.  */
++      if (fd == -1
++	  && ((l = loader ?: GL(dl_ns)[nsid]._ns_loaded) == NULL
++	      || __glibc_likely (!(l->l_flags_1 & DF_1_NODEFLIB)))
++	  && rtld_search_dirs.dirs != (void *) -1)
++	fd = open_path_fd (name, fd_, namelen, mode, &rtld_search_dirs,
++			&realname, &fb, l, LA_SER_DEFAULT, &found_other_class);
++
++      /* Add another newline when we are tracing the library loading.  */
++      if (__glibc_unlikely (GLRO_dl_debug_mask & DL_DEBUG_LIBS))
++	_dl_debug_printf ("\n");
++    }
++  else
++    {
++      /* The path may contain dynamic string tokens.  */
++      realname = (loader
++		  ? expand_dynamic_string_token (loader, name, 0)
++		  : __strdup (name));
++      if (realname == NULL)
++	fd = -1;
++      else
++	{
++	  fd = open_verify_fd (realname, fd_, &fb,
++			    loader ?: GL(dl_ns)[nsid]._ns_loaded, 0, mode,
++			    &found_other_class, true);
++	  if (__glibc_unlikely (fd == -1))
++	    free (realname);
++	}
++    }
++
++#ifdef SHARED
++ no_file:
++#endif
++  /* In case the LOADER information has only been provided to get to
++     the appropriate RUNPATH/RPATH information we do not need it
++     anymore.  */
++  if (mode & __RTLD_CALLMAP)
++    loader = NULL;
++
++  if (__glibc_unlikely (fd == -1) && __glibc_unlikely (fd_ == -1))
++    {
++      if (trace_mode
++	  && __glibc_likely ((GLRO_dl_debug_mask & DL_DEBUG_PRELINK) == 0))
++	{
++	  /* We haven't found an appropriate library.  But since we
++	     are only interested in the list of libraries this isn't
++	     so severe.  Fake an entry with all the information we
++	     have.  */
++	  static const Elf_Symndx dummy_bucket = STN_UNDEF;
++
++	  /* Allocate a new object map.  */
++	  if ((name_copy = __strdup (name)) == NULL
++	      || (l = _dl_new_object (name_copy, name, type, loader,
++				      mode, nsid)) == NULL)
++	    {
++	      free (name_copy);
++	      _dl_signal_error (ENOMEM, name, NULL,
++				N_("cannot create shared object descriptor"));
++	    }
++	  /* Signal that this is a faked entry.  */
++	  l->l_faked = 1;
++	  /* Since the descriptor is initialized with zero we do not
++	     have do this here.
++	  l->l_reserved = 0; */
++	  l->l_buckets = &dummy_bucket;
++	  l->l_nbuckets = 1;
++	  l->l_relocated = 1;
++
++	  /* Enter the object in the object list.  */
++	  _dl_add_to_namespace_list (l, nsid);
++
++	  return l;
++	}
++      else if (found_other_class)
++	_dl_signal_error (0, name, NULL,
++			  ELFW(CLASS) == ELFCLASS32
++			  ? N_("wrong ELF class: ELFCLASS64")
++			  : N_("wrong ELF class: ELFCLASS32"));
++      else
++	_dl_signal_error (errno, name, NULL,
++			  N_("cannot open shared object file"));
++    }
+   void *stack_end = __libc_stack_end;
+-  return _dl_map_object_from_fd (name, fd, &fb, realname, loader, type, mode,
++
++  return _dl_map_object_from_fd (name, fd_, &fb, realname, loader, type, mode,
+				 &stack_end, nsid);
+ }
+
+diff --git a/elf/dl-open.c b/elf/dl-open.c
+index 1288604..5ea18e5 100644
+--- a/elf/dl-open.c
++++ b/elf/dl-open.c
+@@ -45,6 +45,7 @@ extern int __libc_multiple_libcs;	/* Defined in init-first.c.  */
+ struct dl_open_args
+ {
+   const char *file;
++  int fd;
+   int mode;
+   /* This is the caller of the dlopen() function.  */
+   const void *caller_dlopen;
+@@ -186,6 +187,7 @@ dl_open_worker (void *a)
+ {
+   struct dl_open_args *args = a;
+   const char *file = args->file;
++  int fd = args->fd;
+   int mode = args->mode;
+   struct link_map *call_map = NULL;
+
+@@ -223,8 +225,12 @@ dl_open_worker (void *a)
+
+   /* Load the named object.  */
+   struct link_map *new;
+-  args->map = new = _dl_map_object (call_map, file, lt_loaded, 0,
+-				    mode | __RTLD_CALLMAP, args->nsid);
++  if (fd == -1)
++    args->map = new = _dl_map_object (call_map, file, lt_loaded, 0,
++				      mode | __RTLD_CALLMAP, args->nsid);
++  else
++    args->map = new =_dl_map_object_fd (call_map, file, fd, lt_loaded, 0,
++				        mode | __RTLD_CALLMAP, args->nsid);
+
+   /* Mark the object as not deletable if the RTLD_NODELETE flags was passed.
+      Do this early so that we don't skip marking the object if it was
+@@ -634,6 +640,7 @@ no more namespaces available for dlmopen()"));
+
+   struct dl_open_args args;
+   args.file = file;
++  args.fd = -1;
+   args.mode = mode;
+   args.caller_dlopen = caller_dlopen;
+   args.caller_dl_open = RETURN_ADDRESS (0);
+@@ -712,6 +719,133 @@ no more namespaces available for dlmopen()"));
+ }
+
+
++void *
++_dl_open_fd (int fd, int mode, const char *file, const void *caller_dlopen, Lmid_t nsid,
++	  int argc, char *argv[], char *env[])
++{
++  if ((mode & RTLD_BINDING_MASK) == 0) {
++    /* One of the flags must be set.  */
++    _dl_signal_error (EINVAL, "", NULL, N_("invalid mode for dlopen()"));
++	}
++  /* Make sure we are alone.  */
++  __rtld_lock_lock_recursive (GL(dl_load_lock));
++
++  if (__glibc_unlikely (nsid == LM_ID_NEWLM))
++    {
++      /* Find a new namespace.  */
++      for (nsid = 1; DL_NNS > 1 && nsid < GL(dl_nns); ++nsid) {
++	if (GL(dl_ns)[nsid]._ns_loaded == NULL)
++	  break; }
++
++      if (__glibc_unlikely (nsid == DL_NNS))
++	{
++	  /* No more namespace available.  */
++	  __rtld_lock_unlock_recursive (GL(dl_load_lock));
++
++	  _dl_signal_error (EINVAL, "", NULL, N_("\
++no more namespaces available for dlmopen()"));
++	}
++      else if (nsid == GL(dl_nns))
++	{
++	  __rtld_lock_initialize (GL(dl_ns)[nsid]._ns_unique_sym_table.lock);
++	  ++GL(dl_nns);
++	}
++      _dl_debug_initialize (0, nsid)->r_state = RT_CONSISTENT;
++    }
++  /* Never allow loading a DSO in a namespace which is empty.  Such
++     direct placements is only causing problems.  Also don't allow
++     loading into a namespace used for auditing.  */
++  else if (__glibc_unlikely (nsid != LM_ID_BASE && nsid != __LM_ID_CALLER)
++	   && (__glibc_unlikely (nsid < 0 || nsid >= GL(dl_nns))
++	       /* This prevents the [NSID] index expressions from being
++		  evaluated, so the compiler won't think that we are
++		  accessing an invalid index here in the !SHARED case where
++		  DL_NNS is 1 and so any NSID != 0 is invalid.  */
++	       || DL_NNS == 1
++	       || GL(dl_ns)[nsid]._ns_nloaded == 0
++	       || GL(dl_ns)[nsid]._ns_loaded->l_auditing))
++    _dl_signal_error (EINVAL, "", NULL,
++		      N_("invalid target namespace in dlmopen()"));
++
++  struct dl_open_args args;
++  args.file = file;
++  args.fd = fd;
++  args.mode = mode;
++  args.caller_dlopen = caller_dlopen;
++  args.caller_dl_open = RETURN_ADDRESS (0);
++  args.map = NULL;
++  args.nsid = nsid;
++  args.argc = argc;
++  args.argv = argv;
++  args.env = env;
++
++  const char *objname;
++  const char *errstring;
++  bool malloced;
++  int errcode = _dl_catch_error (&objname, &errstring, &malloced,
++				 dl_open_worker, &args);
++
++#if defined USE_LDCONFIG && !defined MAP_COPY
++  /* We must unmap the cache file.  */
++  _dl_unload_cache ();
++#endif
++
++  /* See if an error occurred during loading.  */
++  if (__glibc_unlikely (errstring != NULL))
++    {
++      /* Remove the object from memory.  It may be in an inconsistent
++	 state if relocation failed, for example.  */
++      if (args.map)
++	{
++	  /* Maybe some of the modules which were loaded use TLS.
++	     Since it will be removed in the following _dl_close call
++	     we have to mark the dtv array as having gaps to fill the
++	     holes.  This is a pessimistic assumption which won't hurt
++	     if not true.  There is no need to do this when we are
++	     loading the auditing DSOs since TLS has not yet been set
++	     up.  */
++	  if ((mode & __RTLD_AUDIT) == 0)
++	    GL(dl_tls_dtv_gaps) = true;
++	  _dl_close_worker (args.map, true);
++	}
++      assert (_dl_debug_initialize (0, args.nsid)->r_state == RT_CONSISTENT);
++
++      /* Release the lock.  */
++      __rtld_lock_unlock_recursive (GL(dl_load_lock));
++
++      /* Make a local copy of the error string so that we can release the
++	 memory allocated for it.  */
++      size_t len_errstring = strlen (errstring) + 1;
++      char *local_errstring;
++      if (objname == errstring + len_errstring)
++	{
++	  size_t total_len = len_errstring + strlen (objname) + 1;
++	  local_errstring = alloca (total_len);
++	  memcpy (local_errstring, errstring, total_len);
++	  objname = local_errstring + len_errstring;
++	}
++      else
++	{
++	  local_errstring = alloca (len_errstring);
++	  memcpy (local_errstring, errstring, len_errstring);
++	}
++
++      if (malloced)
++	free ((char *) errstring);
++
++      /* Reraise the error.  */
++      _dl_signal_error (errcode, objname, NULL, local_errstring);
++    }
++
++  assert (_dl_debug_initialize (0, args.nsid)->r_state == RT_CONSISTENT);
++
++  /* Release the lock.  */
++  __rtld_lock_unlock_recursive (GL(dl_load_lock));
++
++  return args.map;
++}
++
++
+ void
+ _dl_show_scope (struct link_map *l, int from)
+ {
+diff --git a/elf/rtld.c b/elf/rtld.c
+index bf484ad..aba9219 100644
+--- a/elf/rtld.c
++++ b/elf/rtld.c
+@@ -175,6 +175,7 @@ struct rtld_global_ro _rtld_global_ro attribute_relro =
+     ._dl_lookup_symbol_x = _dl_lookup_symbol_x,
+     ._dl_check_caller = _dl_check_caller,
+     ._dl_open = _dl_open,
++    ._dl_open_fd = _dl_open_fd,
+     ._dl_close = _dl_close,
+     ._dl_tls_get_addr_soft = _dl_tls_get_addr_soft,
+ #ifdef HAVE_DL_DISCOVER_OSVERSION
+diff --git a/include/dlfcn.h b/include/dlfcn.h
+index 0ce0af5..7841568 100644
+--- a/include/dlfcn.h
++++ b/include/dlfcn.h
+@@ -112,6 +112,7 @@ struct dlfcn_hook
+		  void **extra_info, int flags);
+   int (*dlinfo) (void *handle, int request, void *arg, void *dl_caller);
+   void *(*dlmopen) (Lmid_t nsid, const char *file, int mode, void *dl_caller);
++  void *(*dlopen_fd) (int fd, int mode, const char *file, void *dl_caller);
+   void *pad[4];
+ };
+
+@@ -120,6 +121,8 @@ libdl_hidden_proto (_dlfcn_hook)
+
+ extern void *__dlopen (const char *file, int mode DL_CALLER_DECL)
+      attribute_hidden;
++extern void *__dlopen_fd (int fd, int mode, const char *file DL_CALLER_DECL)
++     attribute_hidden;
+ extern void *__dlmopen (Lmid_t nsid, const char *file, int mode DL_CALLER_DECL)
+      attribute_hidden;
+ extern int __dlclose (void *handle)
+diff --git a/sysdeps/generic/ldsodefs.h b/sysdeps/generic/ldsodefs.h
+index 4668f73..b7499fc 100644
+--- a/sysdeps/generic/ldsodefs.h
++++ b/sysdeps/generic/ldsodefs.h
+@@ -591,6 +591,8 @@ struct rtld_global_ro
+   int (*_dl_check_caller) (const void *, enum allowmask);
+   void *(*_dl_open) (const char *file, int mode, const void *caller_dlopen,
+		     Lmid_t nsid, int argc, char *argv[], char *env[]);
++  void *(*_dl_open_fd) (int fd, int mode, const char *file, const void *caller_dlopen,
++		        Lmid_t nsid, int argc, char *argv[], char *env[]);
+   void (*_dl_close) (void *map);
+   void *(*_dl_tls_get_addr_soft) (struct link_map *);
+ #ifdef HAVE_DL_DISCOVER_OSVERSION
+@@ -756,6 +758,14 @@ extern struct link_map *_dl_map_object (struct link_map *loader,
+					Lmid_t nsid)
+      internal_function attribute_hidden;
+
++
++extern struct link_map *_dl_map_object_fd (struct link_map *loader, const char *file,
++					int fd,
++					int type, int trace_mode, int mode,
++					Lmid_t nsid)
++     internal_function attribute_hidden;
++
++
+ /* Call _dl_map_object on the dependencies of MAP, and set up
+    MAP->l_searchlist.  PRELOADS points to a vector of NPRELOADS previously
+    loaded objects that will be inserted into MAP->l_searchlist after MAP
+@@ -1012,6 +1022,10 @@ extern void *_dl_open (const char *name, int mode, const void *caller,
+		       Lmid_t nsid, int argc, char *argv[], char *env[])
+      attribute_hidden;
+
++extern void *_dl_open_fd (int fd, int mode, const char *name, const void *caller,
++		       Lmid_t nsid, int argc, char *argv[], char *env[])
++     attribute_hidden;
++
+ /* Free or queue for freeing scope OLD.  If other threads might be
+    in the middle of _dl_fixup, _dl_profile_fixup or dl*sym using the
+    old scope, OLD can't be freed until no thread is using it.  */
+diff --git a/sysdeps/unix/sysv/linux/aarch64/libdl.abilist b/sysdeps/unix/sysv/linux/aarch64/libdl.abilist
+index 6caff88..cabf217 100644
+--- a/sysdeps/unix/sysv/linux/aarch64/libdl.abilist
++++ b/sysdeps/unix/sysv/linux/aarch64/libdl.abilist
+@@ -7,5 +7,6 @@ GLIBC_2.17
+  dlinfo F
+  dlmopen F
+  dlopen F
++ dlopen_fd F
+  dlsym F
+  dlvsym F
+--
+1.9.1
+
