@@ -30,6 +30,7 @@
 #pragma once
 
 #include <utils/Log.h>
+#include <cutils/properties.h>
 
 #undef assert
 // Invalid ptr operation just to get backtraces into logcat.
@@ -43,35 +44,28 @@
   } \
 } while (0)
 
-// Remove comment markers to define LOG_LEVEL_DEBUG for debugging-related logs
-//#define LOG_LEVEL_DEBUG
-
-// Remove comment markers to define LOG_LEVEL_VERBOSE for complete logs
-//#define LOG_LEVEL_VERBOSE
-
 #define LOG_LEVEL_KPI
 
 // INFO, ERROR and WARN logs are enabled by default
-#define QMMF_INFO(fmt, args...)  ALOGD(fmt, ##args)
+#define QMMF_INFO(fmt, args...)  ALOGI(fmt, ##args)
 #define QMMF_WARN(fmt, args...)  ALOGW(fmt, ##args)
 #define QMMF_ERROR(fmt, args...) ALOGE(fmt, ##args)
 
 static inline void unused(...) {};
 
-#ifdef LOG_LEVEL_DEBUG
-#define QMMF_DEBUG(fmt, args...)  ALOGD(fmt, ##args)
-#else
-#define QMMF_DEBUG(...) unused(__VA_ARGS__)
-#endif
+extern uint32_t qmmf_log_level;
 
-#ifdef LOG_LEVEL_VERBOSE
-#define QMMF_VERBOSE(fmt, args...)  ALOGD(fmt, ##args)
-#else
-#define QMMF_VERBOSE(...) unused(__VA_ARGS__)
-#endif
+#define QMMF_GET_LOG_LEVEL()                               \
+  ({                                                       \
+    char prop[PROPERTY_VALUE_MAX];                         \
+    property_get("persist.qmmf.sdk.log.level", prop, "0"); \
+    qmmf_log_level = atoi(prop);                           \
+  })
+
+#define QMMF_DEBUG(fmt, args...) ALOGD_IF((qmmf_log_level > 0), fmt, ##args)
+#define QMMF_VERBOSE(fmt, args...) ALOGV_IF((qmmf_log_level > 1), fmt, ##args)
 
 #ifdef LOG_LEVEL_KPI
-#include <cutils/properties.h>
 #include <cutils/trace.h>
 
 #define BASE_KPI_FLAG   1
