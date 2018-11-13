@@ -8,8 +8,8 @@ function trace_start {
     mkdir -p $LTTNG_HOME
     /sbin/modprobe lttng-tracer
     $LTTNG create --snapshot --set-url=$LTTNG_URL
-    $LTTNG enable-channel -k --subbuf-size=512K channel0
-    $LTTNG enable-channel -u --subbuf-size=128K channel0
+    $LTTNG enable-channel -k --subbuf-size=512k --num-subbuf=2 channel0
+    $LTTNG enable-channel -u --subbuf-size=128K --num-subbuf=2 channel0
     $LTTNG enable-event -u anki_ust* -c channel0
     $LTTNG enable-event -k -a --syscall  -c channel0
     $LTTNG enable-event -k sched_switch -c channel0
