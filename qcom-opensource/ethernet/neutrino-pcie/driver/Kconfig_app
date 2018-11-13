@@ -1,0 +1,6 @@
+config NEUTRINO_APP
+	bool "Neutrino Ethernet app support"
+	depends on NEUTRINO_ETH
+	default y
+	---help---
+	  Say y here if you want to run Neutrino ethernet open function

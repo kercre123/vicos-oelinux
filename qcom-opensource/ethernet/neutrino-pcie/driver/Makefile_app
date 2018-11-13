@@ -1,0 +1,5 @@
+#
+# Makefile for the DWC_ETH_QOS app kernel module
+#
+
+obj-y += DWC_ETH_QOS_app.o
