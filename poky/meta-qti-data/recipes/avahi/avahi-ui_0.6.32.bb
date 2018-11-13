@@ -34,8 +34,8 @@ RDEPENDS_avahi-discover = "python-avahi python-pygtk"
 RDEPENDS_python-avahi = "python-dbus"
 
 
-SRC_URI[md5sum] = "e4db89a2a403ff4c47d66ac66fad1f43"
-SRC_URI[sha256sum] = "f9e4316c2339d0020726edd846d01bee0c39980906db0c247479e5807457ff1f"
+SRC_URI[md5sum] = "22b5e705d3eabb31d26f2e1e7b074013"
+SRC_URI[sha256sum] = "d54991185d514a0aba54ebeb408d7575b60f5818a772e28fa0e18b98bc1db454"
 
 do_install_append () {
 	rm ${D}${sysconfdir} -rf
