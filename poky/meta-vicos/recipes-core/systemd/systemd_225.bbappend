@@ -1,6 +1,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/systemd:"
 
 SRC_URI += "file://journald.conf"
+SRC_URI += "file://0001-systemctl-kill-all-units-specified-on-the-command-line.patch"
 
 # Place journald.conf in /etc/systemd/
 do_install_append () {
