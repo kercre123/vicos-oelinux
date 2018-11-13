@@ -1,0 +1,18 @@
+<launch>
+  <arg name="logDir"/>
+  <arg name="loopRate"/>
+  <arg name="iterations" />
+  <arg name="transport" />
+  <arg name="msgSize" default="30"/>
+  <arg name="msgType" />
+  <param name="logDir" value="$(arg logDir)" />
+  <param name="loopRate" type="double" value="$(arg loopRate)" />
+  <param name="iterations" type="int" value="$(arg iterations)" />
+  <param name="transport" type="string" value="$(arg transport)" />
+  <param name="msgSize" type="int" value="$(arg msgSize)" />
+  <param name="msgType" type="string" value="$(arg msgType)" />
+  
+  <node name="client" pkg="ros_tests" type="client" output="screen" required="true"/>
+  <node name="server" pkg="ros_tests" type="server" output="screen" required="true"/>
+</launch>
+
