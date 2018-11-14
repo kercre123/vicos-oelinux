@@ -1,0 +1,4 @@
+# https://help.github.com/articles/about-codeowners/
+
+.github/CODEOWNERS @CodeForCoffee
+poky/build/build.sh @CodeForCoffee
