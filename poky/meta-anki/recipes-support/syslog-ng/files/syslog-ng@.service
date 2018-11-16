@@ -2,7 +2,6 @@
 Description=System Logger Daemon "%i" instance
 Documentation=man:syslog-ng(8)
 Conflicts=emergency.service emergency.target
-After=systemd-journald.service
 
 [Service]
 Type=notify
@@ -16,5 +15,4 @@ StandardError=journal
 Restart=on-failure
 
 [Install]
-WantedBy=multi-user.target
 Alias=syslog.service
