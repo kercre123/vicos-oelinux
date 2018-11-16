@@ -34,17 +34,18 @@ fi
 
 # if the file time is in the future, use that
 setclock() {
+    CLOCK_OFFSET=${HWCLOCK}
     if expr "${HWCLOCK}" \> "${FHWCLOCK}" ; then
 	# If the RTC clock has continued to advance since our last boot
-	# then add in the difference here
+	# then only use the difference here
 	CLOCK_OFFSET=$(expr "${HWCLOCK}" - "${FHWCLOCK}")
-	SAVEDTIME_SECS=$(date -u -D '%Y-%m-%d %H:%M:%S' -d "${SAVEDTIME}" +'%s')
-	SAVEDTIME_SECS=$(expr "${SAVEDTIME_SECS}" + "${CLOCK_OFFSET}")
-	SAVEDTIME=$(date -u -D '%s' -d "${SAVEDTIME_SECS}" +'%Y-%m-%d %H:%M:%S')
     fi
+    SAVEDTIME_SECS=$(date -u -D '%Y-%m-%d %H:%M:%S' -d "${SAVEDTIME}" +'%s')
+    SAVEDTIME_SECS=$(expr "${SAVEDTIME_SECS}" + "${CLOCK_OFFSET}")
+    SAVEDTIME=$(date -u -D '%s' -d "${SAVEDTIME_SECS}" +'%Y-%m-%d %H:%M:%S')
 
     if expr "${SAVEDTIME}" \> "${CTIME}" ; then
-	echo "loading saved time ${SAVEDTIME} over ${CTIME}"
+	echo -e "loading saved time ${SAVEDTIME} over ${CTIME}\nClock Offset = ${CLOCK_OFFSET} seconds"
 	date -u --set="${SAVEDTIME}"
     else
 	echo "ignoring saved time ${SAVEDTIME} over ${CTIME}"
