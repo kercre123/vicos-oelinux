@@ -13,3 +13,5 @@ IMAGE_INSTALL += "alsa-utils"
 IMAGE_INSTALL += "syslog-ng"
 IMAGE_INSTALL += "logrotate"
 IMAGE_INSTALL += "kernel-module-ramoops"
+
+IMAGE_INSTALL += "tlsdate"
