@@ -98,6 +98,16 @@ case ${FAULT_CODE} in
     STOP_DASMGR_ONLY=1
     ON_FAULT_RESTART=0
     ;;
+915)
+    log "kill -ILL vic-engine"
+    PID=$(pidof vic-engine)
+    [ $? -eq 0 ] && kill -ILL $PID
+    ;;
+917)
+    log "kill -ILL vic-anim"
+    PID=$(pidof vic-anim)
+    [ $? -eq 0 ] && kill -ILL $PID
+    ;;
 98[0-1])
     # These codes indicate issues with the camera
     # These issues are typically caused by mm-anki-camera hanging
