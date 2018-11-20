@@ -34,15 +34,23 @@ fi
 
 # if the file time is in the future, use that
 setclock() {
-    CLOCK_OFFSET=${HWCLOCK}
-    if expr "${HWCLOCK}" \> "${FHWCLOCK}" ; then
-	# If the RTC clock has continued to advance since our last boot
-	# then only use the difference here
-	CLOCK_OFFSET=$(expr "${HWCLOCK}" - "${FHWCLOCK}")
+    CLOCK_OFFSET=0
+    if [ -f "${CLOCKFILE}" ]; then
+	# Only add in hwclock seconds if we have a saved fake-hwclock.data file
+	# Otherwise, we don't want to add a potentially large number of seconds
+	# to the saved time from the OS build timestamp.  Could cause us to
+	# set the clock forward of the true wall clock time if the robot hasn't
+	# been power cycled in a long time.
+	CLOCK_OFFSET=${HWCLOCK}
+	if expr "${HWCLOCK}" \> "${FHWCLOCK}" ; then
+	    # If the RTC clock has continued to advance since our last boot
+	    # then only use the difference here
+	    CLOCK_OFFSET=$(expr "${HWCLOCK}" - "${FHWCLOCK}")
+	fi
+	SAVEDTIME_SECS=$(date -u -D '%Y-%m-%d %H:%M:%S' -d "${SAVEDTIME}" +'%s')
+	SAVEDTIME_SECS=$(expr "${SAVEDTIME_SECS}" + "${CLOCK_OFFSET}")
+	SAVEDTIME=$(date -u -D '%s' -d "${SAVEDTIME_SECS}" +'%Y-%m-%d %H:%M:%S')
     fi
-    SAVEDTIME_SECS=$(date -u -D '%Y-%m-%d %H:%M:%S' -d "${SAVEDTIME}" +'%s')
-    SAVEDTIME_SECS=$(expr "${SAVEDTIME_SECS}" + "${CLOCK_OFFSET}")
-    SAVEDTIME=$(date -u -D '%s' -d "${SAVEDTIME_SECS}" +'%Y-%m-%d %H:%M:%S')
 
     if expr "${SAVEDTIME}" \> "${CTIME}" ; then
 	echo -e "loading saved time ${SAVEDTIME} over ${CTIME}\nClock Offset = ${CLOCK_OFFSET} seconds"
