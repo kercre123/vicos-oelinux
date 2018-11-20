@@ -3,11 +3,6 @@ SRC_URI += " file://syslog-ng.conf.systemd \
              file://syslog-ng@.service \
            "
 
-PACKAGECONFIG ??= " \
-    ${@base_contains('DISTRO_FEATURES', 'ipv6', 'ipv6', '', d)} \
-    ${@base_contains('DISTRO_FEATURES', 'systemd', 'systemd', '', d)} \
-  "
-
 do_install_append() {
     install -d ${D}/${sysconfdir}/${BPN}
     install -d ${D}/${sysconfdir}/init.d
