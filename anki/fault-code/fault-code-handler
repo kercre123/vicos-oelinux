@@ -71,13 +71,10 @@ fi
 
 echo $FAULT_CODE > $PROGRESS_FILE
 
-<<<<<<< HEAD
-=======
 if [ -f /usr/bin/ankitrace ]; then
    /usr/bin/ankitrace -r $TRACE_PATH/$FAULT_CODE
 fi
 
->>>>>>> a317b28a6... VIC-11518: Reliability improvements for fault-code handler script (#481)
 # Log source, event, i1 to DAS
 /anki/bin/vic-log-event fault-code-handler robot.fault_code '' '' '' '' ${FAULT_CODE}
 
@@ -142,14 +139,9 @@ function wait_until_services_stopped() {
     # force a crash for diagnostics.
     #
     if [ ${#RUNNING_PROCS[*]} -gt 0 ]; then
-<<<<<<< HEAD
-        logv "kill remaining processes"
-        systemctl kill "${RUNNING_PROCS[@]}"
-=======
         log "systemctl kill -s SIGILL ${RUNNING_PROCS[@]}"
         systemctl kill -s SIGILL ${RUNNING_PROCS[@]}
         sleep 1
->>>>>>> a317b28a6... VIC-11518: Reliability improvements for fault-code handler script (#481)
     fi
 }
 
@@ -159,22 +151,13 @@ function wait_until_services_stopped() {
 # Once we have signalled each service, poll status until they stop.
 #
 if [ $STOP_DASMGR_ONLY -eq 1 ]; then
-<<<<<<< HEAD
-    logv "stop vic-dasmgr"
-=======
->>>>>>> a317b28a6... VIC-11518: Reliability improvements for fault-code handler script (#481)
     ANKI_SERVICES=( "vic-dasmgr" )
     log "systemctl kill -s SIGTERM vic-dasmgr"
     systemctl kill -s SIGTERM vic-dasmgr
     wait_until_services_stopped
 else
-<<<<<<< HEAD
-    logv "stop anki-robot.target"
-    systemctl stop anki-robot.target
-=======
     log "systemctl kill -s SIGTERM ${ANKI_SERVICES[@]}"
     systemctl kill -s SIGTERM ${ANKI_SERVICES[@]}
->>>>>>> a317b28a6... VIC-11518: Reliability improvements for fault-code handler script (#481)
     wait_until_services_stopped
 
     # display error code
@@ -199,9 +182,5 @@ if [ $ON_FAULT_RESTART -eq 1 ]; then
     systemctl restart anki-robot.target
 fi
 
-<<<<<<< HEAD
-logv "fault-code-handler: done"
-=======
 log "fault-code-handler done"
 rm -f $PROGRESS_FILE
->>>>>>> a317b28a6... VIC-11518: Reliability improvements for fault-code handler script (#481)
