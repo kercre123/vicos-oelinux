@@ -177,7 +177,7 @@ else
     DISPLAY_RESTART=""
     if [ ${ON_FAULT_RESTART} -eq 1 ]; then
         case ${FAULT_CODE} in
-        913|914|915|916|917|921|923)
+        800|913|914|915|916|917|921|923)
             DISPLAY_RESTART="-r"
             ;;
         esac
