@@ -1,0 +1,25 @@
+From 1d80210009e1fcd1a366b5f98c6af24e01f6e124 Mon Sep 17 00:00:00 2001
+From: Mathew Prokos <mprokos@anki.com>
+Date: Wed, 21 Nov 2018 17:15:21 -0800
+Subject: [PATCH] Set journal FILE_SIZE_INCREASE to 100KB from 8MB
+
+---
+ src/journal/journal-file.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/journal/journal-file.c b/src/journal/journal-file.c
+index 4f94799ce..4e9a7e913 100644
+--- a/src/journal/journal-file.c
++++ b/src/journal/journal-file.c
+@@ -67,7 +67,7 @@
+ #define CHAIN_CACHE_MAX 20
+ 
+ /* How much to increase the journal file size at once each time we allocate something new. */
+-#define FILE_SIZE_INCREASE (8ULL*1024ULL*1024ULL)              /* 8MB */
++#define FILE_SIZE_INCREASE (100ULL*1024ULL)              /* 100KB */
+ 
+ /* Reread fstat() of the file for detecting deletions at least this often */
+ #define LAST_STAT_REFRESH_USEC (5*USEC_PER_SEC)
+-- 
+2.17.1
+
