@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -e
+set -u
+
+check_if_clock_is_already_synchronized() {
+
+    # Do NOT adjust the clock if it is already synchronized via NTP
+    if adjtimex | egrep -q 'clock synchronized'; then
+	echo "Clock is already synchronized via NTP."
+	exit 0
+    fi
+}
+
+check_if_clock_is_already_synchronized
+
+: ${EARLIESTDATE:="2018-11-20 12:34:56"}
+: ${HOST:="www.anki.com"}
+: ${HTTPDATEFMT:='%a, %d %b %Y %T %Z'}
+: ${DATEFMT:='%Y-%m-%d %H:%M:%S'}
+: ${TIMESTAMP:="/etc/timestamp"}
+: ${TIMESTAMPFMT:='%Y%m%d%H%M%S'}
+: ${SYNCFILE:="/run/https.timesync"}
+
+rm -rf "${SYNCFILE}"
+
+if [ -f "${TIMESTAMP}" ]; then
+    EDATE=$(date -u -D "${TIMESTAMPFMT}" -d `cat ${TIMESTAMP}` "+${DATEFMT}")
+    if [[ "${EARLIESTDATE}" < "${EDATE}" ]]; then
+        EARLIESTDATE=${EDATE}
+    fi
+fi
+
+OS_VERSION=`getprop ro.anki.version`
+USERAGENT="Victor-httpsdate/${OS_VERSION}"
+
+DATESTRING=$(curl -A "${USERAGENT}" -sI "https://$HOST/" | grep -i "^date: ")
+
+DATESTRING="${DATESTRING/Date: /}"
+DATESTRING="${DATESTRING/date: /}"
+
+HTTPDATE=$(date -u -D "${HTTPDATEFMT}" -d "$DATESTRING" "+${DATEFMT}")
+
+if [[ "${HTTPDATE}" < "${EARLIESTDATE}" ]]; then
+    echo "\"${HTTPDATE}\" (from $HOST) is earlier than allowed: \"${EARLIESTDATE}\""
+    /anki/bin/vic-log-event httpsdate tooearly "${HTTPSDATE}" "${EARLIESTDATE}"
+    exit 1
+fi
+
+
+check_if_clock_is_already_synchronized
+
+date -u --set="${HTTPDATE}" > /dev/null 2>&1
+
+echo 1 > "${SYNCFILE}"
+
+# DAS Event
+/anki/bin/vic-log-event httpsdate https.timesync "${HTTPDATE}"
