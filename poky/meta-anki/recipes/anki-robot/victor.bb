@@ -43,7 +43,7 @@ GROUPADD_PARAM_${PN} += "; -g 1000 system"
 # Add users
 USERADD_PARAM_${PN} =  "  -u 2901 -g 2901 -s /bin/false anki"
 USERADD_PARAM_${PN} += "; -u 2902 -g 2902 -G 2901,1000 -s /bin/false robot"
-USERADD_PARAM_${PN} += "; -u 2903 -g 2903 -G 2901,1000 -s /bin/false engine"
+USERADD_PARAM_${PN} += "; -u 2903 -g 2903 -G 2901,1000,3003 -s /bin/false engine"
 USERADD_PARAM_${PN} += "; -u 2904 -g 2904 -G 2901,1000 -s /bin/false bluetooth"
 USERADD_PARAM_${PN} += "; -u 2905 -g 2905 -G 2901,2904,1000,3003 -s /bin/false net"
 USERADD_PARAM_${PN} += "; -u 888  -g 888  -G 2901,1000,3003 -s /bin/false cloud"
