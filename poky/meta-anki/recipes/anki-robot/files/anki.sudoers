@@ -1,0 +1,7 @@
+%anki ALL = (root, root) NOPASSWD: /anki/bin/update-engine
+%anki ALL = (root, root) NOPASSWD: /anki/bin/update-engine http*
+%anki ALL = (root, root) NOPASSWD: /bin/systemctl restart wpa_supplicant connman
+%anki ALL = (root, root) NOPASSWD: /sbin/reboot
+%anki ALL = (root, root) NOPASSWD: /usr/bin/python /anki/bin/diagnostics-logger
+%anki ALL = (root, root) NOPASSWD: /anki/bin/vic-log-cat
+%anki ALL = (root, root) NOPASSWD: /usr/bin/connmanctl enable wifi

@@ -6,6 +6,7 @@ Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 SERVICE_FILE = "anki-robot.target"
 
 SRC_URI = "file://${SERVICE_FILE}"
+SRC_URI += "file://anki.sudoers"
 
 DEPENDS += "vic-init"
 DEPENDS += "vic-robot"
@@ -27,7 +28,10 @@ do_install_append () {
         ln -sf ${systemd_unitdir}/system/${SERVICE_FILE} \
             ${D}${systemd_unitdir}/system/victor.target
    fi
+   install -m 0750 -d ${D}${sysconfdir}/sudoers.d
+   install -m 0644 ${WORKDIR}/anki.sudoers -D ${D}${sysconfdir}/sudoers.d/anki
 }
 
+FILES_${PN} += "${sysconfdir}/sudoers.d/anki"
 FILES_${PN} += "${systemd_unitdir}/system/"
 SYSTEMD_SERVICE_${PN} = "${SERVICE_FILE}"
