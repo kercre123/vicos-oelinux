@@ -1,0 +1,1 @@
+engine ALL = (root, root) NOPASSWD: /usr/bin/timedatectl set-timezone *
