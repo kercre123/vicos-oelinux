@@ -13,14 +13,18 @@
 # Exit on unset variable
 set -u
 
+#
+# Configurable variables may be set in fault-code-handler.env
+#
 : ${ON_FAULT_RESTART:=0}
 : ${TIMEOUT_SIGTERM_SEC:=3}
 : ${TIMEOUT_RESTART_SEC:=5}
-
-# enable VERBOSE for debugging
+: ${FAULT_RESTART_COUNT:=0}
+: ${FAULT_RESTART_LIMIT:=2}
 : ${VERBOSE:=0}
 
 PROGRESS_FILE="/run/fault_code.pending"
+FAULT_RESTART_COUNT_FILE="/run/fault_restart_count"
 TRACE_PATH="/data/ankitrace/faults"
 LOGGER="/bin/logger -t fault-code-handler"
 
@@ -173,6 +177,18 @@ else
     systemctl kill -s SIGTERM ${ANKI_SERVICES[@]}
     wait_until_services_stopped
 
+    # Have we reached restart limit?
+    if [ ${ON_FAULT_RESTART} -eq 1 ]; then
+      if [ -f ${FAULT_RESTART_COUNT_FILE} ]; then
+        FAULT_RESTART_COUNT="`/bin/cat ${FAULT_RESTART_COUNT_FILE}`"
+      fi
+      log "Restart count ${FAULT_RESTART_COUNT}/${FAULT_RESTART_LIMIT}"
+      if [ ${FAULT_RESTART_COUNT} -ge ${FAULT_RESTART_LIMIT} ]; then
+        log "No more restarts allowed"
+        ON_FAULT_RESTART=0
+      fi
+    fi
+
     # Display "Vector will restart"?
     DISPLAY_RESTART=""
     if [ ${ON_FAULT_RESTART} -eq 1 ]; then
@@ -201,10 +217,15 @@ if [ $KILL_CAMERA_AFTER_STOPPING_ROBOT -eq 1 ]; then
 fi
 
 if [ $ON_FAULT_RESTART -eq 1 ]; then
+    # Sleep before restart
     if [ $TIMEOUT_RESTART_SEC -gt 0 ]; then
         log "Sleep for ${TIMEOUT_RESTART_SEC}"
         sleep $TIMEOUT_RESTART_SEC
     fi
+
+    # Update restart count
+    ((++FAULT_RESTART_COUNT))
+    echo ${FAULT_RESTART_COUNT} > ${FAULT_RESTART_COUNT_FILE}
 
     # restart processes
     log "Restart anki-robot.target"
