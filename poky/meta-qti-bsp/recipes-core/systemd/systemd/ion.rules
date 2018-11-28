@@ -1,1 +1,1 @@
-KERNEL=="ion", TAG+="systemd"
+KERNEL=="ion", GROUP="camera", MODE="0640", TAG+="systemd"
