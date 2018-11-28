@@ -10,6 +10,8 @@ SRC_URI += "file://mount-data"
 SRC_URI += "file://mount-factory-data"
 SRC_URI += "file://mount-data.service"
 SRC_URI += "file://mtpserver.rules"
+SRC_URI += "file://ion.rules"
+SRC_URI += "file://gpio.rules"
 
 DEPENDS += "emr-cat blkdiscard"
 
@@ -46,6 +48,11 @@ do_install_append () {
    install -d ${D}${systemd_unitdir}/system/local-fs.target.requires/
    ln -sf ${systemd_unitdir}/system/mount-data.service \
                ${D}${systemd_unitdir}/system/local-fs.target.requires/mount-data.service
+   install -d ${D}${sysconfdir}/udev/rules.d
+   install -m 0644 ${WORKDIR}/ion.rules ${D}${sysconfdir}/udev/rules.d/ion.rules
+   install -m 0644 ${WORKDIR}/gpio.rules ${D}${sysconfdir}/udev/rules.d/gpio.rules
 }
 
 FILES_${PN} += "/etc/initscripts"
+FILES_${PN} += "${sysconfdir}/udev/rules.d/ion.rules"
+FILES_${PN} += "${sysconfdir}/udev/rules.d/gpio.rules"
