@@ -4,7 +4,7 @@ lib_LTLIBRARIES := libsync.la
 libsync_la_SOURCES := sync.c
 libsync_la_CFLAGS  := -I$(top_srcdir)/include
 libsync_la_CFLAGS  += -I$(top_srcdir)/libsync/include
-libsync_la_LDFLAGS := -llog
+libsync_la_LDFLAGS := -llog -lcutils
 
 # Build sync_test
 bin_PROGRAMS := sync_test
