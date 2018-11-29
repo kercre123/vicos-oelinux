@@ -74,7 +74,7 @@ int create_socket(const char* socket_path)
   // ensure path exists
   struct stat st = {0};
   if (stat(ANKI_CAMERA_SOCKET_DIR, &st) == -1) {
-    mkdir(ANKI_CAMERA_SOCKET_DIR, 0700);
+    mkdir(ANKI_CAMERA_SOCKET_DIR, 0770);
   }
 
 
