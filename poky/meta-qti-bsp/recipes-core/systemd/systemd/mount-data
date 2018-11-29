@@ -154,7 +154,9 @@ mount_userdata() {
 
 case "$1" in
   start )
-    hexdump -e '"%c"' -n 4 /dev/block/bootdevice/by-name/userdata | egrep -q WIPE && echo "1" > /run/data_cleared
+    hexdump -e '"%c"' -n 4 /dev/block/bootdevice/by-name/userdata | egrep -q WIPE && echo "1" > /tmp/data_cleared && chown engine:anki /tmp/data_cleared
+    # VIC-11364 Preserve compatibility with old versions of vic-engine that look for /run/data_cleared
+    [ -f /tmp/data_cleared ] && cp /tmp/data_cleared /run/data_cleared
     if grep $UNBRICK_KEY /proc/cmdline > /dev/null; then
       echo "Mount-data in UNBRICK MODE" > /dev/kmsg
       mount_tmp_userdata
