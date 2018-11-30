@@ -68,15 +68,6 @@ do_compile () {
 do_install () {
     ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
 
-    # Remove "other" permission and remove unnecessary exec on everything in /anki
-    # BRC: Setting this here is a dirty hack, we should correctly set permissions in a
-    # cmake install step.
-    chmod -R 644 ${D}/anki
-    chmod 755 ${D}/anki
-    chmod 755 ${D}/anki/{data,etc,lib}
-    chmod -R 755 ${D}/anki/bin
-    chmod -R 755 ${D}/anki/lib
-    chown -R 2901:2901 ${D}/anki
     # If a user build, overwrite ota public key with production one
     if [[ ${USER_BUILD} == "1" ]]; then
       install -m 0640 ${WORKDIR}/ota/ota_prod.pub ${D}/anki/etc/ota.pub
