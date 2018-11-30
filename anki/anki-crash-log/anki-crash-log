@@ -9,7 +9,7 @@
 set -eu
 
 : ${MESSAGES="/var/log/messages"}
-: ${TAIL="/bin/tail -200"}
+: ${TAIL="/bin/tail -500"}
 
 function log () {
   /bin/logger -p user.info -t anki-crash-log -- "$1"
