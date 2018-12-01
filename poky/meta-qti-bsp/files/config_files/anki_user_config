@@ -39,22 +39,28 @@ usr/bin/mm-anki-camera      2907 2907 0750
 
 # Anki stuff
 # ===========
-anki                        2901 2901 0750
-anki/lib                    2901 2901 0750
-anki/data                   2901 2901 0750
-anki/etc                    2901 2901 0750
-anki/bin                    2901 2901 0750
-anki/bin/vic-robot          2902 2901 0750
-anki/bin/vic-anim           2903 2901 0750
-anki/bin/vic-bootAnim       2903 2901 0750
-anki/bin/vic-engine         2903 2901 0750
-anki/bin/vic-neuralnets     2903 2901 0750
-anki/bin/vic-switchboard    2905 2901 0750
-anki/bin/vic-gateway        2905 2901 0750
-anki/bin/vic-dasmgr         2905 2901 0750
-anki/bin/vic-crashuploader  2905 2901 0750
-anki/bin/vic-on-exit        2901 2901 0750
-anki/bin/vic-cloud           888 2901 0750
-anki/bin/diagnostics-logger 2901 2901 0750
-anki/bin/displayFaultCode   2903 2901 0750
-anki/bin/update-engine      2905 2901 0750
+anki                              2901 2901 0550
+anki/bin/diagnostics-logger       2901 2901 0550
+anki/bin/displayFaultCode         2903 2901 0550
+anki/bin/update-engine            2905 2901 0550
+anki/bin/vic-anim                 2903 2901 0500
+anki/bin/vic-bootAnim             2903 2901 0550
+anki/bin/vic-cloud                 888 2901 0550
+anki/bin/vic-crashuploader        2905 2901 0550
+anki/bin/vic-dasmgr               2905 2901 0500
+anki/bin/vic-engine               2903 2901 0500
+anki/bin/vic-faultCodeDisplay     2901 2901 0550
+anki/bin/vic-gateway              2905 2901 0500
+anki/bin/vic-getprocessstatus.sh  2901 2901 0550
+anki/bin/vic-init.sh              2901 2901 0550
+anki/bin/vic-log-cat              2901 2901 0550
+anki/bin/vic-log-event            2901 2901 0550
+anki/bin/vic-log-upload           2901 2901 0550
+anki/bin/vic-logmgr-upload        2901 2901 0550
+anki/bin/vic-neuralnets           2903 2901 0500
+anki/bin/vic-on-exit              2901 2901 0550
+anki/bin/vic-powerstatus.sh       2901 2901 0550
+anki/bin/vic-robot                2902 2901 0550
+anki/bin/vic-runcrashtests.sh     2901 2901 0550
+anki/bin/vic-switchboard          2905 2901 0500
+anki/bin/vic-webserver            2901 2901 0500
