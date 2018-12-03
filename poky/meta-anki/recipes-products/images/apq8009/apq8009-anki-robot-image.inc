@@ -5,6 +5,7 @@
 IMAGE_INSTALL += "animfail"
 IMAGE_INSTALL += "ankibluetoothd"
 IMAGE_INSTALL += "anki-audio-init"
+IMAGE_INSTALL += "anki-crash-log"
 IMAGE_INSTALL += "anki-robot-target"
 IMAGE_INSTALL += "anki-version"
 IMAGE_INSTALL += "ankiinit"
@@ -54,7 +55,6 @@ IMAGE_INSTALL += "fluoride"
 IMAGE_INSTALL += "rb-camera"
 
 # Developer stuff
-IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'anki-crash-log', d)}"
 IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'reboot-stresser', d)}"
 IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'ankitrace', d)}"
 IMAGE_INSTALL += "${@base_conditional('DEV', '1', 'ankitrace', '', d)}"
