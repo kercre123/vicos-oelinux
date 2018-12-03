@@ -2,3 +2,4 @@
 
 .github/CODEOWNERS @CodeForCoffee
 poky/build/build.sh @CodeForCoffee
+ANKI_VERSION @CodeForCoffee @udo-anki
