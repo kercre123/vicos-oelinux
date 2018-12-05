@@ -2132,7 +2132,6 @@ void isp_hw_proc_subdev_event(isp_hw_t *isp_hw, isp_thread_t *thread_data)
         thread_data->wake_up_at_sof = FALSE;
         sem_post(&thread_data->sig_sem);
       }
-      ATRACE_INT("Camera:SOF", sof->frame_id);
       /*when got SOF event means got reg update IRQ, just applied the hw setting*/
       if (isp_hw->isp_diag.has_user_dianostics) {
         isp_hw_prepare_vfe_diag(isp_hw, streaming_mode);
