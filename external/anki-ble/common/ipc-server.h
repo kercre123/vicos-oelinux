@@ -79,6 +79,7 @@ class IPCServer : public IPCEndpoint {
                                                 int latency,
                                                 int timeout) {}
   virtual void SetAdapterName(const std::string& name) {}
+  virtual void DisconnectByAddress(const std::string& address) {}
  private:
   void AcceptWatcherCallback(ev::io& w, int revents);
   ev::io* accept_watcher_;

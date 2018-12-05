@@ -209,6 +209,13 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
         SetAdapterName(std::string(args->name));
       }
       break;
+    case IPCMessageType::DisconnectByAddress:
+      logv("ipc-server: DisconnectByAddress");
+      {
+        DisconnectByAddressArgs* args = (DisconnectByAddressArgs *) data.data();
+        DisconnectByAddress(std::string(args->address));
+      }
+      break;
     default:
       loge("ipc-server: Unknown IPC message (%d)", (int) type);
       break;
@@ -218,7 +225,6 @@ void IPCServer::OnReceiveIPCMessage(const int sockfd,
 void IPCServer::OnPeerClose(const int sockfd)
 {
   IPCEndpoint::OnPeerClose(sockfd);
-  close(sockfd);
 }
 
 void IPCServer::OnPeripheralStateUpdate(const bool advertising,
