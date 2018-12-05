@@ -9,7 +9,7 @@ After=vic-gateway-cert.service vic-engine.service vic-cloud.service vic-switchbo
 
 [Service]
 EnvironmentFile=/anki/etc/vic-gateway.env
-ExecStart=/usr/bin/logwrapper /anki/bin/vic-gateway $VIC_GATEWAY_OPTS
+ExecStart=/anki/bin/vic-gateway $VIC_GATEWAY_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
 User=net
