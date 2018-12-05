@@ -24,9 +24,12 @@ else
   TAR=tar
 endif
 
-OTAKEY ?= ota_test.key
+OTAKEY ?= ota_prod.key
 OTAPASS ?= file:ota_test.pass
 OTAENC ?= 1
+ANKIDEV ?= 1
+
+MANIFEST_VERSION = 1.0.0
 
 UPDATE_VERSION ?= $(shell cat $(OS_VERSION_FILE))
 
@@ -65,12 +68,13 @@ $(BUILD)/%.img: $(IMG_DIR)/%.ext4
 	echo "sha256=`shasum -a256 -b $< | awk '{ print $$1 }'`" >> $@
 
 %.sha256: %.ini
-	openssl dgst -sha256 -sign $(OTAKEY) -out $@ $<
+	openssl dgst -sha256 -sign $(OTAKEY) -passin env:OTA_KEY_PASS -out $@ $<
 
 $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	echo "[META]"                           > $@
-	echo "manifest_version=0.9.2"           >> $@
+	echo "manifest_version=$(MANIFEST_VERSION)"           >> $@
 	echo "update_version=$(UPDATE_VERSION)" >> $@
+	echo "ankidev=$(ANKIDEV)"               >> $@
 	echo "num_images=2"                     >> $@
 	echo "[BOOT]"                           >> $@
 	echo "encryption=$(OTAENC)"             >> $@
