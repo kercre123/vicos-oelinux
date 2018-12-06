@@ -14,11 +14,6 @@ public:
   {
   }
 
-  void wait(){
-    std::unique_lock<std::mutex> lk(_mutex);
-    _condition.wait(lk,[&]{return this->_triggered; });
-  };
-
   void set()
   {
     _triggered = true;
@@ -29,6 +24,11 @@ public:
   {
     _triggered = false;
   }
+
+  void wait(){
+    std::unique_lock<std::mutex> lk(_mutex);
+    _condition.wait(lk,[&]{return this->_triggered; });
+  };
 
 private:
   volatile bool _triggered;

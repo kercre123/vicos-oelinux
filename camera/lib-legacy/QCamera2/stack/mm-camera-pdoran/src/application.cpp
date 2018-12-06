@@ -54,7 +54,8 @@ int Application::exec(const Args& args)
   setup_signal_handler();
 
   // Create and start a new camera
-  _camera = std::unique_ptr<Camera>(new Camera());
+  _camera.reset(new Camera());
+  
   _camera->start();
 
   // Wait for an exit signal (e.g. CTRL+C)
