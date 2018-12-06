@@ -8,5 +8,5 @@ Requires=fake-hwclock.service
 [Service]
 Type=simple
 EnvironmentFile=-/data/etc/rebooter.env
-ExecStart=/usr/bin/logwrapper /sbin/rebooter.py
+ExecStart=/sbin/rebooter.py
 
