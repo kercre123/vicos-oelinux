@@ -24,7 +24,7 @@ ExecStartPre=/bin/mkdir -p /run/update-engine /run/vic-switchboard
 ExecStartPre=/bin/test $UPDATE_ENGINE_ENABLED = "True"
 ExecStartPre=/bin/bash -c 'sleep $(( RANDOM % $UPDATE_ENGINE_MAX_SLEEP ))'
 ExecStartPre=/bin/bash -c 'echo Unclean exit > /run/update-engine/error'
-ExecStart=/bin/bash -c '/usr/bin/logwrapper /anki/bin/update-engine; echo $? > /run/update-engine/exit_code'
+ExecStart=/bin/bash -c '/anki/bin/update-engine; echo $? > /run/update-engine/exit_code'
 ExecStopPost=/bin/rm -rf /run/vic-switchboard/update-engine.env
 ExecStopPost=/bin/rm -rf /run/update-engine/boot.img
 ExecStopPost=/bin/rm -rf /run/update-engine/delta.bin
