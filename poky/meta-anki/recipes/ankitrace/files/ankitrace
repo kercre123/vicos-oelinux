@@ -13,6 +13,7 @@ function trace_start {
     $LTTNG enable-channel -k --subbuf-size=512k --num-subbuf=2 channel0
     $LTTNG enable-channel -u --subbuf-size=128K --num-subbuf=2 channel0
     $LTTNG enable-event -u anki_ust* -c channel0
+    $LTTNG enable-event -u lttng_ust_tracelog* -c channel0
     $LTTNG enable-event -k -a --syscall  -c channel0
     $LTTNG enable-event -k sched_switch -c channel0
     $LTTNG enable-event -k power_cpu_frequency -c channel0
