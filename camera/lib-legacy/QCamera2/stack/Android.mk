@@ -3,4 +3,5 @@ include $(LOCAL_PATH)/mm-camera-interface/Android.mk
 include $(LOCAL_PATH)/mm-jpeg-interface/Android.mk
 include $(LOCAL_PATH)/mm-jpeg-interface/test/Android.mk
 include $(LOCAL_PATH)/mm-camera-anki/Android.mk
+include $(LOCAL_PATH)/mm-camera-pdoran/Android.mk
 include $(LOCAL_PATH)/mm-camera-test/Android.mk
