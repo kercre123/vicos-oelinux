@@ -8,53 +8,53 @@ OLD_LOCAL_PATH := $(LOCAL_PATH)
 LOCAL_PATH:=$(call my-dir)
 # END COPY
 
-# ======================================================================================================================
-# Build libmmcamera-pdoran library
-include $(CLEAR_VARS)
+# # ======================================================================================================================
+# # Build libmmcamera-pdoran library
+# include $(CLEAR_VARS)
 
-# LOCAL_CFLAGS:= \
-#         -DAMSS_VERSION=$(AMSS_VERSION) \
-#         $(mmcamera_debug_defines) \
-#         $(mmcamera_debug_cflags) \
-#         $(USE_SERVER_TREE)
+# # LOCAL_CFLAGS:= \
+# #         -DAMSS_VERSION=$(AMSS_VERSION) \
+# #         $(mmcamera_debug_defines) \
+# #         $(mmcamera_debug_cflags) \
+# #         $(USE_SERVER_TREE)
 
-# ifeq ($(strip $(TARGET_USES_ION)),true)
-# LOCAL_CFLAGS += -DUSE_ION
-# endif
+# # ifeq ($(strip $(TARGET_USES_ION)),true)
+# # LOCAL_CFLAGS += -DUSE_ION
+# # endif
 
-LOCAL_CFLAGS += -D_ANDROID_
+# LOCAL_CFLAGS += -D_ANDROID_
 
-LOCAL_SRC_FILES:= \
-        src/wrapper.c
+# LOCAL_SRC_FILES:= \
+#         src/wrapper.c
 
-LOCAL_C_INCLUDES:=$(LOCAL_PATH)/src
-LOCAL_C_INCLUDES+=$(LOCAL_PATH)/inc
-LOCAL_C_INCLUDES+=$(LOCAL_PATH)/../common
-LOCAL_C_INCLUDES+=$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+# LOCAL_C_INCLUDES:=$(LOCAL_PATH)/src
+# LOCAL_C_INCLUDES+=$(LOCAL_PATH)/inc
+# LOCAL_C_INCLUDES+=$(LOCAL_PATH)/../common
+# LOCAL_C_INCLUDES+=$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
-LOCAL_ADDITIONAL_DEPENDENCIES:=$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+# LOCAL_ADDITIONAL_DEPENDENCIES:=$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
-# LOCAL_CFLAGS += -DCAMERA_ION_HEAP_ID=ION_IOMMU_HEAP_ID
-# LOCAL_CFLAGS += -DCAMERA_GRALLOC_HEAP_ID=GRALLOC_USAGE_PRIVATE_MM_HEAP
-# LOCAL_CFLAGS += -DCAMERA_GRALLOC_FALLBACK_HEAP_ID=GRALLOC_USAGE_PRIVATE_IOMMU_HEAP
-# LOCAL_CFLAGS += -DCAMERA_ION_FALLBACK_HEAP_ID=ION_IOMMU_HEAP_ID
-# LOCAL_CFLAGS += -DCAMERA_GRALLOC_CACHING_ID=0
-# LOCAL_CFLAGS += -DNUM_RECORDING_BUFFERS=9
-LOCAL_CFLAGS += -std=c11
-LOCAL_CFLAGS += -Wall
-LOCAL_CFLAGS += -Wextra
-LOCAL_CFLAGS += -Werror
+# # LOCAL_CFLAGS += -DCAMERA_ION_HEAP_ID=ION_IOMMU_HEAP_ID
+# # LOCAL_CFLAGS += -DCAMERA_GRALLOC_HEAP_ID=GRALLOC_USAGE_PRIVATE_MM_HEAP
+# # LOCAL_CFLAGS += -DCAMERA_GRALLOC_FALLBACK_HEAP_ID=GRALLOC_USAGE_PRIVATE_IOMMU_HEAP
+# # LOCAL_CFLAGS += -DCAMERA_ION_FALLBACK_HEAP_ID=ION_IOMMU_HEAP_ID
+# # LOCAL_CFLAGS += -DCAMERA_GRALLOC_CACHING_ID=0
+# # LOCAL_CFLAGS += -DNUM_RECORDING_BUFFERS=9
+# LOCAL_CFLAGS += -std=c11
+# LOCAL_CFLAGS += -Wall
+# LOCAL_CFLAGS += -Wextra
+# LOCAL_CFLAGS += -Werror
 
-# Probably don't need this since we're compiling a lib and not an executable
-LOCAL_SHARED_LIBRARIES:= \
-         libmm-qcamera libcutils libdl libmmcamera_interface liblog
+# # Probably don't need this since we're compiling a lib and not an executable
+# LOCAL_SHARED_LIBRARIES:= \
+#          libmm-qcamera libcutils libdl libmmcamera_interface liblog
 
-LOCAL_MODULE_TAGS := optional
+# LOCAL_MODULE_TAGS := optional
 
-LOCAL_MODULE:= libmmcamera-pdoran
-LOCAL_CLANG := false
-LOCAL_32_BIT_ONLY := true
-include $(BUILD_STATIC_LIBRARY)
+# LOCAL_MODULE:= libmmcamera-pdoran
+# LOCAL_CLANG := false
+# LOCAL_32_BIT_ONLY := true
+# include $(BUILD_STATIC_LIBRARY)
 
 # ======================================================================================================================
 # Build mm-pdoran-camera application
@@ -83,9 +83,10 @@ LOCAL_CPPFLAGS += -Wextra
 LOCAL_CPPFLAGS += -Werror
 
 LOCAL_SRC_FILES:= \
-        src/main_pdoran.cpp \
         src/application.cpp \
-        src/camera.cpp
+        src/camera.cpp \
+        src/wrapper.cpp \
+        src/main_pdoran.cpp
 
 LOCAL_C_INCLUDES:=$(LOCAL_PATH)/src
 LOCAL_C_INCLUDES+=$(LOCAL_PATH)/inc
@@ -101,7 +102,7 @@ LOCAL_SHARED_LIBRARIES += libcutils
 LOCAL_SHARED_LIBRARIES += libdl
 LOCAL_SHARED_LIBRARIES += liblog
 
-LOCAL_STATIC_LIBRARIES := libmmcamera-pdoran
+# LOCAL_STATIC_LIBRARIES := libmmcamera-pdoran
 
 LOCAL_MODULE:= mm-pdoran-camera
 
