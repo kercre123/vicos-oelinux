@@ -9,6 +9,7 @@ __author__ = "Stuart Eichert <seichert@anki.com>"
 import datetime
 import os
 import random
+import subprocess
 import sys
 import time
 
@@ -25,31 +26,16 @@ minimum_uptime = int(os.getenv("REBOOTER_MINIMUM_UPTIME", 4 * 60 * 60))  # 4 hr
 inhibitor_delay = int(os.getenv("REBOOTER_INHIBITOR_DELAY", 17))  # 17 seconds
 verbose_logging = os.getenv("REBOOTER_VERBOSE_LOGGING", False)
 
-#
-# Return milliseconds since boot for use as hardware timestamp
-#
-def das_uptime_ms():
-  try:                                   
-    up, _ = [float(field) for field in open("/proc/uptime").read().split()]  
-  except (IOError, ValueError):
-    return 0             
-  return long(up*1000)
 
-def das_event(name, s1 = "", s2 = "", s3 = "", s4 = "", i1 = "", i2 = "", i3 = "", i4 = ""):
-    fmt = "\n@{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\x1f{}\n"
-    s1 = s1.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    s2 = s2.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    s3 = s3.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    s4 = s4.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    i1 = i1.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    i2 = i2.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    i3 = i3.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    i4 = i4.rstrip().replace('\r', '\\r').replace('\n', '\\n')
-    sys.stdout.write(fmt.format(name, s1, s2, s3, s4, i1, i2, i3, i4, das_uptime_ms()))
-    sys.stdout.flush()
+def das_event(name, parameters = []):
+    args = ["/anki/bin/vic-log-event", "rebooter.py", name]
+    for p in parameters:
+        args.append(p.rstrip().replace('\r', '\\r').replace('\n', '\\n'))
+    subprocess.call(args)
+
 
 def log_das_event_for_failure(reason):
-    das_event("robot.maintenance_reboot", s1="fail", s2=reason)
+    das_event("robot.maintenance_reboot", ["fail", reason])
 
 
 def write_status(file_name, status):
@@ -63,7 +49,7 @@ def reboot():
     if verbose_logging:
         print("Reboot time has arrived.  See you on the other side....")
         sys.stdout.flush()
-    das_event("robot.maintenance_reboot", s1="success")
+    das_event("robot.maintenance_reboot", ["success"])
     write_status("/data/maintenance_reboot", 1)
     os.system("/sbin/reboot")
 
