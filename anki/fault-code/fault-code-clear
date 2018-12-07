@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+# /anki/fault-code/fault-code-clear
+#
+# Copyright 2018 Anki, Inc.
+#
+# Clear fault-code state files to allow display of a new fault code.
+# This allows victor scripts (eg vic-init.sh) to reset state
+# without knowing the internals of handler script.
+#
+# Note that fault-code-clear does NOT reset failure count!
+# Failure count must accumulate across restarts.
+# Failure count is only cleared by reboot.
+#
+# 
+set -eu
+
+# State files shared with fault-code-handler
+PROGRESS_FILE="/run/fault_code.pending"
+SHOWING_FILE="/run/fault_code.showing"
+
+/bin/rm -f ${PROGRESS_FILE}
+/bin/rm -f ${SHOWING_FILE}
