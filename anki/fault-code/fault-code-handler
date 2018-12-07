@@ -24,6 +24,7 @@ set -u
 : ${VERBOSE:=0}
 
 PROGRESS_FILE="/run/fault_code.pending"
+SHOWING_FILE="/run/fault_code.showing"
 FAULT_RESTART_COUNT_FILE="/run/fault_restart_count"
 TRACE_PATH="/data/ankitrace/faults"
 LOGGER="/bin/logger -t fault-code-handler"
@@ -199,9 +200,14 @@ else
         esac
     fi
 
-    if [ -x /anki/bin/vic-faultCodeDisplay ]; then
-        log "Display fault code ${FAULT_CODE}"
-        /anki/bin/vic-faultCodeDisplay ${DISPLAY_RESTART} ${FAULT_CODE}
+    # If we are already showing a fault code, don't show another one.
+    # Fault code will persist until cleared by /anki/bin/vic-init.sh.
+    if [ ! -f ${SHOWING_FILE} ]; then
+        if [ -x /anki/bin/vic-faultCodeDisplay ]; then
+          log "Display fault code ${FAULT_CODE}"
+          /anki/bin/vic-faultCodeDisplay ${DISPLAY_RESTART} ${FAULT_CODE}
+          echo ${FAULT_CODE} > ${SHOWING_FILE}
+        fi
     fi
 
     if [ -x /usr/bin/ankitrace ]; then

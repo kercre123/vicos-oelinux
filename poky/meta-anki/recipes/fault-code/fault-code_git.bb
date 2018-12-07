@@ -13,7 +13,8 @@ SYSTEM_DIR = "${D}${sysconfdir}/systemd/system"
 
 do_install() {
   install -d ${D}/bin
-  install -m 0755 ${S}/fault-code-handler ${D}/bin/
+  install -m 0755 ${S}/fault-code-handler ${D}/bin
+  install -m 0755 ${S}/fault-code-clear ${D}/bin
 
   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
     install -d  ${D}${systemd_unitdir}/system/
@@ -29,6 +30,7 @@ do_install() {
 }
 
 FILES_${PN} += "/bin/fault-code-handler"
+FILES_${PN} += "/bin/fault-code-clear"
 FILES_${PN} += "/lib/systemd/system"
 
 RDEPENDS_${PN} += "bash"
