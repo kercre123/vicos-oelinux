@@ -20,9 +20,6 @@
 # Accept all OUTPUT
 -A OUTPUT -p ALL -o wlan0 -j ACCEPT
 
-# Accept https traffic (vic-gateway)
--A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
-
 # Allow ping
 -A INPUT -p ipv6-icmp -j ACCEPT
 -A OUTPUT -p ipv6-icmp -j ACCEPT
