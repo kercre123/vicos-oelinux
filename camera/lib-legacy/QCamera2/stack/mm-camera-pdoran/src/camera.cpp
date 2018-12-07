@@ -1,30 +1,58 @@
 #include "camera.h"
 
-#include "wrapper.h"
+#include <atomic>
+#include <thread>
 
 // TODO: Remove, these are for debugging experiments
 #include <chrono>
 #include <iostream>
 
-Camera::Camera()
+extern "C" {
+#include "mm_camera_interface.h"
+}
+
+//======================================================================================================================
+// Camera Private Implementation
+class Camera::Impl
+{
+public:
+  Impl();
+  ~Impl();
+  void start();
+  void stop();
+
+private:
+  void run();
+
+  std::atomic<bool> _isRunning;
+  std::thread _thread;
+};
+
+Camera::Impl::Impl()
+  : _isRunning(false)
+  , _thread()
 {
 }
 
-void Camera::start()
+Camera::Impl::~Impl()
 {
-  _thread = std::thread(&Camera::run, this);
+}
+
+void Camera::Impl::start()
+{
+  _thread = std::thread(&Camera::Impl::run, this);
   _isRunning = true;
 }
 
-void Camera::stop()
+void Camera::Impl::stop()
 {
   _isRunning = false;
   _thread.join();
 }
 
-void Camera::run()
+void Camera::Impl::run()
 {
-  uint8_t num_cameras = my_get_num_of_cameras();
+  uint8_t num_cameras = get_num_of_cameras();
   std::cerr<<"Num Cameras: "<<static_cast<uint32_t>(num_cameras)<<std::endl;
 
   int counter = 0;
@@ -34,3 +62,17 @@ void Camera::run()
     std::cout<<"Camera "<<(counter++)<<std::endl;
   }
 }
+
+//======================================================================================================================
+// Camera Public Implementation
+Camera::Camera()
+  : _impl(std::unique_ptr<Camera::Impl>(new Camera::Impl())) // std::make_unique requires c++14
+{
+}
+
+Camera::~Camera()
+{
+}
+
+void Camera::start() { _impl->start(); }
+void Camera::stop() { _impl->stop(); }
