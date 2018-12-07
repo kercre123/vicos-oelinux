@@ -1,5 +1,7 @@
 #include "camera.h"
 
+#include "wrapper.h"
+
 // TODO: Remove, these are for debugging experiments
 #include <chrono>
 #include <iostream>
@@ -22,6 +24,9 @@ void Camera::stop()
 
 void Camera::run()
 {
+  uint8_t num_cameras = my_get_num_of_cameras();
+  std::cerr<<"Num Cameras: "<<static_cast<uint32_t>(num_cameras)<<std::endl;
+
   int counter = 0;
   while (_isRunning)
   {

@@ -12,6 +12,9 @@ public:
   void stop();
 
 private:
+  void init();
+  void deinit();
+
   void run();
 
   std::atomic<bool> _isRunning;
