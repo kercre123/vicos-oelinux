@@ -23,3 +23,4 @@ bitbake/lib/toaster/contrib/tts/backlog.txt
 bitbake/lib/toaster/contrib/tts/log/*
 bitbake/lib/toaster/contrib/tts/.cache/*
 build-victor-robot-factory-image
+build-victor-robot-facdev-image
