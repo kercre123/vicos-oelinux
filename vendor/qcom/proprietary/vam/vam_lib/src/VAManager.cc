@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, Qualcomm Technologies, Inc.
+ * Copyright (c) 2016-2018, Qualcomm Technologies, Inc.
  * All Rights Reserved.
  * Confidential and Proprietary - Qualcomm Technologies, Inc.
  */
@@ -28,6 +28,11 @@ volatile uint32_t kpi_debug_level = BASE_KPI_FLAG;
 #include <dirent.h>
 #include <iostream>
 #include <limits>
+#include <string>
+#include <map>
+#include <deque>
+#include <list>
+#include <vector>
 
 #define ABS_TO_REL_COORD_COEF 10000
 
@@ -43,34 +48,34 @@ VAManager::VAManager():
     _pSnapshotCBFunc(nullptr),
     _pSnapshotCBUsrData(nullptr),
     _pFrameProcessedCBFunc(nullptr),
-    _pFrameProcessedCBUsrData(nullptr)
-{
+    _pFrameProcessedCBUsrData(nullptr) {
     VAM_KPI_GET_MASK();
     VAM_KPI_BASE("ConstructVAManager");
     _objIDAssignment.resize(32);
     VAMEngineBase::RegisterCBs(this, &_eventCB, &_metadataCB, &_frameCB);
 }
 
-VAManager::~VAManager()
-{
+VAManager::~VAManager() {
     VAM_KPI_BASE("DestroyVAManager");
     destroy();
 }
 
-int VAManager::init(const struct vaapi_source_info *pSourceInfo, const char *dyn_lib_path)
-{
+int VAManager::init(const struct vaapi_source_info *pSourceInfo,
+                    const char *dyn_lib_path) {
     VAM_KPI_BASE("VamInit");
     if (pSourceInfo == nullptr) {
         return VAM_NULLPTR;
     }
 
     if (dyn_lib_path == nullptr || strlen(dyn_lib_path) == 0) {
-        VAM_LOGE("VAManager Error: dynamia loading library path or data path is not set");
+        VAM_LOGE("VAManager Error: dynamia loading library path or "
+                 "data path is not set");
         return VAM_ENGINE_DYLIB_PATH_NOT_SET;
     }
 
     if (_isInited) {
-        VAM_LOGE("VAManager Error: VAM is inited & can't be re-inited twice. Try destroy()");
+        VAM_LOGE("VAManager Error: VAM is inited & can't be re-inited twice."
+                 " Try destroy()");
         return VAM_FAIL;
     }
 
@@ -81,7 +86,8 @@ int VAManager::init(const struct vaapi_source_info *pSourceInfo, const char *dyn
         // case vaapi_format_yuv420:
             break;
         default:
-            VAM_LOGE("VAManager Error: unsupported img format (%d).", pSourceInfo->img_format);
+            VAM_LOGE("VAManager Error: unsupported img format (%d).",
+                     pSourceInfo->img_format);
             return VAM_IMG_FORMAT_NOT_SUPPORTED;
     }
 
@@ -101,8 +107,7 @@ int VAManager::init(const struct vaapi_source_info *pSourceInfo, const char *dyn
 }
 
 // need to be protected when call
-VAMEngineBase *VAManager::_getEngineByEventType(vaapi_event_type type)
-{
+VAMEngineBase *VAManager::_getEngineByEventType(vaapi_event_type type) {
     for (size_t idx = 0; idx < _engineList.size(); idx++) {
         if (_engineList[idx] && _engineList[idx]->isEventSupported(type)) {
             return _engineList[idx];
@@ -112,8 +117,7 @@ VAMEngineBase *VAManager::_getEngineByEventType(vaapi_event_type type)
     return nullptr;
 }
 
-int VAManager::_initEngineLibs()
-{
+int VAManager::_initEngineLibs() {
     std::lock_guard<std::mutex> m(_engineListMutex);
     VAMEngineBase *v = nullptr;
 
@@ -142,8 +146,8 @@ int VAManager::_initEngineLibs()
 
 //    try {
         for (size_t idx = 0; idx < libList.size(); idx++) {
-            VAM_LOGD("VAManager::_initEngineLibs: loading %s", libList[idx].c_str());
-            // TODO: load all libraries from the assigned folder
+            VAM_LOGD("VAManager::_initEngineLibs: loading %s",
+                     libList[idx].c_str());
             std::string dynLibName = _dynLibPath + "/" + libList[idx];
             v = new VAMEngine_DynEngine(dynLibName.c_str(), _sourceInfo);
             if (v) {
@@ -161,8 +165,7 @@ int VAManager::_initEngineLibs()
     return VAM_OK;
 }
 
-int VAManager::destroy()
-{
+int VAManager::destroy() {
     VAM_KPI_BASE("VamDestroy");
     stop();
 
@@ -170,7 +173,7 @@ int VAManager::destroy()
 
     _workerThreadStop = true;
     _signalTask.notify_one();
-    if (_isInited) {
+    if (_workerThreadId.joinable()) {
         _workerThreadId.join();
     }
     _isInited = false;
@@ -179,8 +182,7 @@ int VAManager::destroy()
     return VAM_OK;
 }
 
-int VAManager::run()
-{
+int VAManager::run() {
     if (_areEnginedRunning) {
         return VAM_OK;
     }
@@ -198,8 +200,7 @@ int VAManager::run()
     return VAM_OK;
 }
 
-int VAManager::stop()
-{
+int VAManager::stop() {
     VAM_KPI_BASE("VamStop");
     {
         std::lock_guard<std::mutex> l(_frameObjListMutex);
@@ -225,8 +226,7 @@ int VAManager::stop()
     return VAM_OK;
 }
 
-int VAManager::setConfig(vaapi_configuration *pConfig)
-{
+int VAManager::setConfig(vaapi_configuration *pConfig) {
     VAM_KPI_BASE(__func__);
     if (pConfig == nullptr) {
         return VAM_NULLPTR;
@@ -244,25 +244,25 @@ int VAManager::setConfig(vaapi_configuration *pConfig)
 
         // convert from relative to absolute coordinates
         vaapi_rule r = pConfig->rules[i];
+        vaapi_source_info &si = _sourceInfo;
         for (uint32_t zi = 0; zi < r.zone_size; zi++) {
             for (uint32_t pi = 0; pi < r.zones[zi].point_size; pi++) {
                 vaapi_point &p = r.zones[zi].points[pi];
-                p.x = p.x * _sourceInfo.frame_l_width[0] / ABS_TO_REL_COORD_COEF;
-                p.y = p.y * _sourceInfo.frame_l_height[0] / ABS_TO_REL_COORD_COEF;
+                p.x = p.x * si.frame_l_width[0] / ABS_TO_REL_COORD_COEF;
+                p.y = p.y * si.frame_l_height[0] / ABS_TO_REL_COORD_COEF;
             }
         }
         v->addRule(&r);
         VAM_LOGD("VAManager::setConfig: add rule:%d.", pConfig->rules[i].type);
     }
 
-    // TODO: add compound event to rule interpreter
+    // TODO(future): add compound event to rule interpreter
     // int VAMEngine_RuleInterpreter::addCompoundRule(vaapi_compound_rule *rule)
 
     return VAM_OK;
 }
 
-int VAManager::delConfig(vaapi_configuration *pConfig)
-{
+int VAManager::delConfig(vaapi_configuration *pConfig) {
     VAM_KPI_BASE("VamDelConfig");
     if (pConfig == nullptr) {
         return VAM_NULLPTR;
@@ -284,9 +284,15 @@ int VAManager::delConfig(vaapi_configuration *pConfig)
     return VAM_OK;
 }
 
-int VAManager::enrollObj(vaapi_event_type type, vaapi_enrollment_info *enroll_info)
-{
+int VAManager::enrollObj(vaapi_event_type type,
+                         vaapi_enrollment_info *enroll_info) {
     VAM_KPI_BASE("VamEnrollObj");
+
+    if (!IsValidUUID(enroll_info->id)) {
+        CreateUUID(enroll_info->id, VAAPI_UUID_LEN);
+    }
+    CreateUUID(enroll_info->img_id, VAAPI_UUID_LEN);
+
     for (size_t idx = 0; idx < _engineList.size(); idx++) {
         if (_engineList[idx] && _engineList[idx]->isEventSupported(type)) {
             return _engineList[idx]->enrollObj(enroll_info);
@@ -296,8 +302,8 @@ int VAManager::enrollObj(vaapi_event_type type, vaapi_enrollment_info *enroll_in
     return VAM_OK;
 }
 
-int VAManager::disenrollObj(vaapi_event_type type, const char *id)
-{
+int VAManager::disenrollObj(vaapi_event_type type, const char *id) {
+    VAM_KPI_BASE("VamDisenrollObj");
     for (size_t idx = 0; idx < _engineList.size(); idx++) {
         if (_engineList[idx] && _engineList[idx]->isEventSupported(type)) {
             return _engineList[idx]->disenrollObj(id);
@@ -307,8 +313,7 @@ int VAManager::disenrollObj(vaapi_event_type type, const char *id)
     return VAM_OK;
 }
 
-int VAManager::putFrame(vaapi_frame_info *pFrameInfo)
-{
+int VAManager::putFrame(vaapi_frame_info *pFrameInfo) {
     VAM_KPI_DETAIL("VamPutFrame");
     if (pFrameInfo == nullptr) {
         return VAM_NULLPTR;
@@ -359,8 +364,7 @@ int VAManager::putFrame(vaapi_frame_info *pFrameInfo)
     return VAM_OK;
 }
 
-void VAManager::_workerThread(VAManager *_this)
-{
+void VAManager::_workerThread(VAManager *_this) {
     VAM_KPI_BASE("VamWorkerThread");
     _this->_isInited = true;
 
@@ -370,10 +374,13 @@ void VAManager::_workerThread(VAManager *_this)
 
             if (_this->_tasks.size() == 0) {
                 std::unique_lock<std::mutex> ul(_this->_signalTaskMutex);
-                res = _this->_signalTask.wait_for(ul, std::chrono::milliseconds(1000));
+                res = _this->_signalTask.wait_for(ul,
+                        std::chrono::milliseconds(1000));
             }
 
-            if (res == std::cv_status::timeout && !_this->_workerThreadStop && _this->_tasks.size() == 0) {
+            if (res == std::cv_status::timeout &&
+                !_this->_workerThreadStop &&
+                _this->_tasks.size() == 0) {
                 VAM_KPI_DETAIL("taskWaitTimeout");
                 VAM_LOGD("%s: task wait timeout", __func__);
                 continue;
@@ -445,8 +452,7 @@ finishTask:
     _this->_workerThreadStop = false;
 }
 
-bool VAManager::isEventSupported(vaapi_event_type type)
-{
+bool VAManager::isEventSupported(vaapi_event_type type) {
     for (size_t idx = 0; idx < _engineList.size(); idx++) {
         if (_engineList[idx] && _engineList[idx]->isEventSupported(type)) {
             return true;
@@ -459,8 +465,7 @@ bool VAManager::isEventSupported(vaapi_event_type type)
 int VAManager::_eventCB(const VAMEngineBase *pEngine,
                         vaapi_event *pEventInfo,
                         vaapi_frame_info */*pFrameInfo*/,
-                        void *pVAManager)
-{
+                        void *pVAManager) {
     VAM_KPI_DETAIL("VamEventCB");
     if (pVAManager == nullptr || pEventInfo == nullptr) {
         return VAM_NULLPTR;
@@ -472,21 +477,22 @@ int VAManager::_eventCB(const VAMEngineBase *pEngine,
     {
         std::lock_guard<std::mutex> lg(_this->_resultsMutex);
         VAMTask *task = *(_this->_currentTask);
+        CreateUUID(pEventInfo->id, VAAPI_UUID_LEN);
         task->events.push_back(*pEventInfo);
     }
 
     // Add/update the event's object to the global object trail
     {
         std::lock_guard<std::mutex> lg(_this->_frameObjListMutex);
-        std::string uniqueObjID = _this->_getUniqueObjID(pEngine, pEventInfo->obj);
-        std::map<std::string, int>::iterator it = _this->_objIDList.find(uniqueObjID);
+        std::string objID = _this->_getUniqueObjID(pEngine, pEventInfo->obj);
+        std::map<std::string, int>::iterator it = _this->_objIDList.find(objID);
         if (it == _this->_objIDList.end()) {
-            _this->_pushObjAndGetID(uniqueObjID, pEventInfo->obj);
+            _this->_pushObjAndGetID(objID, pEventInfo->obj);
 
-            it = _this->_objIDList.find(uniqueObjID);
+            it = _this->_objIDList.find(objID);
             if (it == _this->_objIDList.end()) {
-                VAM_LOGE("VAManager::_eventCB error: Failed to assign new object ID %d",
-                         pEventInfo->obj.id);
+                VAM_LOGE("VAManager::_eventCB error: Failed to assign "
+                        "new object ID %d", pEventInfo->obj.id);
                 return VAM_FAIL;
             }
         }
@@ -500,13 +506,14 @@ int VAManager::sendEventsToClient(VAMTask *task) {
         return VAM_NULLPTR;
     }
 
+    vaapi_source_info &si = _sourceInfo;
     for (size_t i = 0; i < task->events.size(); i++) {
         vaapi_event &e = task->events[i];
         vaapi_position &p = e.obj.pos;
-        p.x = p.x * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_width[0];
-        p.y = p.y * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_height[0];
-        p.width = p.width * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_width[0];
-        p.height = p.height * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_height[0];
+        p.x = p.x * ABS_TO_REL_COORD_COEF / si.frame_l_width[0];
+        p.y = p.y * ABS_TO_REL_COORD_COEF / si.frame_l_height[0];
+        p.width = p.width * ABS_TO_REL_COORD_COEF / si.frame_l_width[0];
+        p.height = p.height * ABS_TO_REL_COORD_COEF / si.frame_l_height[0];
         _pEventCBFunc(&e, _pEventCBUsrData);
     }
 
@@ -517,8 +524,7 @@ int VAManager::_metadataCB(const VAMEngineBase *pEngine,
                            uint64_t pts,
                            bool /*isUpdated*/,
                            void *pVAManager,
-                           std::vector<vaapi_object> &objList)
-{
+                           std::vector<vaapi_object> *objList) {
     VAM_KPI_DETAIL("VamMetadataCB");
     if (pVAManager == nullptr || pEngine == nullptr) {
         return VAM_NULLPTR;
@@ -531,16 +537,18 @@ int VAManager::_metadataCB(const VAMEngineBase *pEngine,
         std::lock_guard<std::mutex> lg(_this->_resultsMutex);
         VAMTask *task = *(_this->_currentTask);
         VAMStage *stage = *(task->currentStage);
-        stage->results.insert(stage->results.end(), objList.begin(), objList.end());
+        stage->results.insert(stage->results.end(),
+                              objList->begin(),
+                              objList->end());
     }
 
     // Store objects in global object trail
     {
         std::lock_guard<std::mutex> l(_this->_frameObjListMutex);
-        for (size_t i = 0; i < objList.size(); i++) {
-            vaapi_object o = objList[i];
-            std::string uniqueObjID = _this->_getUniqueObjID(pEngine, objList[i]);
-            o.id = _this->_pushObjAndGetID(uniqueObjID, objList[i]);
+        for (size_t i = 0; i < objList->size(); i++) {
+            vaapi_object &o = objList->at(i);
+            std::string uniqueObjID = _this->_getUniqueObjID(pEngine, o);
+            o.id = _this->_pushObjAndGetID(uniqueObjID, o);
             _this->_frameObjList[pts].push_back(o);
         }
     }
@@ -554,13 +562,14 @@ int VAManager::sendMetadataToClient(VAMTask *task) {
     m.pts = task->frame.time_stamp;
     m.object_num = _frameObjList[m.pts].size();
     if (m.object_num > 0) {
+        vaapi_source_info &si = _sourceInfo;
         for (uint32_t i = 0; i < m.object_num; i++) {
             vaapi_object o = _frameObjList[m.pts][i];
             vaapi_position &p = o.pos;
-            p.x = p.x * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_width[0];
-            p.y = p.y * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_height[0];
-            p.width = p.width * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_width[0];
-            p.height = p.height * ABS_TO_REL_COORD_COEF / _sourceInfo.frame_l_height[0];
+            p.x = p.x * ABS_TO_REL_COORD_COEF / si.frame_l_width[0];
+            p.y = p.y * ABS_TO_REL_COORD_COEF / si.frame_l_height[0];
+            p.width = p.width * ABS_TO_REL_COORD_COEF / si.frame_l_width[0];
+            p.height = p.height * ABS_TO_REL_COORD_COEF / si.frame_l_height[0];
             task->objects.push_back(o);
         }
 
@@ -579,8 +588,7 @@ int VAManager::sendMetadataToClient(VAMTask *task) {
 
 int VAManager::_frameCB(const VAMEngineBase */*pEngine*/,
                         vaapi_frame_info */*frameInfo*/,
-                        void *pVAManager)
-{
+                        void *pVAManager) {
     VAM_KPI_DETAIL("VamFrameCB");
     if (pVAManager == nullptr) {
         return VAM_NULLPTR;
@@ -595,8 +603,7 @@ int VAManager::_frameCB(const VAMEngineBase */*pEngine*/,
     return VAM_OK;
 }
 
-int VAManager::sendFrameToClient(const VAMTask *task)
-{
+int VAManager::sendFrameToClient(const VAMTask *task) {
     VAM_KPI_DETAIL("VamSendFrameToClient");
     if (_pSnapshotCBFunc && task->events.size() > 0) {
         struct vaapi_snapshot_info snapshotInfo;
@@ -616,13 +623,14 @@ int VAManager::sendFrameToClient(const VAMTask *task)
     }
 
     if (_pFrameProcessedCBFunc) {
-        _pFrameProcessedCBFunc(task->frame.time_stamp, _pFrameProcessedCBUsrData);
+        _pFrameProcessedCBFunc(task->frame.time_stamp,
+                               _pFrameProcessedCBUsrData);
     }
     return VAM_OK;
 }
 
-std::string VAManager::_getUniqueObjID(const VAMEngineBase *pEngine, const vaapi_object &objInfo)
-{
+std::string VAManager::_getUniqueObjID(const VAMEngineBase *pEngine,
+                                       const vaapi_object &objInfo) {
     std::stringstream ss;
     ss << pEngine;
     ss << "-";
@@ -631,8 +639,7 @@ std::string VAManager::_getUniqueObjID(const VAMEngineBase *pEngine, const vaapi
     return ss.str();
 }
 
-int VAManager::_resetObjIDList()
-{
+int VAManager::_resetObjIDList() {
     for (size_t i = 0; i < _objIDAssignment.size(); i++) {
         _objIDAssignment[i].lastSeen--;
     }
@@ -640,10 +647,10 @@ int VAManager::_resetObjIDList()
     return VAM_OK;
 }
 
-uint32_t VAManager::_pushObjAndGetID(std::string uniqueObjID, const vaapi_object &objInfo)
-{
+uint32_t VAManager::_pushObjAndGetID(std::string uniqueObjID,
+                                     const vaapi_object &objInfo) {
     const int MAX_TRAIL_SIZE = 512;
-
+    const vaapi_position &pos = objInfo.pos;
     size_t IDIdx = 0;
     std::map<std::string, int>::iterator it =  _objIDList.find(uniqueObjID);
     if (it != _objIDList.end()) {
@@ -653,11 +660,11 @@ uint32_t VAManager::_pushObjAndGetID(std::string uniqueObjID, const vaapi_object
 
         // only update when moves
         if (trailSize > 0 &&
-            _objIDAssignment[IDIdx].trail[trailSize - 1].x != objInfo.pos.x &&
-            _objIDAssignment[IDIdx].trail[trailSize - 1].y != objInfo.pos.y &&
-            _objIDAssignment[IDIdx].trail[trailSize - 1].width != objInfo.pos.width &&
-            _objIDAssignment[IDIdx].trail[trailSize - 1].height != objInfo.pos.height) {
-            _objIDAssignment[IDIdx].trail.push_back(objInfo.pos);
+            _objIDAssignment[IDIdx].trail[trailSize - 1].x != pos.x &&
+            _objIDAssignment[IDIdx].trail[trailSize - 1].y != pos.y &&
+            _objIDAssignment[IDIdx].trail[trailSize - 1].width != pos.width &&
+            _objIDAssignment[IDIdx].trail[trailSize - 1].height != pos.height) {
+            _objIDAssignment[IDIdx].trail.push_back(pos);
         }
 
         if (_objIDAssignment[IDIdx].trail.size() > MAX_TRAIL_SIZE) {
@@ -678,7 +685,8 @@ uint32_t VAManager::_pushObjAndGetID(std::string uniqueObjID, const vaapi_object
     // resize _objIDAssignment if full
     if (IDIdx == _objIDAssignment.size()) {
         if (_objIDList.size() > MAX_OBJECT_QUEUED) {
-            VAM_LOGE("VAManager::_metadataCB error: failed to assign obj ID, tool size overflow.");
+            VAM_LOGE("VAManager::_metadataCB error: failed to assign obj ID,"
+                     " tool size overflow.");
             return -1;
         }
 
@@ -687,7 +695,7 @@ uint32_t VAManager::_pushObjAndGetID(std::string uniqueObjID, const vaapi_object
 
     _objIDAssignment[IDIdx].uniqueObjID = uniqueObjID;
     _objIDAssignment[IDIdx].lastSeen = -1;
-    _objIDAssignment[IDIdx].trail.push_back(objInfo.pos);
+    _objIDAssignment[IDIdx].trail.push_back(pos);
 
     _objIDAssignment[IDIdx].VAMAssignedID = ++_lastAssignedID;
 
@@ -700,8 +708,7 @@ uint32_t VAManager::_pushObjAndGetID(std::string uniqueObjID, const vaapi_object
     return _objIDAssignment[IDIdx].VAMAssignedID;
 }
 
-int VAManager::_trimObjIDList(bool clearAll)
-{
+int VAManager::_trimObjIDList(bool clearAll) {
     const int REMOVE_UNSEEN_OBJ_AFTER_FRAME = -3000;
     for (size_t i = 0; i <_objIDAssignment.size(); i++) {
         VAMObjIDInfo &o = _objIDAssignment[i];
@@ -714,7 +721,8 @@ int VAManager::_trimObjIDList(bool clearAll)
             continue;
         }
 
-        std::map<std::string, int>::iterator it = _objIDList.find(o.uniqueObjID);
+        std::map<std::string, int>::iterator it;
+        it = _objIDList.find(o.uniqueObjID);
         if (it != _objIDList.end()) {
             _objIDList.erase(it);
         }
@@ -725,19 +733,16 @@ int VAManager::_trimObjIDList(bool clearAll)
     return VAM_OK;
 }
 
-VAManager::VAMObjIDInfo::VAMObjIDInfo():
-    lastSeen(0)
-{
+VAManager::VAMObjIDInfo::VAMObjIDInfo()
+    : lastSeen(0) {
     memset(&frameInfo, 0, sizeof(vaapi_frame_info));
 }
 
-VAManager::VAMObjIDInfo::~VAMObjIDInfo()
-{
+VAManager::VAMObjIDInfo::~VAMObjIDInfo() {
     clear();
 }
 
-void VAManager::VAMObjIDInfo::clear()
-{
+void VAManager::VAMObjIDInfo::clear() {
     if (frameInfo.frame_l_data[0]) {
         delete [] frameInfo.frame_l_data[0];
     }
@@ -759,8 +764,8 @@ void VAManager::VAMObjIDInfo::clear()
     eventID.clear();
 }
 
-int VAManager::convertMetadataToJSON(const struct vaapi_metadata_frame *pFrame, std::string *pJSONStr)
-{
+int VAManager::convertMetadataToJSON(const struct vaapi_metadata_frame *pFrame,
+                                     std::string *pJSONStr) {
     if (pJSONStr == nullptr) {
         return VAM_NULLPTR;
     }
@@ -770,13 +775,35 @@ int VAManager::convertMetadataToJSON(const struct vaapi_metadata_frame *pFrame, 
     return VAM_OK;
 }
 
-int VAManager::convertEventToJSON(const struct vaapi_event *pEvent, std::string *pJSONStr)
-{
+int VAManager::convertEventToJSON(const struct vaapi_event *pEvent,
+                                  std::string *pJSONStr) {
     if (pJSONStr == nullptr) {
         return VAM_NULLPTR;
     }
 
     *pJSONStr = getStrFromEvent(pEvent);
+
+    return VAM_OK;
+}
+
+int VAManager::convertRuleToJSON(const struct vaapi_rule *pR,
+                                 std::string *pJSONStr) {
+    if (pJSONStr == nullptr) {
+        return VAM_NULLPTR;
+    }
+
+    *pJSONStr = getStrFromRule(pR);
+
+    return VAM_OK;
+}
+
+int VAManager::convertEnrollInfoToJSON(const struct vaapi_enrollment_info *pEnroll,
+                                       std::string *pJSONStr) {
+    if (pJSONStr == nullptr) {
+        return VAM_NULLPTR;
+    }
+
+    *pJSONStr = getStrFromEnrollInfo(pEnroll);
 
     return VAM_OK;
 }

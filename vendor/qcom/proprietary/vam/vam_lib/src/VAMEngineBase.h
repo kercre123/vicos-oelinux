@@ -9,11 +9,13 @@
 
 #include <vaapi.h>
 #include <VAMUtilities.h>
+#include <deque>
+#include <string>
+#include <vector>
 
-class VAMEngineBase
-{
-public:
-    VAMEngineBase(const vaapi_source_info &sourceInfo);
+class VAMEngineBase {
+ public:
+    explicit VAMEngineBase(const vaapi_source_info &sourceInfo);
     virtual ~VAMEngineBase();
 
     int init();
@@ -43,7 +45,7 @@ public:
                                   uint64_t pts,
                                   bool isUpdated,
                                   void *pVAManager,
-                                  std::vector<vaapi_object> &objList);
+                                  std::vector<vaapi_object> *objList);
 
     // NOTE: always call frame done callback last
     typedef int (*FrameDoneCBFunc)(const VAMEngineBase *pEngine,
@@ -65,7 +67,7 @@ public:
 
     virtual bool isEventSupported(vaapi_event_type type) = 0;
 
-protected:
+ protected:
     virtual int _addRule(vaapi_rule */*pRule*/) {
         return VAM_OK;
     }
@@ -82,13 +84,13 @@ protected:
     std::condition_variable _putFrameCond;
     const struct vaapi_source_info _sourceInfo;
 
-    int _lastPutFramePTS;
-    int _lastProcessedPTS;
+    uint64_t _lastPutFramePTS;
+    uint64_t _lastProcessedPTS;
     uint8_t _targetFPS;
 
     bool _isDependsOnOtherEvent;
 
-private:
+ private:
     int _updateRule(vaapi_rule *pRule);
     bool _isTimeToPutFrame(uint64_t newPTS);
 

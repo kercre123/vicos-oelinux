@@ -49,6 +49,7 @@ struct _GstQsthwSoundTrigger {
   GCond                 create_cond;
   gboolean              flushing;
   gboolean              enable_capturing;
+  gboolean              user_module;
   GstClockTime          current_ts;
   GstAudioInfo          info;
 };

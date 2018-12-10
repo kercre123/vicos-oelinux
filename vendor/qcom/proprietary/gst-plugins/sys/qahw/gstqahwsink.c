@@ -148,6 +148,7 @@ gst_qahw_ring_buffer_class_init (GstQahwRingBufferClass * klass)
 #define DEFAULT_PROP_KVPAIR_VALUES      ""
 #define DEFAULT_PROP_AUDIO_HANDLE       0x999
 #define DEFAULT_PROP_OUTPUT_FLAGS       GST_QAHWSRC_OUTPUT_FLAG_NON_BLOCKING | GST_QAHWSRC_OUTPUT_FLAG_COMPRESS_OFFLOAD | GST_QAHWSRC_OUTPUT_FLAG_DIRECT
+#define DEFAULT_PROP_SESSION_TYPE       GST_QAHWSRC_OUTPUT_SESSION_DEFAULT
 
 //Defined for KPI measurments
 #define LATENCY_NODE "/sys/kernel/debug/audio_out_latency_measurement_node"
@@ -182,6 +183,7 @@ enum
   PROP_KPI_MODE,
   PROP_BT_ADDR,
   PROP_USER_MODULE_HANDLE,
+  PROP_SESSION_TYPE,
   PROP_LAST
 };
 
@@ -563,6 +565,28 @@ gst_qahwsink_output_flags_get_type (void)
   return (GType) output_flags_type;
 }
 
+static GType
+gst_qahwsink_session_get_type (void)
+{
+  static volatile gsize output_session_type = 0;
+  static const GEnumValue session_type[] = {
+    {GST_QAHWSRC_OUTPUT_SESSION_DEFAULT,
+        "GST_QAHWSRC_OUTPUT_SESSION_DEFAULT", "Compressed-Offload"},
+    {GST_QAHWSRC_OUTPUT_SESSION_DEEP_BUFFER,
+        "GST_QAHWSRC_OUTPUT_SESSION_DEEP_BUFFER", "Deep-buffer-session"},
+    {GST_QAHWSRC_OUTPUT_SESSION_DIRECT_PCM,
+        "GST_QAHWSRC_OUTPUT_SESSION_DIRECT_PCM", "PCM-Offload-session"},
+    {0, NULL, NULL},
+  };
+
+  if (g_once_init_enter (&output_session_type)) {
+    GType tmp =
+        g_enum_register_static ("GstQahwSrcSessionType", session_type);
+    g_once_init_leave (&output_session_type, tmp);
+  }
+
+  return (GType) output_session_type;
+}
 static void
 gst_qahwsink_finalize (GObject * object)
 {
@@ -670,6 +694,10 @@ gst_qahwsink_class_init (GstQahwSinkClass * klass)
   g_object_class_install_property (gobject_class, PROP_USER_MODULE_HANDLE,
       g_param_spec_pointer ("module-handle", "module-handle", "user module handle",
            G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_SESSION_TYPE,
+      g_param_spec_enum ("session-type", "Session type", "QAHW session type",
+          GST_TYPE_QAHWSINK_OUTPUT_SESSION_TYPE, DEFAULT_PROP_SESSION_TYPE,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -697,6 +725,7 @@ gst_qahwsink_set_property (GObject * object, guint prop_id,
 
   qahw = GST_QAHW_SINK (object);
 
+  GST_DEBUG_OBJECT (qahw, "Setting prop: %d", prop_id);
   switch (prop_id) {
     case PROP_MODULE_ID:
       g_free (qahw->module_id);
@@ -751,6 +780,7 @@ gst_qahwsink_set_property (GObject * object, guint prop_id,
       break;
     case PROP_OUTPUT_FLAGS:
       qahw->output_flags = g_value_get_flags (value);
+      GST_DEBUG_OBJECT (qahw, "qahw->output_flags: 0x%x", qahw->output_flags);
       break;
     case PROP_SET_PARAM:
     {
@@ -788,6 +818,9 @@ gst_qahwsink_set_property (GObject * object, guint prop_id,
         }
         break;
     }
+    case PROP_SESSION_TYPE:
+      qahw->session_type = g_value_get_enum (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -846,6 +879,9 @@ gst_qahwsink_get_property (GObject * object, guint prop_id,
         }
         break;
     }
+    case PROP_SESSION_TYPE:
+      g_value_set_enum (value, qahw->session_type);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -1075,7 +1111,6 @@ gst_qahw_autodetect_alac_kvpairs (GstQahwSink * qahw, int n_buffers,
     GstBuffer ** buffers)
 {
   GstMapInfo map;
-  int n;
   guint8 alac_compatible_version, alac_bit_depth;
   guint8 alac_kb, alac_mb, alac_pb;
   guint8 alac_num_channels;
@@ -1134,7 +1169,7 @@ gst_qahw_autodetect_alac_kvpairs (GstQahwSink * qahw, int n_buffers,
     GST_DEBUG_OBJECT (qahw, "alac_sampling_rate %.8x %d\n", alac_sampling_rate, alac_sampling_rate);
     codec_data_found = TRUE;
   }
-  gst_buffer_unmap (buffers[n], &map);
+  gst_buffer_unmap (buffers[0], &map);
 
   if (!codec_data_found)
     return NULL;
@@ -1224,7 +1259,14 @@ qahwsink_parse_spec (GstQahwSink * qahw, GstAudioRingBufferSpec * spec)
   switch (spec->type) {
     case GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW:
       if (qahw->kpi_mode == false) {
-         qahw->output_flags = GST_QAHWSRC_OUTPUT_FLAG_DIRECT_PCM | GST_QAHWSRC_OUTPUT_FLAG_DIRECT | GST_QAHWSRC_OUTPUT_FLAG_DEEP_BUFFER;
+        if(qahw->session_type == GST_QAHWSRC_OUTPUT_SESSION_DEEP_BUFFER) {
+          qahw->output_flags = GST_QAHWSRC_OUTPUT_FLAG_DIRECT | GST_QAHWSRC_OUTPUT_FLAG_DEEP_BUFFER;
+        } else if (qahw->session_type == GST_QAHWSRC_OUTPUT_SESSION_DIRECT_PCM) {
+          qahw->output_flags = GST_QAHWSRC_OUTPUT_FLAG_DIRECT | GST_QAHWSRC_OUTPUT_FLAG_DIRECT_PCM;
+        } else {
+          qahw->output_flags = GST_QAHWSRC_OUTPUT_FLAG_DEEP_BUFFER | GST_QAHWSRC_OUTPUT_FLAG_DIRECT | GST_QAHWSRC_OUTPUT_FLAG_DIRECT_PCM;
+        }
+        GST_DEBUG_OBJECT (qahw, "qahw->output_flags: 0x%x", qahw->output_flags);
       }
       switch (GST_AUDIO_INFO_FORMAT (&spec->info)) {
         case GST_AUDIO_FORMAT_S16LE:
@@ -1588,7 +1630,7 @@ gst_qahw_ring_buffer_commit (GstAudioRingBuffer * rb, guint64 * sample,
   GstQahwSink *qahw = GST_QAHW_SINK (GST_OBJECT_PARENT (self));
   qahw_out_buffer_t buffer;
   size_t total_written = 0;
-  ssize_t written;
+  ssize_t written = 0;
   guint bpf = MAX (1, GST_AUDIO_INFO_BPF (&rb->spec.info));
   guint length, to_write;
   int ret = 0;
@@ -1677,22 +1719,33 @@ gst_qahw_ring_buffer_commit (GstAudioRingBuffer * rb, guint64 * sample,
 
   GST_QAHW_SINK_LOCK (qahw);
   while (length > 0) {
-    if (!qahw->running || qahw->paused) {
-      break;
-    }
     to_write = length > rb->spec.segsize ? rb->spec.segsize : length;
-    buffer.buffer = data + *accum;
-    buffer.bytes = to_write;
-    buffer.offset = 0;
-    written = qahw_out_write (qahw->stream, &buffer);
-    GST_TRACE_OBJECT (qahw, "written %u bytes", written);
-    if (written < 0) {
-      GST_ERROR_OBJECT (qahw, "Error writing to HAL: %zd", written);
-      goto write_error;
+    if(qahw->can_write) {
+      GST_DEBUG_OBJECT (qahw, "running: %d paused: %d", qahw->running, qahw->paused);
+      if (!qahw->running || qahw->paused) {
+        break;
+      }
+      buffer.buffer = data + *accum;
+      buffer.bytes = to_write;
+      buffer.offset = 0;
+      written = qahw_out_write (qahw->stream, &buffer);
+      GST_TRACE_OBJECT (qahw, "written %u bytes", written);
+      if (written < 0) {
+        GST_ERROR_OBJECT (qahw, "Error writing to HAL: %zd", written);
+        goto write_error;
+      }
+      length -= written;
+      *accum += written;
+      total_written += written;
     }
-    length -= written;
-    *accum += written;
-    total_written += written;
+    else {
+      GST_DEBUG_OBJECT (qahw, "Still waiting for async_callback...");
+      GST_DEBUG_OBJECT (qahw, "written: %d to_write: %d", written, to_write);
+      GST_DEBUG_OBJECT (qahw, "running: %d paused: %d", qahw->running, qahw->paused);
+      if (!qahw->running || qahw->paused) {
+        break;
+      }
+    }
 
     if (written < to_write) {
       qahw->can_write = FALSE;

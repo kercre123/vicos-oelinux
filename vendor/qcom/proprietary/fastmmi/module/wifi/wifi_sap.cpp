@@ -7,6 +7,7 @@
 
 #define NAME_SIZE 20
 #define BUF_SIZE 50
+#define MAX_PATH 256
 /**
  * Defined supported command list here.And put into extra_cmd_list,
  * so server could get it.
@@ -19,6 +20,7 @@
 #define DNSMASQ_D "dnsmasq"
 #define HOSTAPD_D "hostapd"
 #define CONFIG_QUANTITY_MAX 5
+#define DRIVER_PATH "/usr/lib/modules/%s/extra/wlan.ko"
 
 static pthread_mutex_t g_mutex;
 
@@ -167,6 +169,19 @@ static int read_info(char *d_name, struct proc_list *item) {
     }
     fclose(fptr);
     return 0;
+}
+
+//get the path of driver.
+static char *get_driver_path() {
+    char path[MAX_PATH] = {0};
+    char kv_tmp[MAX_PATH] = {0};
+    system("uname -r > /tmp/kernelversion");
+     if(read_file("/tmp/kernelversion", kv_tmp, sizeof(kv_tmp))) {
+        ALOGE("%s read /tmp/kernelversion error!", __FUNCTION__);
+    }
+    snprintf(path, sizeof(path), DRIVER_PATH, kv_tmp);
+    ALOGE("%s *******%s******\n", __FUNCTION__, path);
+    return path;
 }
 
 static void free_list(struct proc_list *head) {
@@ -388,8 +403,9 @@ static int32_t run_passwd(const mmi_module_t * module, unordered_map < string, s
 
 static void load_driver() {
     char temp[256] = { 0 };
-    snprintf(temp, sizeof(temp), "insmod %s", get_value("wifi_driver"));
+    snprintf(temp, sizeof(temp), "insmod %s", get_driver_path());
     system(temp);
+    ALOGI("exec '%s' to load wifi driver", temp);
  }
 
 static void unload_driver()

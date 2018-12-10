@@ -38,6 +38,7 @@
 
 uint64_t getTimeNow();
 void CreateUUID(char *uuid_str, size_t uuid_str_size);
+bool IsValidUUID(const char *vaapi_id);
 
 std::string getStrFromMetadataFrame(const vaapi_metadata_frame *pMetadata);
 std::string getStrFromEvent(const vaapi_event *pEvent);
