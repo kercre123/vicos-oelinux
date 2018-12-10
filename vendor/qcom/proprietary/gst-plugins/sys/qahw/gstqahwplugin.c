@@ -10,14 +10,11 @@
 
 #include "gstqahwsink.h"
 #include "gstqahwsrc.h"
-
-#ifdef HAVE_MM_AUDIO_QAHW_API_INC_QAHW_EFFECT_API_H
 #include "gstqahwequalizer.h"
 #include "gstqahwaudiosphere.h"
 #include "gstqahwbassboost.h"
 #include "gstqahwpresetreverb.h"
 #include "gstqahwvirtualizer.h"
-#endif
 
 GST_DEBUG_CATEGORY (qahw_debug);
 
@@ -32,7 +29,6 @@ plugin_init (GstPlugin * plugin)
           GST_TYPE_QAHW_SINK))
     return FALSE;
 
-#ifdef HAVE_MM_AUDIO_QAHW_API_INC_QAHW_EFFECT_API_H
   if (!gst_element_register (plugin, "qahwequalizer", GST_RANK_NONE,
           GST_TYPE_QAHW_EQUALIZER))
     return FALSE;
@@ -52,7 +48,6 @@ plugin_init (GstPlugin * plugin)
   if (!gst_element_register (plugin, "qahwpresetreverb", GST_RANK_NONE,
           GST_TYPE_QAHW_PRESET_REVERB))
     return FALSE;
-#endif
 
   GST_DEBUG_CATEGORY_INIT (qahw_debug, "qahw", 0, "HAL audio plugins");
 

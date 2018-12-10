@@ -22,7 +22,7 @@
     <string name="mmi_ftm_ap_dir">/data/FTM_AP/</string>
 
     <!--  wifi resource -->
-    <string name="wifi_driver">/usr/lib/modules/3.18.48/extra/wlan.ko</string>
+    <string name="wifi_driver">/usr/lib/modules/3.18.66/extra/wlan.ko</string>
     <string name="wifi_ifconfig">/sbin/ifconfig</string>
     <string name="wifi_iwlist">/sbin/iwlist</string>
     <string name="wifi_iw">/sbin/iw</string>

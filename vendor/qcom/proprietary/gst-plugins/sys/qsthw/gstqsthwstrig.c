@@ -60,6 +60,7 @@ enum
   PROP_USER_CONFIDENCE_LEVEL,
   PROP_VENDOR_UUID,
   PROP_LAB,
+  PROP_USER_MODULE_HANDLE,
   PROP_LAST
 };
 
@@ -194,7 +195,10 @@ gst_qsthw_sound_trigger_class_init (GstQsthwSoundTriggerClass * klass)
       g_param_spec_boolean ("lab", "Look ahead buffering",
           "Look ahead buffering", DEFAULT_PROP_LAB,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
+  g_object_class_install_property (gobject_class, PROP_USER_MODULE_HANDLE,
+      g_param_spec_uint ("module-handle", "module-handle",
+          "User module handle", 1, G_MAXUINT,
+          DEFAULT_PROP_NUM_USERS, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   gstelement_class->change_state =
       GST_DEBUG_FUNCPTR (gst_qsthw_sound_trigger_change_state);
 
@@ -390,10 +394,12 @@ gst_qsthw_sound_trigger_load (GstQsthwSoundTrigger * qsthw)
   if (!qsthw->model_data)
     return FALSE;
 
-  qsthw->module = qsthw_load_module (qsthw->module_id);
-  if (!qsthw->module) {
-    GST_ERROR_OBJECT (qsthw, "Failed to load module '%s'", qsthw->module_id);
-    return FALSE;
+  if(!qsthw->module){
+    qsthw->module = qsthw_load_module (qsthw->module_id);
+    if (!qsthw->module) {
+      GST_ERROR_OBJECT (qsthw, "Failed to load module '%s'", qsthw->module_id);
+      return FALSE;
+    }
   }
 
   err =
@@ -412,6 +418,7 @@ gst_qsthw_sound_trigger_unload (GstQsthwSoundTrigger * qsthw)
   int err;
 
   err = qsthw_unload_sound_model (qsthw->module, qsthw->model);
+
   if (err) {
     GST_ERROR_OBJECT (qsthw, "Failed to unload sound model: %d", err);
     return FALSE;
@@ -419,12 +426,18 @@ gst_qsthw_sound_trigger_unload (GstQsthwSoundTrigger * qsthw)
   qsthw->model = -1;
   g_free (qsthw->model_data);
   qsthw->model_data = NULL;
-  err = qsthw_unload_module (qsthw->module);
-  if (err) {
-    GST_ERROR_OBJECT (qsthw, "Failed to unload module: %d", err);
-    return FALSE;
+
+  if (qsthw->module && !qsthw->user_module) {
+    err = qsthw_unload_module (qsthw->module);
+    if (err) {
+      GST_ERROR_OBJECT (qsthw, "Failed to unload module: %d", err);
+      return FALSE;
+    }
+    qsthw->module = NULL;
   }
-  qsthw->module = NULL;
+  else
+    GST_DEBUG_OBJECT (qsthw, "Sound Trigger Module unloaded by app");
+
   return TRUE;
 }
 
@@ -471,7 +484,7 @@ gst_qsthw_sound_trigger_set_property (GObject * object, guint prop_id,
 {
   GstQsthwSoundTrigger *qsthw;
   sound_trigger_uuid_t uuid;
-
+  guint modVal=0;
   qsthw = GST_QSTHW_SOUND_TRIGGER (object);
 
   switch (prop_id) {
@@ -505,9 +518,7 @@ gst_qsthw_sound_trigger_set_property (GObject * object, guint prop_id,
     case PROP_USER_CONFIDENCE_LEVEL:
       qsthw->user_confidence_level = g_value_get_uint (value);
       break;
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-      break;
+
     case PROP_VENDOR_UUID:
       g_free (qsthw->vendor_uuid);
       qsthw->vendor_uuid = g_value_dup_string (value);
@@ -521,6 +532,18 @@ gst_qsthw_sound_trigger_set_property (GObject * object, guint prop_id,
       break;
     case PROP_LAB:
       qsthw->lab = g_value_get_boolean (value);
+      break;
+    case PROP_USER_MODULE_HANDLE:
+    {
+        if(!qsthw->module){
+            modVal = g_value_get_uint (value);
+            qsthw->module = (gpointer*)modVal;
+            qsthw->user_module = TRUE;
+        }
+        break;
+    }
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
 }
@@ -561,6 +584,13 @@ gst_qsthw_sound_trigger_get_property (GObject * object, guint prop_id,
     case PROP_LAB:
       g_value_set_boolean (value, qsthw->lab);
       break;
+    case PROP_USER_MODULE_HANDLE:
+    {
+        if(!qsthw->module){
+            g_value_set_pointer (value, qsthw->module);
+        }
+        break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -724,6 +754,7 @@ gst_qsthw_sound_trigger_init (GstQsthwSoundTrigger * qsthw)
   qsthw->model_data = NULL;
   qsthw->module = NULL;
   qsthw->model = -1;
+  qsthw->user_module = false;
 
   qsthw->current_ts = GST_CLOCK_TIME_NONE;
   g_cond_init (&qsthw->create_cond);

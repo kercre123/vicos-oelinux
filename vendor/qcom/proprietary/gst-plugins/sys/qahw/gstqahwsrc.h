@@ -104,6 +104,9 @@ struct _GstQahwSrc {
   audio_config_t        config;
   gint                  audio_handle;
   gboolean              kpi_mode;
+  gint                  ffv_state;
+  gint                  ffv_ec_ref_dev;
+  gint                  ffv_channel_index;
 
   gint                  rate;
   gint                  channels;

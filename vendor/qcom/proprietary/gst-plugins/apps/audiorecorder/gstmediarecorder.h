@@ -37,6 +37,12 @@ struct AudioProp
   gint bufsize;
   /* Device id*/
   gint device;
+  /* FFV State*/
+  gint ffv_state;
+  /* FFV output refernce device*/
+  gint ffv_ec_ref_dev;
+  /* FFV channel index*/
+  gint ffv_channel_index;
 };
 
 /**

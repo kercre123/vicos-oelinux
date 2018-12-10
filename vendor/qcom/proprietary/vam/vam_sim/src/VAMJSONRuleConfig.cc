@@ -115,6 +115,8 @@ void VAMJSONRuleConfig::print()
                 EventTypeToStr(r.type).c_str());
         printf("      sensitivity: %d\n", (int)r.sensitivity);
         printf("      minimum_size: %d\n", (int)r.minimum_size);
+        printf("      scene_type: %d (%s)\n", r.scene_type,
+                EventTypeToStr(r.scene_type).c_str());
 
         printf("      reserve: ");
         for(int i=0; i<5; i++)
@@ -195,6 +197,7 @@ static int parseJSONRule( JSONVAAtomicRule *pJSONAtomicRule, vaapi_rule *pRule, 
     snprintf(pRule->name, VAAPI_NAME_LEN, "%s", ar.name);
     pRule->sensitivity = ar.sensitivity;
     pRule->minimum_size = ar.min_size;
+    pRule->scene_type = ar.scene_type;
 
     //////////////// zones - start
     if(ar.cnt_zones > 0)

@@ -764,6 +764,11 @@ JSONVAStatus JSONConfigurationParser::ParseAtomicRules(const Json::Value atomic_
                 }
                 else
                     atomic_rule.attributes.motion_detected.minimum_size = 50;
+                if (attributes.isMember("scene_type"))
+                    atomic_rule.attributes.motion_detected.scene_type =
+                    attributes["scene_type"].asString().c_str();
+                else
+                    atomic_rule.attributes.motion_detected.scene_type = 0;
                 if (attributes.isMember("event_on_delay"))
                     atomic_rule.attributes.motion_detected.event_on_delay =
                     attributes["event_on_delay"].asInt();
@@ -807,6 +812,11 @@ JSONVAStatus JSONConfigurationParser::ParseAtomicRules(const Json::Value atomic_
                 else
                     atomic_rule.attributes.object_detected.minimum_size = 50;
 
+                if (attributes.isMember("scene_type"))
+                    atomic_rule.attributes.motion_detected.scene_type =
+                    attributes["scene_type"].asString().c_str();
+                else
+                    atomic_rule.attributes.motion_detected.scene_type = 0;
             }
             if ((*it).isMember("zone_id")){
                 strcpy(atomic_rule.zone_id.uuid,
@@ -831,6 +841,11 @@ JSONVAStatus JSONConfigurationParser::ParseAtomicRules(const Json::Value atomic_
                     attributes["minimum_size"].asInt();
                 else
                     atomic_rule.attributes.intrusion_detected.minimum_size = 50;
+                if (attributes.isMember("scene_type"))
+                    atomic_rule.attributes.motion_detected.scene_type =
+                    attributes["scene_type"].asString().c_str();
+                else
+                    atomic_rule.attributes.motion_detected.scene_type = 0;
             }
             if ((*it).isMember("zone_id")){
                 strcpy(atomic_rule.zone_id.uuid,
@@ -855,6 +870,11 @@ JSONVAStatus JSONConfigurationParser::ParseAtomicRules(const Json::Value atomic_
                     attributes["minimum_size"].asInt();
                 else
                     atomic_rule.attributes.line_crossed.minimum_size = 50;
+                if (attributes.isMember("scene_type"))
+                    atomic_rule.attributes.motion_detected.scene_type =
+                    attributes["scene_type"].asString().c_str();
+                else
+                    atomic_rule.attributes.motion_detected.scene_type = 0;
                 if (attributes.isMember("direction"))
                     atomic_rule.attributes.line_crossed.direction =
                     (VADir)attributes["direction"].asInt();
@@ -917,6 +937,11 @@ JSONVAStatus JSONConfigurationParser::ParseAtomicRules(const Json::Value atomic_
                     attributes["minimum_size"].asInt();
                 else
                     atomic_rule.attributes.object_counted.minimum_size = 50;
+                if (attributes.isMember("scene_type"))
+                    atomic_rule.attributes.motion_detected.scene_type =
+                    attributes["scene_type"].asString().c_str();
+                else
+                    atomic_rule.attributes.motion_detected.scene_type = 0;
                 if (attributes.isMember("report_time_interval"))
                     atomic_rule.attributes.object_counted.report_time_interval =
                     attributes["report_time_interval"].asInt();
@@ -946,6 +971,11 @@ JSONVAStatus JSONConfigurationParser::ParseAtomicRules(const Json::Value atomic_
                     attributes["minimum_size"].asInt();
                 else
                     atomic_rule.attributes.loitering_detected.minimum_size = 50;
+                if (attributes.isMember("scene_type"))
+                    atomic_rule.attributes.motion_detected.scene_type =
+                    attributes["scene_type"].asString().c_str();
+                else
+                    atomic_rule.attributes.motion_detected.scene_type = 0;
                 if (attributes.isMember("dwell_time"))
                     atomic_rule.attributes.loitering_detected.dwell_time =
                     attributes["dwell_time"].asInt();
@@ -977,6 +1007,11 @@ JSONVAStatus JSONConfigurationParser::ParseAtomicRules(const Json::Value atomic_
                     attributes["minimum_size"].asInt();
                 else
                     atomic_rule.attributes.face_recognized.minimum_size = 50;
+                if (attributes.isMember("scene_type"))
+                    atomic_rule.attributes.motion_detected.scene_type =
+                    attributes["scene_type"].asString().c_str();
+                else
+                    atomic_rule.attributes.motion_detected.scene_type = 0;
                 if (attributes.isMember("confidence"))
                     atomic_rule.attributes.face_recognized.confidence =
                     attributes["confidence"].asInt();

@@ -9,6 +9,7 @@
 #ifdef NO_UI
 // Just for build with NO_UI
 bool init_draw(){
+   return true;
 }
 void invalidate() {
 }

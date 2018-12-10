@@ -10,19 +10,29 @@
 #include <vaapi_errors.h>
 #include <vaapi_config.h>
 #include <VAMUtilities.h>
+#include <string>
+#include <mutex>
 
-uint64_t getTimeNow()
-{
+uint64_t getTimeNow() {
     struct timespec res;
     clock_gettime(CLOCK_MONOTONIC, &res);
     return 1000000LL * static_cast<int64_t>(res.tv_sec) + res.tv_nsec / 1000;
 }
 
-void CreateUUID(char *uuid_str, size_t uuid_str_size)
-{
+std::mutex uuid_lock;
+uint32_t uuid_count_to_reset = 0;
+void CreateUUID(char *uuid_str, size_t uuid_str_size) {
     uint16_t mem[8];
 
-    srand(time(0));
+    std::lock_guard<std::mutex> lg(uuid_lock);
+
+    // change the seed after some numbers are generated
+    if ((uuid_count_to_reset % 100) == 0) {
+        srand(time(0));
+        uuid_count_to_reset = 0;
+    }
+    uuid_count_to_reset++;
+
     for (size_t i = 0; i < sizeof(mem) / sizeof(uint16_t); i++)
         mem[i] = rand() % 0xFFFF;
 
@@ -30,11 +40,26 @@ void CreateUUID(char *uuid_str, size_t uuid_str_size)
         mem[0], mem[1], mem[2], mem[3], mem[4], mem[5], mem[6], mem[7]);
 }
 
+bool IsValidUUID(const char *vaapi_id) {
+    if (!vaapi_id) return false;
+    if (strlen(vaapi_id) != VAAPI_UUID_LEN - 1) return false;
+    for (int j = 0; j < 8; j++) {
+        for (int i = 0; i < 4; i++, vaapi_id++) {
+            if (!isxdigit(*vaapi_id)) return false;
+        }
+        if (j > 0 && j < 5) {
+            if(*vaapi_id != '-') return false;
+            vaapi_id++;
+        }
+    }
+
+    return true;
+}
+
 ///////////////////////////////////////////////////////
 // Calibrition utility - start
 
-int OCMatrixInverse3x3_1(float *mat, float *mat_inv)
-{
+int OCMatrixInverse3x3_1(float *mat, float *mat_inv) {
     float a[3][3];
     float *mat_inv1 = mat_inv;
     int i, j;
@@ -47,20 +72,25 @@ int OCMatrixInverse3x3_1(float *mat, float *mat_inv)
     }
 
     for (i = 0; i < 3; i++) {
-        determinant = determinant + (a[0][i] * (a[1][(i + 1) % 3] * a[2][(i + 2) % 3] - a[1][(i + 2) % 3] * a[2][(i + 1) % 3]));
+        determinant += (a[0][i] * (a[1][(i + 1) % 3] * a[2][(i + 2) % 3] -
+                        a[1][(i + 2) % 3] * a[2][(i + 1) % 3]));
     }
 
     for (i = 0; i < 3; i++) {
         for (j = 0; j < 3; j++) {
-            mat_inv1[i * 3 + j] = ((a[(i + 1) % 3][(j + 1) % 3] * a[(i + 2) % 3][(j + 2) % 3]) - (a[(i + 1) % 3][(j + 2) % 3] * a[(i + 2) % 3][(j + 1) % 3])) / determinant;
+            mat_inv1[i * 3 + j] = ((a[(i + 1) % 3][(j + 1) % 3] *
+                                    a[(i + 2) % 3][(j + 2) % 3]) -
+                                    (a[(i + 1) % 3][(j + 2) % 3] *
+                                     a[(i + 2) % 3][(j + 1) % 3])) /
+                                     determinant;
         }
     }
 
     return 0;
 }
 
-int getCalibratedParams(const vaapi_scene_calibration *caliInfo, int64_t *params)
-{
+int getCalibratedParams(const vaapi_scene_calibration *caliInfo,
+                        int64_t *params) {
     float sx2 = 0;
     float sxy = 0;
     float sx = 0;
@@ -73,21 +103,25 @@ int getCalibratedParams(const vaapi_scene_calibration *caliInfo, int64_t *params
 
     for (uint32_t i = 0; i < caliInfo->object_size; i++) {
         vaapi_scene_calibration_object object = caliInfo->objects[i];
-        float height = object.pos.height * fixed_height_ / object.physical_height;
+        float height = object.pos.height * fixed_height_ /
+                       object.physical_height;
         sx2 += object.pos.x * object.pos.x;
         sxy += object.pos.x * (object.pos.y + object.pos.height);
         sx += object.pos.x;
-        sy2 += (object.pos.y + object.pos.height) *(object.pos.y + object.pos.height);
+        sy2 += (object.pos.y + object.pos.height) *
+               (object.pos.y + object.pos.height);
         sy += (object.pos.y + object.pos.height);
         sxz += object.pos.x * height;
         syz += (object.pos.y + object.pos.height) * height;
         sz += height;
     }
 
-    float h_mat[9] = { sx2, sxy, sx, sxy, sy2, sy, sx, sy, static_cast<float>(caliInfo->object_size) };
+    float h_mat[9] = { sx2, sxy, sx, sxy, sy2, sy, sx, sy,
+                       static_cast<float>(caliInfo->object_size) };
     float h_inv_mat[9];
     float p[3] = { sxz, syz, sz };
-    OCMatrixInverse3x3_1(reinterpret_cast<float *>(h_mat), reinterpret_cast<float *>(h_inv_mat));
+    OCMatrixInverse3x3_1(reinterpret_cast<float *>(h_mat),
+                         reinterpret_cast<float *>(h_inv_mat));
     float a = 0;
     float b = 0;
     float c = 0;
@@ -110,14 +144,13 @@ int getCalibratedParams(const vaapi_scene_calibration *caliInfo, int64_t *params
 ///////////////////////////////////////////////////////
 // JSON utilities
 
-std::string getStrFromMetadataFrame(const vaapi_metadata_frame *pM)
-{
+std::string getStrFromMetadataFrame(const vaapi_metadata_frame *pM) {
     if (pM == nullptr) {
         return "";
     }
 
     std::stringstream ss;
-    ss << "{ \"timestamp\":" << pM->pts;
+    ss << "{ \"timestamp\":" << pM->pts / 1000;
 
     if (pM->object_num > 0) {
         ss << "," << " \"objects\":[";
@@ -174,8 +207,7 @@ std::string getStrFromMetadataFrame(const vaapi_metadata_frame *pM)
     return ss.str();
 }
 
-std::string getStrFromEvent(const vaapi_event *pE)
-{
+std::string getStrFromEvent(const vaapi_event *pE) {
     if (pE == nullptr) {
         return "";
     }
@@ -219,7 +251,8 @@ std::string getStrFromEvent(const vaapi_event *pE)
         ss << ", \"reserve_str\":[";
         for (uint32_t i = 0; i < VAAPI_RESERVE_ITEM; i++) {
             bool isPrintable = true;
-            for (uint32_t j = 0; j < VAAPI_NAME_LEN && pE->obj.reserve_str[i][j] != '\0'; j++) {
+            for (uint32_t j = 0; j < VAAPI_NAME_LEN &&
+                                 pE->obj.reserve_str[i][j] != '\0'; j++) {
                 if (isprint(pE->obj.reserve_str[i][j]) == false) {
                     isPrintable = false;
                 }
@@ -262,7 +295,8 @@ std::string getStrFromEvent(const vaapi_event *pE)
         ss << ", \"reserve_str\":[";
         for (uint32_t i = 0; i < VAAPI_RESERVE_ITEM; i++) {
             bool isPrintable = true;
-            for (uint32_t j = 0; j < VAAPI_NAME_LEN && pE->reserve_str[i][j] != '\0'; j++) {
+            for (uint32_t j = 0; j < VAAPI_NAME_LEN &&
+                                 pE->reserve_str[i][j] != '\0'; j++) {
                 if (isprint(static_cast<int>(pE->reserve_str[i][j])) == false) {
                     isPrintable = false;
                 }
@@ -285,8 +319,7 @@ std::string getStrFromEvent(const vaapi_event *pE)
     return ss.str();
 }
 
-std::string getStrFromRule(const vaapi_rule *pR)
-{
+std::string getStrFromRule(const vaapi_rule *pR) {
     if (pR == nullptr) {
         return "";
     }
@@ -299,6 +332,7 @@ std::string getStrFromRule(const vaapi_rule *pR)
     ss << ", \"event_type\":" << pR->type;
     ss << ", \"sensitivity\":" << (uint32_t)pR->sensitivity;
     ss << ", \"min_size\":" << (uint32_t)pR->minimum_size;
+    ss << ", \"scene_type\":" << pR->scene_type;
 
     ss << ", \"reserve\":[";
     for (uint32_t i = 0; i < VAAPI_RESERVE_ITEM; i++) {
@@ -312,7 +346,8 @@ std::string getStrFromRule(const vaapi_rule *pR)
     ss << ", \"reserve_str\":[";
     for (uint32_t i = 0; i < VAAPI_RESERVE_ITEM; i++) {
         bool isPrintable = true;
-        for (uint32_t j = 0; j < VAAPI_NAME_LEN && pR->reserve_str[i][j] != '\0'; j++) {
+        for (uint32_t j = 0; j < VAAPI_NAME_LEN &&
+                             pR->reserve_str[i][j] != '\0'; j++) {
             if (isprint(pR->reserve_str[i][j]) == false) {
                 isPrintable = false;
             }
@@ -324,7 +359,7 @@ std::string getStrFromRule(const vaapi_rule *pR)
             ss << " \"[UN-PRINTABLE]\"";
         }
 
-        if(i != VAAPI_RESERVE_ITEM - 1) {
+        if (i != VAAPI_RESERVE_ITEM - 1) {
             ss << ", ";
         }
     }
