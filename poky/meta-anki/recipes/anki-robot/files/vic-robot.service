@@ -7,10 +7,13 @@ Wants=vic-init.service
 After=vic-init.service
 
 [Service]
+PermissionsStartOnly=true
 EnvironmentFile=/anki/etc/vic-robot.env
+ExecStartPre=/bin/chown robot /dev/ttyHS0 /dev/spidev0.0
 ExecStart=/anki/bin/vic-robot $VIC_ROBOT_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
+User=robot
 Group=anki
 UMask=0002
 
