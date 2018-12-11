@@ -1,0 +1,1 @@
+robot ALL = (root, root) NOPASSWD: /bin/systemctl start fake-hwclock-tick
