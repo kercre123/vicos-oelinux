@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+using anki::Application;
+
 /**
  * @brief Print the usage of the application
  */

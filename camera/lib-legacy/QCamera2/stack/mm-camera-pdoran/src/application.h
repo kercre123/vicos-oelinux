@@ -3,6 +3,9 @@
 
 #include <memory>
 
+namespace anki
+{
+
 // Forward declarations
 class Camera;
 
@@ -20,5 +23,7 @@ public:
 private:
   std::unique_ptr<Camera> _camera;
 };
+
+} /* namespace anki */
 
 #endif

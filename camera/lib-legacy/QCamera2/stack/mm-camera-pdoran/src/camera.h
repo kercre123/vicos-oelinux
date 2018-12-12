@@ -3,6 +3,9 @@
 
 #include <memory>
 
+namespace anki
+{
+
 class Camera
 {
 public:
@@ -15,5 +18,7 @@ private:
   class Impl;
   std::unique_ptr<Impl> _impl;
 };
+
+} /* namespace anki */
 
 #endif

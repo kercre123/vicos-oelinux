@@ -34,6 +34,10 @@ LOCAL_CPPFLAGS += -Wall
 LOCAL_CPPFLAGS += -Wextra
 LOCAL_CPPFLAGS += -Werror
 
+# Because we use "mm_qcamera_dbg.h"
+LOCAL_CFLAGS += -D_ANDROID_
+LOCAL_CFLAGS += -DUSE_ANDROID_LOGGING=1
+
 LOCAL_SRC_FILES:= \
         src/application.cpp \
         src/camera.cpp \
@@ -42,7 +46,11 @@ LOCAL_SRC_FILES:= \
 LOCAL_C_INCLUDES:=$(LOCAL_PATH)/src
 LOCAL_C_INCLUDES+=$(LOCAL_PATH)/inc
 LOCAL_C_INCLUDES+=$(LOCAL_PATH)/../common
-LOCAL_C_INCLUDES+=$(LOCAL_PATH)/../mm-camera-interface/inc
+LOCAL_C_INCLUDES+=$(LOCAL_PATH)/../mm-camera-test/inc
+
+LOCAL_C_INCLUDES+=frameworks/native/include/media/openmax
+LOCAL_C_INCLUDES+=$(LOCAL_PATH)/../../../mm-image-codec/qexif
+LOCAL_C_INCLUDES+=$(LOCAL_PATH)/../../../mm-image-codec/qomx_core
 
 LOCAL_C_INCLUDES+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 # TODO: Do we need this?

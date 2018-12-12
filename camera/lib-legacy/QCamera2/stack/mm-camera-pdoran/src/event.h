@@ -4,6 +4,9 @@
 #include <mutex>
 #include <condition_variable>
 
+namespace anki
+{
+
 /**
  * @brief Synchronization object that allows a thread to signal to other threads that an event has happened.
  */
@@ -16,12 +19,14 @@ public:
 
   void set()
   {
+    std::lock_guard<std::mutex> lk(_mutex);
     _triggered = true;
     _condition.notify_all();
   }
 
   void reset()
   {
+    std::lock_guard<std::mutex> lk(_mutex);
     _triggered = false;
   }
 
@@ -35,5 +40,7 @@ private:
   std::mutex _mutex;
   std::condition_variable _condition;
 };
+
+}
 
 #endif

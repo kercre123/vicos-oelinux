@@ -5,6 +5,8 @@
 
 #include <csignal>
 
+namespace anki {
+
 //======================================================================================================================
 // Signal and Global Exit Event setup
 static Event gEvent;
@@ -66,3 +68,5 @@ int Application::exec(const Args& args)
 
   return 0;
 }
+
+} /* namespace anki */
