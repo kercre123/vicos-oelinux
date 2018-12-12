@@ -9,6 +9,7 @@
 
 extern "C" {
 #include "mm_camera_interface.h"
+#include <hardware/camera.h>
 }
 
 //======================================================================================================================
@@ -55,11 +56,70 @@ void Camera::Impl::run()
   uint8_t num_cameras = get_num_of_cameras();
   std::cerr<<"Num Cameras: "<<static_cast<uint32_t>(num_cameras)<<std::endl;
 
+  for (uint32_t i = 0; i < num_cameras; ++i)
+  {
+    std::cerr<<"------------------------------------------------------------"<<std::endl;
+    camera_info* info = get_cam_info(i);
+    if (info == nullptr)
+    {
+      std::cerr<<"Info["<<i<<"]: null"<<std::endl;
+    }
+    else
+    {
+      std::cerr<<"Info["<<i<<"]: "<<std::endl;
+      std::cerr<<"facing:                 "<<info->facing<<std::endl;
+      std::cerr<<"orientation:            "<<info->orientation<<std::endl;
+      std::cerr<<"device_version:         "<<info->device_version<<std::endl;
+      // std::cerr<<"static_camera_characteristics: "<<std::endl; // TODO: camera_metadata
+      std::cerr<<"resource_cost:          "<<info->resource_cost<<std::endl;
+      std::cerr<<"conflicting_devices:    "<<std::endl;
+      for (uint32_t j = 0; j < info->conflicting_devices_length; ++j)
+      {
+        std::cerr<<"    "<<info->conflicting_devices[j]<<std::endl;
+      }
+    }
+    std::cerr<<"------------------------------"<<std::endl;
+    mm_camera_vtbl_t* vtbl = camera_open(i);
+    if (vtbl == nullptr)
+    {
+      std::cerr<<"VTBL["<<i<<"]: null"<<std::endl;
+    }
+    else
+    {
+      std::cerr<<"VTBL["<<i<<"]: "<<std::endl;
+      std::cerr<<"handle:                 "<<vtbl->camera_handle<<std::endl;
+#if 1
+      {
+        vtbl->ops->map_buf(vtbl->camera_handle, CAM_MAPPING_BUF_TYPE_CAPABILITY, fd, size)
+        if (vtbl->query_capabaility(vtbl->camera_handle) == 0)
+        {
+          // success
+        }
+        else
+        {
+          // failure
+        }
+      }
+#endif
+      if (vtbl->ops->close_camera(vtbl->camera_handle) == 0)
+      {
+        // success
+        std::cerr<<"CLOSED CAMERA["<<i<<"]"<<std::endl;
+      }
+      else
+      {
+        //failure
+        std::cerr<<"FAILED TO CLOSE CAMERA["<<i<<"]"<<std::endl;
+      }
+    }
+    std::cerr<<"------------------------------------------------------------"<<std::endl;
+  }
+
   int counter = 0;
   while (_isRunning)
   {
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    std::cout<<"Camera "<<(counter++)<<std::endl;
+    std::cout<<"sleeping "<<(counter++)<<std::endl;
   }
 }
 
