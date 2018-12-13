@@ -6,6 +6,9 @@
 namespace anki
 {
 
+/**
+ * @brief SBGGR10P Camera
+ */
 class Camera
 {
 public:

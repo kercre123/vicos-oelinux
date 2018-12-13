@@ -41,6 +41,7 @@ LOCAL_CFLAGS += -DUSE_ANDROID_LOGGING=1
 LOCAL_SRC_FILES:= \
         src/application.cpp \
         src/camera.cpp \
+        src/util.cpp \
         src/main_pdoran.cpp
 
 LOCAL_C_INCLUDES:=$(LOCAL_PATH)/src

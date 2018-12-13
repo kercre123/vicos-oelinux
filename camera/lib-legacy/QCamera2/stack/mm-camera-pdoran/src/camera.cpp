@@ -9,6 +9,9 @@ extern "C" {
 #include "mm_qcamera_dbg.h"
 }
 
+// TODO: Refactor code so that we don't dump frames from the camera class
+#include "util.h"
+
 // TODO: Remove, these are for debugging experiments
 #include <chrono>
 #include <iostream>
@@ -63,11 +66,15 @@ private:
   mm_camera_stream_t* _stream;
 };
 
+//======================================================================================================================
+
 Camera::Impl::Params::Params()
   : num_bufs(RDI_BUF_NUM) // from mm_qcamera_app.h
 {
 
 }
+
+//======================================================================================================================
 
 Camera::Impl::Impl()
   : _params() 
@@ -80,9 +87,13 @@ Camera::Impl::Impl()
   memset(&_lib_handle,0,sizeof(mm_camera_lib_handle));
 }
 
+//======================================================================================================================
+
 Camera::Impl::~Impl()
 {
 }
+
+//======================================================================================================================
 
 void Camera::Impl::start()
 {
@@ -90,11 +101,15 @@ void Camera::Impl::start()
   _isRunning = true;
 }
 
+//======================================================================================================================
+
 void Camera::Impl::stop()
 {
   _isRunning = false;
   _thread.join();
 }
+
+//======================================================================================================================
 
 void Camera::Impl::run()
 {
@@ -116,6 +131,8 @@ void Camera::Impl::run()
   deinit();
 }
 
+//======================================================================================================================
+
 bool Camera::Impl::init()
 {
   int rc;
@@ -134,6 +151,8 @@ bool Camera::Impl::init()
 
   return true;
 }
+
+//======================================================================================================================
 
 bool Camera::Impl::init_lib()
 {
@@ -167,6 +186,7 @@ bool Camera::Impl::init_channel()
   return true;
 }
 
+//======================================================================================================================
 bool Camera::Impl::init_stream()
 {
   int rc;
@@ -225,11 +245,13 @@ bool Camera::Impl::init_stream()
   return true;
 }
 
+//======================================================================================================================
 void Camera::Impl::deinit()
 {
   // TODO: Implement deinit
 }
 
+//======================================================================================================================
 void Camera::Impl::static_callback(mm_camera_super_buf_t *bufs, void *userdata)
 {
   Camera::Impl* camera = static_cast<Camera::Impl*>(userdata);
@@ -238,14 +260,35 @@ void Camera::Impl::static_callback(mm_camera_super_buf_t *bufs, void *userdata)
 
 void Camera::Impl::callback(mm_camera_super_buf_t *bufs)
 {
-  // std::cerr<<"PDORAN non-static callback"<<std::endl;
-
   // TODO: Consider thread safety in the future when we actually start to do stuff with the bufs
+  
+  // Increment a counter to see how many frames we've processed
   std::lock_guard<std::mutex> lck(_mutex);
+  ++_count;
+  
+
+  // TODO: Cache this info somewhere
+  // TODO: get height, width, padding of the stream properly
+  cam_stream_buf_plane_info_t *buf_planes = &_stream->s_config.stream_info->buf_planes;
+  const int stride = buf_planes->plane_info.mp[0].stride;
+  const int height = buf_planes->plane_info.mp[0].scanline;
+
+  // TODO: Get the data out of the buffers  
+  for (uint32_t i = 0; i < bufs->num_bufs; i++) {
+
+    // We know we are SBGGR10P format, so it's a single plane
+
+    std::string path = std::string("./images/image.")
+      + std::to_string(bufs->bufs[i]->frame_idx) + "."
+      + std::to_string(stride) + "x" + std::to_string(height)
+      + std::string(".sbggr10p");
+    
+    uint8_t* bytes = static_cast<uint8_t*>(bufs->bufs[i]->buffer);
+    uint32_t num_bytes = stride*height;
+    dump_frame(path, bytes, num_bytes);
+  }
   
   // TODO: See if there are other ways of enqueing the buffers rather than going to the ops vtable
-  ++_count;
-
   for (uint32_t i = 0; i < bufs->num_bufs; i++) {
     if (MM_CAMERA_OK != _lib_handle.test_obj.cam->ops->qbuf(bufs->camera_handle,bufs->ch_id,bufs->bufs[i]))
     {
