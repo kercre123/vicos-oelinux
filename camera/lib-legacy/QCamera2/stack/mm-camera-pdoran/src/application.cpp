@@ -1,6 +1,6 @@
 #include "application.h"
 
-#include "camera.h"
+#include "camera_rdi.h"
 #include "event.h"
 
 #include <csignal>
@@ -56,7 +56,7 @@ int Application::exec(const Args& args)
   setup_signal_handler();
 
   // Create and start a new camera
-  _camera.reset(new Camera());
+  _camera.reset(new CameraRDI());
   
   _camera->start();
 

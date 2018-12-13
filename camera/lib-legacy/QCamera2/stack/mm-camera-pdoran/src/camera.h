@@ -1,25 +1,24 @@
 #ifndef _mm_pdoran_camera_h_
 #define _mm_pdoran_camera_h_
 
-#include <memory>
-
 namespace anki
 {
 
 /**
- * @brief SBGGR10P Camera
+ * @brief Camera Interface
  */
 class Camera
 {
 public:
   Camera();
-  ~Camera();
+  virtual ~Camera();
   void start();
   void stop();
 
-private:
-  class Impl;
-  std::unique_ptr<Impl> _impl;
+protected:
+  virtual void onStart() = 0;
+  virtual void onStop() = 0;
+
 };
 
 } /* namespace anki */
