@@ -3,6 +3,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/kthread.h>
 #include <linux/errno.h>
 #include <linux/tty.h>
 #include <linux/tty_driver.h>
@@ -11,6 +12,7 @@
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
+#include <linux/sched/prio.h>
 #include <linux/wait.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
@@ -431,9 +433,8 @@ receive_buf(struct tty_struct *tty, struct tty_buffer *head, int count)
  *		 'consumer'
  */
 
-static void flush_to_ldisc(struct work_struct *work)
+static void flush_to_ldisc(struct tty_port *port)
 {
-	struct tty_port *port = container_of(work, struct tty_port, buf.work);
 	struct tty_bufhead *buf = &port->buf;
 	struct tty_struct *tty;
 	struct tty_ldisc *disc;
@@ -482,6 +483,18 @@ static void flush_to_ldisc(struct work_struct *work)
 	tty_ldisc_deref(disc);
 }
 
+static void flush_to_ldisc_kthread(struct kthread_work *work)
+{
+	struct tty_port *port = container_of(work, struct tty_port, buf.kwork);
+	flush_to_ldisc(port);
+}
+
+static void flush_to_ldisc_workq(struct work_struct *work)
+{
+	struct tty_port *port = container_of(work, struct tty_port, buf.work);
+	flush_to_ldisc(port);
+}
+
 /**
  *	tty_flush_to_ldisc
  *	@tty: tty to push
@@ -495,16 +508,34 @@ void tty_flush_to_ldisc(struct tty_struct *tty)
 	tty_buffer_flush_work(tty->port);
 }
 
+static DEFINE_KTHREAD_WORKER(tty_buffer_worker);
+
 void tty_buffer_queue_work(struct tty_port *port)
 {
 	struct tty_bufhead *buf = &port->buf;
-	schedule_work(&buf->work);
+	if (port->low_latency)
+		queue_kthread_work(&tty_buffer_worker, &buf->kwork);
+	else
+		schedule_work(&buf->work);
 }
 
 void tty_buffer_flush_work(struct tty_port *port)
 {
 	struct tty_bufhead *buf = &port->buf;
+	/* Flush both so we don't have to worry about racing with
+	 changes to port->low_latency */
+	flush_kthread_work(&buf->kwork);
 	flush_work(&buf->work);
+}
+
+void tty_buffer_init_kthread()
+{
+	struct task_struct *task;
+	/* Use same default priority as threaded irq handlers */
+	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO/2 };
+
+	task = kthread_run(kthread_worker_fn, &tty_buffer_worker, "tty");
+	sched_setscheduler(task, SCHED_FIFO, &param);
 }
 
 /**
@@ -543,7 +574,8 @@ void tty_buffer_init(struct tty_port *port)
 	init_llist_head(&buf->free);
 	atomic_set(&buf->mem_used, 0);
 	atomic_set(&buf->priority, 0);
-	INIT_WORK(&buf->work, flush_to_ldisc);
+	INIT_WORK(&buf->work, flush_to_ldisc_workq);
+	init_kthread_work(&buf->kwork, flush_to_ldisc_kthread);
 	buf->mem_limit = TTYB_DEFAULT_MEM_LIMIT;
 }
 
