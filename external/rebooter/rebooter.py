@@ -100,9 +100,15 @@ def processes():
 
     return processes
 
+def is_os_update_pending():
+    return os.path.exists("/run/update-engine/done")
+
 
 def inhibitors():
     inhibitors = [file for file in INHIBITOR_FILES if os.path.exists(file)]
+    if is_os_update_pending():
+        return inhibitors
+
     powersave = False
     try:
         governor = '/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor'
@@ -118,21 +124,21 @@ def inhibitors():
         inhibitors.append(UPDATER_PROCESS)
     return inhibitors
 
+if not is_os_update_pending():
+    # Check that we have a local timezone and not just the default
+    if not os.path.exists(LOCALTIME_FILE):
+        print("{0} does not exist.  Exiting.".format(LOCALTIME_FILE))
+        sys.stdout.flush()
+        log_das_event_for_failure("no_timezone")
+        sys.exit()
 
-# Check that we have a local timezone and not just the default
-if not os.path.exists(LOCALTIME_FILE):
-    print("{0} does not exist.  Exiting.".format(LOCALTIME_FILE))
-    sys.stdout.flush()
-    log_das_event_for_failure("no_timezone")
-    sys.exit()
+    if os.path.realpath(LOCALTIME_FILE) == DEFAULT_TIMEZONE:
+        print("Local timezone has not been set.  Exiting.")
+        sys.stdout.flush()
+        log_das_event_for_failure("default_timezone")
+        sys.exit()
 
-if os.path.realpath(LOCALTIME_FILE) == DEFAULT_TIMEZONE:
-    print("Local timezone has not been set.  Exiting.")
-    sys.stdout.flush()
-    log_das_event_for_failure("default_timezone")
-    sys.exit()
-
-exit_if_too_late()
+    exit_if_too_late()
 
 # systemd should start us at 1AM or a little later, but just in case, sleep
 # if we are run too early
@@ -140,26 +146,28 @@ if now() < earliest:
     sleep = earliest - now()
     print_and_sleep("Too early", sleep)
 
-exit_if_too_late()
+if not is_os_update_pending():
+    exit_if_too_late()
 
-# If we have rebooted recently, don't bother doing this periodic reboot
-if uptime() < minimum_uptime:
-    sleep_needed = minimum_uptime - uptime()
-    max_sleep = latest - now()
-    if sleep_needed > max_sleep:
-        print("Uptime not met.  Exiting...")
-        log_das_event_for_failure("uptime")
-        sys.exit()
-    print_and_sleep("Uptime not met", sleep_needed)
+    # If we have rebooted recently, don't bother doing this periodic reboot
+    if uptime() < minimum_uptime:
+        sleep_needed = minimum_uptime - uptime()
+        max_sleep = latest - now()
+        if sleep_needed > max_sleep:
+            print("Uptime not met.  Exiting...")
+            log_das_event_for_failure("uptime")
+            sys.exit()
+        print_and_sleep("Uptime not met", sleep_needed)
 
-exit_if_too_late()
+    exit_if_too_late()
 
 # Random sleep to avoid hitting servers at the same time
 max_sleep = max(1, latest - now() - 60)
 random_sleep = random.randint(1, max_sleep)
 print_and_sleep("Random delay to be nice to servers", random_sleep)
 
-exit_if_too_late()
+if not is_os_update_pending():
+    exit_if_too_late()
 
 # Wait until all the inhibitors are cleared
 while len(inhibitors()) > 0:
