@@ -72,7 +72,7 @@ void tty_buffer_unlock_exclusive(struct tty_port *port)
 	atomic_dec(&buf->priority);
 	mutex_unlock(&buf->lock);
 	if (restart)
-		queue_work(system_unbound_wq, &buf->work);
+		tty_buffer_queue_work(port);
 }
 EXPORT_SYMBOL_GPL(tty_buffer_unlock_exclusive);
 
@@ -364,7 +364,7 @@ void tty_schedule_flip(struct tty_port *port)
 	struct tty_bufhead *buf = &port->buf;
 
 	buf->tail->commit = buf->tail->used;
-	schedule_work(&buf->work);
+	tty_buffer_queue_work(port);
 }
 EXPORT_SYMBOL(tty_schedule_flip);
 
@@ -492,7 +492,19 @@ static void flush_to_ldisc(struct work_struct *work)
  */
 void tty_flush_to_ldisc(struct tty_struct *tty)
 {
-	flush_work(&tty->port->buf.work);
+	tty_buffer_flush_work(tty->port);
+}
+
+void tty_buffer_queue_work(struct tty_port *port)
+{
+	struct tty_bufhead *buf = &port->buf;
+	schedule_work(&buf->work);
+}
+
+void tty_buffer_flush_work(struct tty_port *port)
+{
+	struct tty_bufhead *buf = &port->buf;
+	flush_work(&buf->work);
 }
 
 /**
