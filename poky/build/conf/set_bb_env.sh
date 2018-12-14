@@ -68,10 +68,14 @@ alias goout='croot && cd poky/build/tmp-glibc/deploy/images/$MACHINE'
 python $scriptdir/get_bblayers.py ${WS}/poky \"meta*\" > $scriptdir/bblayers.conf
 
 # 8009 commands
-function build-8009-robot-image() {
+function setenv-8009-robot-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
   export PRODUCT=robot
+}
+
+function build-8009-robot-image() {
+  setenv-8009-robot-image
   cdbitbake machine-robot-image
 }
 
@@ -141,6 +145,13 @@ build-all-8009-robot-images() {
 
 function build-victor-robot-image() {
   build-8009-robot-image
+}
+
+function build-victor-robot-image-incremental() {
+  setenv-8009-robot-image
+  rebakeList=(anki-version machine-robot-image victor)
+  cdbitbake -c cleanall ${rebakeList[@]}
+  cdbitbake machine-robot-image
 }
 
 function build-victor-robot-perf-image() {

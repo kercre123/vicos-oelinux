@@ -5,6 +5,7 @@ set -e
 SCRIPT_NAME=$(basename $0)
 
 # defaults
+INCREMENTAL=0
 VERBOSE=0
 BUILD_COMMAND=("build-victor-robot-image")
 
@@ -42,21 +43,41 @@ if [ $# -gt 0 ]; then
     BUILD_COMMAND=$*
 fi
 
+case "${BUILD_COMMAND[0]}" in
+    *incremental)
+	INCREMENTAL=1
+	;;
+    *)
+	INCREMENTAL=0
+	;;
+esac
+
 echo "Build starting at `date`"
 
 SCRIPT_PATH=$(dirname $([ -L $0 ] && echo "$(dirname $0)/$(readlink -n $0)" || echo $0))
 TOPLEVEL=$(cd "${SCRIPT_PATH}/../.." && pwd)
 
-# remove any existing artifacts
+# If we are not building the same git commit SHA as last time, do a full rebuild
+OS_VER_REV_FILE="$TOPLEVEL/poky/build/os-version-rev"
+if [ $INCREMENTAL -eq 1 ]; then
+  if [ ! -f "${OS_VER_REV_FILE}" -o "`git rev-parse --short HEAD`" != "`cat $OS_VER_REV_FILE`" ]; then
+      INCREMENTAL=0
+  fi
+fi
+
+rm -rf ${OS_VER_REV_FILE}
+# Remove build images, OTA files, etc.
+git clean -dffx $TOPLEVEL/_build
+
+# If we are doing a full build, clean everything, except the downloads folder
+if [ $INCREMENTAL -eq 0 ]; then
+    pushd $TOPLEVEL
+    git clean -dffx -e poky/build/downloads .
+    git submodule foreach --recursive 'git clean -dffx .'
+    popd
+fi
+
 pushd $TOPLEVEL/poky
-
-pushd build
-# known build artifact dirs
-rm -rf bitbake.lock cache downloads  sstate-cache  tmp-glibc
-
-# remove generated files under build/conf
-git clean -xddf -- ./conf
-popd
 
 # Disable check for unset variables (it will make the bitbake scripts exit)
 set +u
@@ -73,4 +94,5 @@ popd
 # Re-enable check for unset variables
 set -u
 
+git rev-parse --short HEAD > ${OS_VER_REV_FILE}
 echo "Build finished at `date`"
