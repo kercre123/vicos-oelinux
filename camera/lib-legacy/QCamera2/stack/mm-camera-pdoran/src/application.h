@@ -14,6 +14,20 @@ class Application
 public:
   struct Args
   {
+    /**
+     * @brief Camera Type (RAW, YUV)
+     */
+    std::string camera;
+
+    /**
+     * @brief Output path
+     */
+    std::string output;
+
+    /**
+     * @brief Dump images
+     */
+    bool dump;
   };
 
   Application();

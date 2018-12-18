@@ -3,13 +3,14 @@
 
 #include <string>
 
+extern "C" {
+#include "mm_qcamera_app.h"
+}
+
 namespace anki
 {
 
-/**
- * @brief Dump binary data to a file
- */
-void dump_frame(const std::string& filename, const uint8_t *bytes, uint32_t num_bytes);
+void dump_frame(mm_camera_buf_def_t* frame, const std::string& path);
 
 } /* namespace anki */
 

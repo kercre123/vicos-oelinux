@@ -1,4 +1,4 @@
-#include "camera_rdi.h"
+#include "camera_yuv.h"
 
 #include <atomic>
 #include <thread>
@@ -9,6 +9,7 @@ extern "C" {
 #include "mm_qcamera_dbg.h"
 }
 
+// TODO: Refactor code so that we don't dump frames from the camera class
 #include "util.h"
 
 // TODO: Remove, these are for debugging experiments
@@ -19,7 +20,7 @@ namespace anki {
 
 //======================================================================================================================
 // Camera Private Implementation
-class CameraRDI::Impl
+class CameraYUV::Impl
 {
 public:
   Impl();
@@ -40,11 +41,15 @@ private:
   bool init();
   bool init_lib();
   bool init_channel();
-  bool init_stream();
+  bool init_stream_preview();
+  bool init_stream_meta();
   void deinit();
 
-  static void static_callback(mm_camera_super_buf_t *bufs, void *userdata);
-  void callback(mm_camera_super_buf_t *bufs);
+  static void static_callback_preview(mm_camera_super_buf_t *bufs, void *userdata);
+  void callback_preview(mm_camera_super_buf_t *bufs);
+
+  static void static_callback_meta(mm_camera_super_buf_t *bufs, void *userdata);
+  void callback_meta(mm_camera_super_buf_t *bufs);
 
   Params _params;
   
@@ -56,11 +61,12 @@ private:
   mm_camera_lib_handle _lib_handle;
   mm_camera_channel_t* _channel;
   mm_camera_stream_t* _stream;
+  mm_camera_stream_t* _meta;
 };
 
 //======================================================================================================================
 
-CameraRDI::Impl::Params::Params()
+CameraYUV::Impl::Params::Params()
   : num_bufs(RDI_BUF_NUM) // from mm_qcamera_app.h
 {
 
@@ -68,7 +74,7 @@ CameraRDI::Impl::Params::Params()
 
 //======================================================================================================================
 
-CameraRDI::Impl::Impl()
+CameraYUV::Impl::Impl()
   : _params() 
   , _isRunning(false)
   , _thread()
@@ -81,21 +87,21 @@ CameraRDI::Impl::Impl()
 
 //======================================================================================================================
 
-CameraRDI::Impl::~Impl()
+CameraYUV::Impl::~Impl()
 {
 }
 
 //======================================================================================================================
 
-void CameraRDI::Impl::start()
+void CameraYUV::Impl::start()
 {
-  _thread = std::thread(&CameraRDI::Impl::run, this);
+  _thread = std::thread(&CameraYUV::Impl::run, this);
   _isRunning = true;
 }
 
 //======================================================================================================================
 
-void CameraRDI::Impl::stop()
+void CameraYUV::Impl::stop()
 {
   _isRunning = false;
   _thread.join();
@@ -103,7 +109,7 @@ void CameraRDI::Impl::stop()
 
 //======================================================================================================================
 
-void CameraRDI::Impl::run()
+void CameraYUV::Impl::run()
 {
   bool initialized = init();
   if (!initialized){
@@ -125,7 +131,7 @@ void CameraRDI::Impl::run()
 
 //======================================================================================================================
 
-bool CameraRDI::Impl::init()
+bool CameraYUV::Impl::init()
 {
   int rc;
 
@@ -133,7 +139,9 @@ bool CameraRDI::Impl::init()
     return false;
   if (!init_channel())
     return false;
-  if (!init_stream())
+  if (!init_stream_preview())
+    return false;
+  if (!init_stream_meta())
     return false;
 
   // Now start the channel
@@ -146,7 +154,7 @@ bool CameraRDI::Impl::init()
 
 //======================================================================================================================
 
-bool CameraRDI::Impl::init_lib()
+bool CameraYUV::Impl::init_lib()
 {
   int rc;
 
@@ -164,7 +172,7 @@ bool CameraRDI::Impl::init_lib()
   return true;
 }
 
-bool CameraRDI::Impl::init_channel()
+bool CameraYUV::Impl::init_channel()
 {
   _channel = mm_app_add_channel(&_lib_handle.test_obj,
                                MM_CHANNEL_TYPE_RDI,
@@ -179,10 +187,10 @@ bool CameraRDI::Impl::init_channel()
 }
 
 //======================================================================================================================
-bool CameraRDI::Impl::init_stream()
+bool CameraYUV::Impl::init_stream_preview()
 {
   int rc;
-  mm_camera_buf_notify_t stream_cb = &CameraRDI::Impl::static_callback;
+  mm_camera_buf_notify_t stream_cb = &CameraYUV::Impl::static_callback_preview;
   void* userdata = static_cast<void*>(this);
 
   mm_camera_stream_t* stream = NULL;
@@ -192,9 +200,9 @@ bool CameraRDI::Impl::init_stream()
     return false;
   }
 
-  // TODO: Verify RDI is a supported format (we know it is)
+  // TODO: Verify supported format
 
-  cam_format_t fmt = CAM_FORMAT_BAYER_MIPI_RAW_10BPP_BGGR;
+  cam_format_t fmt = CAM_FORMAT_YUV_420_NV21;
 
   cam_capability_t *cam_cap = (cam_capability_t *)(_lib_handle.test_obj.cap_buf.buf.buffer);
 
@@ -211,9 +219,8 @@ bool CameraRDI::Impl::init_stream()
   
   stream->s_config.stream_info = (cam_stream_info_t *)stream->s_info_buf.buf.buffer;
   memset(stream->s_config.stream_info, 0, sizeof(cam_stream_info_t));
-  stream->s_config.stream_info->stream_type = CAM_STREAM_TYPE_RAW;
+  stream->s_config.stream_info->stream_type = CAM_STREAM_TYPE_PREVIEW;
   stream->s_config.stream_info->streaming_mode = CAM_STREAMING_MODE_CONTINUOUS;
-  stream->s_config.stream_info->num_of_burst = 0;
 
   stream->s_config.stream_info->fmt = fmt;
   stream->s_config.stream_info->dim.width = cam_cap->raw_dim.width;
@@ -232,19 +239,66 @@ bool CameraRDI::Impl::init_stream()
 }
 
 //======================================================================================================================
-void CameraRDI::Impl::deinit()
+bool CameraYUV::Impl::init_stream_meta()
+{
+  int rc;
+  mm_camera_buf_notify_t stream_cb = &CameraYUV::Impl::static_callback_meta;
+  void* userdata = static_cast<void*>(this);
+  
+  mm_camera_stream_t *stream = NULL;
+  stream = mm_app_add_stream(&_lib_handle.test_obj, _channel);
+  if (stream == NULL) {
+    CDBG_ERROR("%s: add stream failed\n", __func__);
+    return false;
+  }
+
+  cam_format_t fmt = CAM_FORMAT_YUV_420_NV21;
+
+  cam_capability_t *cam_cap = (cam_capability_t *)(_lib_handle.test_obj.cap_buf.buf.buffer);
+
+  stream->s_config.mem_vtbl.get_bufs = mm_app_stream_initbuf;
+  stream->s_config.mem_vtbl.put_bufs = mm_app_stream_deinitbuf;
+  stream->s_config.mem_vtbl.clean_invalidate_buf =
+    mm_app_stream_clean_invalidate_buf;
+  stream->s_config.mem_vtbl.invalidate_buf = mm_app_stream_invalidate_buf;
+  stream->s_config.mem_vtbl.user_data = (void *)stream;
+  stream->s_config.stream_cb = stream_cb;
+  stream->s_config.userdata = userdata;
+  stream->num_of_bufs = _params.num_bufs;
+
+  stream->s_config.stream_info = (cam_stream_info_t *)stream->s_info_buf.buf.buffer;
+  memset(stream->s_config.stream_info, 0, sizeof(cam_stream_info_t));
+  stream->s_config.stream_info->stream_type = CAM_STREAM_TYPE_METADATA;
+  stream->s_config.stream_info->streaming_mode = CAM_STREAMING_MODE_CONTINUOUS;
+  stream->s_config.stream_info->fmt = fmt;
+  stream->s_config.stream_info->dim.width = sizeof(cam_metadata_info_t);
+  stream->s_config.stream_info->dim.height = 1;
+  stream->s_config.padding_info = cam_cap->padding_info;
+
+  rc = mm_app_config_stream(&_lib_handle.test_obj, _channel, stream, &stream->s_config);
+  if (MM_CAMERA_OK != rc) {
+      CDBG_ERROR("%s:config preview stream err=%d\n", __func__, rc);
+      return NULL;
+  }
+  _meta = stream;
+
+  return true;
+}
+
+//======================================================================================================================
+void CameraYUV::Impl::deinit()
 {
   // TODO: Implement deinit
 }
 
 //======================================================================================================================
-void CameraRDI::Impl::static_callback(mm_camera_super_buf_t *bufs, void *userdata)
+void CameraYUV::Impl::static_callback_preview(mm_camera_super_buf_t *bufs, void *userdata)
 {
-  CameraRDI::Impl* camera = static_cast<CameraRDI::Impl*>(userdata);
-  camera->callback(bufs);
+  CameraYUV::Impl* camera = static_cast<CameraYUV::Impl*>(userdata);
+  camera->callback_preview(bufs);
 }
 
-void CameraRDI::Impl::callback(mm_camera_super_buf_t *bufs)
+void CameraYUV::Impl::callback_preview(mm_camera_super_buf_t *bufs)
 {
   // TODO: Consider thread safety in the future when we actually start to do stuff with the bufs
   
@@ -259,8 +313,8 @@ void CameraRDI::Impl::callback(mm_camera_super_buf_t *bufs)
   const int stride = buf_planes->plane_info.mp[0].stride;
   const int height = buf_planes->plane_info.mp[0].scanline;
 
-#if 1
   // TODO: Get the data out of the buffers  
+#if 0
   for (uint32_t i = 0; i < bufs->num_bufs; i++) {
 
     // We know we are SBGGR10P format, so it's a single plane
@@ -268,7 +322,7 @@ void CameraRDI::Impl::callback(mm_camera_super_buf_t *bufs)
     std::string path = std::string("./images/image.")
       + std::to_string(bufs->bufs[i]->frame_idx) + "."
       + std::to_string(stride) + "x" + std::to_string(height)
-      + std::string(".sbggr10p");
+      + std::string(".yuv420sp");
     
     mm_camera_buf_def_t* frame = bufs->bufs[i];
     dump_frame(frame, path);
@@ -285,14 +339,33 @@ void CameraRDI::Impl::callback(mm_camera_super_buf_t *bufs)
 }
 
 //======================================================================================================================
+void CameraYUV::Impl::static_callback_meta(mm_camera_super_buf_t *bufs, void *userdata)
+{
+  CameraYUV::Impl* camera = static_cast<CameraYUV::Impl*>(userdata);
+  camera->callback_meta(bufs);
+}
+
+void CameraYUV::Impl::callback_meta(mm_camera_super_buf_t *bufs)
+{
+  std::cerr<<"callback_meta"<<std::endl;
+  // TODO: See if there are other ways of enqueing the buffers rather than going to the ops vtable
+  for (uint32_t i = 0; i < bufs->num_bufs; i++) {
+    if (MM_CAMERA_OK != _lib_handle.test_obj.cam->ops->qbuf(bufs->camera_handle,bufs->ch_id,bufs->bufs[i]))
+    {
+      CDBG_ERROR("%s: Failed in Qbuf\n", __func__);
+    }
+  }
+}
+
+//======================================================================================================================
 // Camera Public Implementation
-CameraRDI::CameraRDI()
-  : _impl(std::unique_ptr<CameraRDI::Impl>(new CameraRDI::Impl())) // std::make_unique requires c++14
+CameraYUV::CameraYUV()
+  : _impl(std::unique_ptr<CameraYUV::Impl>(new CameraYUV::Impl())) // std::make_unique requires c++14
 {
 }
 
-CameraRDI::~CameraRDI(){ }
-void CameraRDI::onStart() { _impl->start(); }
-void CameraRDI::onStop() { _impl->stop(); }
+CameraYUV::~CameraYUV(){ }
+void CameraYUV::onStart() { _impl->start(); }
+void CameraYUV::onStop() { _impl->stop(); }
 
 } /* namespace anki */

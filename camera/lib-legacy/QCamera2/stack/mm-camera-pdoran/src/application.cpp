@@ -1,6 +1,7 @@
 #include "application.h"
 
 #include "camera_rdi.h"
+#include "camera_yuv.h"
 #include "event.h"
 
 #include <csignal>
@@ -56,7 +57,17 @@ int Application::exec(const Args& args)
   setup_signal_handler();
 
   // Create and start a new camera
-  _camera.reset(new CameraRDI());
+  if (args.camera == "RAW")
+    _camera.reset(new CameraRDI());
+  else if (args.camera == "YUV")
+    _camera.reset(new CameraYUV());
+  else
+    return 1;
+
+  Camera::Params params;
+  params.dump = args.dump;
+  params.directory = args.output;
+  _camera->setParams(params);
   
   _camera->start();
 
