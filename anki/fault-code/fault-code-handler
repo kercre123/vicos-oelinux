@@ -184,10 +184,12 @@ else
         FAULT_RESTART_COUNT="`/bin/cat ${FAULT_RESTART_COUNT_FILE}`"
       fi
       log "Restart count ${FAULT_RESTART_COUNT}/${FAULT_RESTART_LIMIT}"
-      if [ ${FAULT_RESTART_COUNT} -ge ${FAULT_RESTART_LIMIT} ]; then
-        log "No more restarts allowed"
-        ON_FAULT_RESTART=0
-      fi
+      
+      # if [ ${FAULT_RESTART_COUNT} -ge ${FAULT_RESTART_LIMIT} ]; then
+      #  log "No more restarts allowed"
+      #  ON_FAULT_RESTART=0
+      # fi
+
     fi
 
     # Display "Vector will restart"?
