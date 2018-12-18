@@ -22,7 +22,7 @@ namespace anki {
 class CameraRDI::Impl
 {
 public:
-  Impl();
+  Impl(CameraRDI& parent);
   ~Impl();
   void start();
   void stop();
@@ -46,6 +46,7 @@ private:
   static void static_callback(mm_camera_super_buf_t *bufs, void *userdata);
   void callback(mm_camera_super_buf_t *bufs);
 
+  CameraRDI& _parent;
   Params _params;
   
   std::atomic<bool> _isRunning;
@@ -68,8 +69,9 @@ CameraRDI::Impl::Params::Params()
 
 //======================================================================================================================
 
-CameraRDI::Impl::Impl()
-  : _params() 
+CameraRDI::Impl::Impl(CameraRDI& parent)
+  : _parent(parent)
+  , _params() 
   , _isRunning(false)
   , _thread()
   , _lib_handle()
@@ -259,21 +261,21 @@ void CameraRDI::Impl::callback(mm_camera_super_buf_t *bufs)
   const int stride = buf_planes->plane_info.mp[0].stride;
   const int height = buf_planes->plane_info.mp[0].scanline;
 
-#if 1
-  // TODO: Get the data out of the buffers  
-  for (uint32_t i = 0; i < bufs->num_bufs; i++) {
+  if (_parent.getParams().dump){
+    // TODO: Get the data out of the buffers  
+    for (uint32_t i = 0; i < bufs->num_bufs; i++) {
 
-    // We know we are SBGGR10P format, so it's a single plane
+      // We know we are SBGGR10P format, so it's a single plane
 
-    std::string path = std::string("./images/image.")
-      + std::to_string(bufs->bufs[i]->frame_idx) + "."
-      + std::to_string(stride) + "x" + std::to_string(height)
-      + std::string(".sbggr10p");
-    
-    mm_camera_buf_def_t* frame = bufs->bufs[i];
-    dump_frame(frame, path);
+      std::string path = _parent.getParams().directory + "/" + std::string("image.")
+        + std::to_string(bufs->bufs[i]->frame_idx) + "."
+        + std::to_string(stride) + "x" + std::to_string(height)
+        + std::string(".sbggr10p");
+      
+      mm_camera_buf_def_t* frame = bufs->bufs[i];
+      dump_frame(frame, path);
+    }
   }
-#endif
   
   // TODO: See if there are other ways of enqueing the buffers rather than going to the ops vtable
   for (uint32_t i = 0; i < bufs->num_bufs; i++) {
@@ -287,7 +289,7 @@ void CameraRDI::Impl::callback(mm_camera_super_buf_t *bufs)
 //======================================================================================================================
 // Camera Public Implementation
 CameraRDI::CameraRDI()
-  : _impl(std::unique_ptr<CameraRDI::Impl>(new CameraRDI::Impl())) // std::make_unique requires c++14
+  : _impl(std::unique_ptr<CameraRDI::Impl>(new CameraRDI::Impl(*this))) // std::make_unique requires c++14
 {
 }
 
