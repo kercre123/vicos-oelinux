@@ -16,6 +16,7 @@ Restart=no
 User=robot
 Group=anki
 UMask=0002
+LimitMEMLOCK=infinity
 
 # Robot process runs at top priority
 Nice=-20
