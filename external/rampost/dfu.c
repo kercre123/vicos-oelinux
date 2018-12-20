@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <errno.h>
+#include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
+#include <time.h>
 
 #include "messages.h"
 #include "spine_hal.h"

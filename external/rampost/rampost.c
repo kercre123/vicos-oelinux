@@ -1,16 +1,12 @@
-#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include <time.h>
 #include <fcntl.h>
-#include <errno.h>
-#include <ctype.h>
-#include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <string.h>
 #include <termios.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <sys/ioctl.h>
-#include <assert.h>
 
 #include "messages.h"
 #include "spine_hal.h"
@@ -60,7 +56,7 @@ void microwait(long microsec)
 enum {LED_BACKPACK_FRONT, LED_BACKPACK_MIDDLE, LED_BACKPACK_BACK};
 
 void set_body_leds(int success, int inRecovery) {
-  struct LightState ledPayload = {0};
+   struct LightState ledPayload = {{0}};
 
   if (!success) {
     ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
@@ -213,6 +209,7 @@ void force_syscon_resync(void) {
 int main(int argc, const char* argv[]) {
   static const char* const LOW_BAT = "low bat";
   static const char* const TOO_HOT = "too hot";
+  static const char* const BAD_LCD = "bad lcd";
   int error_code = 0;
   SpineErr spine_error = 0;
   bool success = false;
@@ -246,11 +243,13 @@ int main(int argc, const char* argv[]) {
   }
 
   lcd_gpio_setup();
-  lcd_spi_init();
-
   lcd_device_reset();
-  success = lcd_device_read_status();
+
+  success = lcd_status_check();
   DAS_LOG(DAS_INFO, "lcd_check", "%d",success);
+  if (!success) {
+     write_semaphore(BAD_LCD, strlen(BAD_LCD));
+  }
 
   in_recovery_mode = recovery_mode_check();
 
@@ -310,8 +309,11 @@ int main(int argc, const char* argv[]) {
   }
 
   if (error_code || is_dev_unit || is_low_battery || is_too_hot) {
-    lcd_device_init(); // We'll be displaying something
-    lcd_set_brightness(5);
+     // We'll be displaying something, initialize the display
+     lcd_spi_init(); 
+     lcd_device_init(); 
+     lcd_set_brightness(5);
+     
     //Skip everything else on syscon error!
     if (error_code) {
       show_error(error_code);

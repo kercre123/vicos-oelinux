@@ -1,10 +1,12 @@
-#include <stdio.h>
-#include <fcntl.h>
-#include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 #include <string.h>
 #include <assert.h>
-#include <unistd.h>
 #include <termios.h>
 
 #include "spine_hal.h"
