@@ -5,6 +5,7 @@
 #include "event.h"
 
 #include <csignal>
+#include <iostream>
 
 namespace anki {
 
@@ -61,8 +62,10 @@ int Application::exec(const Args& args)
     _camera.reset(new CameraRDI());
   else if (args.camera == "YUV")
     _camera.reset(new CameraYUV());
-  else
+  else {
+    std::cerr<<"No valid camera argument"<<std::endl;
     return 1;
+  }
 
   Camera::Params params;
   params.dump = args.dump;

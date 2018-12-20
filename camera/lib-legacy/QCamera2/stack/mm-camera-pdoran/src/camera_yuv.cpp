@@ -9,6 +9,8 @@ extern "C" {
 #include "mm_qcamera_dbg.h"
 }
 
+#include "serialization.h"
+
 // TODO: Refactor code so that we don't dump frames from the camera class
 #include "util.h"
 
@@ -350,6 +352,13 @@ void CameraYUV::Impl::static_callback_meta(mm_camera_super_buf_t *bufs, void *us
 void CameraYUV::Impl::callback_meta(mm_camera_super_buf_t *bufs)
 {
   std::cerr<<"callback_meta"<<std::endl;
+
+  // TODO: Assert that this is metadata for our channel & stream
+  mm_camera_buf_def_t *frame = bufs->bufs[0];
+  cam_metadata_info_t* metadata = (cam_metadata_info_t*)frame->buffer; 
+
+  std::cerr<<"Metadata: "<<std::endl<<(*metadata)<<std::endl;
+
   // TODO: See if there are other ways of enqueing the buffers rather than going to the ops vtable
   for (uint32_t i = 0; i < bufs->num_bufs; i++) {
     if (MM_CAMERA_OK != _lib_handle.test_obj.cam->ops->qbuf(bufs->camera_handle,bufs->ch_id,bufs->bufs[i]))

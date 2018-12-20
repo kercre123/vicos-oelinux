@@ -43,6 +43,7 @@ LOCAL_SRC_FILES:= \
         src/camera_rdi.cpp \
         src/camera_yuv.cpp \
         src/camera.cpp \
+        src/serialization.cpp \
         src/util.cpp \
         src/main_pdoran.cpp
 

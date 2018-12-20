@@ -27,6 +27,10 @@ int main(int argc, char* argv[])
   Application app;
   Application::Args args;
   
+  args.dump = false;
+  args.output = "./";
+  args.camera = "RAW";
+
   // Parse arguments using getopt (posix standard)
   int c;
   int optidx = 0;
