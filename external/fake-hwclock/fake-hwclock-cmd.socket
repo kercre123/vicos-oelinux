@@ -1,0 +1,8 @@
+[Unit]
+Description=Fake Hardware Clock socket
+
+[Socket]
+ListenFIFO=/run/fake-hwclock-cmd
+
+[Install]
+WantedBy=sockets.target

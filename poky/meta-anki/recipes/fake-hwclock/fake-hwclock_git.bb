@@ -28,6 +28,11 @@ do_install() {
          install -m 0644 ${S}/${f} -D ${SYSTEM_DIR}/${f}
          ln -sf /etc/systemd/system/${f} ${SYSTEM_DIR}/multi-user.target.wants/${f}
       done
+
+      install -d ${SYSTEM_DIR}/sockets.target.wants/
+      install -m 0644 ${S}/fake-hwclock-cmd.socket -D ${SYSTEM_DIR}/fake-hwclock-cmd.socket
+      install -m 0644 ${S}/fake-hwclock-cmd.service -D ${SYSTEM_DIR}/fake-hwclock-cmd.service
+      ln -sf /etc/systemd/system/fake-hwclock-cmd.socket ${SYSTEM_DIR}/sockets.target.wants/fake-hwclock-cmd.socket
   fi
 }
 
