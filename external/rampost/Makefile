@@ -31,3 +31,6 @@ rampost: rampost.c gpio.c lcd.c spine_hal.c dfu.c lcd_bitbang.c
 
 animfail: animfail.c gpio.c lcd.c
 	$(CC) $(CFLAGS) animfail.c gpio.c lcd.c -o $@
+
+format:
+	astyle --options=../../anki/victor/astylerc *.c *.h

@@ -57,7 +57,6 @@ anki/bin/vic-log-cat              2901 2901 0550
 anki/bin/vic-log-event            2901 2901 0550
 anki/bin/vic-log-upload           2901 2901 0550
 anki/bin/vic-logmgr-upload        2901 2901 0550
-anki/bin/vic-neuralnets           2903 2901 0500
 anki/bin/vic-on-exit              2901 2901 0550
 anki/bin/vic-powerstatus.sh       2901 2901 0550
 anki/bin/vic-robot                2902 2901 0550

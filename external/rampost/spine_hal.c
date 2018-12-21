@@ -541,7 +541,7 @@ const void* hal_get_a_frame(uint8_t* frame_buffer, int buffer_len)
     else if (r > 0) { //good data
       return frame_buffer;
     }
-    else {  //r==0: out of data
+    else {   //r==0: out of data
       hal_spine_io();  //get more and return
     }
   }

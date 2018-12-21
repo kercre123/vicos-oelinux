@@ -102,7 +102,6 @@ GPIO gpio_create(int gpio_number, enum Gpio_Dir direction, enum Gpio_Level initi
   return gp;
 }
 
-
 GPIO gpio_create_open_drain_output(int gpio_number, enum Gpio_Level initial_value)
 {
   enum Gpio_Dir initial_dir = gpio_drain_direction(initial_value);
