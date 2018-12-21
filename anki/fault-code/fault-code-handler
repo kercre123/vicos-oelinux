@@ -184,7 +184,7 @@ else
         FAULT_RESTART_COUNT="`/bin/cat ${FAULT_RESTART_COUNT_FILE}`"
       fi
       log "Restart count ${FAULT_RESTART_COUNT}/${FAULT_RESTART_LIMIT}"
-      
+
       # if [ ${FAULT_RESTART_COUNT} -ge ${FAULT_RESTART_LIMIT} ]; then
       #  log "No more restarts allowed"
       #  ON_FAULT_RESTART=0
@@ -224,6 +224,20 @@ if [ $KILL_CAMERA_AFTER_STOPPING_ROBOT -eq 1 ]; then
   systemctl start mm-anki-camera
 fi
 
+#
+# Read and discard any fault codes that arrived during shutdown,
+# to prevent repeat activation of fault code handler.
+#
+
+logv "Draining input"
+while read -r -t 1 CODE ; do
+  logv "Drained ${CODE}"
+done
+logv "Drained input"
+
+#
+# Restart services?
+#
 if [ $ON_FAULT_RESTART -eq 1 ]; then
     # Sleep before restart
     if [ $TIMEOUT_RESTART_SEC -gt 0 ]; then
@@ -240,5 +254,8 @@ if [ $ON_FAULT_RESTART -eq 1 ]; then
     systemctl restart anki-robot.target
 fi
 
+#
+# Clean up and exit
+#
 log "fault-code-handler done"
 rm -f $PROGRESS_FILE
