@@ -5,8 +5,9 @@
 
 #include "gpio.h"
 #include "das.h"
+#include "rampost.h"
+#include "lcd.h"
 
-void microwait(long microsec);
 #define milliwait(ms) microwait(1000L*(ms))
 
 /************** LCD INTERFACE *****************/
@@ -30,18 +31,18 @@ static GPIO MISO_PIN;
 
 void gpio_destroy(GPIO gp);
 
-
-
-static void lcd_bitbang_teardown(void) {
+static void lcd_bitbang_teardown(void)
+{
   if (SELECT_PIN) { gpio_destroy(SELECT_PIN); }
   if (CLOCK_PIN)  { gpio_destroy(CLOCK_PIN);  }
   if (MOSI_PIN)   { gpio_destroy(MOSI_PIN);   }
   if (MISO_PIN)   { gpio_destroy(MISO_PIN);   }
-  //destroying this one clears the screen, so just close 
-  if (DnC_PIN)    { gpio_close(DnC_PIN);    }  
+  //destroying this one clears the screen, so just close
+  if (DnC_PIN)    { gpio_close(DnC_PIN);    }
 }
 
-static void lcd_bitbang_setup(void) {
+static void lcd_bitbang_setup(void)
+{
   // IO Setup
   DnC_PIN = gpio_create(GPIO_LCD_WRX, gpio_DIR_OUTPUT, gpio_HIGH);
   SELECT_PIN = gpio_create(GPIO_LCD_SELECT, gpio_DIR_OUTPUT, gpio_HIGH);
@@ -51,27 +52,30 @@ static void lcd_bitbang_setup(void) {
 }
 
 
-static inline void lcd_bitbang_clockout(uint8_t byte) {
-  for (int bitcount=0; bitcount<8; bitcount++) {
+static inline void lcd_bitbang_clockout(uint8_t byte)
+{
+  for (int bitcount = 0; bitcount < 8; bitcount++) {
     gpio_set_value(MOSI_PIN, (byte & 0x80) ? gpio_HIGH : gpio_LOW);
     gpio_set_value(CLOCK_PIN, gpio_LOW);
-    byte<<=1;
+    byte <<= 1;
     gpio_set_value(CLOCK_PIN, gpio_HIGH);
   }
 }
 
-static inline uint8_t lcd_bitbang_clockin(void) {
+static inline uint8_t lcd_bitbang_clockin(void)
+{
   uint8_t byte = 0;
-  for (int bitcount=0; bitcount<8; bitcount++) {
+  for (int bitcount = 0; bitcount < 8; bitcount++) {
     gpio_set_value(CLOCK_PIN, gpio_LOW);
-    byte<<=1;
-    byte|=gpio_get_value(MISO_PIN);
+    byte <<= 1;
+    byte |= gpio_get_value(MISO_PIN);
     gpio_set_value(CLOCK_PIN, gpio_HIGH);
   }
   return byte;
 }
 
-static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes ) {
+static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes )
+{
   gpio_set_value(DnC_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_LOW);
 
@@ -79,50 +83,40 @@ static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes ) 
 
   //toggle data/command pin
   gpio_set_value(DnC_PIN, gpio_HIGH);
-  
-  while (data_bytes-->0) {
+
+  while (data_bytes-- > 0) {
     lcd_bitbang_clockout( *outbuf++);
   }
 
-  gpio_set_value(MOSI_PIN, gpio_LOW); 
+  gpio_set_value(MOSI_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_HIGH);
-}  
+}
 
-static void lcd_bitbang_read(int cmd, uint8_t result[], int bytes_expected ) {
-  int bytes = bytes_expected; //for debug
-  uint8_t* out = result;
-
+static void lcd_bitbang_read(int cmd, uint8_t result[], int bytes_expected )
+{
   gpio_set_value(DnC_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_LOW);
 
   //shift out command
   lcd_bitbang_clockout(cmd);
-  
-  gpio_set_value(DnC_PIN, gpio_HIGH);
-  gpio_set_value(MOSI_PIN, gpio_HIGH); 
 
-  if (bytes_expected>1)  {
+  gpio_set_value(DnC_PIN, gpio_HIGH);
+  gpio_set_value(MOSI_PIN, gpio_HIGH);
+
+  if (bytes_expected > 1)  {
     //we need one extra clock cycle for multi-byte reads.
-      gpio_set_value(CLOCK_PIN, gpio_LOW);
-      gpio_set_value(CLOCK_PIN, gpio_HIGH);
+    gpio_set_value(CLOCK_PIN, gpio_LOW);
+    gpio_set_value(CLOCK_PIN, gpio_HIGH);
   }
 
   //shift in result:
-  while (bytes_expected-->0) {
+  while (bytes_expected-- > 0) {
     *result++ = lcd_bitbang_clockin();
-  }  
-  
-  gpio_set_value(MOSI_PIN, gpio_LOW); 
+  }
+
+  gpio_set_value(MOSI_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_HIGH);
 
-  printf("sent command %d\n", cmd);
-  printf("received %d bytes: ", bytes);
-  for (int i=0;i<bytes;i++)
-  {
-     printf("%02x ", out[i]);
-  }
-  printf("\n");
-  
 }
 
 enum {
@@ -133,12 +127,13 @@ enum {
 };
 
 
-int lcd_status_check(void) {
+int lcd_status_check(void)
+{
 
   /* Preconditions: Device must have been reset
      device SPI should not be initialized
   */
-  uint8_t id[3]; 
+  uint8_t id[3];
   uint8_t status[1];
   uint8_t zerobyte[1] = {0};
 
@@ -150,25 +145,21 @@ int lcd_status_check(void) {
   //we need to wait 120 ms before status is available (ST7789V pg 181)
   lcd_bitbang_write(cmd_SleepOut, zerobyte, sizeof(zerobyte));
   milliwait(120);
-  
+
   lcd_bitbang_read(cmd_GetStatus, status, sizeof(status));
 
   lcd_bitbang_write(cmd_SleepIn, zerobyte, sizeof(zerobyte));
-   //"It will be necessary to wait 5msec before sending any new commands..." (ST7789V pg 179) 
-  milliwait(5); 
-  
+  //"It will be necessary to wait 5msec before sending any new commands..." (ST7789V pg 179)
+  milliwait(5);
+
   DAS_LOG(DAS_DEBUG, "lcd.read_status", "id = %02x%02x%02x,  result = %x",
           id[0], id[1], id[2], status[0]);
 
   lcd_bitbang_teardown();
-  
+
   //check against the magic numbers from the manufacturer. (ST7789V datasheet pg 162)
   int good_id = ( (id[0] == 0x85) && (id[1] == 0x85) && (id[2] == 0x52));
   // check self-Diagnostic bits. 2 high bits are `11`. (ST7789V datasheet pg 177)
   int good_selfcheck = ( (status[0] & 0xC0) == 0xC0 );
   return (good_id && good_selfcheck);
 }
-
-
-
-

@@ -1,15 +1,16 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <ctype.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 
 #include "messages.h"
 #include "spine_hal.h"
 #include "rampost.h"
 #include "das.h"
+#include "dfu.h"
 
 #define VERSTRING_LEN 16
 
@@ -31,13 +32,14 @@ FILE* gImgFilep = NULL;
 
 void dfu_cleanup(void)
 {
-   if (gImgFilep) {
-      fclose(gImgFilep);
-      gImgFilep = NULL;
-   }
+  if (gImgFilep) {
+    fclose(gImgFilep);
+    gImgFilep = NULL;
+  }
 }
 
-void show_error(RampostErr err) {
+void show_error(RampostErr err)
+{
   DAS_LOG(DAS_ERROR, "dfu.error", "%d", err);
 }
 
@@ -65,9 +67,9 @@ enum VersionStatus  CheckVersion(const uint8_t desiredVersion[], const uint8_t f
   DAS_PRINTHEX(DAS_EVENT, "dfu.desired_version  ", desiredVersion, VERSTRING_LEN);
 
   uint8_t i;
-  for (i=0;i<VERSTRING_LEN;i++) {
+  for (i = 0; i < VERSTRING_LEN; i++) {
     if (desiredVersion[i] != firmwareVersion[i]) {
-       return (desiredVersion[i] < firmwareVersion[i]) ? version_NEWER : version_OLDER;
+      return (desiredVersion[i] < firmwareVersion[i]) ? version_NEWER : version_OLDER;
     }
   }
   return version_OK;  // all digits same
@@ -84,7 +86,8 @@ int IsGoodAck(struct AckMessage* msg)
 }
 
 
-bool SendData(const struct WriteDFU* packet) {
+bool SendData(const struct WriteDFU* packet)
+{
 
   const struct SpineMessageHeader* hdr;
 
@@ -105,7 +108,8 @@ bool SendData(const struct WriteDFU* packet) {
   }
   else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
     //Noone should send NACK
-    DAS_LOG(DAS_ERROR, "dfu.send_data_nak", "Got NACK %d in response",((struct AckMessage*)(hdr + 1))->status);
+    DAS_LOG(DAS_ERROR, "dfu.send_data_nak", "Got NACK %d in response",
+            ((struct AckMessage*)(hdr + 1))->status);
     return false;
   }
   return true;
@@ -124,7 +128,7 @@ const uint8_t* dfu_get_version()
   hal_send_frame(PAYLOAD_VERSION, NULL, 0);
 
   // Worst case, version should be returned 3 packets later. we're waiting for a full 200 here
-  hdr = hal_wait_for_frame_or_nack(PAYLOAD_VERSION, FRAME_WAIT_MS*2);
+  hdr = hal_wait_for_frame_or_nack(PAYLOAD_VERSION, FRAME_WAIT_MS * 2);
   if (hdr) {
     if (hdr->payload_type == PAYLOAD_VERSION) {
       memcpy(gInstalledVersion, ((struct VersionInfo*)(hdr + 1))->app_version, VERSTRING_LEN);
@@ -146,8 +150,9 @@ const uint8_t* dfu_get_version()
 
 uint8_t versionString[VERSTRING_LEN];
 
-const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
-  DAS_LOG(DAS_EVENT, "dfu.open_file", "opening \"%s\"",filename);
+const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut)
+{
+  DAS_LOG(DAS_EVENT, "dfu.open_file", "opening \"%s\"", filename);
   *fpOut = fopen(filename, "rb");
   if (!*fpOut) {
     show_error(err_DFU_FILE_OPEN);
@@ -162,7 +167,8 @@ const uint8_t* dfu_open_binary_file(const char* filename, FILE** fpOut) {
   return versionString;
 }
 
-bool dfu_erase_image(void) {
+bool dfu_erase_image(void)
+{
   const struct SpineMessageHeader* hdr;
 
   DAS_LOG(DAS_EVENT, "dfu.erase_image", "erasing installed image");
@@ -178,14 +184,16 @@ bool dfu_erase_image(void) {
   if (hdr) {
     if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
       //Should not fail
-      DAS_LOG(DAS_ERROR, "dfu.erase_nak", "Got NACK %d in response",((struct AckMessage*)(hdr + 1))->status);
+      DAS_LOG(DAS_ERROR, "dfu.erase_nak", "Got NACK %d in response",
+              ((struct AckMessage*)(hdr + 1))->status);
       return false;
     }
   }
   return true;
 }
 
-bool dfu_send_image(FILE* imgfile) {
+bool dfu_send_image(FILE* imgfile)
+{
   struct WriteDFU packet = {0};
   size_t databytes;
   size_t itemcount;
@@ -205,7 +213,8 @@ bool dfu_send_image(FILE* imgfile) {
       packet.address = start_addr;
       packet.wordCount = itemcount;
 
-      DAS_LOG(DAS_DEBUG, "dfu.send_image_write", "writing %d words (%zd bytes) for @%x", packet.wordCount, databytes, packet.address);
+      DAS_LOG(DAS_DEBUG, "dfu.send_image_write", "writing %d words (%zd bytes) for @%x",
+              packet.wordCount, databytes, packet.address);
 
       if (!SendData(&packet)) {
         show_error(err_DFU_SEND);
@@ -221,7 +230,8 @@ bool dfu_send_image(FILE* imgfile) {
   return true;
 }
 
-bool dfu_validate_image(void) {
+bool dfu_validate_image(void)
+{
   DAS_LOG(DAS_EVENT, "dfu.validate", "...");
 
   const struct SpineMessageHeader* hdr;
@@ -241,7 +251,8 @@ bool dfu_validate_image(void) {
   }
   else if (!IsGoodAck((struct AckMessage*)(hdr + 1))) {
     //Noone should send NACK
-    DAS_LOG(DAS_ERROR, "dfu.validate_nak", "Got NACK %d in response",((struct AckMessage*)(hdr + 1))->status);
+    DAS_LOG(DAS_ERROR, "dfu.validate_nak", "Got NACK %d in response",
+            ((struct AckMessage*)(hdr + 1))->status);
     return false;
   }
   //else good ack, but let's wait for a app data frame to be sure
@@ -268,18 +279,15 @@ RampostErr dfu_sequence(const char* dfu_file, bool force_update)
     return err_SYSCON_VERSION_GOOD; //no update needed
   }
 
-  if (!dfu_erase_image())
-  {
+  if (!dfu_erase_image()) {
     return err_DFU_ERASE_ERROR;
   }
 
-  if (!dfu_send_image(gImgFilep))
-  {
+  if (!dfu_send_image(gImgFilep)) {
     return err_DFU_INSTALL_ERROR;
   }
 
-  if (!dfu_validate_image())
-  {
+  if (!dfu_validate_image()) {
     return err_DFU_VALIDATE_ERROR;
   }
 

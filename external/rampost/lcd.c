@@ -1,28 +1,22 @@
-#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <time.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <stdbool.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 
-#include "rampost.h"
 #include "gpio.h"
-#include "lcd.h"
+#include "rampost.h"
 #include "das.h"
+#include "lcd.h"
 
 /************** LCD INTERFACE *****************/
 
 #define GPIO_LCD_WRX   110
 #define GPIO_LCD_RESET1 55
-
-#define GPIO_LCD_MOSI 12
-#define GPIO_LCD_MISO 13
-#define GPIO_LCD_SELECT 14
-#define GPIO_LCD_CLK 15
-
 
 #define LCD_FRAME_WIDTH     184
 #define LCD_FRAME_HEIGHT    96
@@ -30,7 +24,7 @@
 #define RSHIFT 0x1C
 
 typedef struct LcdFrame_t {
-  uint16_t data[LCD_FRAME_WIDTH*LCD_FRAME_HEIGHT];
+  uint16_t data[LCD_FRAME_WIDTH * LCD_FRAME_HEIGHT];
 } LcdFrame;
 
 typedef struct {
@@ -43,7 +37,7 @@ typedef struct {
 static const INIT_SCRIPT init_scr[] = {
   { 0x10, 1, { 0x00 }, 120}, // Sleep in
   { 0x2A, 4, { 0x00, RSHIFT, (LCD_FRAME_WIDTH + RSHIFT - 1) >> 8, (LCD_FRAME_WIDTH + RSHIFT - 1) & 0xFF } }, // Column address set
-  { 0x2B, 4, { 0x00, 0x00, (LCD_FRAME_HEIGHT -1) >> 8, (LCD_FRAME_HEIGHT -1) & 0xFF } }, // Row address set
+  { 0x2B, 4, { 0x00, 0x00, (LCD_FRAME_HEIGHT - 1) >> 8, (LCD_FRAME_HEIGHT - 1) & 0xFF } }, // Row address set
   { 0x36, 1, { 0x00 }, 0 }, // Memory data access control
   { 0x3A, 1, { 0x55 }, 0 }, // Interface pixel format (16 bit/pixel 65k RGB data)
   { 0xB0, 2, { 0x00, 0x08 } }, // RAM control (LSB first)
@@ -92,13 +86,14 @@ int lcd_spi_init()
   if (!spi_fd)  {
     error_exit(err_SPI_INIT);
   }
-  if (spi_fd>0) {
+  if (spi_fd > 0) {
     ioctl(spi_fd, SPI_IOC_RD_MODE, &MODE);
   }
   return spi_fd;
 }
 
-static void lcd_spi_transfer(int cmd, int bytes, const void* data) {
+static void lcd_spi_transfer(int cmd, int bytes, const void* data)
+{
   const uint8_t* tx_buf = data;
 
   gpio_set_value(DnC_PIN, cmd ? gpio_LOW : gpio_HIGH);
@@ -115,10 +110,10 @@ static void lcd_spi_transfer(int cmd, int bytes, const void* data) {
 
 static void _led_set_brightness(const int brightness, const char* led)
 {
-  int fd = open(led,O_WRONLY);
+  int fd = open(led, O_WRONLY);
   if (fd) {
     char buf[3];
-    snprintf(buf,3,"%02d\n",brightness);
+    snprintf(buf, 3, "%02d\n", brightness);
     write(fd, buf, 3);
     close(fd);
   }
@@ -128,25 +123,28 @@ void lcd_set_brightness(int brightness)
 {
   if (brightness > 10) { brightness = 10; }
   if (brightness <  0) { brightness =  0; }
-  
-  for (int l=0; l<sizeof(BACKLIGHT_DEVICES); ++l) {
+
+  for (int l = 0; l < sizeof(BACKLIGHT_DEVICES); ++l) {
     _led_set_brightness(brightness, BACKLIGHT_DEVICES[l]);
   }
 }
 
 
-void lcd_draw_frame2(const uint16_t* frame, size_t size) {
-   static const uint8_t WRITE_RAM = 0x2C;
-   lcd_spi_transfer(true, 1, &WRITE_RAM);
-   lcd_spi_transfer(false, size, frame);
+void lcd_draw_frame2(const uint16_t* frame, size_t size)
+{
+  static const uint8_t WRITE_RAM = 0x2C;
+  lcd_spi_transfer(true, 1, &WRITE_RAM);
+  lcd_spi_transfer(false, size, frame);
 }
 
-void lcd_clear_screen(void) {
-   const LcdFrame frame={{0}};
-   lcd_draw_frame2(frame.data, sizeof(frame.data));
+void lcd_clear_screen(void)
+{
+  const LcdFrame frame = {{0}};
+  lcd_draw_frame2(frame.data, sizeof(frame.data));
 }
 
-void lcd_gpio_teardown(void) {
+void lcd_gpio_teardown(void)
+{
   if (DnC_PIN) {
     gpio_close(DnC_PIN);
   }
@@ -156,7 +154,8 @@ void lcd_gpio_teardown(void) {
 }
 
 
-void lcd_gpio_setup(void) {
+void lcd_gpio_setup(void)
+{
   // IO Setup
   DnC_PIN = gpio_create(GPIO_LCD_WRX, gpio_DIR_OUTPUT, gpio_HIGH);
 
@@ -164,7 +163,8 @@ void lcd_gpio_setup(void) {
 }
 
 
-int lcd_device_reset(void) {
+int lcd_device_reset(void)
+{
 
   // Send reset signal
   microwait(50);
@@ -183,7 +183,7 @@ static void lcd_run_script(const INIT_SCRIPT* script)
   for (idx = 0; script[idx].cmd; idx++) {
     lcd_spi_transfer(true, 1, &script[idx].cmd);
     lcd_spi_transfer(false, script[idx].data_bytes, script[idx].data);
-    usleep(script[idx].delay_ms*1000);
+    usleep(script[idx].delay_ms * 1000);
   }
 }
 
