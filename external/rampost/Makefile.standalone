@@ -1,0 +1,24 @@
+## Makefile to cross-compile from a local machine
+#
+#  - usage:  make -f Makefile.standalone <targets>
+#
+#  - must have vicos-sdk installed.
+#  - it should be installed if you have ever built victor.
+#  - if not present, you can get them with 
+#        <victor>/tools/build/tools/ankibuild/vicos.py --install $(VICOS_BUILD_TOOL_VER)
+
+
+VICOS_BUILD_TOOL_VER:=1.1.0-r04
+
+
+VICOS_ARM_TOOLS_ROOT:=~/.anki/vicos-sdk/dist/$(VICOS_BUILD_TOOL_VER)
+
+VICOS_ARM_TOOLS_BIN:=$(VICOS_ARM_TOOLS_ROOT)/prebuilt/bin
+
+# Compilation Tools
+
+CROSS_COMPILE = $(VICOS_ARM_TOOLS_BIN)/arm-oe-linux-gnueabi-
+
+CC := $(CROSS_COMPILE)clang
+
+include Makefile
