@@ -1,0 +1,18 @@
+# Fake hwclock timer
+# Requires mount-data.service to periodically save clock value in /data
+
+[Unit]
+Description=Save hwclock by socket
+Requires=mount-data.service fake-hwclock-cmd.socket
+After=mount-data.service
+
+[Service]
+Type=simple
+Restart=no
+StartLimitInterval=0
+StartLimitBurst=0
+RemainAfterExit=no
+ExecStart=/sbin/fake-hwclock stdin > /dev/null
+StandardInput=socket
+StandardOutput=journal
+StandardError=journal
