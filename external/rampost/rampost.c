@@ -36,10 +36,11 @@ enum {
 
 
 //returns monotonic time in ns.
-uint64_t steady_clock_now(void) {
-   struct timespec time;
-   clock_gettime(CLOCK_MONOTONIC,&time);
-   return time.tv_nsec + time.tv_sec * NSEC_PER_SEC;
+uint64_t steady_clock_now(void)
+{
+  struct timespec time;
+  clock_gettime(CLOCK_MONOTONIC, &time);
+  return time.tv_nsec + time.tv_sec * NSEC_PER_SEC;
 }
 
 void microwait(long microsec)
@@ -59,8 +60,9 @@ void microwait(long microsec)
 
 enum {LED_BACKPACK_FRONT, LED_BACKPACK_MIDDLE, LED_BACKPACK_BACK};
 
-void set_body_leds(int success, int inRecovery) {
-  struct LightState ledPayload = {0};
+void set_body_leds(int success, int inRecovery)
+{
+  struct LightState ledPayload = {{0}};
 
   if (!success) {
     ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
@@ -85,16 +87,18 @@ void set_body_leds(int success, int inRecovery) {
 #define MAX_COMMANDLINE_CHARS 512
 #define RECOVERY_MODE_INDICATOR "anki.unbrick"
 
-int recovery_mode_check(void) {
+int recovery_mode_check(void)
+{
   char buffer[MAX_COMMANDLINE_CHARS];
   int fd = open(CMDLINE_FILE, O_RDONLY);
-  int result = read(fd, buffer, sizeof(buffer)-1);
+  int result = read(fd, buffer, sizeof(buffer) - 1);
   if (result > 0) {
     buffer[result] = '\0'; //null terminate
-    DAS_LOG(DAS_DEBUG, "recovery_mode_check.scan", "scanning [%s] for [%s]", buffer, RECOVERY_MODE_INDICATOR);
+    DAS_LOG(DAS_DEBUG, "recovery_mode_check.scan", "scanning [%s] for [%s]", buffer,
+            RECOVERY_MODE_INDICATOR);
     char* pos = strstr(buffer, RECOVERY_MODE_INDICATOR);
-    DAS_LOG(DAS_DEBUG, "recovery_mode_check.result", "%s", pos?"found":"nope");
-    return (pos!=NULL);
+    DAS_LOG(DAS_DEBUG, "recovery_mode_check.result", "%s", pos ? "found" : "nope");
+    return (pos != NULL);
   }
   return 0; //fault mode
 }
@@ -117,20 +121,24 @@ void cleanup(bool blank_display)
 #define ERROR_HAL_ERROR (802)
 #define ERROR_DFU_ERROR (801)
 
-static inline void show_dev_unit(void) {
+static inline void show_dev_unit(void)
+{
   lcd_draw_frame2((uint16_t*)anki_dev_unit, anki_dev_unit_len);
 }
 
-static inline void show_low_battery(void) {
+static inline void show_low_battery(void)
+{
   lcd_draw_frame2((uint16_t*)low_battery, low_battery_len);
 }
 
-static inline void show_too_hot(void) {
+static inline void show_too_hot(void)
+{
   lcd_draw_frame2((uint16_t*)too_hot, too_hot_len);
 }
 
-static void write_semaphore(const char* const text, const int length) {
-  int fd = open(SEMAPHORE_FILE, O_CREAT|O_WRONLY, 00640);
+static void write_semaphore(const char* const text, const int length)
+{
+  int fd = open(SEMAPHORE_FILE, O_CREAT | O_WRONLY, 00640);
   if (fd >= 0) {
     write(fd, text, length);
     close(fd);
@@ -141,24 +149,26 @@ static void write_semaphore(const char* const text, const int length) {
   }
 }
 
-static void show_error(const int error_code) {
+static void show_error(const int error_code)
+{
   char error_str[MAX_ERROR_STR_LEN];
   const int wlen = snprintf(error_str, MAX_ERROR_STR_LEN, "ERROR %d\n", error_code);
   write_semaphore(error_str, wlen);
 
-  switch(error_code) {
-    case 801:
-      lcd_draw_frame2((uint16_t*)error_801, error_801_len);
-      break;
-    case 802:
-      lcd_draw_frame2((uint16_t*)error_802, error_802_len);
-      break;
-    default:
-      DAS_LOG(DAS_ERROR, "show_error", "No image for error %d", error_code);
+  switch (error_code) {
+  case 801:
+    lcd_draw_frame2((uint16_t*)error_801, error_801_len);
+    break;
+  case 802:
+    lcd_draw_frame2((uint16_t*)error_802, error_802_len);
+    break;
+  default:
+    DAS_LOG(DAS_ERROR, "show_error", "No image for error %d", error_code);
   }
 }
 
-int error_exit(RampostErr err) {
+int error_exit(RampostErr err)
+{
   show_error(ERROR_HAL_ERROR);
   cleanup(false);
   exit(err);
@@ -173,24 +183,25 @@ typedef enum {
 } BatteryState;
 
 
-BatteryState confirm_battery_level(void) {
+BatteryState confirm_battery_level(void)
+{
   int i;
-  for (i=0; i<5; i++) {
+  for (i = 0; i < 5; i++) {
     const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
-    if (hdr == NULL) continue;
-    else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) return battery_BOOTLOADER;
+    if (hdr == NULL) { continue; }
+    else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) { return battery_BOOTLOADER; }
     else if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
       static const float kBatteryScale = 2.8f / 2048.f;
-      struct BodyToHead* const b2h = (struct BodyToHead*)(hdr+1);
+      struct BodyToHead* const b2h = (struct BodyToHead*)(hdr + 1);
       const int16_t counts = b2h->battery.main_voltage;
-      const float volts = counts*kBatteryScale;
+      const float volts = counts * kBatteryScale;
 
       DAS_LOG(DAS_EVENT, "battery_level", "%0.3f", volts);
       DAS_LOG(DAS_EVENT, "battery_temperature", "%d", b2h->battery.temperature);
 
-      if (b2h->battery.temperature > 45) return battery_TOO_HOT;
-      if (b2h->battery.flags & POWER_ON_CHARGER) return battery_LEVEL_GOOD;
-      if (volts > 3.55f) return battery_LEVEL_GOOD;
+      if (b2h->battery.temperature > 45) { return battery_TOO_HOT; }
+      if (b2h->battery.flags & POWER_ON_CHARGER) { return battery_LEVEL_GOOD; }
+      if (volts > 3.55f) { return battery_LEVEL_GOOD; }
       return battery_LEVEL_TOOLOW;
     }
   }
@@ -198,19 +209,21 @@ BatteryState confirm_battery_level(void) {
 }
 
 
-void force_syscon_resync(void) {
+void force_syscon_resync(void)
+{
   uint8_t ALL_EFFS[256];
   memset(ALL_EFFS, 0xFF, sizeof(ALL_EFFS));
   int bytes_to_send = 2048;
   while (bytes_to_send) {
     hal_serial_send(ALL_EFFS, sizeof(ALL_EFFS));
-    bytes_to_send-= sizeof(ALL_EFFS);
+    bytes_to_send -= sizeof(ALL_EFFS);
   }
 }
 
 
 /************ MAIN *******************/
-int main(int argc, const char* argv[]) {
+int main(int argc, const char* argv[])
+{
   static const char* const LOW_BAT = "low bat";
   static const char* const TOO_HOT = "too hot";
   int error_code = 0;
@@ -228,16 +241,14 @@ int main(int argc, const char* argv[]) {
   for (; argn < argc; argn++) {
     if (argv[argn][0] == '-') {
       switch (argv[argn][1]) {
-        case 'd':
-        {
-          is_dev_unit = true;
-          break;
-        }
-        case 'f':
-        {
-          force_update = true;
-          break;
-        }
+      case 'd': {
+        is_dev_unit = true;
+        break;
+      }
+      case 'f': {
+        force_update = true;
+        break;
+      }
       }
     }
     else {   //does not start with dash, must be dfu file
@@ -250,7 +261,7 @@ int main(int argc, const char* argv[]) {
 
   lcd_device_reset();
   success = lcd_device_read_status();
-  DAS_LOG(DAS_INFO, "lcd_check", "%d",success);
+  DAS_LOG(DAS_INFO, "lcd_check", "%d", success);
 
   in_recovery_mode = recovery_mode_check();
 
@@ -265,10 +276,11 @@ int main(int argc, const char* argv[]) {
     const struct SpineMessageHeader* hdr;
     do {
       hdr = hal_get_next_frame(1); //clear backlog already in UART RX FIFO
-    } while (hdr && steady_clock_now() < timeout);
+    }
+    while (hdr && steady_clock_now() < timeout);
     // If we haven't seen anything yet, try to make sure we're receiving something
-    if (!hdr) hdr = hal_get_next_frame(10);
-    if (hdr) DAS_LOG(DAS_EVENT, "before_dfu.got_frame", "%c%c", hdr->payload_type&0xff, hdr->payload_type >> 8);
+    if (!hdr) { hdr = hal_get_next_frame(10); }
+    if (hdr) { DAS_LOG(DAS_EVENT, "before_dfu.got_frame", "%c%c", hdr->payload_type & 0xff, hdr->payload_type >> 8); }
 
     if (dfu_file != NULL) { // A DFU file has been specified
       RampostErr result = dfu_sequence(dfu_file, force_update);
@@ -277,8 +289,8 @@ int main(int argc, const char* argv[]) {
       }
       else if (result > err_OK) {
         DAS_LOG(DAS_ERROR, "dfu_error", "DFU Error %d", result);
-        if (result < err_DFU_ERASE_ERROR) error_code = ERROR_HAL_ERROR;
-        else error_code = ERROR_DFU_ERROR;
+        if (result < err_DFU_ERASE_ERROR) { error_code = ERROR_HAL_ERROR; }
+        else { error_code = ERROR_DFU_ERROR; }
       }
     }
   }
@@ -286,23 +298,23 @@ int main(int argc, const char* argv[]) {
   if (!error_code) {
     BatteryState bat_state = confirm_battery_level();
     switch (bat_state) {
-      case battery_LEVEL_GOOD:
-        break;
-      case battery_LEVEL_TOOLOW:
-        DAS_LOG(DAS_EVENT, "battery_level_low", "%d", bat_state);
-        is_low_battery = true;
-        break;
-      case battery_TOO_HOT:
-        DAS_LOG(DAS_EVENT, "battery_too_hot", "%d", bat_state);
-        is_too_hot = true;
-        break;
-      case battery_BOOTLOADER:
-        DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
-        error_code = ERROR_DFU_ERROR; //should be impossible.
-        break;
-      case battery_TIMEOUT:
-        DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check timed out!");
-        break; // But do continue boot in case this is because something needs recovering etc.
+    case battery_LEVEL_GOOD:
+      break;
+    case battery_LEVEL_TOOLOW:
+      DAS_LOG(DAS_EVENT, "battery_level_low", "%d", bat_state);
+      is_low_battery = true;
+      break;
+    case battery_TOO_HOT:
+      DAS_LOG(DAS_EVENT, "battery_too_hot", "%d", bat_state);
+      is_too_hot = true;
+      break;
+    case battery_BOOTLOADER:
+      DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check saw bootloader!");
+      error_code = ERROR_DFU_ERROR; //should be impossible.
+      break;
+    case battery_TIMEOUT:
+      DAS_LOG(DAS_EVENT, "battery_check_fail", "Battery check timed out!");
+      break; // But do continue boot in case this is because something needs recovering etc.
     }
 
     //set LEDS only after we expect syscon is good

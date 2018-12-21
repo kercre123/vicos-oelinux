@@ -34,13 +34,15 @@ void exit_cleanup(void)
   lcd_gpio_teardown();
 }
 
-int error_exit(RampostErr err) {
+int error_exit(RampostErr err)
+{
   exit_cleanup();
   exit(err);
 }
 
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char* argv[])
+{
   lcd_set_brightness(5);
 
   lcd_gpio_setup();

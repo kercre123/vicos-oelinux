@@ -125,7 +125,8 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
     return err_CANT_OPEN_FILE;
   }
 
-  DAS_LOG(DAS_INFO, "spine.configure_serial_port", "configuring port %s (fd=%d)", devicename, gHal.fd);
+  DAS_LOG(DAS_INFO, "spine.configure_serial_port", "configuring port %s (fd=%d)", devicename,
+          gHal.fd);
 
   usleep(10000); // Sleep due to kernel bug which prevents flush from working imeediately after open
 
@@ -159,7 +160,8 @@ SpineErr hal_serial_open(const char* devicename, long baudrate)
   return err_OK;
 }
 
-ssize_t hal_select() {
+ssize_t hal_select()
+{
   static uint8_t selectTimeoutCount = 0;
 
   static fd_set fdSet;
@@ -169,13 +171,12 @@ ssize_t hal_select() {
   timeout.tv_sec = 1;
   timeout.tv_usec = 0;
   ssize_t s = select(FD_SETSIZE, &fdSet, NULL, NULL, &timeout);
-  if(s == 0)
-  {
+  if (s == 0) {
     selectTimeoutCount++;
     DAS_LOG(DAS_INFO, "spine.select_timeout", "No serial data for %d sec", selectTimeoutCount);
   }
   else {
-    selectTimeoutCount=0;
+    selectTimeoutCount = 0;
   }
   return s;
 }
@@ -185,75 +186,76 @@ static inline ssize_t rx_buffer_space() { return sizeof(gHal.buf_rx) - gHal.rx_c
 // send data into spine for processing
 static ssize_t hal_receive_data(const uint8_t* bytes, size_t len)
 {
-    size_t next_offset = gHal.rx_cursor;
-    size_t remaining = rx_buffer_space();
+  size_t next_offset = gHal.rx_cursor;
+  size_t remaining = rx_buffer_space();
 
-    if (len > remaining) {
-      DAS_LOG(DAS_ERROR, "spine.receive_data_overflow", "%u", len - remaining);
-      gHal.rx_cursor = 0;
-        // BRC: add a flag to indicate a reset (for using in parsing?)
-    }
+  if (len > remaining) {
+    DAS_LOG(DAS_ERROR, "spine.receive_data_overflow", "%u", len - remaining);
+    gHal.rx_cursor = 0;
+    // BRC: add a flag to indicate a reset (for using in parsing?)
+  }
 
-    uint8_t* rx = gHal.buf_rx + next_offset;
-    memcpy(rx, bytes, len);
-    gHal.rx_cursor = next_offset + len;
+  uint8_t* rx = gHal.buf_rx + next_offset;
+  memcpy(rx, bytes, len);
+  gHal.rx_cursor = next_offset + len;
 
-    return len;
+  return len;
 }
 
 #if EXTENDED_SPINE_DEBUG
-static const char* ascii[]={
-"00 ","01 ","02 ","03 ","04 ","05 ","06 ","07 ",
-"08 ","09 ","0a ","0b ","0c ","0d ","0e ","0f ",
-"10 ","11 ","12 ","13 ","14 ","15 ","16 ","17 ",
-"18 ","19 ","1a ","1b ","1c ","1d ","1e ","1f ",
-"20 ","21 ","22 ","23 ","24 ","25 ","26 ","27 ",
-"28 ","29 ","2a ","2b ","2c ","2d ","2e ","2f ",
-"30 ","31 ","32 ","33 ","34 ","35 ","36 ","37 ",
-"38 ","39 ","3a ","3b ","3c ","3d ","3e ","3f ",
-"40 ","41 ","42 ","43 ","44 ","45 ","46 ","47 ",
-"48 ","49 ","4a ","4b ","4c ","4d ","4e ","4f ",
-"50 ","51 ","52 ","53 ","54 ","55 ","56 ","57 ",
-"58 ","59 ","5a ","5b ","5c ","5d ","5e ","5f ",
-"60 ","61 ","62 ","63 ","64 ","65 ","66 ","67 ",
-"68 ","69 ","6a ","6b ","6c ","6d ","6e ","6f ",
-"70 ","71 ","72 ","73 ","74 ","75 ","76 ","77 ",
-"78 ","79 ","7a ","7b ","7c ","7d ","7e ","7f ",
-"80 ","81 ","82 ","83 ","84 ","85 ","86 ","87 ",
-"88 ","89 ","8a ","8b ","8c ","8d ","8e ","8f ",
-"90 ","91 ","92 ","93 ","94 ","95 ","96 ","97 ",
-"98 ","99 ","9a ","9b ","9c ","9d ","9e ","9f ",
-"a0 ","a1 ","a2 ","a3 ","a4 ","a5 ","a6 ","a7 ",
-"a8 ","a9 ","aa ","ab ","ac ","ad ","ae ","af ",
-"b0 ","b1 ","b2 ","b3 ","b4 ","b5 ","b6 ","b7 ",
-"b8 ","b9 ","ba ","bb ","bc ","bd ","be ","bf ",
-"c0 ","c1 ","c2 ","c3 ","c4 ","c5 ","c6 ","c7 ",
-"c8 ","c9 ","ca ","cb ","cc ","cd ","ce ","cf ",
-"d0 ","d1 ","d2 ","d3 ","d4 ","d5 ","d6 ","d7 ",
-"d8 ","d9 ","da ","db ","dc ","dd ","de ","df ",
-"e0 ","e1 ","e2 ","e3 ","e4 ","e5 ","e6 ","e7 ",
-"e8 ","e9 ","ea ","eb ","ec ","ed ","ee ","ef ",
-"f0 ","f1 ","f2 ","f3 ","f4 ","f5 ","f6 ","f7 ",
-"f8 ","f9 ","fa ","fb ","fc ","fd ","fe ","ff "};
+static const char* ascii[] = {
+  "00 ", "01 ", "02 ", "03 ", "04 ", "05 ", "06 ", "07 ",
+  "08 ", "09 ", "0a ", "0b ", "0c ", "0d ", "0e ", "0f ",
+  "10 ", "11 ", "12 ", "13 ", "14 ", "15 ", "16 ", "17 ",
+  "18 ", "19 ", "1a ", "1b ", "1c ", "1d ", "1e ", "1f ",
+  "20 ", "21 ", "22 ", "23 ", "24 ", "25 ", "26 ", "27 ",
+  "28 ", "29 ", "2a ", "2b ", "2c ", "2d ", "2e ", "2f ",
+  "30 ", "31 ", "32 ", "33 ", "34 ", "35 ", "36 ", "37 ",
+  "38 ", "39 ", "3a ", "3b ", "3c ", "3d ", "3e ", "3f ",
+  "40 ", "41 ", "42 ", "43 ", "44 ", "45 ", "46 ", "47 ",
+  "48 ", "49 ", "4a ", "4b ", "4c ", "4d ", "4e ", "4f ",
+  "50 ", "51 ", "52 ", "53 ", "54 ", "55 ", "56 ", "57 ",
+  "58 ", "59 ", "5a ", "5b ", "5c ", "5d ", "5e ", "5f ",
+  "60 ", "61 ", "62 ", "63 ", "64 ", "65 ", "66 ", "67 ",
+  "68 ", "69 ", "6a ", "6b ", "6c ", "6d ", "6e ", "6f ",
+  "70 ", "71 ", "72 ", "73 ", "74 ", "75 ", "76 ", "77 ",
+  "78 ", "79 ", "7a ", "7b ", "7c ", "7d ", "7e ", "7f ",
+  "80 ", "81 ", "82 ", "83 ", "84 ", "85 ", "86 ", "87 ",
+  "88 ", "89 ", "8a ", "8b ", "8c ", "8d ", "8e ", "8f ",
+  "90 ", "91 ", "92 ", "93 ", "94 ", "95 ", "96 ", "97 ",
+  "98 ", "99 ", "9a ", "9b ", "9c ", "9d ", "9e ", "9f ",
+  "a0 ", "a1 ", "a2 ", "a3 ", "a4 ", "a5 ", "a6 ", "a7 ",
+  "a8 ", "a9 ", "aa ", "ab ", "ac ", "ad ", "ae ", "af ",
+  "b0 ", "b1 ", "b2 ", "b3 ", "b4 ", "b5 ", "b6 ", "b7 ",
+  "b8 ", "b9 ", "ba ", "bb ", "bc ", "bd ", "be ", "bf ",
+  "c0 ", "c1 ", "c2 ", "c3 ", "c4 ", "c5 ", "c6 ", "c7 ",
+  "c8 ", "c9 ", "ca ", "cb ", "cc ", "cd ", "ce ", "cf ",
+  "d0 ", "d1 ", "d2 ", "d3 ", "d4 ", "d5 ", "d6 ", "d7 ",
+  "d8 ", "d9 ", "da ", "db ", "dc ", "dd ", "de ", "df ",
+  "e0 ", "e1 ", "e2 ", "e3 ", "e4 ", "e5 ", "e6 ", "e7 ",
+  "e8 ", "e9 ", "ea ", "eb ", "ec ", "ed ", "ee ", "ef ",
+  "f0 ", "f1 ", "f2 ", "f3 ", "f4 ", "f5 ", "f6 ", "f7 ",
+  "f8 ", "f9 ", "fa ", "fb ", "fc ", "fd ", "fe ", "ff "
+};
 
 #define open_logfile() fopen("/dev/serial.log", "w")
 void serial_log(int dir, const uint8_t* buf, int len)
 {
   static int lastdir = 1;
   int i;
-  if (dir!=lastdir) {
-      const uint64_t now = steady_clock_now();
-      const uint8_t* now_ptr = (uint8_t*)(&now);
-      lastdir = dir;
-      if (dir==0) { fwrite("\n--- OUT --- ", 13, 1, gHal.logFd);}
-      else { fwrite("\n--- IN  --- ", 13, 1, gHal.logFd); }
-      for (i=0; i<sizeof(uint64_t); i++) {
-        fwrite(ascii[now_ptr[i]],3,1,gHal.logFd);
-      }
-      fwrite("\n", 1, 1, gHal.logFd);
+  if (dir != lastdir) {
+    const uint64_t now = steady_clock_now();
+    const uint8_t* now_ptr = (uint8_t*)(&now);
+    lastdir = dir;
+    if (dir == 0) { fwrite("\n--- OUT --- ", 13, 1, gHal.logFd);}
+    else { fwrite("\n--- IN  --- ", 13, 1, gHal.logFd); }
+    for (i = 0; i < sizeof(uint64_t); i++) {
+      fwrite(ascii[now_ptr[i]], 3, 1, gHal.logFd);
+    }
+    fwrite("\n", 1, 1, gHal.logFd);
   }
-  for (i=0;i<len;i++) {
-     fwrite(ascii[buf[i]],3,1,gHal.logFd);
+  for (i = 0; i < len; i++) {
+    fwrite(ascii[buf[i]], 3, 1, gHal.logFd);
   }
 }
 #else
@@ -270,28 +272,25 @@ static ssize_t hal_spine_io()
   if (sizeof(readBuffer_) < bytes_to_read) {
     bytes_to_read = sizeof(readBuffer_);
   }
-  if (hal_select() == 0) //no data
-  {
+  if (hal_select() == 0) { //no data
     return -1;
   }
   ssize_t r = read(fd, readBuffer_, sizeof(readBuffer_));
 
-  if (r > 0)
-  {
-     serial_log(1,readBuffer_, r);
-     r = hal_receive_data((const void*)readBuffer_, r);
+  if (r > 0) {
+    serial_log(1, readBuffer_, r);
+    r = hal_receive_data((const void*)readBuffer_, r);
   }
-  else if (r < 0)
-  {
+  else if (r < 0) {
     if (errno == EAGAIN) {
       r = 0;
     }
     else {
 #if EXTENDED_SPINE_DEBUG
-      unsigned char ermsg[]="RE00";
-      ermsg[2]=(r>>8)&0xFF;
-      ermsg[2]=(r)&0xFF;
-      serial_log(1,ermsg, 4);
+      unsigned char ermsg[] = "RE00";
+      ermsg[2] = (r >> 8) & 0xFF;
+      ermsg[2] = (r) & 0xFF;
+      serial_log(1, ermsg, 4);
 #endif
     }
   }
@@ -302,22 +301,22 @@ static ssize_t hal_spine_io()
 int hal_serial_send(const uint8_t* buffer, int len)
 {
   int written = 0;
-  while (len>0) {
+  while (len > 0) {
     ssize_t wr = write(gHal.fd, buffer, len);
-    if (wr<=0) {
+    if (wr <= 0) {
 #if EXTENDED_SPINE_DEBUG
-      unsigned char ermsg[]="ER00";
-      ermsg[2]=(wr>>8)&0xFF;
-      ermsg[2]=(wr)&0xFF;
-      serial_log(0,ermsg,4);
+      unsigned char ermsg[] = "ER00";
+      ermsg[2] = (wr >> 8) & 0xFF;
+      ermsg[2] = (wr) & 0xFF;
+      serial_log(0, ermsg, 4);
 #endif
       DAS_LOG(DAS_ERROR, "spine.write_error", "Serial write error=%d", wr);
       return wr;
     }
-    serial_log(0,buffer,wr);
-    buffer+=wr;
-    written+=wr;
-    len-=wr;
+    serial_log(0, buffer, wr);
+    buffer += wr;
+    written += wr;
+    len -= wr;
   }
   return written;
 }
@@ -376,7 +375,8 @@ static const uint8_t* spine_construct_header(PayloadId payload_type,  uint16_t p
 {
 #ifndef NDEBUG
   int expected_len = get_payload_len(payload_type, dir_SEND);
-  DAS_LOG(DAS_DEBUG, "spine.construct_header_lengths", "expected=%d, payload=%d", expected_len, payload_len);
+  DAS_LOG(DAS_DEBUG, "spine.construct_header_lengths", "expected=%d, payload=%d", expected_len,
+          payload_len);
   assert(expected_len >= 0); //valid type
   assert(expected_len == payload_len);
   assert(payload_len <= (SPINE_MAX_BYTES - SPINE_HEADER_LEN - SPINE_CRC_LEN));
@@ -406,20 +406,21 @@ SpineErr hal_init(const char* devicename, long baudrate)
 
 void hal_discard_rx_bytes(ssize_t bytes_to_drop)
 {
-    if (bytes_to_drop > 0) {
-        ssize_t remaining = sizeof(gHal.buf_rx) - bytes_to_drop;
-        assert(remaining >= 0);
-        assert(gHal.rx_cursor >= bytes_to_drop);
-        if (remaining >= 0) {
-            const uint8_t* rx = (const uint8_t*)gHal.buf_rx + bytes_to_drop;
-            memmove(gHal.buf_rx, rx, remaining);
-        }
-        gHal.rx_cursor -= bytes_to_drop;
-    } else if (bytes_to_drop < 0) {
-        // discard all data
-        gHal.rx_cursor = 0;
-        memset(gHal.buf_rx, 0x55, sizeof(gHal.buf_rx));
+  if (bytes_to_drop > 0) {
+    ssize_t remaining = sizeof(gHal.buf_rx) - bytes_to_drop;
+    assert(remaining >= 0);
+    assert(gHal.rx_cursor >= bytes_to_drop);
+    if (remaining >= 0) {
+      const uint8_t* rx = (const uint8_t*)gHal.buf_rx + bytes_to_drop;
+      memmove(gHal.buf_rx, rx, remaining);
     }
+    gHal.rx_cursor -= bytes_to_drop;
+  }
+  else if (bytes_to_drop < 0) {
+    // discard all data
+    gHal.rx_cursor = 0;
+    memset(gHal.buf_rx, 0x55, sizeof(gHal.buf_rx));
+  }
 }
 
 
@@ -438,10 +439,10 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
 
   // Start from the beginning of the rx buffer
   uint8_t* rx = gHal.buf_rx;
-  int last_test_idx = rx_len - (SPINE_SYNC_LEN-1);
+  int last_test_idx = rx_len - (SPINE_SYNC_LEN - 1);
   int sync_index;
-  for(sync_index = 0; sync_index < last_test_idx; sync_index++) {
-    const uint8_t* test_bytes = rx+sync_index;
+  for (sync_index = 0; sync_index < last_test_idx; sync_index++) {
+    const uint8_t* test_bytes = rx + sync_index;
     if (BODY_TAG_PREFIX[0] == test_bytes[0] &&
         BODY_TAG_PREFIX[1] == test_bytes[1] &&
         BODY_TAG_PREFIX[2] == test_bytes[2] &&
@@ -459,8 +460,8 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   }
 
   //advance our working pointer to start of sync
-  const uint8_t* sync_start = rx+sync_index;
-  rx_len-=sync_index;
+  const uint8_t* sync_start = rx + sync_index;
+  rx_len -= sync_index;
 
   // Not enough data for valid header
   if (rx_len < SPINE_HEADER_LEN) {
@@ -476,7 +477,8 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
   // Payload type is invalid or payload len is invalid
   if (payload_len == -1 || header->bytes_to_follow != payload_len) {
     // skip current sync
-    DAS_LOG(DAS_INFO, "spine.invalid_payload_len", "expected=%d | observed=%u", payload_len, header->bytes_to_follow);
+    DAS_LOG(DAS_INFO, "spine.invalid_payload_len", "expected=%d | observed=%u", payload_len,
+            header->bytes_to_follow);
     //start searching again after SYNC
     hal_discard_rx_bytes(sync_index + SPINE_SYNC_LEN);
     return -1;
@@ -504,7 +506,7 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
 
   // At this point we have a valid frame.
   DAS_LOG(DAS_DEBUG, "spine.found_frame", "payload type=%c%c",
-          header->payload_type&0xff, header->payload_type>>8);
+          header->payload_type & 0xff, header->payload_type >> 8);
 
   // Copy data to output buffer
   size_t frame_len = SPINE_HEADER_LEN + payload_len + SPINE_CRC_LEN;
@@ -520,7 +522,8 @@ int hal_parse_frame(uint8_t outbuf[], size_t outbuf_len)
 
 
 //pulls out frames
-const void* hal_get_a_frame(uint8_t* frame_buffer, int buffer_len) {
+const void* hal_get_a_frame(uint8_t* frame_buffer, int buffer_len)
+{
 
   assert(buffer_len >= SPINE_B2H_FRAME_LEN);
 
@@ -529,18 +532,17 @@ const void* hal_get_a_frame(uint8_t* frame_buffer, int buffer_len) {
   do {
     r = hal_parse_frame(frame_buffer, buffer_len);
 
-    if (r < 0)  //no sync found, some data discarded
-    {
+    if (r < 0) { //no sync found, some data discarded
       continue; //there may be more to parse
     }
-    else if (r > 0) //good data
-    {
+    else if (r > 0) {   //good data
       return frame_buffer;
     }
-    else {  //r==0: out of data
+    else {   //r==0: out of data
       hal_spine_io();  //get more and return
     }
-  } while (r != 0);
+  }
+  while (r != 0);
   return NULL;
 }
 
@@ -555,7 +557,8 @@ const void* hal_get_next_frame(const int32_t timeout_ms)
     if (hdr ) {
       return hdr;
     }
-  } while (steady_clock_now() < expiry);
+  }
+  while (steady_clock_now() < expiry);
   return NULL;
 }
 
@@ -584,7 +587,7 @@ const void* hal_wait_for_frame_or_nack(const uint16_t type, const int32_t timeou
       return hdr;
     }
     else if (hdr && hdr->payload_type == PAYLOAD_ACK) {
-      if (*(Ack*)(hdr + 1) < 0) return hdr;
+      if (*(Ack*)(hdr + 1) < 0) { return hdr; }
     }
   }
   return NULL;
@@ -596,7 +599,8 @@ void hal_send_frame(PayloadId type, const void* data, int len)
   const uint8_t* hdr = spine_construct_header(type, len);
   crc_t crc = calc_crc(data, len);
   if (hdr) {
-    DAS_LOG(DAS_DEBUG, "spine.send_frame", "sending %c%c packet (%d bytes) CRC=%08x", type&0xFF, type>>8, len, crc);
+    DAS_LOG(DAS_DEBUG, "spine.send_frame", "sending %c%c packet (%d bytes) CRC=%08x", type & 0xFF,
+            type >> 8, len, crc);
     hal_serial_send(hdr, SPINE_HEADER_LEN);
     hal_serial_send(data, len);
     hal_serial_send((uint8_t*)&crc, sizeof(crc));
@@ -610,7 +614,8 @@ void hal_set_mode(int new_mode)
   hal_send_frame(PAYLOAD_MODE_CHANGE, NULL, 0);
 }
 
-void hal_exit(void){
+void hal_exit(void)
+{
 #if EXTENDED_SPINE_DEBUG
   fclose(gHal.logFd);
 #endif
@@ -622,8 +627,8 @@ void hal_exit(void){
 
 int main(int argc, const char* argv[])
 {
-   gHal.fd = open("unittest.dat", O_RDONLY);
-   const struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_ACK, 1000);
-   assert(hdr && hdr->payload_type == PAYLOAD_ACK);
+  gHal.fd = open("unittest.dat", O_RDONLY);
+  const struct SpineMessageHeader* hdr = hal_get_frame(PAYLOAD_ACK, 1000);
+  assert(hdr && hdr->payload_type == PAYLOAD_ACK);
 }
 #endif
