@@ -75,7 +75,15 @@ saveclock() {
 }
 
 
-case "$1" in
+# The format expected is "<CMD>\n"
+# Read line from stdin with 1 second timeout.
+# If run from systemd the FIFO socket will be read
+read -r -t 1 CMD
+if [ -z $CMD ]
+then
+    CMD=$1
+fi
+case "$CMD" in
 	load)
 		setclock
 		;;
