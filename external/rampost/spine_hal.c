@@ -557,7 +557,7 @@ const void* hal_get_next_frame(const int32_t timeout_ms)
 
   do {
     const void* hdr = hal_get_a_frame(gHal.framebuffer, sizeof(gHal.framebuffer));
-    if (hdr ) {
+    if (hdr) {
       return hdr;
     }
   }

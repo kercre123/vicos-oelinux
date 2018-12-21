@@ -74,7 +74,7 @@ static inline uint8_t lcd_bitbang_clockin(void)
   return byte;
 }
 
-static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes )
+static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes)
 {
   gpio_set_value(DnC_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_LOW);
@@ -85,14 +85,14 @@ static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes )
   gpio_set_value(DnC_PIN, gpio_HIGH);
 
   while (data_bytes-- > 0) {
-    lcd_bitbang_clockout( *outbuf++);
+    lcd_bitbang_clockout(*outbuf++);
   }
 
   gpio_set_value(MOSI_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_HIGH);
 }
 
-static void lcd_bitbang_read(int cmd, uint8_t result[], int bytes_expected )
+static void lcd_bitbang_read(int cmd, uint8_t result[], int bytes_expected)
 {
   gpio_set_value(DnC_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_LOW);
@@ -158,8 +158,8 @@ int lcd_status_check(void)
   lcd_bitbang_teardown();
 
   //check against the magic numbers from the manufacturer. (ST7789V datasheet pg 162)
-  int good_id = ( (id[0] == 0x85) && (id[1] == 0x85) && (id[2] == 0x52));
+  int good_id = ((id[0] == 0x85) && (id[1] == 0x85) && (id[2] == 0x52));
   // check self-Diagnostic bits. 2 high bits are `11`. (ST7789V datasheet pg 177)
-  int good_selfcheck = ( (status[0] & 0xC0) == 0xC0 );
+  int good_selfcheck = ((status[0] & 0xC0) == 0xC0);
   return (good_id && good_selfcheck);
 }

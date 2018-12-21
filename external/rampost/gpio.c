@@ -31,7 +31,7 @@ void gpio_set_direction(GPIO gp, enum Gpio_Dir direction)
   assert(gp != NULL);
   char ioname[40];
   snprintf(ioname, 40, "/sys/class/gpio/gpio%d/direction", gp->pin);
-  int fd =  open(ioname, O_WRONLY );
+  int fd =  open(ioname, O_WRONLY);
   if (fd <  0) {
     error_exit(err_GPIO_DIRECTION);
   }
@@ -95,7 +95,7 @@ GPIO gpio_create(int gpio_number, enum Gpio_Dir direction, enum Gpio_Level initi
     error_exit(err_GPIO_CREATE);
   }
   gp->fd = fd;
-  if  (fd > 0) {
+  if (fd > 0) {
     gpio_set_value(gp, initial_value);
   }
   gp->isOpenDrain = false;
