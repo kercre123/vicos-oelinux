@@ -187,6 +187,9 @@ parser.add_argument('--ota-key', action='store', default=None, required=False,
                     help="Path to file with private key")
 parser.add_argument('--ota-key-pass', action='store', default=None, required=False,
                     help="Passphrase for private key")
+parser.add_argument('--max-delta-size', type=int, action='store', default=None, required=False,
+                    help="If the delta OTA file is larger than this, just use a full OTA")
+parser.add_argument('--verbose', '-v', action='store_true', default=False)
 args = parser.parse_args()
 
 cleanup_working_dirs()
@@ -307,4 +310,12 @@ for name in namelist:
     tarinfo.mode = 0o0400
     ota.addfile(tarinfo, fileobj=open(name, 'rb'))
 ota.close()
+
+if args.max_delta_size and os.path.getsize(delta_ota_name) > args.max_delta_size:
+    # This delta OTA file is too big, just use the new OTA file for a full update
+    if args.verbose:
+        print("Delta OTA file is too big ({0} > {1}). Will substitute a full OTA instead.".format(os.path.getsize(delta_ota_name), args.max_delta_size))
+    os.remove(delta_ota_name)
+    shutil.copyfile(args.new, delta_ota_name)
+
 cleanup_working_dirs()
