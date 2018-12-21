@@ -33,7 +33,7 @@ void microwait(long microsec);
 #define RSHIFT 0x1C
 
 typedef struct LcdFrame_t {
-  uint16_t data[LCD_FRAME_WIDTH*LCD_FRAME_HEIGHT];
+  uint16_t data[LCD_FRAME_WIDTH * LCD_FRAME_HEIGHT];
 } LcdFrame;
 
 typedef struct {
@@ -46,7 +46,7 @@ typedef struct {
 static const INIT_SCRIPT init_scr[] = {
   { 0x10, 1, { 0x00 }, 120}, // Sleep in
   { 0x2A, 4, { 0x00, RSHIFT, (LCD_FRAME_WIDTH + RSHIFT - 1) >> 8, (LCD_FRAME_WIDTH + RSHIFT - 1) & 0xFF } }, // Column address set
-  { 0x2B, 4, { 0x00, 0x00, (LCD_FRAME_HEIGHT -1) >> 8, (LCD_FRAME_HEIGHT -1) & 0xFF } }, // Row address set
+  { 0x2B, 4, { 0x00, 0x00, (LCD_FRAME_HEIGHT - 1) >> 8, (LCD_FRAME_HEIGHT - 1) & 0xFF } }, // Row address set
   { 0x36, 1, { 0x00 }, 0 }, // Memory data access control
   { 0x3A, 1, { 0x55 }, 0 }, // Interface pixel format (16 bit/pixel 65k RGB data)
   { 0xB0, 2, { 0x00, 0x08 } }, // RAM control (LSB first)
@@ -97,13 +97,14 @@ int lcd_spi_init()
   if (!spi_fd)  {
     error_exit(err_SPI_INIT);
   }
-  if (spi_fd>0) {
+  if (spi_fd > 0) {
     ioctl(spi_fd, SPI_IOC_RD_MODE, &MODE);
   }
   return spi_fd;
 }
 
-static void lcd_spi_transfer(int cmd, int bytes, const void* data) {
+static void lcd_spi_transfer(int cmd, int bytes, const void* data)
+{
   const uint8_t* tx_buf = data;
 
   gpio_set_value(DnC_PIN, cmd ? gpio_LOW : gpio_HIGH);
@@ -118,7 +119,8 @@ static void lcd_spi_transfer(int cmd, int bytes, const void* data) {
   }
 }
 
-int lcd_spi_readback(int bytes,  const uint8_t* outbuf, uint8_t result[]) {
+int lcd_spi_readback(int bytes,  const uint8_t* outbuf, uint8_t result[])
+{
 
   struct spi_ioc_transfer mesg = {
     .tx_buf = (unsigned long)outbuf,
@@ -136,9 +138,9 @@ int lcd_spi_readback(int bytes,  const uint8_t* outbuf, uint8_t result[]) {
     return -1;
   }
   mesg.tx_buf = (unsigned long)(&outbuf[1]);
-  mesg.len = bytes-1;
+  mesg.len = bytes - 1;
   gpio_set_value(DnC_PIN, gpio_HIGH);
-   err = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &mesg);
+  err = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &mesg);
   if (err < 1) {
     DAS_LOG(DAS_ERROR, "lcd.spi.dat_error", "%d %s", errno, strerror(errno));
     return -1;
@@ -147,24 +149,24 @@ int lcd_spi_readback(int bytes,  const uint8_t* outbuf, uint8_t result[]) {
 }
 
 
-int lcd_device_read_status(void) {
+int lcd_device_read_status(void)
+{
   uint8_t message[] = {0x0F, 0x00, 0x00};
-  uint8_t result[sizeof(message)] = {1,2,3};
+  uint8_t result[sizeof(message)] = {1, 2, 3};
   memset(result, 0, sizeof(result));
-  if (lcd_spi_readback(sizeof(message), message, result))
-  {
+  if (lcd_spi_readback(sizeof(message), message, result)) {
     DAS_LOG(DAS_ERROR, "lcd.read_status", "readback error");
   }
   DAS_LOG(DAS_DEBUG, "lcd.read_status", "Result = %x %x %x", result[0], result[1], result[2]);
-  return result[2]==0;
+  return result[2] == 0;
 }
 
 static void _led_set_brightness(const int brightness, const char* led)
 {
-  int fd = open(led,O_WRONLY);
+  int fd = open(led, O_WRONLY);
   if (fd) {
     char buf[3];
-    snprintf(buf,3,"%02d\n",brightness);
+    snprintf(buf, 3, "%02d\n", brightness);
     write(fd, buf, 3);
     close(fd);
   }
@@ -175,24 +177,27 @@ void lcd_set_brightness(int brightness)
   int l;
   brightness = MIN(brightness, 10);
   brightness = MAX(brightness, 0);
-  for (l=0; l<3; ++l) {
+  for (l = 0; l < 3; ++l) {
     _led_set_brightness(brightness, BACKLIGHT_DEVICES[l]);
   }
 }
 
 
-void lcd_draw_frame2(const uint16_t* frame, size_t size) {
-   static const uint8_t WRITE_RAM = 0x2C;
-   lcd_spi_transfer(true, 1, &WRITE_RAM);
-   lcd_spi_transfer(false, size, frame);
+void lcd_draw_frame2(const uint16_t* frame, size_t size)
+{
+  static const uint8_t WRITE_RAM = 0x2C;
+  lcd_spi_transfer(true, 1, &WRITE_RAM);
+  lcd_spi_transfer(false, size, frame);
 }
 
- void lcd_clear_screen(void) {
-   const LcdFrame frame={{0}};
-   lcd_draw_frame2(frame.data, sizeof(frame.data));
- }
+void lcd_clear_screen(void)
+{
+  const LcdFrame frame = {{0}};
+  lcd_draw_frame2(frame.data, sizeof(frame.data));
+}
 
-void lcd_gpio_teardown(void) {
+void lcd_gpio_teardown(void)
+{
   if (DnC_PIN) {
     gpio_close(DnC_PIN);
   }
@@ -205,7 +210,8 @@ void lcd_gpio_teardown(void) {
 }
 
 
-void lcd_gpio_setup(void) {
+void lcd_gpio_setup(void)
+{
   // IO Setup
   DnC_PIN = gpio_create(GPIO_LCD_WRX, gpio_DIR_OUTPUT, gpio_HIGH);
 
@@ -214,7 +220,8 @@ void lcd_gpio_setup(void) {
 }
 
 
-int lcd_device_reset(void) {
+int lcd_device_reset(void)
+{
 
   // Send reset signal
   microwait(50);
@@ -226,7 +233,7 @@ int lcd_device_reset(void) {
   microwait(50);
 
   static const uint8_t SLEEPOUT = 0x11;
-  lcd_spi_transfer(true, 1,&SLEEPOUT);   //sleep off
+  lcd_spi_transfer(true, 1, &SLEEPOUT);  //sleep off
   microwait(50);
 
   return 0;
@@ -239,7 +246,7 @@ static void lcd_run_script(const INIT_SCRIPT* script)
   for (idx = 0; script[idx].cmd; idx++) {
     lcd_spi_transfer(true, 1, &script[idx].cmd);
     lcd_spi_transfer(false, script[idx].data_bytes, script[idx].data);
-    usleep(script[idx].delay_ms*1000);
+    usleep(script[idx].delay_ms * 1000);
   }
 }
 
