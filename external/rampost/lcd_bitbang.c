@@ -74,7 +74,7 @@ static inline uint8_t lcd_bitbang_clockin(void)
   return byte;
 }
 
-static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes)
+static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], size_t data_bytes)
 {
   gpio_set_value(DnC_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_LOW);
@@ -92,7 +92,7 @@ static void lcd_bitbang_write(int cmd, const uint8_t outbuf[], int data_bytes)
   gpio_set_value(SELECT_PIN, gpio_HIGH);
 }
 
-static void lcd_bitbang_read(int cmd, uint8_t result[], int bytes_expected)
+static void lcd_bitbang_read(uint8_t cmd, uint8_t result[], size_t bytes_expected)
 {
   gpio_set_value(DnC_PIN, gpio_LOW);
   gpio_set_value(SELECT_PIN, gpio_LOW);
