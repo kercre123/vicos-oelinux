@@ -197,7 +197,7 @@ std::ostream & operator << (std::ostream &out, const cam_ae_params_t &value)
 std::ostream & operator << (std::ostream &out, const cam_awb_params_t &value)
 {
   out << "cct_value:        "<<value.cct_value<<std::endl;
-  out << "rgb_gains:        "<<value.rgb_gains<<std::endl;
+  // out << "rgb_gains:        "<<value.rgb_gains<<std::endl;
   out << "decision:         "<<value.decision<<std::endl;
   return out;
 }

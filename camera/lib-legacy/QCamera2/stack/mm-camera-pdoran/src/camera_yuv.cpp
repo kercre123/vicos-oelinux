@@ -47,6 +47,8 @@ private:
   bool init_stream_meta();
   void deinit();
 
+  bool set_control(cam_intf_parm_type_t key, void* value, size_t size);
+
   static void static_callback_preview(mm_camera_super_buf_t *bufs, void *userdata);
   void callback_preview(mm_camera_super_buf_t *bufs);
 
@@ -119,6 +121,23 @@ void CameraYUV::Impl::run()
   if (!initialized){
     return;
   }
+
+#if 1
+{
+  bool rc;
+  cam_auto_exposure_mode_type ae_mode = CAM_AEC_MODE_FRAME_AVERAGE;
+  cam_wb_mode_type awb_mode = CAM_WB_MODE_AUTO;
+  int off = 0;
+  rc = this->set_control(CAM_INTF_PARM_EXPOSURE, &ae_mode, sizeof(cam_auto_exposure_mode_type));
+  std::cerr<<"Return Code: "<<rc<<std::endl;
+  rc = this->set_control(CAM_INTF_PARM_WHITE_BALANCE, &awb_mode, sizeof(cam_wb_mode_type));
+  std::cerr<<"Return Code: "<<rc<<std::endl;
+  rc = this->set_control(CAM_INTF_PARM_AEC_LOCK, &off, sizeof(int));
+  std::cerr<<"Return Code: "<<rc<<std::endl;
+  rc = this->set_control(CAM_INTF_PARM_AWB_LOCK, &off, sizeof(int));
+  std::cerr<<"Return Code: "<<rc<<std::endl;
+}
+#endif
 
   while (_isRunning)
   {
@@ -366,6 +385,43 @@ void CameraYUV::Impl::callback_meta(mm_camera_super_buf_t *bufs)
       CDBG_ERROR("%s: Failed in Qbuf\n", __func__);
     }
   }
+}
+
+//======================================================================================================================
+bool CameraYUV::Impl::set_control(cam_intf_parm_type_t key, void* value, size_t size)
+{
+  parm_buffer_new_t *param_buf = (parm_buffer_new_t *)_lib_handle.test_obj.parm_buf.mem_info.data;
+
+  // TODO: what about parm_buf.mem_info.size ?
+  // Why set ONE_MB_OF_PARAMS?
+
+  // Clear exising buffer
+  memset(param_buf, 0, sizeof(ONE_MB_OF_PARAMS));
+  param_buf->num_entry = 0;
+  param_buf->curr_size = 0;
+  param_buf->tot_rem_size = ONE_MB_OF_PARAMS - sizeof(parm_buffer_new_t);
+
+  // Set the control
+  uint32_t paramLength = size;
+
+  uint32_t size_req = paramLength + sizeof(parm_entry_type_new_t);
+  uint32_t aligned_size_req = (size_req + 3U) & (~3U);
+  parm_entry_type_new_t *curr_param = (parm_entry_type_new_t *)&param_buf->entry[0];
+
+  param_buf->curr_size += aligned_size_req;
+  param_buf->tot_rem_size -= aligned_size_req;
+  param_buf->num_entry++;
+
+  curr_param->entry_type = key;
+  curr_param->size = (size_t)paramLength;
+  curr_param->aligned_size = aligned_size_req;
+  memcpy(&curr_param->data[0], value, paramLength);
+
+  // Send the new value;
+
+  int rc = _lib_handle.test_obj.cam->ops->set_parms(_lib_handle.test_obj.cam->camera_handle, param_buf);
+  
+  return rc == MM_CAMERA_OK;
 }
 
 //======================================================================================================================
