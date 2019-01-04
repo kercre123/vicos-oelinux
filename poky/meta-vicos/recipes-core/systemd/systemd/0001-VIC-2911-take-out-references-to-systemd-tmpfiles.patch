@@ -1,0 +1,67 @@
+From cb3b855749a1fb9f317ad71874f99c6c4f9be47a Mon Sep 17 00:00:00 2001
+From: Alexander Kaplan <alexander@anki.com>
+Date: Tue, 24 Jul 2018 17:27:18 -0700
+Subject: [PATCH] VIC-4633: take out references to systemd-tmpfiles*
+
+---
+ units/kmod-static-nodes.service.in     | 2 +-
+ units/systemd-journal-flush.service.in | 2 +-
+ units/systemd-timesyncd.service.in     | 2 +-
+ units/systemd-update-utmp.service.in   | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/units/kmod-static-nodes.service.in b/units/kmod-static-nodes.service.in
+index 0934a87..fa00f48 100644
+--- a/units/kmod-static-nodes.service.in
++++ b/units/kmod-static-nodes.service.in
+@@ -8,7 +8,7 @@
+ [Unit]
+ Description=Create list of required static device nodes for the current kernel
+ DefaultDependencies=no
+-Before=sysinit.target systemd-tmpfiles-setup-dev.service
++Before=sysinit.target 
+ ConditionCapability=CAP_SYS_MODULE
+ ConditionPathExists=/lib/modules/%v/modules.devname
+ 
+diff --git a/units/systemd-journal-flush.service.in b/units/systemd-journal-flush.service.in
+index a0a2e3f..444bcc6 100644
+--- a/units/systemd-journal-flush.service.in
++++ b/units/systemd-journal-flush.service.in
+@@ -12,7 +12,7 @@ DefaultDependencies=no
+ Requires=systemd-journald.service
+ After=systemd-journald.service
+ After=systemd-remount-fs.service
+-Before=systemd-user-sessions.service systemd-tmpfiles-setup.service
++Before=systemd-user-sessions.service 
+ RequiresMountsFor=/var/log/journal
+ 
+ [Service]
+diff --git a/units/systemd-timesyncd.service.in b/units/systemd-timesyncd.service.in
+index 8219c95..cede2a7 100644
+--- a/units/systemd-timesyncd.service.in
++++ b/units/systemd-timesyncd.service.in
+@@ -12,7 +12,7 @@ ConditionCapability=CAP_SYS_TIME
+ ConditionVirtualization=!container
+ DefaultDependencies=no
+ RequiresMountsFor=/var/lib/systemd/clock
+-After=systemd-remount-fs.service systemd-tmpfiles-setup.service systemd-sysusers.service
++After=systemd-remount-fs.service systemd-sysusers.service
+ Before=time-sync.target sysinit.target shutdown.target
+ Conflicts=shutdown.target
+ Wants=time-sync.target
+diff --git a/units/systemd-update-utmp.service.in b/units/systemd-update-utmp.service.in
+index 163eccd..31476c3 100644
+--- a/units/systemd-update-utmp.service.in
++++ b/units/systemd-update-utmp.service.in
+@@ -11,7 +11,7 @@ Documentation=man:systemd-update-utmp.service(8) man:utmp(5)
+ DefaultDependencies=no
+ RequiresMountsFor=/var/log/wtmp
+ Conflicts=shutdown.target
+-After=systemd-remount-fs.service systemd-tmpfiles-setup.service auditd.service
++After=systemd-remount-fs.service auditd.service
+ Before=sysinit.target shutdown.target
+ 
+ [Service]
+-- 
+2.1.2
+

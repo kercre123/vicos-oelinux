@@ -1,0 +1,51 @@
+From 024cb3559f3873a23056c3562f1cbd8fe265dcfa Mon Sep 17 00:00:00 2001
+From: Alexander Kaplan <alexander@anki.com>
+Date: Mon, 23 Jul 2018 15:10:15 -0700
+Subject: [PATCH] VIC-4633: fixing problems with systemd-tmpfiles-setup
+
+---
+ tmpfiles.d/home.conf | 1 -
+ tmpfiles.d/tmp.conf  | 4 ++--
+ tmpfiles.d/var.conf  | 2 +-
+ 3 files changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/tmpfiles.d/home.conf b/tmpfiles.d/home.conf
+index aa652b1..b111167 100644
+--- a/tmpfiles.d/home.conf
++++ b/tmpfiles.d/home.conf
+@@ -8,4 +8,3 @@
+ # See tmpfiles.d(5) for details
+ 
+ v /home 0755 - - -
+-v /srv 0755 - - -
+diff --git a/tmpfiles.d/tmp.conf b/tmpfiles.d/tmp.conf
+index ffdd82f..1b4908a 100644
+--- a/tmpfiles.d/tmp.conf
++++ b/tmpfiles.d/tmp.conf
+@@ -8,8 +8,8 @@
+ # See tmpfiles.d(5) for details
+ 
+ # Clear tmp directories separately, to make them easier to override
+-v /tmp 1777 root root 10d
+-v /var/tmp 1777 root root 30d
++L /tmp - - - - /var/volatile/tmp
++L /var/tmp - - - - /var/volatile/tmp
+ 
+ # Exclude namespace mountpoints created with PrivateTmp=yes
+ x /tmp/systemd-private-%b-*
+diff --git a/tmpfiles.d/var.conf b/tmpfiles.d/var.conf
+index 472680c..411a49a 100644
+--- a/tmpfiles.d/var.conf
++++ b/tmpfiles.d/var.conf
+@@ -11,7 +11,7 @@ v /var 0755 - - -
+ 
+ L /var/run - - - - ../run
+ 
+-d /var/log 0755 - - -
++L /var/log - - - - ../volatile/log
+ f /var/log/wtmp 0664 root utmp -
+ f /var/log/btmp 0600 root utmp -
+ 
+-- 
+2.1.2
+
