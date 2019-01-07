@@ -58,7 +58,11 @@
 #define HARDIRQ_OFFSET	(1UL << HARDIRQ_SHIFT)
 #define NMI_OFFSET	(1UL << NMI_SHIFT)
 
-#define SOFTIRQ_DISABLE_OFFSET	(2 * SOFTIRQ_OFFSET)
+#ifndef CONFIG_PREEMPT_RT_FULL
+# define SOFTIRQ_DISABLE_OFFSET        (2 * SOFTIRQ_OFFSET)
+#else
+# define SOFTIRQ_DISABLE_OFFSET        (0)
+#endif
 
 #define PREEMPT_ACTIVE_BITS	1
 #define PREEMPT_ACTIVE_SHIFT	(NMI_SHIFT + NMI_BITS)
@@ -68,6 +72,14 @@
 #define softirq_count()	(preempt_count() & SOFTIRQ_MASK)
 #define irq_count()	(preempt_count() & (HARDIRQ_MASK | SOFTIRQ_MASK \
 				 | NMI_MASK))
+#ifndef CONFIG_PREEMPT_RT_FULL
+# define softirq_count()       (preempt_count() & SOFTIRQ_MASK)
+# define in_serving_softirq()  (softirq_count() & SOFTIRQ_OFFSET)
+#else
+# define softirq_count()       (0UL)
+extern int in_serving_softirq(void);
+#endif
+
 
 /*
  * Are we doing bottom half or hardware interrupt processing?
@@ -78,7 +90,6 @@
 #define in_irq()		(hardirq_count())
 #define in_softirq()		(softirq_count())
 #define in_interrupt()		(irq_count())
-#define in_serving_softirq()	(softirq_count() & SOFTIRQ_OFFSET)
 
 /*
  * Are we in NMI context?
@@ -153,11 +164,31 @@ extern void preempt_count_sub(int val);
 #define preempt_count_inc() preempt_count_add(1)
 #define preempt_count_dec() preempt_count_sub(1)
 
+#ifdef CONFIG_PREEMPT_LAZY
+#define add_preempt_lazy_count(val)	do { preempt_lazy_count() += (val); } while (0)
+#define sub_preempt_lazy_count(val)	do { preempt_lazy_count() -= (val); } while (0)
+#define inc_preempt_lazy_count()	add_preempt_lazy_count(1)
+#define dec_preempt_lazy_count()	sub_preempt_lazy_count(1)
+#define preempt_lazy_count()		(current_thread_info()->preempt_lazy_count)
+#else
+#define add_preempt_lazy_count(val)	do { } while (0)
+#define sub_preempt_lazy_count(val)	do { } while (0)
+#define inc_preempt_lazy_count()	do { } while (0)
+#define dec_preempt_lazy_count()	do { } while (0)
+#define preempt_lazy_count()		(0)
+#endif
+
 #ifdef CONFIG_PREEMPT_COUNT
 
 #define preempt_disable() \
 do { \
 	preempt_count_inc(); \
+	barrier(); \
+} while (0)
+
+#define preempt_lazy_disable() \
+do { \
+	inc_preempt_lazy_count(); \
 	barrier(); \
 } while (0)
 
@@ -167,7 +198,13 @@ do { \
 	preempt_count_dec(); \
 } while (0)
 
-#define preempt_enable_no_resched() sched_preempt_enable_no_resched()
+#ifdef CONFIG_PREEMPT_RT_BASE
+# define preempt_enable_no_resched() sched_preempt_enable_no_resched()
+# define preempt_check_resched_rt() preempt_check_resched()
+#else
+# define preempt_enable_no_resched() preempt_enable()
+# define preempt_check_resched_rt() barrier();
+#endif
 
 #ifdef CONFIG_PREEMPT
 #define preempt_enable() \
@@ -181,6 +218,13 @@ do { \
 do { \
 	if (should_resched(0)) \
 		__preempt_schedule(); \
+} while (0)
+
+#define preempt_lazy_enable() \
+do { \
+	dec_preempt_lazy_count(); \
+	barrier(); \
+	preempt_check_resched(); \
 } while (0)
 
 #else
@@ -241,6 +285,7 @@ do { \
 #define preempt_disable_notrace()		barrier()
 #define preempt_enable_no_resched_notrace()	barrier()
 #define preempt_enable_notrace()		barrier()
+#define preempt_check_resched_rt()		barrier()
 
 #endif /* CONFIG_PREEMPT_COUNT */
 
@@ -260,9 +305,30 @@ do { \
 } while (0)
 #define preempt_fold_need_resched() \
 do { \
-	if (tif_need_resched()) \
+	if (tif_need_resched_now()) \
 		set_preempt_need_resched(); \
 } while (0)
+
+#ifdef CONFIG_PREEMPT_RT_FULL
+# define preempt_disable_rt()		preempt_disable()
+# define preempt_enable_rt()		preempt_enable()
+# define preempt_disable_nort()		barrier()
+# define preempt_enable_nort()		barrier()
+# ifdef CONFIG_SMP
+   extern void migrate_disable(void);
+   extern void migrate_enable(void);
+# else /* CONFIG_SMP */
+#  define migrate_disable()		barrier()
+#  define migrate_enable()		barrier()
+# endif /* CONFIG_SMP */
+#else
+# define preempt_disable_rt()		barrier()
+# define preempt_enable_rt()		barrier()
+# define preempt_disable_nort()		preempt_disable()
+# define preempt_enable_nort()		preempt_enable()
+# define migrate_disable()		preempt_disable()
+# define migrate_enable()		preempt_enable()
+#endif
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 
