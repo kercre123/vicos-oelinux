@@ -914,7 +914,7 @@ static int l2_cache_pmu_probe(struct platform_device *pdev)
 		}
 
 		slice->cluster = affinity_cpu >> 1;
-		slice->pmu_lock = __SPIN_LOCK_UNLOCKED(slice->pmu_lock);
+		spin_lock_init(&slice->pmu_lock);
 
 		hml2_pmu__init(slice);
 		list_add(&slice->entry, &l2cache_pmu.pmus);

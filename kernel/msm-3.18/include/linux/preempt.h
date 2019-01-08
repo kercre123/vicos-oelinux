@@ -69,7 +69,6 @@
 #define PREEMPT_ACTIVE	(__IRQ_MASK(PREEMPT_ACTIVE_BITS) << PREEMPT_ACTIVE_SHIFT)
 
 #define hardirq_count()	(preempt_count() & HARDIRQ_MASK)
-#define softirq_count()	(preempt_count() & SOFTIRQ_MASK)
 #define irq_count()	(preempt_count() & (HARDIRQ_MASK | SOFTIRQ_MASK \
 				 | NMI_MASK))
 #ifndef CONFIG_PREEMPT_RT_FULL
@@ -96,6 +95,12 @@ extern int in_serving_softirq(void);
  */
 #define in_nmi()	(preempt_count() & NMI_MASK)
 
+#if defined(CONFIG_PREEMPT_COUNT)
+# define PREEMPT_CHECK_OFFSET 1
+#else
+# define PREEMPT_CHECK_OFFSET 0
+#endif
+
 /*
  * The preempt_count offset after preempt_disable();
  */
@@ -105,10 +110,11 @@ extern int in_serving_softirq(void);
 # define PREEMPT_DISABLE_OFFSET	0
 #endif
 
-/*
- * The preempt_count offset after spin_lock()
- */
-#define PREEMPT_LOCK_OFFSET	PREEMPT_DISABLE_OFFSET
+#if defined(CONFIG_PREEMPT_COUNT) && !defined(CONFIG_PREEMPT_RT_FULL)
+#define PREEMPT_LOCK_OFFSET	PREEMPT_OFFSET
+#else
+#define PREEMPT_LOCK_OFFSET	0
+#endif
 
 /*
  * The preempt_count offset needed for things like:

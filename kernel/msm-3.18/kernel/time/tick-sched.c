@@ -19,7 +19,6 @@
 #include <linux/percpu.h>
 #include <linux/profile.h>
 #include <linux/sched.h>
-#include <linux/timer.h>
 #include <linux/module.h>
 #include <linux/irq_work.h>
 #include <linux/posix-timers.h>
@@ -53,11 +52,11 @@ u64 jiffy_to_ktime_ns(u64 *now, u64 *jiffy_ktime_ns)
 	unsigned long seq;
 
 	do {
-		seq = read_seqbegin(&jiffies_lock);
+		seq = read_seqcount_begin(&jiffies_seq);
 		*now = ktime_get_ns();
 		*jiffy_ktime_ns = ktime_to_ns(last_jiffies_update);
 		cur_jiffies = get_jiffies_64();
-	} while (read_seqretry(&jiffies_lock, seq));
+	} while (read_seqcount_retry(&jiffies_seq, seq));
 
 	return cur_jiffies;
 }
@@ -826,11 +825,6 @@ static void __tick_nohz_idle_enter(struct tick_sched *ts)
 	int cpu = smp_processor_id();
 
 	now = tick_nohz_start_idle(ts);
-
-#ifdef CONFIG_SMP
-	if (check_pending_deferrable_timers(cpu))
-		raise_softirq_irqoff(TIMER_SOFTIRQ);
-#endif
 
 	if (can_stop_idle_tick(cpu, ts)) {
 		int was_stopped = ts->tick_stopped;

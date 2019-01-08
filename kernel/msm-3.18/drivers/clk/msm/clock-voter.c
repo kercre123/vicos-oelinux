@@ -13,7 +13,7 @@
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
 #include <linux/err.h>
-#include <linux/rtmutex.h>
+#include <linux/spinlock_types.h>
 #include <linux/clk.h>
 #include <linux/clk/msm-clk-provider.h>
 #include <soc/qcom/clock-voter.h>

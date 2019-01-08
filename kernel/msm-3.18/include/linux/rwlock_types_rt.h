@@ -24,8 +24,7 @@ typedef struct {
 #endif
 
 #define __RW_LOCK_UNLOCKED(name) \
-	{ .lock = __RT_MUTEX_INITIALIZER_SAVE_STATE(name.lock),	\
-	  RW_DEP_MAP_INIT(name) }
+	{ .lock = __RT_MUTEX_INITIALIZER_SAVE_STATE(name.lock),	 RW_DEP_MAP_INIT(name) }
 
 #define DEFINE_RWLOCK(name) \
 	rwlock_t name __cacheline_aligned_in_smp = __RW_LOCK_UNLOCKED(name)

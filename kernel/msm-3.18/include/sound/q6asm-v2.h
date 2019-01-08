@@ -208,9 +208,9 @@ struct audio_client {
 	struct mutex	       cmd_lock;
 	/* idx:1 out port, 0: in port*/
 	struct audio_port_data port[2];
-	wait_queue_head_t      cmd_wait;
-	wait_queue_head_t      time_wait;
-	wait_queue_head_t      mem_wait;
+	struct swait_head      cmd_wait;
+	struct swait_head      time_wait;
+	struct swait_head      mem_wait;
 	int                    perf_mode;
 	int					   stream_id;
 	struct device *dev;

@@ -25,7 +25,7 @@ struct ion_system_secure_heap {
 	struct ion_heap *sys_heap;
 	struct ion_heap heap;
 
-	spinlock_t work_lock;
+	raw_spinlock_t work_lock;
 	bool destroy_heap;
 	struct list_head prefetch_list;
 	struct work_struct prefetch_work;
@@ -139,11 +139,11 @@ static void ion_system_secure_heap_prefetch_work(struct work_struct *work)
 	if (!buffer)
 		return;
 
-	spin_lock_irqsave(&secure_heap->work_lock, flags);
+	raw_spin_lock_irqsave(&secure_heap->work_lock, flags);
 	list_for_each_entry_safe(info, tmp,
 				&secure_heap->prefetch_list, list) {
 		list_del(&info->list);
-		spin_unlock_irqrestore(&secure_heap->work_lock, flags);
+		raw_spin_unlock_irqrestore(&secure_heap->work_lock, flags);
 		size = info->size;
 		vmid_flags = info->vmid;
 		kfree(info);
@@ -158,14 +158,14 @@ static void ion_system_secure_heap_prefetch_work(struct work_struct *work)
 			pr_debug("%s: Failed to get %zx allocation for %s, ret = %d\n",
 				__func__, info->size, secure_heap->heap.name,
 				ret);
-			spin_lock_irqsave(&secure_heap->work_lock, flags);
+			raw_spin_lock_irqsave(&secure_heap->work_lock, flags);
 			continue;
 		}
 
 		ion_system_secure_heap_free(buffer);
-		spin_lock_irqsave(&secure_heap->work_lock, flags);
+		raw_spin_lock_irqsave(&secure_heap->work_lock, flags);
 	}
-	spin_unlock_irqrestore(&secure_heap->work_lock, flags);
+	raw_spin_unlock_irqrestore(&secure_heap->work_lock, flags);
 	kfree(buffer);
 }
 
@@ -226,14 +226,14 @@ int ion_system_secure_heap_prefetch(struct ion_heap *heap, void *ptr)
 			goto out_free;
 	}
 
-	spin_lock_irqsave(&secure_heap->work_lock, flags);
+	raw_spin_lock_irqsave(&secure_heap->work_lock, flags);
 	if (secure_heap->destroy_heap) {
-		spin_unlock_irqrestore(&secure_heap->work_lock, flags);
+		raw_spin_unlock_irqrestore(&secure_heap->work_lock, flags);
 		goto out_free;
 	}
 	list_splice_init(&items, &secure_heap->prefetch_list);
 	schedule_work(&secure_heap->prefetch_work);
-	spin_unlock_irqrestore(&secure_heap->work_lock, flags);
+	raw_spin_unlock_irqrestore(&secure_heap->work_lock, flags);
 
 	return 0;
 
@@ -323,7 +323,7 @@ struct ion_heap *ion_system_secure_heap_create(struct ion_platform_heap *unused)
 	heap->sys_heap = get_ion_heap(ION_SYSTEM_HEAP_ID);
 
 	heap->destroy_heap = false;
-	heap->work_lock = __SPIN_LOCK_UNLOCKED(heap->work_lock);
+	raw_spin_lock_init(&heap->work_lock);
 	INIT_LIST_HEAD(&heap->prefetch_list);
 	INIT_WORK(&heap->prefetch_work, ion_system_secure_heap_prefetch_work);
 	return &heap->heap;
@@ -339,10 +339,10 @@ void ion_system_secure_heap_destroy(struct ion_heap *heap)
 	struct prefetch_info *info, *tmp;
 
 	/* Stop any pending/future work */
-	spin_lock_irqsave(&secure_heap->work_lock, flags);
+	raw_spin_lock_irqsave(&secure_heap->work_lock, flags);
 	secure_heap->destroy_heap = true;
 	list_splice_init(&secure_heap->prefetch_list, &items);
-	spin_unlock_irqrestore(&secure_heap->work_lock, flags);
+	raw_spin_unlock_irqrestore(&secure_heap->work_lock, flags);
 
 	cancel_work_sync(&secure_heap->prefetch_work);
 

@@ -1,0 +1,68 @@
+--- kernel/time/timer.c
++++ kernel/time/timer.c
+@@ -777,26 +716,24 @@ __mod_timer(struct timer_list *timer, unsigned long expires,
+ 
+ 	debug_activate(timer, expires);
+ 
+-	if (!is_deferrable_timer_base(base) || pinned == TIMER_PINNED) {
+-		cpu = get_nohz_timer_target(pinned);
+-		new_base = per_cpu(tvec_bases, cpu);
++	cpu = get_nohz_timer_target(pinned);
++	new_base = per_cpu(tvec_bases, cpu);
+ 
+-		if (base != new_base) {
+-			/*
+-			 * We are trying to schedule the timer on the local CPU.
+-			 * However we can't change timer's base while it is
+-			 * running, otherwise del_timer_sync() can't detect that
+-			 * the timer's handler yet has not finished. This also
+-			 * guarantees that the timer is serialized wrt itself.
+-			 */
+-			if (likely(base->running_timer != timer)) {
+-				/* See the comment in lock_timer_base() */
+-				timer_set_base(timer, NULL);
+-				spin_unlock(&base->lock);
+-				base = new_base;
+-				spin_lock(&base->lock);
+-				timer_set_base(timer, base);
+-			}
++	if (base != new_base) {
++		/*
++		 * We are trying to schedule the timer on the local CPU.
++		 * However we can't change timer's base while it is running,
++		 * otherwise del_timer_sync() can't detect that the timer's
++		 * handler yet has not finished. This also guarantees that
++		 * the timer is serialized wrt itself.
++		 */
++		if (likely(base->running_timer != timer)) {
++			/* See the comment in lock_timer_base() */
++			timer_set_base(timer, NULL);
++			spin_unlock(&base->lock);
++			base = new_base;
++			spin_lock(&base->lock);
++			timer_set_base(timer, base);
+ 		}
+ 	}
+ 
+@@ -1576,8 +1493,20 @@ static int init_timers_cpu(int cpu)
+ 		base = per_cpu(tvec_bases, cpu);
+ 	}
+ 
+-	__init_timers(base);
+ 
++	for (j = 0; j < TVN_SIZE; j++) {
++		INIT_LIST_HEAD(base->tv5.vec + j);
++		INIT_LIST_HEAD(base->tv4.vec + j);
++		INIT_LIST_HEAD(base->tv3.vec + j);
++		INIT_LIST_HEAD(base->tv2.vec + j);
++	}
++	for (j = 0; j < TVR_SIZE; j++)
++		INIT_LIST_HEAD(base->tv1.vec + j);
++
++	base->timer_jiffies = jiffies;
++	base->next_timer = base->timer_jiffies;
++	base->active_timers = 0;
++	base->all_timers = 0;
+ 	return 0;
+ }
+ 

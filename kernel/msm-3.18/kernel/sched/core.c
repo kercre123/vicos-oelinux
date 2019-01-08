@@ -5293,6 +5293,7 @@ int wake_up_process_no_notif(struct task_struct *p)
 }
 EXPORT_SYMBOL(wake_up_process_no_notif);
 
+/*
  * wake_up_lock_sleeper - Wake up a specific process blocked on a "sleeping lock"
  * @p: The process to be woken up.
  *
