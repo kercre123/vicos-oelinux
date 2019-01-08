@@ -47,6 +47,8 @@ obj-$(CONFIG_SOC_CAMERA)		+= soc_camera/
 
 obj-$(CONFIG_VIDEO_RENESAS_VSP1)	+= vsp1/
 
+obj-$(CONFIG_VIDEO_QCOM_VENUS)		+= qcom/venus/
+
 obj-y	+= omap/
 obj-y	+= msm/
 
