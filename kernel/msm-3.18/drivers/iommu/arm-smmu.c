@@ -53,6 +53,7 @@
 #include <dt-bindings/msm/msm-bus-ids.h>
 
 #include "io-pgtable.h"
+#include "arm-smmu-regs.h"
 
 /* Maximum number of stream IDs assigned to a single device */
 #define MAX_MASTER_STREAMIDS		45
@@ -77,6 +78,7 @@
 		((smmu->options & ARM_SMMU_OPT_SECURE_CFG_ACCESS)	\
 			? 0x400 : 0))
 
+#if 0 // PDORAN_DISABLED
 /* Configuration registers */
 #define ARM_SMMU_GR0_sCR0		0x0
 #define sCR0_CLIENTPD			(1 << 0)
@@ -294,6 +296,7 @@
 					 FSR_EF | FSR_PF | FSR_TF | FSR_IGN)
 
 #define FSYNR0_WNR			(1 << 4)
+#endif
 
 static int force_stage;
 module_param_named(force_stage, force_stage, int, S_IRUGO | S_IWUSR);
