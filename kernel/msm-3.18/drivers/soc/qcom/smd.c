@@ -70,7 +70,7 @@ static struct smsm_shared_info smsm_info;
 static struct kfifo smsm_snapshot_fifo;
 static struct wakeup_source smsm_snapshot_ws;
 static int smsm_snapshot_count;
-static DEFINE_SPINLOCK(smsm_snapshot_count_lock);
+static DEFINE_RAW_SPINLOCK(smsm_snapshot_count_lock);
 
 struct smsm_size_info_type {
 	uint32_t num_hosts;
@@ -526,7 +526,7 @@ static struct notifier_block smsm_pm_nb = {
  * irq handler and code that mutates the channel
  * list or fiddles with channel state
  */
-static DEFINE_SPINLOCK(smd_lock);
+static DEFINE_RAW_SPINLOCK(smd_lock);
 DEFINE_RAW_SPINLOCK(smem_lock);
 
 /* the mutex is used during open() and close()
