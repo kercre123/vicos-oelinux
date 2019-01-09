@@ -232,13 +232,13 @@ struct qseecom_clk {
 struct qseecom_control {
 	struct ion_client *ion_clnt;		/* Ion client */
 	struct list_head  registered_listener_list_head;
-	spinlock_t        registered_listener_list_lock;
+	raw_spinlock_t        registered_listener_list_lock;
 
 	struct list_head  registered_app_list_head;
-	spinlock_t        registered_app_list_lock;
+	raw_spinlock_t        registered_app_list_lock;
 
 	struct list_head   registered_kclient_list_head;
-	spinlock_t        registered_kclient_list_lock;
+	raw_spinlock_t        registered_kclient_list_lock;
 
 	wait_queue_head_t send_resp_wq;
 	int               send_resp_flag;
@@ -1054,7 +1054,7 @@ static int __qseecom_is_svc_unique(struct qseecom_dev_handle *data,
 	int unique = 1;
 	unsigned long flags;
 
-	spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
 	list_for_each_entry(ptr, &qseecom.registered_listener_list_head, list) {
 		if (ptr->svc.listener_id == svc->listener_id) {
 			pr_err("Service id: %u is already registered\n",
@@ -1063,7 +1063,7 @@ static int __qseecom_is_svc_unique(struct qseecom_dev_handle *data,
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
 	return unique;
 }
 
@@ -1073,13 +1073,13 @@ static struct qseecom_registered_listener_list *__qseecom_find_svc(
 	struct qseecom_registered_listener_list *entry = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
 	list_for_each_entry(entry, &qseecom.registered_listener_list_head, list)
 	{
 		if (entry->svc.listener_id == listener_id)
 			break;
 	}
-	spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
 
 	if ((entry != NULL) && (entry->svc.listener_id != listener_id)) {
 		pr_err("Service id: %u is not found\n", listener_id);
@@ -1203,9 +1203,9 @@ static int qseecom_register_listener(struct qseecom_dev_handle *data,
 	init_waitqueue_head(&new_entry->listener_block_app_wq);
 	new_entry->send_resp_flag = 0;
 	new_entry->listener_in_use = false;
-	spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
 	list_add_tail(&new_entry->list, &qseecom.registered_listener_list_head);
-	spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
 
 	return ret;
 }
@@ -1239,7 +1239,7 @@ static int qseecom_unregister_listener(struct qseecom_dev_handle *data)
 	}
 
 	data->abort = 1;
-	spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
 	list_for_each_entry(ptr_svc, &qseecom.registered_listener_list_head,
 			list) {
 		if (ptr_svc->svc.listener_id == data->listener.id) {
@@ -1247,7 +1247,7 @@ static int qseecom_unregister_listener(struct qseecom_dev_handle *data)
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
 
 	while (atomic_read(&data->ioctl_count) > 1) {
 		if (wait_event_freezable(data->abort_wq,
@@ -1258,7 +1258,7 @@ static int qseecom_unregister_listener(struct qseecom_dev_handle *data)
 		}
 	}
 
-	spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_listener_list_lock, flags);
 	list_for_each_entry(ptr_svc,
 			&qseecom.registered_listener_list_head,
 			list)
@@ -1273,7 +1273,7 @@ static int qseecom_unregister_listener(struct qseecom_dev_handle *data)
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_listener_list_lock, flags);
 
 	/* Unmap the memory */
 	if (unmap_mem) {
@@ -1689,7 +1689,7 @@ static int __qseecom_process_incomplete_cmd(struct qseecom_dev_handle *data,
 		/*
 		 * Wake up blocking lsitener service with the lstnr id
 		 */
-		spin_lock_irqsave(&qseecom.registered_listener_list_lock,
+		raw_spin_lock_irqsave(&qseecom.registered_listener_list_lock,
 					flags);
 		list_for_each_entry(ptr_svc,
 				&qseecom.registered_listener_list_head, list) {
@@ -1700,7 +1700,7 @@ static int __qseecom_process_incomplete_cmd(struct qseecom_dev_handle *data,
 				break;
 			}
 		}
-		spin_unlock_irqrestore(&qseecom.registered_listener_list_lock,
+		raw_spin_unlock_irqrestore(&qseecom.registered_listener_list_lock,
 				flags);
 
 		if (ptr_svc == NULL) {
@@ -1857,7 +1857,7 @@ int __qseecom_process_reentrancy_blocked_on_listener(
 
 	/* find app_id & img_name from list */
 	if (!ptr_app) {
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_for_each_entry(ptr_app, &qseecom.registered_app_list_head,
 							list) {
 			if ((ptr_app->app_id == data->client.app_id) &&
@@ -1867,7 +1867,7 @@ int __qseecom_process_reentrancy_blocked_on_listener(
 				break;
 			}
 		}
-		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
+		raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 					flags);
 		if (!found_app) {
 			pr_err("app_id %d (%s) is not found\n",
@@ -1954,7 +1954,7 @@ static int __qseecom_reentrancy_process_incomplete_cmd(
 		/*
 		 * Wake up blocking lsitener service with the lstnr id
 		 */
-		spin_lock_irqsave(&qseecom.registered_listener_list_lock,
+		raw_spin_lock_irqsave(&qseecom.registered_listener_list_lock,
 					flags);
 		list_for_each_entry(ptr_svc,
 				&qseecom.registered_listener_list_head, list) {
@@ -1965,7 +1965,7 @@ static int __qseecom_reentrancy_process_incomplete_cmd(
 				break;
 			}
 		}
-		spin_unlock_irqrestore(&qseecom.registered_listener_list_lock,
+		raw_spin_unlock_irqrestore(&qseecom.registered_listener_list_lock,
 				flags);
 
 		if (ptr_svc == NULL) {
@@ -2179,7 +2179,7 @@ static int __qseecom_check_app_exists(struct qseecom_check_app_ireq req,
 	*app_id = 0;
 
 	/* check if app exists and has been registered locally */
-	spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 	list_for_each_entry(entry,
 			&qseecom.registered_app_list_head, list) {
 		if (!strcmp(entry->app_name, req.app_name)) {
@@ -2187,7 +2187,7 @@ static int __qseecom_check_app_exists(struct qseecom_check_app_ireq req,
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
 	if (found_app) {
 		pr_debug("Found app with id %d\n", entry->app_id);
 		*app_id = entry->app_id;
@@ -2298,7 +2298,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 	if (app_id) {
 		pr_debug("App id %d (%s) already exists\n", app_id,
 			(char *)(req.app_name));
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_for_each_entry(entry,
 		&qseecom.registered_app_list_head, list){
 			if (entry->app_id == app_id) {
@@ -2306,7 +2306,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 				break;
 			}
 		}
-		spin_unlock_irqrestore(
+		raw_spin_unlock_irqrestore(
 		&qseecom.registered_app_list_lock, flags);
 		ret = 0;
 	} else {
@@ -2434,9 +2434,9 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		if (!IS_ERR_OR_NULL(ihandle))
 			ion_free(qseecom.ion_clnt, ihandle);
 
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_add_tail(&entry->list, &qseecom.registered_app_list_head);
-		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
+		raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 									flags);
 
 		pr_warn("App with id %d (%s) now loaded\n", app_id,
@@ -2454,10 +2454,10 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		pr_err("copy_to_user failed\n");
 		ret = -EFAULT;
 		if (first_time == true) {
-			spin_lock_irqsave(
+			raw_spin_lock_irqsave(
 				&qseecom.registered_app_list_lock, flags);
 			list_del(&entry->list);
-			spin_unlock_irqrestore(
+			raw_spin_unlock_irqrestore(
 				&qseecom.registered_app_list_lock, flags);
 			kzfree(entry);
 		}
@@ -2530,7 +2530,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 	__qseecom_reentrancy_check_if_no_app_blocked(TZ_OS_APP_SHUTDOWN_ID);
 
 	if (data->client.app_id > 0) {
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_for_each_entry(ptr_app, &qseecom.registered_app_list_head,
 									list) {
 			if (ptr_app->app_id == data->client.app_id) {
@@ -2546,7 +2546,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 				}
 			}
 		}
-		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
+		raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 								flags);
 		if (found_app == false && found_dead_app == false) {
 			pr_err("Cannot find app with id = %d (%s)\n",
@@ -2599,7 +2599,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 	}
 
 	if (found_app) {
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags1);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags1);
 		if (app_crash) {
 			ptr_app->ref_cnt = 0;
 			pr_debug("app_crash: ref_count = 0\n");
@@ -2617,7 +2617,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 			list_del(&ptr_app->list);
 			kzfree(ptr_app);
 		}
-		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
+		raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 								flags1);
 	}
 unload_exit:
@@ -3060,7 +3060,7 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 
 	reqd_len_sb_in = req->cmd_req_len + req->resp_len;
 	/* find app_id & img_name from list */
-	spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 	list_for_each_entry(ptr_app, &qseecom.registered_app_list_head,
 							list) {
 		if ((ptr_app->app_id == data->client.app_id) &&
@@ -3069,7 +3069,7 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
 
 	if (!found_app) {
 		pr_err("app_id %d (%s) is not found\n", data->client.app_id,
@@ -4426,7 +4426,7 @@ int qseecom_start_app(struct qseecom_handle **handle,
 	if (app_id) {
 		pr_warn("App id %d for [%s] app exists\n", app_id,
 			(char *)app_ireq.app_name);
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_for_each_entry(entry,
 				&qseecom.registered_app_list_head, list){
 			if (entry->app_id == app_id) {
@@ -4435,7 +4435,7 @@ int qseecom_start_app(struct qseecom_handle **handle,
 				break;
 			}
 		}
-		spin_unlock_irqrestore(
+		raw_spin_unlock_irqrestore(
 				&qseecom.registered_app_list_lock, flags);
 		if (!found_app)
 			pr_warn("App_id %d [%s] was loaded but not registered\n",
@@ -4467,9 +4467,9 @@ int qseecom_start_app(struct qseecom_handle **handle,
 		entry->app_arch = app_arch;
 		entry->app_blocked = false;
 		entry->blocked_on_listener_id = 0;
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_add_tail(&entry->list, &qseecom.registered_app_list_head);
-		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
+		raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 									flags);
 	}
 
@@ -4503,10 +4503,10 @@ int qseecom_start_app(struct qseecom_handle **handle,
 	}
 	kclient_entry->handle = *handle;
 
-	spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
 	list_add_tail(&kclient_entry->list,
 			&qseecom.registered_kclient_list_head);
-	spin_unlock_irqrestore(&qseecom.registered_kclient_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_kclient_list_lock, flags);
 
 	mutex_unlock(&app_access_lock);
 	return 0;
@@ -4542,7 +4542,7 @@ int qseecom_shutdown_app(struct qseecom_handle **handle)
 	data =	(struct qseecom_dev_handle *) ((*handle)->dev);
 	mutex_lock(&app_access_lock);
 
-	spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
 	list_for_each_entry(kclient, &qseecom.registered_kclient_list_head,
 				list) {
 		if (kclient->handle == (*handle)) {
@@ -4551,7 +4551,7 @@ int qseecom_shutdown_app(struct qseecom_handle **handle)
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_kclient_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_kclient_list_lock, flags);
 	if (!found_handle)
 		pr_err("Unable to find the handle, exiting\n");
 	else
@@ -5288,7 +5288,7 @@ static int qseecom_query_app_loaded(struct qseecom_dev_handle *data,
 	if (app_id) {
 		pr_debug("App id %d (%s) already exists\n", app_id,
 			(char *)(req.app_name));
-		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+		raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_for_each_entry(entry,
 				&qseecom.registered_app_list_head, list){
 			if (entry->app_id == app_id) {
@@ -5298,7 +5298,7 @@ static int qseecom_query_app_loaded(struct qseecom_dev_handle *data,
 				break;
 			}
 		}
-		spin_unlock_irqrestore(
+		raw_spin_unlock_irqrestore(
 				&qseecom.registered_app_list_lock, flags);
 		data->client.app_id = app_id;
 		query_req.app_id = app_id;
@@ -5330,11 +5330,11 @@ static int qseecom_query_app_loaded(struct qseecom_dev_handle *data,
 				MAX_APP_NAME_SIZE);
 			entry->app_blocked = false;
 			entry->blocked_on_listener_id = 0;
-			spin_lock_irqsave(&qseecom.registered_app_list_lock,
+			raw_spin_lock_irqsave(&qseecom.registered_app_list_lock,
 				flags);
 			list_add_tail(&entry->list,
 				&qseecom.registered_app_list_head);
-			spin_unlock_irqrestore(
+			raw_spin_unlock_irqrestore(
 				&qseecom.registered_app_list_lock, flags);
 		}
 		if (copy_to_user(argp, &query_req, sizeof(query_req))) {
@@ -6471,7 +6471,7 @@ static int __qseecom_qteec_issue_cmd(struct qseecom_dev_handle *data,
 	resp_ptr = req->resp_ptr;
 
 	/* find app_id & img_name from list */
-	spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 	list_for_each_entry(ptr_app, &qseecom.registered_app_list_head,
 							list) {
 		if ((ptr_app->app_id == data->client.app_id) &&
@@ -6480,7 +6480,7 @@ static int __qseecom_qteec_issue_cmd(struct qseecom_dev_handle *data,
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
 	if (!found_app) {
 		pr_err("app_id %d (%s) is not found\n", data->client.app_id,
 			(char *)data->client.app_name);
@@ -6670,7 +6670,7 @@ static int qseecom_qteec_invoke_modfd_cmd(struct qseecom_dev_handle *data,
 	resp_ptr = req.resp_ptr;
 
 	/* find app_id & img_name from list */
-	spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 	list_for_each_entry(ptr_app, &qseecom.registered_app_list_head,
 							list) {
 		if ((ptr_app->app_id == data->client.app_id) &&
@@ -6679,7 +6679,7 @@ static int qseecom_qteec_invoke_modfd_cmd(struct qseecom_dev_handle *data,
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_app_list_lock, flags);
 	if (!found_app) {
 		pr_err("app_id %d (%s) is not found\n", data->client.app_id,
 			(char *)data->client.app_name);
@@ -8395,11 +8395,11 @@ static int qseecom_probe(struct platform_device *pdev)
 	}
 
 	INIT_LIST_HEAD(&qseecom.registered_listener_list_head);
-	spin_lock_init(&qseecom.registered_listener_list_lock);
+	raw_spin_lock_init(&qseecom.registered_listener_list_lock);
 	INIT_LIST_HEAD(&qseecom.registered_app_list_head);
-	spin_lock_init(&qseecom.registered_app_list_lock);
+	raw_spin_lock_init(&qseecom.registered_app_list_lock);
 	INIT_LIST_HEAD(&qseecom.registered_kclient_list_head);
-	spin_lock_init(&qseecom.registered_kclient_list_lock);
+	raw_spin_lock_init(&qseecom.registered_kclient_list_lock);
 	init_waitqueue_head(&qseecom.send_resp_wq);
 	qseecom.send_resp_flag = 0;
 
@@ -8640,7 +8640,7 @@ static int qseecom_remove(struct platform_device *pdev)
 	struct qseecom_ce_info_use *pce_info_use;
 
 	atomic_set(&qseecom.qseecom_state, QSEECOM_STATE_NOT_READY);
-	spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
+	raw_spin_lock_irqsave(&qseecom.registered_kclient_list_lock, flags);
 
 	list_for_each_entry(kclient, &qseecom.registered_kclient_list_head,
 								list) {
@@ -8670,7 +8670,7 @@ exit_free_kc_handle:
 exit_free_kclient:
 	kzfree(kclient);
 exit_irqrestore:
-	spin_unlock_irqrestore(&qseecom.registered_kclient_list_lock, flags);
+	raw_spin_unlock_irqrestore(&qseecom.registered_kclient_list_lock, flags);
 
 	if (qseecom.qseos_version > QSEEE_VERSION_00)
 		qseecom_unload_commonlib_image();

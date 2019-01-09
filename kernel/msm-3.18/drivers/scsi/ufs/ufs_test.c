@@ -683,11 +683,11 @@ static void scenario_free_end_io_fn(struct request *rq, int err)
 	test_rq = (struct test_request *)rq->elv.priv[0];
 	BUG_ON(!test_rq);
 
-	spin_lock_irqsave(&test_iosched->lock, flags);
+	raw_spin_lock_irqsave(&test_iosched->lock, flags);
 	test_iosched->dispatched_count--;
 	list_del_init(&test_rq->queuelist);
 	__blk_put_request(test_iosched->req_q, test_rq->rq);
-	spin_unlock_irqrestore(&test_iosched->lock, flags);
+	raw_spin_unlock_irqrestore(&test_iosched->lock, flags);
 
 	test_iosched_free_test_req_data_buffer(test_rq);
 	kfree(test_rq);
@@ -968,11 +968,11 @@ static void long_test_free_end_io_fn(struct request *rq, int err)
 
 	BUG_ON(!test_rq);
 
-	spin_lock_irqsave(&test_iosched->lock, flags);
+	raw_spin_lock_irqsave(&test_iosched->lock, flags);
 	test_iosched->dispatched_count--;
 	list_del_init(&test_rq->queuelist);
 	__blk_put_request(test_iosched->req_q, test_rq->rq);
-	spin_unlock_irqrestore(&test_iosched->lock, flags);
+	raw_spin_unlock_irqrestore(&test_iosched->lock, flags);
 
 	if (utd->test_stage == UFS_TEST_LONG_SEQUENTIAL_MIXED_STAGE2 &&
 			rq_data_dir(rq) == READ &&

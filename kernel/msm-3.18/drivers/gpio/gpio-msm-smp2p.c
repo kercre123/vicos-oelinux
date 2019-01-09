@@ -35,7 +35,7 @@ struct smp2p_chip_dev {
 	bool in_shadow;
 	uint32_t shadow_value;
 	struct work_struct shadow_work;
-	spinlock_t shadow_lock;
+	raw_spinlock_t shadow_lock;
 	struct notifier_block out_notifier;
 	struct notifier_block in_notifier;
 	struct msm_smp2p_out *out_handle;
@@ -44,7 +44,7 @@ struct smp2p_chip_dev {
 	struct irq_domain *irq_domain;
 	int irq_base;
 
-	spinlock_t irq_lock;
+	raw_spinlock_t irq_lock;
 	DECLARE_BITMAP(irq_enabled, SMP2P_BITS_PER_ENTRY);
 	DECLARE_BITMAP(irq_rising_edge, SMP2P_BITS_PER_ENTRY);
 	DECLARE_BITMAP(irq_falling_edge, SMP2P_BITS_PER_ENTRY);
@@ -53,7 +53,7 @@ struct smp2p_chip_dev {
 static struct platform_driver smp2p_gpio_driver;
 static struct lock_class_key smp2p_gpio_lock_class;
 static struct irq_chip smp2p_gpio_irq_chip;
-static DEFINE_SPINLOCK(smp2p_entry_lock_lha1);
+static DEFINE_RAW_SPINLOCK(smp2p_entry_lock_lha1);
 static LIST_HEAD(smp2p_entry_list);
 
 /* Used for mapping edge to name for logging. */
@@ -158,12 +158,12 @@ static void smp2p_set_value(struct gpio_chip *cp, unsigned offset, int value)
 		data_clear = 1 << offset;
 	}
 
-	spin_lock_irqsave(&chip->shadow_lock, flags);
+	raw_spin_lock_irqsave(&chip->shadow_lock, flags);
 	if (!chip->is_open) {
 		chip->in_shadow = true;
 		chip->shadow_value &= ~data_clear;
 		chip->shadow_value |= data_set;
-		spin_unlock_irqrestore(&chip->shadow_lock, flags);
+		raw_spin_unlock_irqrestore(&chip->shadow_lock, flags);
 		return;
 	}
 
@@ -178,7 +178,7 @@ static void smp2p_set_value(struct gpio_chip *cp, unsigned offset, int value)
 		ret = msm_smp2p_out_modify(chip->out_handle,
 				data_set, data_clear, send_irq);
 	}
-	spin_unlock_irqrestore(&chip->shadow_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->shadow_lock, flags);
 
 	if (ret)
 		SMP2P_GPIO("'%s':%d gpio %d set to %d failed (%d)\n",
@@ -269,12 +269,12 @@ static void smp2p_gpio_irq_mask_helper(struct irq_data *d, bool mask)
 		return;
 
 	offset = d->irq - chip->irq_base;
-	spin_lock_irqsave(&chip->irq_lock, flags);
+	raw_spin_lock_irqsave(&chip->irq_lock, flags);
 	if (mask)
 		clear_bit(offset, chip->irq_enabled);
 	else
 		set_bit(offset, chip->irq_enabled);
-	spin_unlock_irqrestore(&chip->irq_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->irq_lock, flags);
 }
 
 /**
@@ -324,7 +324,7 @@ static int smp2p_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 
 	offset = d->irq - chip->irq_base;
 
-	spin_lock_irqsave(&chip->irq_lock, flags);
+	raw_spin_lock_irqsave(&chip->irq_lock, flags);
 	clear_bit(offset, chip->irq_rising_edge);
 	clear_bit(offset, chip->irq_falling_edge);
 	switch (type) {
@@ -349,7 +349,7 @@ static int smp2p_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 		ret = -EINVAL;
 		break;
 	}
-	spin_unlock_irqrestore(&chip->irq_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->irq_lock, flags);
 	return ret;
 }
 
@@ -426,7 +426,7 @@ static void msm_summary_irq_handler(struct smp2p_chip_dev *chip,
 			chip->name, chip->remote_pid, prev_val, cur_val);
 
 	for (i = 0; i < SMP2P_BITS_PER_ENTRY; ++i) {
-		spin_lock_irqsave(&chip->irq_lock, flags);
+		raw_spin_lock_irqsave(&chip->irq_lock, flags);
 		trigger_interrrupt = false;
 		edge = (prev_val & 0x1) << 1 | (cur_val & 0x1);
 		irq_rising = test_bit(i, chip->irq_rising_edge);
@@ -448,7 +448,7 @@ static void msm_summary_irq_handler(struct smp2p_chip_dev *chip,
 				edge_name_falling[irq_falling],
 				edge_names[edge]);
 		}
-		spin_unlock_irqrestore(&chip->irq_lock, flags);
+		raw_spin_unlock_irqrestore(&chip->irq_lock, flags);
 
 		if (trigger_interrrupt) {
 			SMP2P_INFO(
@@ -585,7 +585,7 @@ static void smp2p_gpio_shadow_worker(struct work_struct *work)
 	unsigned long flags;
 
 	chip = container_of(work, struct smp2p_chip_dev, shadow_work);
-	spin_lock_irqsave(&chip->shadow_lock, flags);
+	raw_spin_lock_irqsave(&chip->shadow_lock, flags);
 	if (chip->in_shadow) {
 		ret = msm_smp2p_out_modify(chip->out_handle,
 					chip->shadow_value, 0x0, true);
@@ -601,7 +601,7 @@ static void smp2p_gpio_shadow_worker(struct work_struct *work)
 		chip->shadow_value = 0;
 		chip->in_shadow = false;
 	}
-	spin_unlock_irqrestore(&chip->shadow_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->shadow_lock, flags);
 }
 
 /**
@@ -628,8 +628,8 @@ static int smp2p_gpio_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto fail;
 	}
-	spin_lock_init(&chip->irq_lock);
-	spin_lock_init(&chip->shadow_lock);
+	raw_spin_lock_init(&chip->irq_lock);
+	raw_spin_lock_init(&chip->shadow_lock);
 	INIT_WORK(&chip->shadow_work, smp2p_gpio_shadow_worker);
 
 	/* parse device tree */
@@ -698,9 +698,9 @@ static int smp2p_gpio_probe(struct platform_device *pdev)
 		}
 	}
 
-	spin_lock_irqsave(&smp2p_entry_lock_lha1, flags);
+	raw_spin_lock_irqsave(&smp2p_entry_lock_lha1, flags);
 	list_add(&chip->entry_list, &smp2p_entry_list);
-	spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
+	raw_spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
 
 	/*
 	 * Create interrupt domain - note that chip can't be removed from the
@@ -780,9 +780,9 @@ void smp2p_gpio_open_test_entry(const char *name, int remote_pid, bool do_open)
 	struct smp2p_chip_dev *start_entry;
 	unsigned long flags;
 
-	spin_lock_irqsave(&smp2p_entry_lock_lha1, flags);
+	raw_spin_lock_irqsave(&smp2p_entry_lock_lha1, flags);
 	if (list_empty(&smp2p_entry_list)) {
-		spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
+		raw_spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
 		return;
 	}
 	start_entry = list_first_entry(&smp2p_entry_list,
@@ -793,16 +793,16 @@ void smp2p_gpio_open_test_entry(const char *name, int remote_pid, bool do_open)
 		if (!strncmp(entry->name, name, SMP2P_MAX_ENTRY_NAME)
 				&& entry->remote_pid == remote_pid) {
 			/* found entry to change */
-			spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
+			raw_spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
 			smp2p_gpio_open_close(entry, do_open);
-			spin_lock_irqsave(&smp2p_entry_lock_lha1, flags);
+			raw_spin_lock_irqsave(&smp2p_entry_lock_lha1, flags);
 		}
 		list_rotate_left(&smp2p_entry_list);
 		entry = list_first_entry(&smp2p_entry_list,
 						struct smp2p_chip_dev,
 						entry_list);
 	} while (entry != start_entry);
-	spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
+	raw_spin_unlock_irqrestore(&smp2p_entry_lock_lha1, flags);
 }
 
 static struct of_device_id msm_smp2p_match_table[] = {

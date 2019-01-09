@@ -95,11 +95,11 @@ static void mon_irq_enable(struct bwmon *m)
 {
 	u32 val;
 
-	spin_lock(&glb_lock);
+	raw_spin_lock(&glb_lock);
 	val = readl_relaxed(GLB_INT_EN(m));
 	val |= 1 << m->mport;
 	writel_relaxed(val, GLB_INT_EN(m));
-	spin_unlock(&glb_lock);
+	raw_spin_unlock(&glb_lock);
 
 	val = readl_relaxed(MON_INT_EN(m));
 	val |= 0x1;
@@ -115,11 +115,11 @@ static void mon_irq_disable(struct bwmon *m)
 {
 	u32 val;
 
-	spin_lock(&glb_lock);
+	raw_spin_lock(&glb_lock);
 	val = readl_relaxed(GLB_INT_EN(m));
 	val &= ~(1 << m->mport);
 	writel_relaxed(val, GLB_INT_EN(m));
-	spin_unlock(&glb_lock);
+	raw_spin_unlock(&glb_lock);
 
 	val = readl_relaxed(MON_INT_EN(m));
 	val &= ~0x1;

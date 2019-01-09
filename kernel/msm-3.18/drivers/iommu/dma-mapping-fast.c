@@ -288,7 +288,7 @@ static dma_addr_t fast_smmu_map_page(struct device *dev, struct page *page,
 		__fast_dma_page_cpu_to_dev(phys_to_page(phys_to_map),
 					   offset_from_phys_to_map, size, dir);
 
-	spin_lock_irqsave(&mapping->lock, flags);
+	raw_spin_lock_irqsave(&mapping->lock, flags);
 
 	iova = __fast_smmu_alloc_iova(mapping, attrs, len);
 
@@ -303,13 +303,13 @@ static dma_addr_t fast_smmu_map_page(struct device *dev, struct page *page,
 	if (!skip_sync)		/* TODO: should ask SMMU if coherent */
 		dmac_clean_range(pmd, pmd + nptes);
 
-	spin_unlock_irqrestore(&mapping->lock, flags);
+	raw_spin_unlock_irqrestore(&mapping->lock, flags);
 	return iova + offset_from_phys_to_map;
 
 fail_free_iova:
 	__fast_smmu_free_iova(mapping, iova, size);
 fail:
-	spin_unlock_irqrestore(&mapping->lock, flags);
+	raw_spin_unlock_irqrestore(&mapping->lock, flags);
 	return DMA_ERROR_CODE;
 }
 
@@ -329,12 +329,12 @@ static void fast_smmu_unmap_page(struct device *dev, dma_addr_t iova,
 	if (!skip_sync)
 		__fast_dma_page_dev_to_cpu(page, offset, size, dir);
 
-	spin_lock_irqsave(&mapping->lock, flags);
+	raw_spin_lock_irqsave(&mapping->lock, flags);
 	av8l_fast_unmap_public(pmd, len);
 	if (!skip_sync)		/* TODO: should ask SMMU if coherent */
 		dmac_clean_range(pmd, pmd + nptes);
 	__fast_smmu_free_iova(mapping, iova, len);
-	spin_unlock_irqrestore(&mapping->lock, flags);
+	raw_spin_unlock_irqrestore(&mapping->lock, flags);
 }
 
 static int fast_smmu_map_sg(struct device *dev, struct scatterlist *sg,
@@ -429,11 +429,11 @@ static void *fast_smmu_alloc(struct device *dev, size_t size,
 		sg_miter_stop(&miter);
 	}
 
-	spin_lock_irqsave(&mapping->lock, flags);
+	raw_spin_lock_irqsave(&mapping->lock, flags);
 	dma_addr = __fast_smmu_alloc_iova(mapping, attrs, size);
 	if (dma_addr == DMA_ERROR_CODE) {
 		dev_err(dev, "no iova\n");
-		spin_unlock_irqrestore(&mapping->lock, flags);
+		raw_spin_unlock_irqrestore(&mapping->lock, flags);
 		goto out_free_sg;
 	}
 	iova_iter = dma_addr;
@@ -454,7 +454,7 @@ static void *fast_smmu_alloc(struct device *dev, size_t size,
 		iova_iter += miter.length;
 	}
 	sg_miter_stop(&miter);
-	spin_unlock_irqrestore(&mapping->lock, flags);
+	raw_spin_unlock_irqrestore(&mapping->lock, flags);
 
 	addr = dma_common_pages_remap(pages, size, VM_USERMAP, remap_prot,
 				      __builtin_return_address(0));
@@ -469,13 +469,13 @@ static void *fast_smmu_alloc(struct device *dev, size_t size,
 
 out_unmap:
 	/* need to take the lock again for page tables and iova */
-	spin_lock_irqsave(&mapping->lock, flags);
+	raw_spin_lock_irqsave(&mapping->lock, flags);
 	ptep = iopte_pmd_offset(mapping->pgtbl_pmds, dma_addr);
 	av8l_fast_unmap_public(ptep, size);
 	dmac_clean_range(ptep, ptep + count);
 out_free_iova:
 	__fast_smmu_free_iova(mapping, dma_addr, size);
-	spin_unlock_irqrestore(&mapping->lock, flags);
+	raw_spin_unlock_irqrestore(&mapping->lock, flags);
 out_free_sg:
 	sg_free_table(&sgt);
 out_free_pages:
@@ -503,11 +503,11 @@ static void fast_smmu_free(struct device *dev, size_t size,
 	pages = area->pages;
 	dma_common_free_remap(vaddr, size, VM_USERMAP, false);
 	ptep = iopte_pmd_offset(mapping->pgtbl_pmds, dma_handle);
-	spin_lock_irqsave(&mapping->lock, flags);
+	raw_spin_lock_irqsave(&mapping->lock, flags);
 	av8l_fast_unmap_public(ptep, size);
 	dmac_clean_range(ptep, ptep + count);
 	__fast_smmu_free_iova(mapping, dma_handle, size);
-	spin_unlock_irqrestore(&mapping->lock, flags);
+	raw_spin_unlock_irqrestore(&mapping->lock, flags);
 	__fast_smmu_free_pages(pages, count);
 }
 
@@ -596,7 +596,7 @@ static struct dma_fast_smmu_mapping *__fast_smmu_create_mapping_sized(
 	if (!fast->bitmap)
 		goto err2;
 
-	spin_lock_init(&fast->lock);
+	raw_spin_lock_init(&fast->lock);
 
 	return fast;
 err2:

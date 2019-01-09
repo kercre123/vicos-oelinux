@@ -55,7 +55,7 @@ struct f_ccid {
 	struct usb_function function;
 	struct usb_composite_dev *cdev;
 	int ifc_id;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	atomic_t online;
 	/* usb eps*/
 	struct usb_ep *notify;
@@ -198,9 +198,9 @@ static void ccid_req_put(struct f_ccid *ccid_dev, struct list_head *head,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&ccid_dev->lock, flags);
+	raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 	list_add_tail(&req->list, head);
-	spin_unlock_irqrestore(&ccid_dev->lock, flags);
+	raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 }
 
 static struct usb_request *ccid_req_get(struct f_ccid *ccid_dev,
@@ -209,12 +209,12 @@ static struct usb_request *ccid_req_get(struct f_ccid *ccid_dev,
 	unsigned long flags;
 	struct usb_request *req = NULL;
 
-	spin_lock_irqsave(&ccid_dev->lock, flags);
+	raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 	if (!list_empty(head)) {
 		req = list_first_entry(head, struct usb_request, list);
 		list_del(&req->list);
 	}
-	spin_unlock_irqrestore(&ccid_dev->lock, flags);
+	raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 	return req;
 }
 
@@ -586,9 +586,9 @@ static int ccid_bulk_open(struct inode *ip, struct file *fp)
 	atomic_set(&bulk_dev->opened, 1);
 	/* clear the error latch */
 	atomic_set(&bulk_dev->error, 0);
-	spin_lock_irqsave(&ccid_dev->lock, flags);
+	raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 	fp->private_data = ccid_dev;
-	spin_unlock_irqrestore(&ccid_dev->lock, flags);
+	raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 
 	return 0;
 }
@@ -628,7 +628,7 @@ static ssize_t ccid_bulk_read(struct file *fp, char __user *buf,
 	}
 
 requeue_req:
-	spin_lock_irqsave(&ccid_dev->lock, flags);
+	raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 	if (!atomic_read(&ccid_dev->online)) {
 		pr_debug("%s: USB cable not connected\n", __func__);
 		return -ENODEV;
@@ -637,7 +637,7 @@ requeue_req:
 	req = bulk_dev->rx_req;
 	req->length = count;
 	bulk_dev->rx_done = 0;
-	spin_unlock_irqrestore(&ccid_dev->lock, flags);
+	raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 	ret = usb_ep_queue(ccid_dev->out, req, GFP_KERNEL);
 	if (ret < 0) {
 		r = -EIO;
@@ -656,37 +656,37 @@ requeue_req:
 		goto done;
 	}
 	if (!atomic_read(&bulk_dev->error)) {
-		spin_lock_irqsave(&ccid_dev->lock, flags);
+		raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 		if (!atomic_read(&ccid_dev->online)) {
-			spin_unlock_irqrestore(&ccid_dev->lock, flags);
+			raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 			pr_debug("%s: USB cable not connected\n", __func__);
 			r = -ENODEV;
 			goto done;
 		}
 		/* If we got a 0-len packet, throw it back and try again. */
 		if (req->actual == 0) {
-			spin_unlock_irqrestore(&ccid_dev->lock, flags);
+			raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 			goto requeue_req;
 		}
 		xfer = (req->actual < count) ? req->actual : count;
 		atomic_set(&bulk_dev->rx_req_busy, 1);
-		spin_unlock_irqrestore(&ccid_dev->lock, flags);
+		raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 
 		if (copy_to_user(buf, req->buf, xfer))
 			r = -EFAULT;
 
-		spin_lock_irqsave(&ccid_dev->lock, flags);
+		raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 		atomic_set(&bulk_dev->rx_req_busy, 0);
 		if (!atomic_read(&ccid_dev->online)) {
 			ccid_request_free(bulk_dev->rx_req, ccid_dev->out);
-			spin_unlock_irqrestore(&ccid_dev->lock, flags);
+			raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 			pr_debug("%s: USB cable not connected\n", __func__);
 			r = -ENODEV;
 			goto done;
 		} else {
 			r = xfer;
 		}
-		spin_unlock_irqrestore(&ccid_dev->lock, flags);
+		raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 	} else {
 		r = -EIO;
 	}
@@ -757,9 +757,9 @@ static ssize_t ccid_bulk_write(struct file *fp, const char __user *buf,
 		atomic_set(&bulk_dev->error, 1);
 		ccid_req_put(ccid_dev, &bulk_dev->tx_idle, req);
 		r = -EIO;
-		spin_lock_irqsave(&ccid_dev->lock, flags);
+		raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 		if (!atomic_read(&ccid_dev->online)) {
-			spin_unlock_irqrestore(&ccid_dev->lock, flags);
+			raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 			pr_debug("%s: USB cable not connected\n",
 							__func__);
 			while ((req = ccid_req_get(ccid_dev,
@@ -767,7 +767,7 @@ static ssize_t ccid_bulk_write(struct file *fp, const char __user *buf,
 				ccid_request_free(req, ccid_dev->in);
 			r = -ENODEV;
 		}
-		spin_unlock_irqrestore(&ccid_dev->lock, flags);
+		raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 		goto done;
 	}
 done:
@@ -822,9 +822,9 @@ static int ccid_ctrl_open(struct inode *inode, struct file *fp)
 		return -EBUSY;
 	}
 	atomic_set(&ctrl_dev->opened, 1);
-	spin_lock_irqsave(&ccid_dev->lock, flags);
+	raw_spin_lock_irqsave(&ccid_dev->lock, flags);
 	fp->private_data = ccid_dev;
-	spin_unlock_irqrestore(&ccid_dev->lock, flags);
+	raw_spin_unlock_irqrestore(&ccid_dev->lock, flags);
 
 	return 0;
 }
@@ -966,7 +966,7 @@ static int ccid_setup(void)
 		return -ENOMEM;
 
 	_ccid_dev = ccid_dev;
-	spin_lock_init(&ccid_dev->lock);
+	raw_spin_lock_init(&ccid_dev->lock);
 
 	ret = ccid_ctrl_device_init(ccid_dev);
 	if (ret) {

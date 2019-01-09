@@ -34,7 +34,7 @@ struct ipa_data_ch_info {
 	enum gadget_type	gtype;
 	bool			is_connected;
 	unsigned		port_num;
-	spinlock_t		port_lock;
+	raw_spinlock_t		port_lock;
 
 	struct work_struct	connect_w;
 	struct work_struct	disconnect_w;
@@ -150,9 +150,9 @@ static void ipa_data_disconnect_work(struct work_struct *w)
 	unsigned long flags;
 	int ret;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (!port->is_connected) {
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		pr_debug("Already disconnected.\n");
 		return;
 	}
@@ -161,7 +161,7 @@ static void ipa_data_disconnect_work(struct work_struct *w)
 			port->ipa_params.prod_clnt_hdl,
 			port->ipa_params.cons_clnt_hdl);
 
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	ret = usb_bam_disconnect_ipa(port->usb_bam_type, &port->ipa_params);
 	if (ret)
 		pr_err("usb_bam_disconnect_ipa failed: err:%d\n", ret);
@@ -209,7 +209,7 @@ void ipa_data_disconnect(struct gadget_ipa_port *gp, u8 port_num)
 		return;
 	}
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (port->port_usb) {
 		gadget = port->port_usb->cdev->gadget;
 		port->port_usb->ipa_consumer_ep = -1;
@@ -225,24 +225,24 @@ void ipa_data_disconnect(struct gadget_ipa_port *gp, u8 port_num)
 			 */
 			if (gadget_is_dwc3(gadget))
 				msm_ep_unconfig(port->port_usb->in);
-			spin_unlock_irqrestore(&port->port_lock, flags);
+			raw_spin_unlock_irqrestore(&port->port_lock, flags);
 			usb_ep_disable(port->port_usb->in);
-			spin_lock_irqsave(&port->port_lock, flags);
+			raw_spin_lock_irqsave(&port->port_lock, flags);
 			port->port_usb->in->endless = false;
 		}
 
 		if (port->port_usb->out) {
 			if (gadget_is_dwc3(gadget))
 				msm_ep_unconfig(port->port_usb->out);
-			spin_unlock_irqrestore(&port->port_lock, flags);
+			raw_spin_unlock_irqrestore(&port->port_lock, flags);
 			usb_ep_disable(port->port_usb->out);
-			spin_lock_irqsave(&port->port_lock, flags);
+			raw_spin_lock_irqsave(&port->port_lock, flags);
 			port->port_usb->out->endless = false;
 		}
 
 		port->port_usb = NULL;
 	}
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	queue_work(ipa_data_wq, &port->disconnect_w);
 }
 
@@ -290,10 +290,10 @@ static void ipa_data_connect_work(struct work_struct *w)
 
 	pr_debug("%s: Connect workqueue started", __func__);
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 
 	if (!port->port_usb) {
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		pr_err("%s(): port_usb is NULL.\n", __func__);
 		return;
 	}
@@ -303,7 +303,7 @@ static void ipa_data_connect_work(struct work_struct *w)
 		gadget = gport->cdev->gadget;
 
 	if (!gadget) {
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		pr_err("%s: gport is NULL.\n", __func__);
 		return;
 	}
@@ -313,7 +313,7 @@ static void ipa_data_connect_work(struct work_struct *w)
 	if (gport->out) {
 		port->rx_req = usb_ep_alloc_request(gport->out, GFP_ATOMIC);
 		if (!port->rx_req) {
-			spin_unlock_irqrestore(&port->port_lock, flags);
+			raw_spin_unlock_irqrestore(&port->port_lock, flags);
 			pr_err("%s: failed to allocate rx_req\n", __func__);
 			return;
 		}
@@ -326,7 +326,7 @@ static void ipa_data_connect_work(struct work_struct *w)
 	if (gport->in) {
 		port->tx_req = usb_ep_alloc_request(gport->in, GFP_ATOMIC);
 		if (!port->tx_req) {
-			spin_unlock_irqrestore(&port->port_lock, flags);
+			raw_spin_unlock_irqrestore(&port->port_lock, flags);
 			pr_err("%s: failed to allocate tx_req\n", __func__);
 			goto free_rx_req;
 		}
@@ -337,7 +337,7 @@ static void ipa_data_connect_work(struct work_struct *w)
 	}
 
 	port->is_connected = true;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	/* update IPA Parameteres here. */
 	port->ipa_params.usb_connection_speed = gadget->speed;
@@ -479,9 +479,9 @@ unconfig_msm_ep_out:
 						port->src_connection_idx);
 	}
 free_rx_tx_req:
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	port->is_connected = false;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	if (gport->in && port->tx_req)
 		usb_ep_free_request(gport->in, port->tx_req);
 free_rx_req:
@@ -524,7 +524,7 @@ int ipa_data_connect(struct gadget_ipa_port *gp, u8 port_num,
 
 	port = ipa_data_ports[port_num];
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	port->port_usb = gp;
 	port->src_connection_idx = src_connection_idx;
 	port->dst_connection_idx = dst_connection_idx;
@@ -570,7 +570,7 @@ int ipa_data_connect(struct gadget_ipa_port *gp, u8 port_num,
 	}
 
 	queue_work(ipa_data_wq, &port->connect_w);
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	return ret;
 
@@ -578,7 +578,7 @@ err_usb_out:
 	if (port->port_usb->in)
 		port->port_usb->in->endless = false;
 err_usb_in:
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 err:
 	pr_debug("%s(): failed with error:%d\n", __func__, ret);
 	return ret;
@@ -726,10 +726,10 @@ void ipa_data_resume(struct gadget_ipa_port *gp, u8 port_num)
 	}
 
 	pr_debug("%s: resume started\n", __func__);
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	gadget = port->port_usb->cdev->gadget;
 	if (!gadget) {
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		pr_err("%s(): Gadget is NULL.\n", __func__);
 		return;
 	}
@@ -737,7 +737,7 @@ void ipa_data_resume(struct gadget_ipa_port *gp, u8 port_num)
 	ret = usb_bam_register_wake_cb(port->usb_bam_type,
 				port->dst_connection_idx, NULL, NULL);
 	if (ret) {
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		pr_err("%s(): Failed to register BAM wake callback.\n",
 								__func__);
 		return;
@@ -748,13 +748,13 @@ void ipa_data_resume(struct gadget_ipa_port *gp, u8 port_num)
 				port->port_usb->out);
 		configure_fifo(port->usb_bam_type, port->dst_connection_idx,
 				port->port_usb->in);
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		msm_dwc3_reset_dbm_ep(port->port_usb->in);
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		usb_bam_resume(port->usb_bam_type, &port->ipa_params);
 	}
 
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 }
 
 /**
@@ -806,7 +806,7 @@ void ipa_data_port_select(int portno, enum gadget_type gtype)
 	port->port_num  = portno;
 	port->is_connected = false;
 
-	spin_lock_init(&port->port_lock);
+	raw_spin_lock_init(&port->port_lock);
 
 	if (!work_pending(&port->connect_w))
 		INIT_WORK(&port->connect_w, ipa_data_connect_work);

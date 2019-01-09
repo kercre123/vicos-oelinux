@@ -21,9 +21,9 @@
 -			if (likely(base->running_timer != timer)) {
 -				/* See the comment in lock_timer_base() */
 -				timer_set_base(timer, NULL);
--				spin_unlock(&base->lock);
+-				raw_spin_unlock(&base->lock);
 -				base = new_base;
--				spin_lock(&base->lock);
+-				raw_spin_lock(&base->lock);
 -				timer_set_base(timer, base);
 -			}
 +	if (base != new_base) {
@@ -37,9 +37,9 @@
 +		if (likely(base->running_timer != timer)) {
 +			/* See the comment in lock_timer_base() */
 +			timer_set_base(timer, NULL);
-+			spin_unlock(&base->lock);
++			raw_spin_unlock(&base->lock);
 +			base = new_base;
-+			spin_lock(&base->lock);
++			raw_spin_lock(&base->lock);
 +			timer_set_base(timer, base);
  		}
  	}

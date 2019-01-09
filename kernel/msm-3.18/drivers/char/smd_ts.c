@@ -133,15 +133,15 @@ static int ts_buf_read(struct smd_ts_apps *ts_app, char *user_buf, size_t count)
 	if (count == 0)
 		return 0;
 
-	spin_lock_irqsave(&ts_app->lock, flags);
+	raw_spin_lock_irqsave(&ts_app->lock, flags);
 
 	/* if none data ready, wait until at least one ready;
 	 * it should release the lock, and get the lock after completion. */
 	if (ts_app->ready_buf_len == 0) {
 		init_completion(&ts_app->work);
-		spin_unlock_irqrestore(&ts_app->lock, flags);
+		raw_spin_unlock_irqrestore(&ts_app->lock, flags);
 		wait_for_completion(&ts_app->work);
-		spin_lock_irqsave(&ts_app->lock, flags);
+		raw_spin_lock_irqsave(&ts_app->lock, flags);
 	}
 
 	if (count > (ts_app->ready_buf_len * sizeof(uint64_t)))
@@ -161,7 +161,7 @@ static int ts_buf_read(struct smd_ts_apps *ts_app, char *user_buf, size_t count)
 				(count - length) / sizeof(uint64_t) - 1;
 	}
 
-	spin_unlock_irqrestore(&ts_app->lock, flags);
+	raw_spin_unlock_irqrestore(&ts_app->lock, flags);
 
 	/* do memcpy outof spinlock_irq */
 	if (count <= length) {
@@ -221,7 +221,7 @@ static int smd_ts_apps_init(struct smd_ts_apps *ts_app)
 	ts_app->buf_ptr = ts_app->ts_buf;
 
 	init_completion(&ts_app->work);
-	spin_lock_init(&ts_app->lock);
+	raw_spin_lock_init(&ts_app->lock);
 
 	ret = alloc_chrdev_region(&ts_app->dev_no, 0, 1, ts_app->ch_name);
 	if (ret != 0)

@@ -698,12 +698,12 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 	 * core and ensure that we queuing the request will finish
 	 * as soon as possible so we will release back the lock.
 	 */
-	spin_lock_irqsave(&dwc->lock, flags);
+	raw_spin_lock_irqsave(&dwc->lock, flags);
 	if (!dep->endpoint.desc) {
 		dev_err(mdwc->dev,
 			"%s: trying to queue request %pK to disabled ep %s\n",
 			__func__, request, ep->name);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EPERM;
 	}
 
@@ -711,13 +711,13 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 		dev_err(mdwc->dev,
 			"ep [%s,%d] was unconfigured as msm endpoint\n",
 			ep->name, dep->number);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EINVAL;
 	}
 
 	if (!request) {
 		dev_err(mdwc->dev, "%s: request is NULL\n", __func__);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EINVAL;
 	}
 
@@ -725,14 +725,14 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 		dev_err(mdwc->dev, "%s: sps mode is not set\n",
 					__func__);
 
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EINVAL;
 	}
 
 	/* HW restriction regarding TRB size (8KB) */
 	if (req->request.length < 0x2000) {
 		dev_err(mdwc->dev, "%s: Min TRB size is 8KB\n", __func__);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EINVAL;
 	}
 
@@ -740,7 +740,7 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 		dev_err(mdwc->dev,
 			"%s: trying to queue dbm request %pK to control ep %s\n",
 			__func__, request, ep->name);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EPERM;
 	}
 
@@ -749,7 +749,7 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 		dev_err(mdwc->dev,
 			"%s: trying to queue dbm request %pK tp ep %s\n",
 			__func__, request, ep->name);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EPERM;
 	}
 	dep->busy_slot = 0;
@@ -762,7 +762,7 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 	req_complete = kzalloc(sizeof(*req_complete), gfp_flags);
 	if (!req_complete) {
 		dev_err(mdwc->dev, "%s: not enough memory\n", __func__);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -ENOMEM;
 	}
 	req_complete->req = request;
@@ -785,7 +785,7 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 		goto err;
 	}
 
-	spin_unlock_irqrestore(&dwc->lock, flags);
+	raw_spin_unlock_irqrestore(&dwc->lock, flags);
 	superspeed = dwc3_msm_is_dev_superspeed(mdwc);
 	dbm_set_speed(mdwc->dbm, (u8)superspeed);
 
@@ -793,7 +793,7 @@ static int dwc3_msm_ep_queue(struct usb_ep *ep,
 
 err:
 	list_del(&req_complete->list_item);
-	spin_unlock_irqrestore(&dwc->lock, flags);
+	raw_spin_unlock_irqrestore(&dwc->lock, flags);
 	kfree(req_complete);
 	return ret;
 }
@@ -1346,15 +1346,15 @@ static int dwc3_msm_gsi_ep_op(struct usb_ep *ep,
 	case GSI_EP_OP_CONFIG:
 		request = (struct usb_gsi_request *)op_data;
 		dbg_print(0xFF, "EP_CONFIG", 0, ep->name);
-		spin_lock_irqsave(&dwc->lock, flags);
+		raw_spin_lock_irqsave(&dwc->lock, flags);
 		gsi_configure_ep(ep, request);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		break;
 	case GSI_EP_OP_STARTXFER:
 		dbg_print(0xFF, "EP_STARTXFER", 0, ep->name);
-		spin_lock_irqsave(&dwc->lock, flags);
+		raw_spin_lock_irqsave(&dwc->lock, flags);
 		ret = gsi_startxfer_for_ep(ep);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		break;
 	case GSI_EP_OP_GET_XFER_IDX:
 		dbg_print(0xFF, "EP_GETXFERID", 0, ep->name);
@@ -1381,16 +1381,16 @@ static int dwc3_msm_gsi_ep_op(struct usb_ep *ep,
 	case GSI_EP_OP_UPDATEXFER:
 		request = (struct usb_gsi_request *)op_data;
 		dbg_print(0xFF, "EP_UPDATEXFER", 0, ep->name);
-		spin_lock_irqsave(&dwc->lock, flags);
+		raw_spin_lock_irqsave(&dwc->lock, flags);
 		ret = gsi_updatexfer_for_ep(ep, request);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		break;
 	case GSI_EP_OP_ENDXFER:
 		request = (struct usb_gsi_request *)op_data;
 		dbg_print(0xFF, "EP_ENDXFER", 0, ep->name);
-		spin_lock_irqsave(&dwc->lock, flags);
+		raw_spin_lock_irqsave(&dwc->lock, flags);
 		gsi_endxfer_for_ep(ep);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		break;
 	case GSI_EP_OP_SET_CLR_BLOCK_DBL:
 		block_db = *((bool *)op_data);
@@ -1438,13 +1438,13 @@ int msm_ep_config(struct usb_ep *ep, struct usb_request *request)
 	unsigned long flags;
 
 
-	spin_lock_irqsave(&dwc->lock, flags);
+	raw_spin_lock_irqsave(&dwc->lock, flags);
 	/* Save original ep ops for future restore*/
 	if (mdwc->original_ep_ops[dep->number]) {
 		dev_err(mdwc->dev,
 			"ep [%s,%d] already configured as msm endpoint\n",
 			ep->name, dep->number);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EPERM;
 	}
 	mdwc->original_ep_ops[dep->number] = ep->ops;
@@ -1455,7 +1455,7 @@ int msm_ep_config(struct usb_ep *ep, struct usb_request *request)
 		dev_err(mdwc->dev,
 			"%s: unable to allocate mem for new usb ep ops\n",
 			__func__);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -ENOMEM;
 	}
 	(*new_ep_ops) = (*ep->ops);
@@ -1464,7 +1464,7 @@ int msm_ep_config(struct usb_ep *ep, struct usb_request *request)
 	ep->ops = new_ep_ops;
 
 	if (!mdwc->dbm || !request || (dep->endpoint.ep_type == EP_TYPE_GSI)) {
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return 0;
 	}
 
@@ -1482,11 +1482,11 @@ int msm_ep_config(struct usb_ep *ep, struct usb_request *request)
 	if (ret < 0) {
 		dev_err(mdwc->dev,
 			"error %d after calling dbm_ep_config\n", ret);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return ret;
 	}
 
-	spin_unlock_irqrestore(&dwc->lock, flags);
+	raw_spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return 0;
 }
@@ -1509,13 +1509,13 @@ int msm_ep_unconfig(struct usb_ep *ep)
 	struct usb_ep_ops *old_ep_ops;
 	unsigned long flags;
 
-	spin_lock_irqsave(&dwc->lock, flags);
+	raw_spin_lock_irqsave(&dwc->lock, flags);
 	/* Restore original ep ops */
 	if (!mdwc->original_ep_ops[dep->number]) {
 		dev_dbg(mdwc->dev,
 			"ep [%s,%d] was not configured as msm endpoint\n",
 			ep->name, dep->number);
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return -EINVAL;
 	}
 	old_ep_ops = (struct usb_ep_ops	*)ep->ops;
@@ -1528,7 +1528,7 @@ int msm_ep_unconfig(struct usb_ep *ep)
 	 * which are specific to MSM.
 	 */
 	if (!mdwc->dbm || (dep->endpoint.ep_type == EP_TYPE_GSI)) {
-		spin_unlock_irqrestore(&dwc->lock, flags);
+		raw_spin_unlock_irqrestore(&dwc->lock, flags);
 		return 0;
 	}
 
@@ -1551,7 +1551,7 @@ int msm_ep_unconfig(struct usb_ep *ep)
 			dbm_event_buffer_config(mdwc->dbm, 0, 0, 0);
 	}
 
-	spin_unlock_irqrestore(&dwc->lock, flags);
+	raw_spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return 0;
 }

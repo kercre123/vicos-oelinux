@@ -87,10 +87,10 @@ struct ch_ctx_iterator {
 };
 
 struct glink_ch_intent_info {
-	spinlock_t *li_lst_lock;
+	raw_spinlock_t *li_lst_lock;
 	struct list_head *li_avail_list;
 	struct list_head *li_used_list;
-	spinlock_t *ri_lst_lock;
+	raw_spinlock_t *ri_lst_lock;
 	struct list_head *ri_list;
 };
 
@@ -733,7 +733,7 @@ struct subsys_info {
 	struct list_head notify_list;
 	int notify_list_len;
 	bool link_up;
-	spinlock_t link_up_lock;
+	raw_spinlock_t link_up_lock;
 };
 
 /**
@@ -889,7 +889,7 @@ struct rwref_lock {
 	struct kref kref;
 	unsigned read_count;
 	unsigned write_count;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	wait_queue_head_t count_zero;
 
 	void (*release)(struct rwref_lock *);
@@ -923,7 +923,7 @@ static inline void rwref_lock_init(struct rwref_lock *lock_ptr,
 	kref_init(&lock_ptr->kref);
 	lock_ptr->read_count = 0;
 	lock_ptr->write_count = 0;
-	spin_lock_init(&lock_ptr->lock);
+	raw_spin_lock_init(&lock_ptr->lock);
 	init_waitqueue_head(&lock_ptr->count_zero);
 	lock_ptr->release = release;
 }
@@ -968,13 +968,13 @@ static inline void rwref_read_get_atomic(struct rwref_lock *lock_ptr,
 
 	kref_get(&lock_ptr->kref);
 	while (1) {
-		spin_lock_irqsave(&lock_ptr->lock, flags);
+		raw_spin_lock_irqsave(&lock_ptr->lock, flags);
 		if (lock_ptr->write_count == 0) {
 			lock_ptr->read_count++;
-			spin_unlock_irqrestore(&lock_ptr->lock, flags);
+			raw_spin_unlock_irqrestore(&lock_ptr->lock, flags);
 			break;
 		}
-		spin_unlock_irqrestore(&lock_ptr->lock, flags);
+		raw_spin_unlock_irqrestore(&lock_ptr->lock, flags);
 		if (!is_atomic) {
 			wait_event(lock_ptr->count_zero,
 					lock_ptr->write_count == 0);
@@ -1005,11 +1005,11 @@ static inline void rwref_read_put(struct rwref_lock *lock_ptr)
 
 	BUG_ON(lock_ptr == NULL);
 
-	spin_lock_irqsave(&lock_ptr->lock, flags);
+	raw_spin_lock_irqsave(&lock_ptr->lock, flags);
 	BUG_ON(lock_ptr->read_count == 0);
 	if (--lock_ptr->read_count == 0)
 		wake_up(&lock_ptr->count_zero);
-	spin_unlock_irqrestore(&lock_ptr->lock, flags);
+	raw_spin_unlock_irqrestore(&lock_ptr->lock, flags);
 	kref_put(&lock_ptr->kref, rwref_lock_release);
 }
 
@@ -1029,13 +1029,13 @@ static inline void rwref_write_get_atomic(struct rwref_lock *lock_ptr,
 
 	kref_get(&lock_ptr->kref);
 	while (1) {
-		spin_lock_irqsave(&lock_ptr->lock, flags);
+		raw_spin_lock_irqsave(&lock_ptr->lock, flags);
 		if (lock_ptr->read_count == 0 && lock_ptr->write_count == 0) {
 			lock_ptr->write_count++;
-			spin_unlock_irqrestore(&lock_ptr->lock, flags);
+			raw_spin_unlock_irqrestore(&lock_ptr->lock, flags);
 			break;
 		}
-		spin_unlock_irqrestore(&lock_ptr->lock, flags);
+		raw_spin_unlock_irqrestore(&lock_ptr->lock, flags);
 		if (!is_atomic) {
 			wait_event(lock_ptr->count_zero,
 					(lock_ptr->read_count == 0 &&
@@ -1067,11 +1067,11 @@ static inline void rwref_write_put(struct rwref_lock *lock_ptr)
 
 	BUG_ON(lock_ptr == NULL);
 
-	spin_lock_irqsave(&lock_ptr->lock, flags);
+	raw_spin_lock_irqsave(&lock_ptr->lock, flags);
 	BUG_ON(lock_ptr->write_count != 1);
 	if (--lock_ptr->write_count == 0)
 		wake_up(&lock_ptr->count_zero);
-	spin_unlock_irqrestore(&lock_ptr->lock, flags);
+	raw_spin_unlock_irqrestore(&lock_ptr->lock, flags);
 	kref_put(&lock_ptr->kref, rwref_lock_release);
 }
 

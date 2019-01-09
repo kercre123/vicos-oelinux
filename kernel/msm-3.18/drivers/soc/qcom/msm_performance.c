@@ -43,7 +43,7 @@ struct cluster {
 	u64 last_io_check_ts;
 	unsigned int iowait_enter_cycle_cnt;
 	unsigned int iowait_exit_cycle_cnt;
-	spinlock_t iowait_lock;
+	raw_spinlock_t iowait_lock;
 	unsigned int cur_io_busy;
 	bool io_change;
 	/* CPU */
@@ -54,14 +54,14 @@ struct cluster {
 	unsigned int single_exit_cycle_cnt;
 	unsigned int multi_enter_cycle_cnt;
 	unsigned int multi_exit_cycle_cnt;
-	spinlock_t mode_lock;
+	raw_spinlock_t mode_lock;
 	/* Perf Cluster Peak Loads */
 	unsigned int perf_cl_peak;
 	u64 last_perf_cl_check_ts;
 	bool perf_cl_detect_state_change;
 	unsigned int perf_cl_peak_enter_cycle_cnt;
 	unsigned int perf_cl_peak_exit_cycle_cnt;
-	spinlock_t perf_cl_peak_lock;
+	raw_spinlock_t perf_cl_peak_lock;
 	/* Tunables */
 	unsigned int single_enter_load;
 	unsigned int pcpu_multi_enter_load;
@@ -76,7 +76,7 @@ struct cluster {
 	unsigned int perf_cl_peak_enter_cycles;
 	unsigned int perf_cl_peak_exit_cycles;
 	unsigned int current_freq;
-	spinlock_t timer_lock;
+	raw_spinlock_t timer_lock;
 	unsigned int timer_rate;
 	struct timer_list mode_exit_timer;
 	struct timer_list perf_cl_peak_mode_exit_timer;
@@ -132,7 +132,7 @@ struct load_stats {
 static DEFINE_PER_CPU(struct load_stats, cpu_load_stats);
 
 struct events {
-	spinlock_t cpu_hotplug_lock;
+	raw_spinlock_t cpu_hotplug_lock;
 	bool cpu_hotplug;
 	bool init_success;
 };
@@ -1402,36 +1402,36 @@ static int set_workload_detect(const char *buf, const struct kernel_param *kp)
 	if (!(workload_detect & IO_DETECT)) {
 		for (i = 0; i < num_clusters; i++) {
 			i_cl = managed_clusters[i];
-			spin_lock_irqsave(&i_cl->iowait_lock, flags);
+			raw_spin_lock_irqsave(&i_cl->iowait_lock, flags);
 			i_cl->iowait_enter_cycle_cnt = 0;
 			i_cl->iowait_exit_cycle_cnt = 0;
 			i_cl->cur_io_busy = 0;
 			i_cl->io_change = true;
-			spin_unlock_irqrestore(&i_cl->iowait_lock, flags);
+			raw_spin_unlock_irqrestore(&i_cl->iowait_lock, flags);
 		}
 	}
 	if (!(workload_detect & MODE_DETECT)) {
 		for (i = 0; i < num_clusters; i++) {
 			i_cl = managed_clusters[i];
-			spin_lock_irqsave(&i_cl->mode_lock, flags);
+			raw_spin_lock_irqsave(&i_cl->mode_lock, flags);
 			i_cl->single_enter_cycle_cnt = 0;
 			i_cl->single_exit_cycle_cnt = 0;
 			i_cl->multi_enter_cycle_cnt = 0;
 			i_cl->multi_exit_cycle_cnt = 0;
 			i_cl->mode = 0;
 			i_cl->mode_change = true;
-			spin_unlock_irqrestore(&i_cl->mode_lock, flags);
+			raw_spin_unlock_irqrestore(&i_cl->mode_lock, flags);
 		}
 	}
 
 	if (!(workload_detect & PERF_CL_PEAK_DETECT)) {
 		for (i = 0; i < num_clusters; i++) {
 			i_cl = managed_clusters[i];
-			spin_lock_irqsave(&i_cl->perf_cl_peak_lock, flags);
+			raw_spin_lock_irqsave(&i_cl->perf_cl_peak_lock, flags);
 			i_cl->perf_cl_peak_enter_cycle_cnt = 0;
 			i_cl->perf_cl_peak_exit_cycle_cnt = 0;
 			i_cl->perf_cl_peak = 0;
-			spin_unlock_irqrestore(&i_cl->perf_cl_peak_lock, flags);
+			raw_spin_unlock_irqrestore(&i_cl->perf_cl_peak_lock, flags);
 		}
 	}
 
@@ -1591,23 +1591,23 @@ static bool check_notify_status(void)
 
 	for (i = 0; i < num_clusters; i++) {
 		cl = managed_clusters[i];
-		spin_lock_irqsave(&cl->iowait_lock, flags);
+		raw_spin_lock_irqsave(&cl->iowait_lock, flags);
 		if (!any_change)
 			any_change = cl->io_change;
 		cl->io_change = false;
-		spin_unlock_irqrestore(&cl->iowait_lock, flags);
+		raw_spin_unlock_irqrestore(&cl->iowait_lock, flags);
 
-		spin_lock_irqsave(&cl->mode_lock, flags);
+		raw_spin_lock_irqsave(&cl->mode_lock, flags);
 		if (!any_change)
 			any_change = cl->mode_change;
 		cl->mode_change = false;
-		spin_unlock_irqrestore(&cl->mode_lock, flags);
+		raw_spin_unlock_irqrestore(&cl->mode_lock, flags);
 
-		spin_lock_irqsave(&cl->perf_cl_peak_lock, flags);
+		raw_spin_lock_irqsave(&cl->perf_cl_peak_lock, flags);
 		if (!any_change)
 			any_change = cl->perf_cl_detect_state_change;
 		cl->perf_cl_detect_state_change = false;
-		spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
+		raw_spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
 	}
 
 	return any_change;
@@ -1667,9 +1667,9 @@ static void hotplug_notify(int action)
 		return;
 
 	if ((action == CPU_ONLINE) || (action == CPU_DEAD)) {
-		spin_lock_irqsave(&(events_group.cpu_hotplug_lock), flags);
+		raw_spin_lock_irqsave(&(events_group.cpu_hotplug_lock), flags);
 		events_group.cpu_hotplug = true;
-		spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock), flags);
+		raw_spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock), flags);
 		wake_up_process(events_notify_thread);
 	}
 }
@@ -1682,23 +1682,23 @@ static int events_notify_userspace(void *data)
 	while (1) {
 
 		set_current_state(TASK_INTERRUPTIBLE);
-		spin_lock_irqsave(&(events_group.cpu_hotplug_lock), flags);
+		raw_spin_lock_irqsave(&(events_group.cpu_hotplug_lock), flags);
 
 		if (!events_group.cpu_hotplug) {
-			spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock),
+			raw_spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock),
 									flags);
 
 			schedule();
 			if (kthread_should_stop())
 				break;
-			spin_lock_irqsave(&(events_group.cpu_hotplug_lock),
+			raw_spin_lock_irqsave(&(events_group.cpu_hotplug_lock),
 									flags);
 		}
 
 		set_current_state(TASK_RUNNING);
 		notify_change = events_group.cpu_hotplug;
 		events_group.cpu_hotplug = false;
-		spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock), flags);
+		raw_spin_unlock_irqrestore(&(events_group.cpu_hotplug_lock), flags);
 
 		if (notify_change)
 			sysfs_notify(events_kobj, NULL, "cpu_hotplug");
@@ -1715,12 +1715,12 @@ static void check_cluster_iowait(struct cluster *cl, u64 now)
 	unsigned int temp_iobusy;
 	u64 max_iowait = 0;
 
-	spin_lock_irqsave(&cl->iowait_lock, flags);
+	raw_spin_lock_irqsave(&cl->iowait_lock, flags);
 
 	if (((now - cl->last_io_check_ts)
 		< (cl->timer_rate - LAST_IO_CHECK_TOL)) ||
 		!(workload_detect & IO_DETECT)) {
-		spin_unlock_irqrestore(&cl->iowait_lock, flags);
+		raw_spin_unlock_irqrestore(&cl->iowait_lock, flags);
 		return;
 	}
 
@@ -1765,7 +1765,7 @@ static void check_cluster_iowait(struct cluster *cl, u64 now)
 		pr_debug("msm_perf: IO changed to %u\n", cl->cur_io_busy);
 	}
 
-	spin_unlock_irqrestore(&cl->iowait_lock, flags);
+	raw_spin_unlock_irqrestore(&cl->iowait_lock, flags);
 	if (cl->io_change)
 		wake_up_process(notify_thread);
 }
@@ -1774,7 +1774,7 @@ static void disable_timer(struct cluster *cl)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&cl->timer_lock, flags);
+	raw_spin_lock_irqsave(&cl->timer_lock, flags);
 
 	if (del_timer(&cl->mode_exit_timer)) {
 		trace_single_cycle_exit_timer_stop(cpumask_first(cl->cpus),
@@ -1785,14 +1785,14 @@ static void disable_timer(struct cluster *cl)
 			cl->timer_rate, cl->mode);
 	}
 
-	spin_unlock_irqrestore(&cl->timer_lock, flags);
+	raw_spin_unlock_irqrestore(&cl->timer_lock, flags);
 }
 
 static void start_timer(struct cluster *cl)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&cl->timer_lock, flags);
+	raw_spin_lock_irqsave(&cl->timer_lock, flags);
 	if ((cl->mode & SINGLE) && !timer_pending(&cl->mode_exit_timer)) {
 		/*Set timer for the Cluster since there is none pending*/
 		cl->mode_exit_timer.expires = get_jiffies_64() +
@@ -1806,7 +1806,7 @@ static void start_timer(struct cluster *cl)
 			cl->multi_exit_cycles, cl->multi_exit_cycle_cnt,
 			cl->timer_rate, cl->mode);
 	}
-	spin_unlock_irqrestore(&cl->timer_lock, flags);
+	raw_spin_unlock_irqrestore(&cl->timer_lock, flags);
 }
 
 
@@ -1966,7 +1966,7 @@ static void check_perf_cl_peak_load(struct cluster *cl, u64 now)
 	unsigned long flags;
 	bool cpu_of_cluster_zero = true;
 
-	spin_lock_irqsave(&cl->perf_cl_peak_lock, flags);
+	raw_spin_lock_irqsave(&cl->perf_cl_peak_lock, flags);
 
 	cpu_of_cluster_zero = cpumask_first(cl->cpus) ? false:true;
 	/*
@@ -1979,7 +1979,7 @@ static void check_perf_cl_peak_load(struct cluster *cl, u64 now)
 		< (cl->timer_rate - LAST_LD_CHECK_TOL)) ||
 		!(workload_detect & PERF_CL_PEAK_DETECT) ||
 		cpu_of_cluster_zero) {
-		spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
+		raw_spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
 		return;
 	}
 	for_each_cpu(i, cl->cpus) {
@@ -2051,7 +2051,7 @@ static void check_perf_cl_peak_load(struct cluster *cl, u64 now)
 		cl->multi_exit_cycle_cnt, cl->perf_cl_peak_enter_cycle_cnt,
 		cl->perf_cl_peak_exit_cycle_cnt, cl->mode, cpu_cnt);
 
-	spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
+	raw_spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
 
 	if (cl->perf_cl_detect_state_change)
 		wake_up_process(notify_thread);
@@ -2065,12 +2065,12 @@ static void check_cpu_load(struct cluster *cl, u64 now)
 	unsigned int total_load_ceil, total_load_floor;
 	unsigned long flags;
 
-	spin_lock_irqsave(&cl->mode_lock, flags);
+	raw_spin_lock_irqsave(&cl->mode_lock, flags);
 
 	if (((now - cl->last_mode_check_ts)
 		< (cl->timer_rate - LAST_LD_CHECK_TOL)) ||
 		!(workload_detect & MODE_DETECT)) {
-		spin_unlock_irqrestore(&cl->mode_lock, flags);
+		raw_spin_unlock_irqrestore(&cl->mode_lock, flags);
 		return;
 	}
 
@@ -2159,7 +2159,7 @@ static void check_cpu_load(struct cluster *cl, u64 now)
 		cl->multi_exit_cycle_cnt, cl->perf_cl_peak_enter_cycle_cnt,
 		cl->perf_cl_peak_exit_cycle_cnt, cl->mode, cpu_cnt);
 
-	spin_unlock_irqrestore(&cl->mode_lock, flags);
+	raw_spin_unlock_irqrestore(&cl->mode_lock, flags);
 
 	if (cl->mode_change)
 		wake_up_process(notify_thread);
@@ -2252,9 +2252,9 @@ static int perf_cputrans_notify(struct notifier_block *nb, unsigned long val,
 		return NOTIFY_OK;
 
 	if (val == CPUFREQ_POSTCHANGE) {
-		spin_lock_irqsave(&cl->perf_cl_peak_lock, flags);
+		raw_spin_lock_irqsave(&cl->perf_cl_peak_lock, flags);
 		cpu_st->freq = freq->new;
-		spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
+		raw_spin_unlock_irqrestore(&cl->perf_cl_peak_lock, flags);
 	}
 	/*
 	* Avoid deadlock in case governor notifier ran in the context
@@ -2536,7 +2536,7 @@ static void single_mod_exit_timer(unsigned long data)
 	if (i_cl == NULL)
 		return;
 
-	spin_lock_irqsave(&i_cl->mode_lock, flags);
+	raw_spin_lock_irqsave(&i_cl->mode_lock, flags);
 	if (i_cl->mode & SINGLE) {
 		/* Disable SINGLE mode and exit since the timer expired */
 		i_cl->mode = i_cl->mode & ~SINGLE;
@@ -2549,7 +2549,7 @@ static void single_mod_exit_timer(unsigned long data)
 			i_cl->multi_exit_cycles, i_cl->multi_exit_cycle_cnt,
 			i_cl->timer_rate, i_cl->mode);
 	}
-	spin_unlock_irqrestore(&i_cl->mode_lock, flags);
+	raw_spin_unlock_irqrestore(&i_cl->mode_lock, flags);
 	wake_up_process(notify_thread);
 }
 
@@ -2573,14 +2573,14 @@ static void perf_cl_peak_mod_exit_timer(unsigned long data)
 	if (i_cl == NULL)
 		return;
 
-	spin_lock_irqsave(&i_cl->perf_cl_peak_lock, flags);
+	raw_spin_lock_irqsave(&i_cl->perf_cl_peak_lock, flags);
 	if (i_cl->perf_cl_peak & PERF_CL_PEAK) {
 		/* Disable PERF_CL_PEAK mode and exit since the timer expired */
 		i_cl->perf_cl_peak = i_cl->perf_cl_peak & ~PERF_CL_PEAK;
 		i_cl->perf_cl_peak_enter_cycle_cnt = 0;
 		i_cl->perf_cl_peak_exit_cycle_cnt = 0;
 	}
-	spin_unlock_irqrestore(&i_cl->perf_cl_peak_lock, flags);
+	raw_spin_unlock_irqrestore(&i_cl->perf_cl_peak_lock, flags);
 	wake_up_process(notify_thread);
 }
 
@@ -2642,10 +2642,10 @@ static int init_cluster_control(void)
 		thr.perf_cl_trigger_threshold = CLUSTER_1_THRESHOLD_FREQ;
 		thr.pwr_cl_trigger_threshold = CLUSTER_0_THRESHOLD_FREQ;
 		thr.ip_evt_threshold = INPUT_EVENT_CNT_THRESHOLD;
-		spin_lock_init(&(managed_clusters[i]->iowait_lock));
-		spin_lock_init(&(managed_clusters[i]->mode_lock));
-		spin_lock_init(&(managed_clusters[i]->timer_lock));
-		spin_lock_init(&(managed_clusters[i]->perf_cl_peak_lock));
+		raw_spin_lock_init(&(managed_clusters[i]->iowait_lock));
+		raw_spin_lock_init(&(managed_clusters[i]->mode_lock));
+		raw_spin_lock_init(&(managed_clusters[i]->timer_lock));
+		raw_spin_lock_init(&(managed_clusters[i]->perf_cl_peak_lock));
 		init_timer(&managed_clusters[i]->mode_exit_timer);
 		managed_clusters[i]->mode_exit_timer.function =
 			single_mod_exit_timer;
@@ -2725,7 +2725,7 @@ static int init_events_group(void)
 		return ret;
 	}
 
-	spin_lock_init(&(events_group.cpu_hotplug_lock));
+	raw_spin_lock_init(&(events_group.cpu_hotplug_lock));
 	events_notify_thread = kthread_run(events_notify_userspace,
 					NULL, "msm_perf:events_notify");
 	if (IS_ERR(events_notify_thread))

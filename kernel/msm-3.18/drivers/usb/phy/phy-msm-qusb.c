@@ -166,7 +166,7 @@ struct qusb_phy {
 	int			phy_pll_reset_seq_len;
 	int			*emu_dcm_reset_seq;
 	int			emu_dcm_reset_seq_len;
-	spinlock_t		pulse_lock;
+	raw_spinlock_t		pulse_lock;
 	bool			put_into_high_z_state;
 	bool			scm_lvl_shifter_update;
 };
@@ -559,7 +559,7 @@ static int qusb_phy_update_dpdm(struct usb_phy *phy, int value)
 		if (ret)
 			goto clk_error;
 
-		spin_lock_irqsave(&qphy->pulse_lock, flags);
+		raw_spin_lock_irqsave(&qphy->pulse_lock, flags);
 		/*Set DP to 3.075v, sleep for .25 ms */
 		reg = readl_relaxed(qphy->base + QUSB2PHY_PORT_QC2);
 		reg |= (RDP_UP_EN | RPUP_LOW_EN);
@@ -584,7 +584,7 @@ static int qusb_phy_update_dpdm(struct usb_phy *phy, int value)
 		writel_relaxed(reg, qphy->base + QUSB2PHY_PORT_QC2);
 		/* complete above write */
 		mb();
-		spin_unlock_irqrestore(&qphy->pulse_lock, flags);
+		raw_spin_unlock_irqrestore(&qphy->pulse_lock, flags);
 		/*
 		 * It is recommended to wait here to get voltage change on
 		 * DP/DM line.
@@ -602,7 +602,7 @@ static int qusb_phy_update_dpdm(struct usb_phy *phy, int value)
 		if (ret)
 			goto clk_error;
 
-		spin_lock_irqsave(&qphy->pulse_lock, flags);
+		raw_spin_lock_irqsave(&qphy->pulse_lock, flags);
 		/* Set DM to 0.6v, sleep .25 ms */
 		reg = readl_relaxed(qphy->base + QUSB2PHY_PORT_QC1);
 		reg |= VDM_SRC_EN;
@@ -632,7 +632,7 @@ static int qusb_phy_update_dpdm(struct usb_phy *phy, int value)
 
 		/* complete above write */
 		mb();
-		spin_unlock_irqrestore(&qphy->pulse_lock, flags);
+		raw_spin_unlock_irqrestore(&qphy->pulse_lock, flags);
 
 		/*
 		 * It is recommended to wait here to get voltage change on
@@ -1108,7 +1108,7 @@ static int qusb_phy_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	qphy->phy.dev = dev;
-	spin_lock_init(&qphy->pulse_lock);
+	raw_spin_lock_init(&qphy->pulse_lock);
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 							"qusb_phy_base");

@@ -594,7 +594,7 @@ struct msm_pcie_dev_t {
 	uint32_t			    parf_swing;
 
 	bool				 cfg_access;
-	spinlock_t			 cfg_lock;
+	raw_spinlock_t			 cfg_lock;
 	unsigned long		    irqsave_flags;
 	struct mutex		     setup_lock;
 
@@ -642,10 +642,10 @@ struct msm_pcie_dev_t {
 	bool				 enumerated;
 	struct work_struct	     handle_wake_work;
 	struct mutex		     recovery_lock;
-	spinlock_t                   linkdown_lock;
-	spinlock_t                   wakeup_lock;
-	spinlock_t			global_irq_lock;
-	spinlock_t			aer_lock;
+	raw_spinlock_t                   linkdown_lock;
+	raw_spinlock_t                   wakeup_lock;
+	raw_spinlock_t			global_irq_lock;
+	raw_spinlock_t			aer_lock;
 	ulong				linkdown_counter;
 	ulong				link_turned_on_counter;
 	ulong				link_turned_off_counter;
@@ -3226,7 +3226,7 @@ static inline int msm_pcie_oper_conf(struct pci_bus *bus, u32 devfn, int oper,
 	rc_idx = dev->rc_idx;
 	rc = (bus->number == 0);
 
-	spin_lock_irqsave(&dev->cfg_lock, dev->irqsave_flags);
+	raw_spin_lock_irqsave(&dev->cfg_lock, dev->irqsave_flags);
 
 	if (!dev->cfg_access) {
 		PCIE_DBG3(dev,
@@ -3324,7 +3324,7 @@ static inline int msm_pcie_oper_conf(struct pci_bus *bus, u32 devfn, int oper,
 	}
 
 unlock:
-	spin_unlock_irqrestore(&dev->cfg_lock, dev->irqsave_flags);
+	raw_spin_unlock_irqrestore(&dev->cfg_lock, dev->irqsave_flags);
 out:
 	return rv;
 }
@@ -5166,13 +5166,13 @@ static irqreturn_t handle_aer_irq(int irq, void *data)
 		dev->ep_corr_counter, dev->ep_non_fatal_counter,
 		dev->ep_fatal_counter);
 
-	spin_lock_irqsave(&dev->aer_lock, irqsave_flags);
+	raw_spin_lock_irqsave(&dev->aer_lock, irqsave_flags);
 
 	if (dev->suspending) {
 		PCIE_DBG2(dev,
 			"PCIe: RC%d is currently suspending.\n",
 			dev->rc_idx);
-		spin_unlock_irqrestore(&dev->aer_lock, irqsave_flags);
+		raw_spin_unlock_irqrestore(&dev->aer_lock, irqsave_flags);
 		return IRQ_HANDLED;
 	}
 
@@ -5289,7 +5289,7 @@ out:
 			PCIE20_AER_ROOT_ERR_STATUS_REG,
 			0x7f, 0x7f);
 
-	spin_unlock_irqrestore(&dev->aer_lock, irqsave_flags);
+	raw_spin_unlock_irqrestore(&dev->aer_lock, irqsave_flags);
 	return IRQ_HANDLED;
 }
 
@@ -5299,7 +5299,7 @@ static irqreturn_t handle_wake_irq(int irq, void *data)
 	unsigned long irqsave_flags;
 	int i;
 
-	spin_lock_irqsave(&dev->wakeup_lock, irqsave_flags);
+	raw_spin_lock_irqsave(&dev->wakeup_lock, irqsave_flags);
 
 	dev->wake_counter++;
 	PCIE_DBG(dev, "PCIe: No. %ld wake IRQ for RC%d\n",
@@ -5329,7 +5329,7 @@ static irqreturn_t handle_wake_irq(int irq, void *data)
 		}
 	}
 
-	spin_unlock_irqrestore(&dev->wakeup_lock, irqsave_flags);
+	raw_spin_unlock_irqrestore(&dev->wakeup_lock, irqsave_flags);
 
 	return IRQ_HANDLED;
 }
@@ -5340,7 +5340,7 @@ static irqreturn_t handle_linkdown_irq(int irq, void *data)
 	unsigned long irqsave_flags;
 	int i;
 
-	spin_lock_irqsave(&dev->linkdown_lock, irqsave_flags);
+	raw_spin_lock_irqsave(&dev->linkdown_lock, irqsave_flags);
 
 	dev->linkdown_counter++;
 
@@ -5380,7 +5380,7 @@ static irqreturn_t handle_linkdown_irq(int irq, void *data)
 		}
 	}
 
-	spin_unlock_irqrestore(&dev->linkdown_lock, irqsave_flags);
+	raw_spin_unlock_irqrestore(&dev->linkdown_lock, irqsave_flags);
 
 	return IRQ_HANDLED;
 }
@@ -5423,7 +5423,7 @@ static irqreturn_t handle_global_irq(int irq, void *data)
 	unsigned long irqsave_flags;
 	u32 status;
 
-	spin_lock_irqsave(&dev->global_irq_lock, irqsave_flags);
+	raw_spin_lock_irqsave(&dev->global_irq_lock, irqsave_flags);
 
 	status = readl_relaxed(dev->parf + PCIE20_PARF_INT_ALL_STATUS) &
 			readl_relaxed(dev->parf + PCIE20_PARF_INT_ALL_MASK);
@@ -5462,7 +5462,7 @@ static irqreturn_t handle_global_irq(int irq, void *data)
 		}
 	}
 
-	spin_unlock_irqrestore(&dev->global_irq_lock, irqsave_flags);
+	raw_spin_unlock_irqrestore(&dev->global_irq_lock, irqsave_flags);
 
 	return IRQ_HANDLED;
 }
@@ -6397,14 +6397,14 @@ int __init pcie_init(void)
 			PCIE_DBG(&msm_pcie_dev[i],
 				"PCIe IPC logging %s is enable for RC%d\n",
 				rc_name, i);
-		spin_lock_init(&msm_pcie_dev[i].cfg_lock);
+		raw_spin_lock_init(&msm_pcie_dev[i].cfg_lock);
 		msm_pcie_dev[i].cfg_access = true;
 		mutex_init(&msm_pcie_dev[i].setup_lock);
 		mutex_init(&msm_pcie_dev[i].recovery_lock);
-		spin_lock_init(&msm_pcie_dev[i].linkdown_lock);
-		spin_lock_init(&msm_pcie_dev[i].wakeup_lock);
-		spin_lock_init(&msm_pcie_dev[i].global_irq_lock);
-		spin_lock_init(&msm_pcie_dev[i].aer_lock);
+		raw_spin_lock_init(&msm_pcie_dev[i].linkdown_lock);
+		raw_spin_lock_init(&msm_pcie_dev[i].wakeup_lock);
+		raw_spin_lock_init(&msm_pcie_dev[i].global_irq_lock);
+		raw_spin_lock_init(&msm_pcie_dev[i].aer_lock);
 		msm_pcie_dev[i].drv_ready = false;
 	}
 	for (i = 0; i < MAX_RC_NUM * MAX_DEVICE_NUM; i++) {
@@ -6468,9 +6468,9 @@ static int msm_pcie_pm_suspend(struct pci_dev *dev,
 
 	PCIE_DBG(pcie_dev, "RC%d: entry\n", pcie_dev->rc_idx);
 
-	spin_lock_irqsave(&pcie_dev->aer_lock, irqsave_flags);
+	raw_spin_lock_irqsave(&pcie_dev->aer_lock, irqsave_flags);
 	pcie_dev->suspending = true;
-	spin_unlock_irqrestore(&pcie_dev->aer_lock, irqsave_flags);
+	raw_spin_unlock_irqrestore(&pcie_dev->aer_lock, irqsave_flags);
 
 	if (!pcie_dev->power_on) {
 		PCIE_DBG(pcie_dev,
@@ -6492,10 +6492,10 @@ static int msm_pcie_pm_suspend(struct pci_dev *dev,
 		return ret;
 	}
 
-	spin_lock_irqsave(&pcie_dev->cfg_lock,
+	raw_spin_lock_irqsave(&pcie_dev->cfg_lock,
 				pcie_dev->irqsave_flags);
 	pcie_dev->cfg_access = false;
-	spin_unlock_irqrestore(&pcie_dev->cfg_lock,
+	raw_spin_unlock_irqrestore(&pcie_dev->cfg_lock,
 				pcie_dev->irqsave_flags);
 
 	msm_pcie_write_mask(pcie_dev->elbi + PCIE20_ELBI_SYS_CTRL, 0,
@@ -6539,17 +6539,17 @@ static void msm_pcie_fixup_suspend(struct pci_dev *dev)
 	if (pcie_dev->link_status != MSM_PCIE_LINK_ENABLED)
 		return;
 
-	spin_lock_irqsave(&pcie_dev->cfg_lock,
+	raw_spin_lock_irqsave(&pcie_dev->cfg_lock,
 				pcie_dev->irqsave_flags);
 	if (pcie_dev->disable_pc) {
 		PCIE_DBG(pcie_dev,
 			"RC%d: Skip suspend because of user request\n",
 			pcie_dev->rc_idx);
-		spin_unlock_irqrestore(&pcie_dev->cfg_lock,
+		raw_spin_unlock_irqrestore(&pcie_dev->cfg_lock,
 				pcie_dev->irqsave_flags);
 		return;
 	}
-	spin_unlock_irqrestore(&pcie_dev->cfg_lock,
+	raw_spin_unlock_irqrestore(&pcie_dev->cfg_lock,
 				pcie_dev->irqsave_flags);
 
 	mutex_lock(&pcie_dev->recovery_lock);
@@ -6577,10 +6577,10 @@ static int msm_pcie_pm_resume(struct pci_dev *dev,
 		pinctrl_select_state(pcie_dev->pinctrl,
 					pcie_dev->pins_default);
 
-	spin_lock_irqsave(&pcie_dev->cfg_lock,
+	raw_spin_lock_irqsave(&pcie_dev->cfg_lock,
 				pcie_dev->irqsave_flags);
 	pcie_dev->cfg_access = true;
-	spin_unlock_irqrestore(&pcie_dev->cfg_lock,
+	raw_spin_unlock_irqrestore(&pcie_dev->cfg_lock,
 				pcie_dev->irqsave_flags);
 
 	ret = msm_pcie_enable(pcie_dev, PM_PIPE_CLK | PM_CLK | PM_VREG);
@@ -6816,7 +6816,7 @@ int msm_pcie_pm_control(enum msm_pcie_pm_opt pm_opt, u32 busnr, void *user,
 		PCIE_DBG(&msm_pcie_dev[rc_idx],
 			"User of RC%d requests to keep the link always alive.\n",
 			rc_idx);
-		spin_lock_irqsave(&msm_pcie_dev[rc_idx].cfg_lock,
+		raw_spin_lock_irqsave(&msm_pcie_dev[rc_idx].cfg_lock,
 				msm_pcie_dev[rc_idx].irqsave_flags);
 		if (msm_pcie_dev[rc_idx].suspending) {
 			PCIE_ERR(&msm_pcie_dev[rc_idx],
@@ -6826,17 +6826,17 @@ int msm_pcie_pm_control(enum msm_pcie_pm_opt pm_opt, u32 busnr, void *user,
 		} else {
 			msm_pcie_dev[rc_idx].disable_pc = true;
 		}
-		spin_unlock_irqrestore(&msm_pcie_dev[rc_idx].cfg_lock,
+		raw_spin_unlock_irqrestore(&msm_pcie_dev[rc_idx].cfg_lock,
 				msm_pcie_dev[rc_idx].irqsave_flags);
 		break;
 	case MSM_PCIE_ENABLE_PC:
 		PCIE_DBG(&msm_pcie_dev[rc_idx],
 			"User of RC%d cancels the request of alive link.\n",
 			rc_idx);
-		spin_lock_irqsave(&msm_pcie_dev[rc_idx].cfg_lock,
+		raw_spin_lock_irqsave(&msm_pcie_dev[rc_idx].cfg_lock,
 				msm_pcie_dev[rc_idx].irqsave_flags);
 		msm_pcie_dev[rc_idx].disable_pc = false;
-		spin_unlock_irqrestore(&msm_pcie_dev[rc_idx].cfg_lock,
+		raw_spin_unlock_irqrestore(&msm_pcie_dev[rc_idx].cfg_lock,
 				msm_pcie_dev[rc_idx].irqsave_flags);
 		break;
 	default:

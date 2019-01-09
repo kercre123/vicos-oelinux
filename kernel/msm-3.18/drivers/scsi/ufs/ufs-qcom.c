@@ -1381,7 +1381,7 @@ static void ufs_qcom_pm_qos_req_start(struct ufs_hba *hba, struct request *req)
 
 	group = &host->pm_qos.groups[ufs_qcom_cpu_to_group(host, req->cpu)];
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 	if (!host->pm_qos.is_enabled)
 		goto out;
 
@@ -1392,7 +1392,7 @@ static void ufs_qcom_pm_qos_req_start(struct ufs_hba *hba, struct request *req)
 		queue_work(host->pm_qos.workq, &group->vote_work);
 	}
 out:
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 }
 
 /* hba->host->host_lock is assumed to be held by caller */
@@ -1420,10 +1420,10 @@ static void ufs_qcom_pm_qos_req_end(struct ufs_hba *hba, struct request *req,
 		return;
 
 	if (should_lock)
-		spin_lock_irqsave(hba->host->host_lock, flags);
+		raw_spin_lock_irqsave(hba->host->host_lock, flags);
 	__ufs_qcom_pm_qos_req_end(ufshcd_get_variant(hba), req->cpu);
 	if (should_lock)
-		spin_unlock_irqrestore(hba->host->host_lock, flags);
+		raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 }
 
 static void ufs_qcom_pm_qos_vote_work(struct work_struct *work)
@@ -1433,15 +1433,15 @@ static void ufs_qcom_pm_qos_vote_work(struct work_struct *work)
 	struct ufs_qcom_host *host = group->host;
 	unsigned long flags;
 
-	spin_lock_irqsave(host->hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(host->hba->host->host_lock, flags);
 
 	if (!host->pm_qos.is_enabled || !group->active_reqs) {
-		spin_unlock_irqrestore(host->hba->host->host_lock, flags);
+		raw_spin_unlock_irqrestore(host->hba->host->host_lock, flags);
 		return;
 	}
 
 	group->state = PM_QOS_VOTED;
-	spin_unlock_irqrestore(host->hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(host->hba->host->host_lock, flags);
 
 	pm_qos_update_request(&group->req, group->latency_us);
 }
@@ -1457,15 +1457,15 @@ static void ufs_qcom_pm_qos_unvote_work(struct work_struct *work)
 	 * Check if new requests were submitted in the meantime and do not
 	 * unvote if so.
 	 */
-	spin_lock_irqsave(host->hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(host->hba->host->host_lock, flags);
 
 	if (!host->pm_qos.is_enabled || group->active_reqs) {
-		spin_unlock_irqrestore(host->hba->host->host_lock, flags);
+		raw_spin_unlock_irqrestore(host->hba->host->host_lock, flags);
 		return;
 	}
 
 	group->state = PM_QOS_UNVOTED;
-	spin_unlock_irqrestore(host->hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(host->hba->host->host_lock, flags);
 
 	pm_qos_update_request_timeout(&group->req,
 		group->latency_us, UFS_QCOM_PM_QOS_UNVOTE_TIMEOUT_US);
@@ -1499,22 +1499,22 @@ static ssize_t ufs_qcom_pm_qos_enable_store(struct device *dev,
 	 * Must take the spinlock and save irqs before changing the enabled
 	 * flag in order to keep correctness of PM QoS release.
 	 */
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 	if (enable == host->pm_qos.is_enabled) {
-		spin_unlock_irqrestore(hba->host->host_lock, flags);
+		raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 		return count;
 	}
 	host->pm_qos.is_enabled = enable;
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 
 	if (!enable)
 		for (i = 0; i < host->pm_qos.num_groups; i++) {
 			cancel_work_sync(&host->pm_qos.groups[i].vote_work);
 			cancel_work_sync(&host->pm_qos.groups[i].unvote_work);
-			spin_lock_irqsave(hba->host->host_lock, flags);
+			raw_spin_lock_irqsave(hba->host->host_lock, flags);
 			host->pm_qos.groups[i].state = PM_QOS_UNVOTED;
 			host->pm_qos.groups[i].active_reqs = 0;
-			spin_unlock_irqrestore(hba->host->host_lock, flags);
+			raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 			pm_qos_update_request(&host->pm_qos.groups[i].req,
 				PM_QOS_DEFAULT_VALUE);
 		}
@@ -1574,9 +1574,9 @@ static ssize_t ufs_qcom_pm_qos_latency_store(struct device *dev,
 		if (ret)
 			break;
 
-		spin_lock_irqsave(hba->host->host_lock, flags);
+		raw_spin_lock_irqsave(hba->host->host_lock, flags);
 		host->pm_qos.groups[i].latency_us = value;
-		spin_unlock_irqrestore(hba->host->host_lock, flags);
+		raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 	}
 
 	kfree(strbuf_copy);

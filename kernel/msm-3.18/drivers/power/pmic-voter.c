@@ -455,7 +455,7 @@ struct votable *find_votable(const char *name)
 	struct votable *v;
 	bool found = false;
 
-	spin_lock_irqsave(&votable_list_slock, flags);
+	raw_spin_lock_irqsave(&votable_list_slock, flags);
 	if (list_empty(&votable_list))
 		goto out;
 
@@ -466,7 +466,7 @@ struct votable *find_votable(const char *name)
 		}
 	}
 out:
-	spin_unlock_irqrestore(&votable_list_slock, flags);
+	raw_spin_unlock_irqrestore(&votable_list_slock, flags);
 
 	if (found)
 		return v;
@@ -621,9 +621,9 @@ struct votable *create_votable(const char *name,
 		votable->effective_result = 0;
 	votable->effective_client_id = -EINVAL;
 
-	spin_lock_irqsave(&votable_list_slock, flags);
+	raw_spin_lock_irqsave(&votable_list_slock, flags);
 	list_add(&votable->list, &votable_list);
-	spin_unlock_irqrestore(&votable_list_slock, flags);
+	raw_spin_unlock_irqrestore(&votable_list_slock, flags);
 
 	votable->root = debugfs_create_dir(name, debug_root);
 	if (!votable->root) {
@@ -680,9 +680,9 @@ void destroy_votable(struct votable *votable)
 	if (!votable)
 		return;
 
-	spin_lock_irqsave(&votable_list_slock, flags);
+	raw_spin_lock_irqsave(&votable_list_slock, flags);
 	list_del(&votable->list);
-	spin_unlock_irqrestore(&votable_list_slock, flags);
+	raw_spin_unlock_irqrestore(&votable_list_slock, flags);
 
 	debugfs_remove_recursive(votable->root);
 

@@ -883,9 +883,9 @@ static void vlv_display_power_well_init(struct drm_i915_private *dev_priv)
 		I915_WRITE(DPLL(pipe), val);
 	}
 
-	spin_lock_irq(&dev_priv->irq_lock);
+	raw_spin_lock_irq(&dev_priv->irq_lock);
 	valleyview_enable_display_irqs(dev_priv);
-	spin_unlock_irq(&dev_priv->irq_lock);
+	raw_spin_unlock_irq(&dev_priv->irq_lock);
 
 	/*
 	 * During driver initialization/resume we can avoid restoring the
@@ -901,9 +901,9 @@ static void vlv_display_power_well_init(struct drm_i915_private *dev_priv)
 
 static void vlv_display_power_well_deinit(struct drm_i915_private *dev_priv)
 {
-	spin_lock_irq(&dev_priv->irq_lock);
+	raw_spin_lock_irq(&dev_priv->irq_lock);
 	valleyview_disable_display_irqs(dev_priv);
-	spin_unlock_irq(&dev_priv->irq_lock);
+	raw_spin_unlock_irq(&dev_priv->irq_lock);
 
 	vlv_power_sequencer_reset(dev_priv);
 }

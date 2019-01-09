@@ -202,7 +202,7 @@ void print_mmc_packing_stats(struct mmc_card *card)
 
 	max_num_of_packed_reqs = card->ext_csd.max_packed_writes;
 
-	spin_lock(&card->wr_pack_stats.lock);
+	raw_spin_lock(&card->wr_pack_stats.lock);
 
 	pr_info("%s: write packing statistics:",
 		mmc_hostname(card->host));
@@ -246,7 +246,7 @@ void print_mmc_packing_stats(struct mmc_card *card)
 			mmc_hostname(card->host),
 			card->wr_pack_stats.pack_stop_reason[THRESHOLD]);
 
-	spin_unlock(&card->wr_pack_stats.lock);
+	raw_spin_unlock(&card->wr_pack_stats.lock);
 }
 
 /*
@@ -638,7 +638,7 @@ static int check_wr_packing_statistics(struct test_iosched *tios)
 		return -EINVAL;
 	}
 
-	spin_lock(&mmc_packed_stats->lock);
+	raw_spin_lock(&mmc_packed_stats->lock);
 
 	if (!mmc_packed_stats->enabled) {
 		pr_err("%s write packing statistics are not enabled",
@@ -736,12 +736,12 @@ static int check_wr_packing_statistics(struct test_iosched *tios)
 	}
 
 exit_err:
-	spin_unlock(&mmc_packed_stats->lock);
+	raw_spin_unlock(&mmc_packed_stats->lock);
 	if (ret && mmc_packed_stats->enabled)
 		print_mmc_packing_stats(card);
 	return ret;
 cancel_round:
-	spin_unlock(&mmc_packed_stats->lock);
+	raw_spin_unlock(&mmc_packed_stats->lock);
 	test_iosched_set_ignore_round(tios, true);
 	return 0;
 }
@@ -1655,10 +1655,10 @@ static void new_req_free_end_io_fn(struct request *rq, int err)
 
 	BUG_ON(!test_rq);
 
-	spin_lock_irqsave(&tios->lock, flags);
+	raw_spin_lock_irqsave(&tios->lock, flags);
 	list_del_init(&test_rq->queuelist);
 	tios->dispatched_count--;
-	spin_unlock_irqrestore(&tios->lock, flags);
+	raw_spin_unlock_irqrestore(&tios->lock, flags);
 
 	__blk_put_request(tios->req_q, test_rq->rq);
 	test_iosched_free_test_req_data_buffer(test_rq);
@@ -1695,12 +1695,12 @@ static int run_new_req(struct test_iosched *tios)
 				READ, tios->start_sector, bio_num,
 				TEST_PATTERN_5A, new_req_free_end_io_fn);
 			if (test_rq) {
-				spin_lock_irqsave(tios->req_q->queue_lock,
+				raw_spin_lock_irqsave(tios->req_q->queue_lock,
 					flags);
 				list_add_tail(&test_rq->queuelist,
 					      &tios->test_queue);
 				tios->test_count++;
-				spin_unlock_irqrestore(tios->req_q->queue_lock,
+				raw_spin_unlock_irqrestore(tios->req_q->queue_lock,
 					flags);
 			} else {
 				pr_err("%s: failed to create read request",
@@ -1729,12 +1729,12 @@ static int run_new_req(struct test_iosched *tios)
 				READ, tios->start_sector, bio_num,
 				TEST_PATTERN_5A, new_req_free_end_io_fn);
 			if (test_rq) {
-				spin_lock_irqsave(tios->req_q->queue_lock,
+				raw_spin_lock_irqsave(tios->req_q->queue_lock,
 					flags);
 				list_add_tail(&test_rq->queuelist,
 					      &tios->test_queue);
 				tios->test_count++;
-				spin_unlock_irqrestore(tios->req_q->queue_lock,
+				raw_spin_unlock_irqrestore(tios->req_q->queue_lock,
 					flags);
 			} else {
 				pr_err("%s: failed to create read request",
@@ -2330,11 +2330,11 @@ static void long_seq_write_free_end_io_fn(struct request *rq, int err)
 
 	BUG_ON(!test_rq);
 
-	spin_lock_irqsave(&tios->lock, flags);
+	raw_spin_lock_irqsave(&tios->lock, flags);
 	list_del_init(&test_rq->queuelist);
 	tios->dispatched_count--;
 	__blk_put_request(tios->req_q, test_rq->rq);
-	spin_unlock_irqrestore(&tios->lock, flags);
+	raw_spin_unlock_irqrestore(&tios->lock, flags);
 
 	test_iosched_free_test_req_data_buffer(test_rq);
 	kfree(test_rq);

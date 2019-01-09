@@ -37,7 +37,7 @@ struct f_gps {
 	atomic_t			ctrl_online;
 	struct usb_composite_dev	*cdev;
 
-	spinlock_t			lock;
+	raw_spinlock_t			lock;
 
 	/* usb eps */
 	struct usb_ep			*notify;
@@ -256,7 +256,7 @@ static void gps_purge_responses(struct f_gps *dev)
 	pr_debug("%s: port#%d\n", __func__, dev->port_num);
 
 	usb_ep_dequeue(dev->notify, dev->notify_req);
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	while (!list_empty(&dev->cpkt_resp_q)) {
 		cpkt = list_first_entry(&dev->cpkt_resp_q,
 				struct rmnet_ctrl_pkt, list);
@@ -265,7 +265,7 @@ static void gps_purge_responses(struct f_gps *dev)
 		rmnet_free_ctrl_pkt(cpkt);
 	}
 	atomic_set(&dev->notify_count, 0);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static void gps_suspend(struct usb_function *f)
@@ -298,12 +298,12 @@ static void gps_resume(struct usb_function *f)
 		return;
 
 	dev->is_suspended = false;
-	spin_lock(&dev->lock);
+	raw_spin_lock(&dev->lock);
 	if (list_empty(&dev->cpkt_resp_q)) {
-		spin_unlock(&dev->lock);
+		raw_spin_unlock(&dev->lock);
 		return;
 	}
-	spin_unlock(&dev->lock);
+	raw_spin_unlock(&dev->lock);
 	gps_ctrl_response_available(dev);
 }
 
@@ -437,14 +437,14 @@ static void gps_ctrl_response_available(struct f_gps *dev)
 
 	pr_debug("%s:dev:%pK\n", __func__, dev);
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	if (!atomic_read(&dev->online) || !req || !req->buf) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		return;
 	}
 
 	if (atomic_inc_return(&dev->notify_count) != 1) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		return;
 	}
 
@@ -455,7 +455,7 @@ static void gps_ctrl_response_available(struct f_gps *dev)
 	event->wValue = cpu_to_le16(0);
 	event->wIndex = cpu_to_le16(dev->ifc_id);
 	event->wLength = cpu_to_le16(0);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	ret = usb_ep_queue(dev->notify, dev->notify_req, GFP_ATOMIC);
 	if (ret) {
@@ -464,7 +464,7 @@ static void gps_ctrl_response_available(struct f_gps *dev)
 				__func__, atomic_read(&dev->notify_count));
 			WARN_ON(1);
 		}
-		spin_lock_irqsave(&dev->lock, flags);
+		raw_spin_lock_irqsave(&dev->lock, flags);
 		if (!list_empty(&dev->cpkt_resp_q)) {
 			atomic_dec(&dev->notify_count);
 			cpkt = list_first_entry(&dev->cpkt_resp_q,
@@ -472,7 +472,7 @@ static void gps_ctrl_response_available(struct f_gps *dev)
 			list_del(&cpkt->list);
 			gps_free_ctrl_pkt(cpkt);
 		}
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		pr_debug("ep enqueue error %d\n", ret);
 	}
 }
@@ -543,9 +543,9 @@ gps_send_cpkt_response(void *gr, void *buf, size_t len)
 		return 0;
 	}
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	list_add_tail(&cpkt->list, &dev->cpkt_resp_q);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	if (dev->is_suspended && dev->is_rw_allowed) {
 		pr_debug("%s: calling gps_wakeup_host\n", __func__);
@@ -614,7 +614,7 @@ static void gps_notify_complete(struct usb_ep *ep, struct usb_request *req)
 				WARN_ON(1);
 			}
 
-			spin_lock_irqsave(&dev->lock, flags);
+			raw_spin_lock_irqsave(&dev->lock, flags);
 			if (!list_empty(&dev->cpkt_resp_q)) {
 				atomic_dec(&dev->notify_count);
 				cpkt = list_first_entry(&dev->cpkt_resp_q,
@@ -622,7 +622,7 @@ static void gps_notify_complete(struct usb_ep *ep, struct usb_request *req)
 				list_del(&cpkt->list);
 				gps_free_ctrl_pkt(cpkt);
 			}
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 			pr_debug("ep enqueue error %d\n", status);
 		}
 		break;
@@ -663,9 +663,9 @@ gps_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 			unsigned len;
 			struct rmnet_ctrl_pkt *cpkt;
 
-			spin_lock(&dev->lock);
+			raw_spin_lock(&dev->lock);
 			if (list_empty(&dev->cpkt_resp_q)) {
-				spin_unlock(&dev->lock);
+				raw_spin_unlock(&dev->lock);
 				pr_debug("%s: ctrl resp queue empty", __func__);
 				ret = 0;
 				goto invalid;
@@ -674,7 +674,7 @@ gps_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 			cpkt = list_first_entry(&dev->cpkt_resp_q,
 					struct rmnet_ctrl_pkt, list);
 			list_del(&cpkt->list);
-			spin_unlock(&dev->lock);
+			raw_spin_unlock(&dev->lock);
 
 			len = min_t(unsigned, w_length, cpkt->len);
 			memcpy(req->buf, cpkt->buf, len);
@@ -825,11 +825,11 @@ static int gps_bind_config(struct usb_configuration *c)
 
 	dev = gps_port.port;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	dev->cdev = c->cdev;
 	f = &dev->port.func;
 	f->name = kasprintf(GFP_ATOMIC, "gps");
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 	if (!f->name) {
 		pr_err("%s: cannot allocate memory for name\n", __func__);
 		return -ENOMEM;
@@ -877,7 +877,7 @@ static int gps_init_port(void)
 		return -ENOMEM;
 	}
 
-	spin_lock_init(&dev->lock);
+	raw_spin_lock_init(&dev->lock);
 	INIT_LIST_HEAD(&dev->cpkt_resp_q);
 	dev->port_num = 0;
 

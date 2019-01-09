@@ -44,7 +44,7 @@
 #define V2M_MSI_TYPER_NUM_SPI(x)       ((x) & V2M_MSI_TYPER_NUM_MASK)
 
 struct v2m_data {
-	spinlock_t msi_cnt_lock;
+	raw_spinlock_t msi_cnt_lock;
 	struct resource res;	/* GICv2m resource */
 	void __iomem *base;	/* GICv2m virt address */
 	u32 spi_start;		/* The SPI number that MSIs start */
@@ -144,9 +144,9 @@ static void gicv2m_unalloc_msi(struct v2m_data *v2m, unsigned int hwirq)
 		return;
 	}
 
-	spin_lock(&v2m->msi_cnt_lock);
+	raw_spin_lock(&v2m->msi_cnt_lock);
 	__clear_bit(pos, v2m->bm);
-	spin_unlock(&v2m->msi_cnt_lock);
+	raw_spin_unlock(&v2m->msi_cnt_lock);
 }
 
 static int gicv2m_irq_domain_alloc(struct irq_domain *domain, unsigned int virq,
@@ -155,13 +155,13 @@ static int gicv2m_irq_domain_alloc(struct irq_domain *domain, unsigned int virq,
 	struct v2m_data *v2m = domain->host_data;
 	int hwirq, offset, err = 0;
 
-	spin_lock(&v2m->msi_cnt_lock);
+	raw_spin_lock(&v2m->msi_cnt_lock);
 	offset = find_first_zero_bit(v2m->bm, v2m->nr_spis);
 	if (offset < v2m->nr_spis)
 		__set_bit(offset, v2m->bm);
 	else
 		err = -ENOSPC;
-	spin_unlock(&v2m->msi_cnt_lock);
+	raw_spin_unlock(&v2m->msi_cnt_lock);
 
 	if (err)
 		return err;
@@ -278,7 +278,7 @@ static int __init gicv2m_init_one(struct device_node *node,
 		goto err_free_domains;
 	}
 
-	spin_lock_init(&v2m->msi_cnt_lock);
+	raw_spin_lock_init(&v2m->msi_cnt_lock);
 
 	pr_info("Node %s: range[%#lx:%#lx], SPI[%d:%d]\n", node->name,
 		(unsigned long)v2m->res.start, (unsigned long)v2m->res.end,

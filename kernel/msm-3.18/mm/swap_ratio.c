@@ -77,8 +77,8 @@ static int swap_ratio_slow(struct swap_info_struct **si)
 	struct swap_info_struct *n = NULL;
 	int ret = 0;
 
-	spin_lock(&(*si)->lock);
-	spin_lock(&swap_avail_lock);
+	raw_spin_lock(&(*si)->lock);
+	raw_spin_lock(&swap_avail_lock);
 	if (&(*si)->avail_list == plist_last(&swap_avail_head)) {
 		/* just to make skip work */
 		n = *si;
@@ -94,9 +94,9 @@ static int swap_ratio_slow(struct swap_info_struct **si)
 		goto skip;
 	}
 
-	spin_unlock(&swap_avail_lock);
-	spin_lock(&n->lock);
-	spin_lock(&swap_avail_lock);
+	raw_spin_unlock(&swap_avail_lock);
+	raw_spin_lock(&n->lock);
+	raw_spin_lock(&swap_avail_lock);
 
 	if ((*si)->flags & SWP_FAST) {
 		if ((*si)->write_pending) {
@@ -114,7 +114,7 @@ static int swap_ratio_slow(struct swap_info_struct **si)
 				plist_requeue(&(*si)->avail_list,
 					&swap_avail_head);
 				n->write_pending--;
-				spin_unlock(&(*si)->lock);
+				raw_spin_unlock(&(*si)->lock);
 				*si = n;
 				goto skip;
 			} else {
@@ -139,7 +139,7 @@ static int swap_ratio_slow(struct swap_info_struct **si)
 			/* requeue slow device to the end */
 			plist_requeue(&(*si)->avail_list, &swap_avail_head);
 			n->write_pending--;
-			spin_unlock(&(*si)->lock);
+			raw_spin_unlock(&(*si)->lock);
 			*si = n;
 			goto skip;
 		} else {
@@ -153,18 +153,18 @@ static int swap_ratio_slow(struct swap_info_struct **si)
 				n->write_pending--;
 				plist_requeue(&(*si)->avail_list,
 					&swap_avail_head);
-				spin_unlock(&(*si)->lock);
+				raw_spin_unlock(&(*si)->lock);
 				*si = n;
 				goto skip;
 			}
 		}
 	}
 exit:
-	spin_unlock(&(*si)->lock);
+	raw_spin_unlock(&(*si)->lock);
 skip:
-	spin_unlock(&swap_avail_lock);
+	raw_spin_unlock(&swap_avail_lock);
 	/* n and si would have got interchanged */
-	spin_unlock(&n->lock);
+	raw_spin_unlock(&n->lock);
 	return ret;
 }
 

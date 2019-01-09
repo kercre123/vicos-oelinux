@@ -63,7 +63,7 @@ struct qmi_handle {
 	uint16_t next_txn_id;
 	struct workqueue_struct *handle_wq;
 	struct mutex handle_lock;
-	spinlock_t notify_lock;
+	raw_spinlock_t notify_lock;
 	void (*notify)(struct qmi_handle *handle, enum qmi_event_type event,
 			void *notify_priv);
 	void *notify_priv;

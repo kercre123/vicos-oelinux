@@ -49,7 +49,7 @@ struct f_qdss {
 
 	struct work_struct connect_w;
 	struct work_struct disconnect_w;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	unsigned int data_enabled:1;
 	unsigned int ctrl_in_enabled:1;
 	unsigned int ctrl_out_enabled:1;

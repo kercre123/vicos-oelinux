@@ -77,9 +77,9 @@ static ssize_t fuse_shortcircuit_read_write_iter(struct kiocb *iocb,
 		ret_val = lower_file->f_op->write_iter(iocb, iter);
 
 		if (ret_val >= 0 || ret_val == -EIOCBQUEUED) {
-			spin_lock(&fc->lock);
+			raw_spin_lock(&fc->lock);
 			fsstack_copy_inode_size(fuse_inode, lower_inode);
-			spin_unlock(&fc->lock);
+			raw_spin_unlock(&fc->lock);
 			fsstack_copy_attr_times(fuse_inode, lower_inode);
 		}
 	} else {

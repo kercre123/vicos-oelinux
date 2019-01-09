@@ -114,14 +114,14 @@ static ssize_t f2fs_sbi_store(struct f2fs_attr *a,
 		return -EINVAL;
 #endif
 	if (a->struct_type == RESERVED_BLOCKS) {
-		spin_lock(&sbi->stat_lock);
+		raw_spin_lock(&sbi->stat_lock);
 		if ((unsigned long)sbi->total_valid_block_count + t >
 				(unsigned long)sbi->user_block_count) {
-			spin_unlock(&sbi->stat_lock);
+			raw_spin_unlock(&sbi->stat_lock);
 			return -EINVAL;
 		}
 		*ui = t;
-		spin_unlock(&sbi->stat_lock);
+		raw_spin_unlock(&sbi->stat_lock);
 		return count;
 	}
 	*ui = t;

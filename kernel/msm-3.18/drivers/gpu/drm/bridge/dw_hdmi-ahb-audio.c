@@ -123,7 +123,7 @@ static struct dw_hdmi_channel_conf default_hdmi_channel_config[7] = {
 struct snd_dw_hdmi {
 	struct snd_card *card;
 	struct snd_pcm *pcm;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct dw_hdmi_audio_data data;
 	struct snd_pcm_substream *substream;
 	void (*reformat)(struct snd_dw_hdmi *, size_t, size_t);
@@ -289,10 +289,10 @@ static irqreturn_t snd_dw_hdmi_irq(int irq, void *data)
 	if (stat & HDMI_IH_AHBDMAAUD_STAT0_DONE && substream) {
 		snd_pcm_period_elapsed(substream);
 
-		spin_lock(&dw->lock);
+		raw_spin_lock(&dw->lock);
 		if (dw->substream)
 			dw_hdmi_start_dma(dw);
-		spin_unlock(&dw->lock);
+		raw_spin_unlock(&dw->lock);
 	}
 
 	return IRQ_HANDLED;
@@ -480,21 +480,21 @@ static int dw_hdmi_trigger(struct snd_pcm_substream *substream, int cmd)
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
-		spin_lock_irqsave(&dw->lock, flags);
+		raw_spin_lock_irqsave(&dw->lock, flags);
 		dw->buf_offset = 0;
 		dw->substream = substream;
 		dw_hdmi_start_dma(dw);
 		dw_hdmi_audio_enable(dw->data.hdmi);
-		spin_unlock_irqrestore(&dw->lock, flags);
+		raw_spin_unlock_irqrestore(&dw->lock, flags);
 		substream->runtime->delay = substream->runtime->period_size;
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
-		spin_lock_irqsave(&dw->lock, flags);
+		raw_spin_lock_irqsave(&dw->lock, flags);
 		dw->substream = NULL;
 		dw_hdmi_stop_dma(dw);
 		dw_hdmi_audio_disable(dw->data.hdmi);
-		spin_unlock_irqrestore(&dw->lock, flags);
+		raw_spin_unlock_irqrestore(&dw->lock, flags);
 		break;
 
 	default:
@@ -564,7 +564,7 @@ static int snd_dw_hdmi_probe(struct platform_device *pdev)
 	dw->data = *data;
 	dw->revision = revision;
 
-	spin_lock_init(&dw->lock);
+	raw_spin_lock_init(&dw->lock);
 
 	ret = snd_pcm_new(card, "DW HDMI", 0, 1, 0, &pcm);
 	if (ret < 0)

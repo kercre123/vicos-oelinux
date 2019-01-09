@@ -227,7 +227,7 @@ static int hbm_submit_async(struct ehci_hcd *ehci, struct urb *urb,
 
 	epnum = urb->ep->desc.bEndpointAddress;
 
-	spin_lock_irqsave(&ehci->lock, flags);
+	raw_spin_lock_irqsave(&ehci->lock, flags);
 	if (unlikely(!HCD_HW_ACCESSIBLE(ehci_to_hcd(ehci)))) {
 		rc = -ESHUTDOWN;
 		goto done;
@@ -249,7 +249,7 @@ static int hbm_submit_async(struct ehci_hcd *ehci, struct urb *urb,
 		qh_link_async(ehci, qh);
 
 done:
-	spin_unlock_irqrestore(&ehci->lock, flags);
+	raw_spin_unlock_irqrestore(&ehci->lock, flags);
 	if (unlikely(qh == NULL))
 		qtd_list_free(ehci, urb, qtd_list);
 	return rc;

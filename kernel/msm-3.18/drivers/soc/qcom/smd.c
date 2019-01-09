@@ -527,7 +527,7 @@ static struct notifier_block smsm_pm_nb = {
  * list or fiddles with channel state
  */
 static DEFINE_SPINLOCK(smd_lock);
-DEFINE_SPINLOCK(smem_lock);
+DEFINE_RAW_SPINLOCK(smem_lock);
 
 /* the mutex is used during open() and close()
  * operations to avoid races while creating or
@@ -993,14 +993,14 @@ void smd_channel_reset(uint32_t restart_pid)
 
 	/* change all remote states to CLOSING */
 	mutex_lock(&smd_probe_lock);
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	smd_channel_reset_state(shared_pri, PRI_ALLOC_TBL, SMD_SS_CLOSING,
 				restart_pid, pri_size / sizeof(*shared_pri));
 	if (shared_sec)
 		smd_channel_reset_state(shared_sec, SEC_ALLOC_TBL,
 						SMD_SS_CLOSING, restart_pid,
 						sec_size / sizeof(*shared_sec));
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 	mutex_unlock(&smd_probe_lock);
 
 	mb();
@@ -1008,14 +1008,14 @@ void smd_channel_reset(uint32_t restart_pid)
 
 	/* change all remote states to CLOSED */
 	mutex_lock(&smd_probe_lock);
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	smd_channel_reset_state(shared_pri, PRI_ALLOC_TBL, SMD_SS_CLOSED,
 				restart_pid, pri_size / sizeof(*shared_pri));
 	if (shared_sec)
 		smd_channel_reset_state(shared_sec, SEC_ALLOC_TBL,
 						SMD_SS_CLOSED, restart_pid,
 						sec_size / sizeof(*shared_sec));
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 	mutex_unlock(&smd_probe_lock);
 
 	mb();
@@ -1339,7 +1339,7 @@ static void handle_smd_irq_closing_list(void)
 	struct smd_channel *index;
 	unsigned tmp;
 
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	list_for_each_entry_safe(ch, index, &smd_ch_closing_list, ch_list) {
 		if (ch->half_ch->get_fSTATE(ch->recv))
 			ch->half_ch->set_fSTATE(ch->recv, 0);
@@ -1347,7 +1347,7 @@ static void handle_smd_irq_closing_list(void)
 		if (tmp != ch->last_state)
 			smd_state_change(ch, ch->last_state, tmp);
 	}
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 }
 
 static void handle_smd_irq(struct remote_proc_info *r_info,
@@ -1362,7 +1362,7 @@ static void handle_smd_irq(struct remote_proc_info *r_info,
 
 	list = &r_info->ch_list;
 
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	list_for_each_entry(ch, list, ch_list) {
 		state_change = 0;
 		ch_flags = 0;
@@ -1409,7 +1409,7 @@ static void handle_smd_irq(struct remote_proc_info *r_info,
 			ch->notify(ch->priv, SMD_EVENT_STATUS);
 		}
 	}
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 	do_smd_probe(r_info->remote_pid);
 }
 
@@ -1622,10 +1622,10 @@ static int smd_packet_read(smd_channel_t *ch, void *data, int len)
 		if (!read_intr_blocked(ch))
 			ch->notify_other_cpu(ch);
 
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	ch->current_packet -= r;
 	update_packet_state(ch);
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 
 	return r;
 }
@@ -1836,14 +1836,14 @@ static void finalize_channel_close_fn(struct work_struct *work)
 	struct smd_channel *index;
 
 	mutex_lock(&smd_creation_mutex);
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	list_for_each_entry_safe(ch, index,  &smd_ch_to_close_list, ch_list) {
 		list_del(&ch->ch_list);
 		list_add(&ch->ch_list, &smd_ch_closed_list);
 		ch->notify(ch->priv, SMD_EVENT_REOPEN_READY);
 		ch->notify = do_nothing_notify;
 	}
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 	mutex_unlock(&smd_creation_mutex);
 }
 
@@ -1886,14 +1886,14 @@ int smd_named_open_on_edge(const char *name, uint32_t edge,
 
 	ch = smd_get_channel(name, edge);
 	if (!ch) {
-		spin_lock_irqsave(&smd_lock, flags);
+		raw_spin_lock_irqsave(&smd_lock, flags);
 		/* check opened list for port */
 		list_for_each_entry(ch,
 			&remote_info[edge_to_pids[edge].remote_pid].ch_list,
 			ch_list) {
 			if (!strcmp(name, ch->name)) {
 				/* channel is already open */
-				spin_unlock_irqrestore(&smd_lock, flags);
+				raw_spin_unlock_irqrestore(&smd_lock, flags);
 				SMD_DBG("smd_open: channel '%s' already open\n",
 					ch->name);
 				return -EBUSY;
@@ -1905,7 +1905,7 @@ int smd_named_open_on_edge(const char *name, uint32_t edge,
 			if (!strncmp(name, ch->name, 20) &&
 				(edge == ch->type)) {
 				/* channel exists, but is being closed */
-				spin_unlock_irqrestore(&smd_lock, flags);
+				raw_spin_unlock_irqrestore(&smd_lock, flags);
 				return -EAGAIN;
 			}
 		}
@@ -1915,11 +1915,11 @@ int smd_named_open_on_edge(const char *name, uint32_t edge,
 			if (!strncmp(name, ch->name, 20) &&
 				(edge == ch->type)) {
 				/* channel exists, but is being closed */
-				spin_unlock_irqrestore(&smd_lock, flags);
+				raw_spin_unlock_irqrestore(&smd_lock, flags);
 				return -EAGAIN;
 			}
 		}
-		spin_unlock_irqrestore(&smd_lock, flags);
+		raw_spin_unlock_irqrestore(&smd_lock, flags);
 
 		/* one final check to handle closing->closed race condition */
 		ch = smd_get_channel(name, edge);
@@ -1949,7 +1949,7 @@ int smd_named_open_on_edge(const char *name, uint32_t edge,
 
 	SMD_DBG("smd_open: opening '%s'\n", ch->name);
 
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	list_add(&ch->ch_list,
 		       &remote_info[edge_to_pids[ch->type].remote_pid].ch_list);
 
@@ -1957,7 +1957,7 @@ int smd_named_open_on_edge(const char *name, uint32_t edge,
 
 	smd_state_change(ch, ch->last_state, SMD_SS_OPENING);
 
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 
 	return 0;
 }
@@ -1973,7 +1973,7 @@ int smd_close(smd_channel_t *ch)
 
 	SMD_INFO("smd_close(%s)\n", ch->name);
 
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	list_del(&ch->ch_list);
 
 	was_opened = ch->half_ch->get_state(ch->recv) == SMD_SS_OPENED;
@@ -1981,9 +1981,9 @@ int smd_close(smd_channel_t *ch)
 
 	if (was_opened) {
 		list_add(&ch->ch_list, &smd_ch_closing_list);
-		spin_unlock_irqrestore(&smd_lock, flags);
+		raw_spin_unlock_irqrestore(&smd_lock, flags);
 	} else {
-		spin_unlock_irqrestore(&smd_lock, flags);
+		raw_spin_unlock_irqrestore(&smd_lock, flags);
 		ch->notify = do_nothing_notify;
 		mutex_lock(&smd_creation_mutex);
 		list_add(&ch->ch_list, &smd_ch_closed_list);
@@ -2307,9 +2307,9 @@ int smd_tiocmset(smd_channel_t *ch, unsigned int set, unsigned int clear)
 		return -ENODEV;
 	}
 
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	smd_tiocmset_from_cb(ch, set, clear);
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 
 	return 0;
 }
@@ -2325,9 +2325,9 @@ int smd_is_pkt_avail(smd_channel_t *ch)
 	if (ch->current_packet)
 		return 1;
 
-	spin_lock_irqsave(&smd_lock, flags);
+	raw_spin_lock_irqsave(&smd_lock, flags);
 	update_packet_state(ch);
-	spin_unlock_irqrestore(&smd_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_lock, flags);
 
 	return ch->current_packet ? 1 : 0;
 }
@@ -2480,13 +2480,13 @@ static void smsm_cb_snapshot(uint32_t use_wakeup_source)
 	 *   This order ensures that 1 will always occur before abc.
 	 */
 	if (use_wakeup_source) {
-		spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
+		raw_spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
 		if (smsm_snapshot_count == 0) {
 			SMSM_POWER_INFO("SMSM snapshot wake lock\n");
 			__pm_stay_awake(&smsm_snapshot_ws);
 		}
 		++smsm_snapshot_count;
-		spin_unlock_irqrestore(&smsm_snapshot_count_lock, flags);
+		raw_spin_unlock_irqrestore(&smsm_snapshot_count_lock, flags);
 	}
 
 	/* queue state entries */
@@ -2520,7 +2520,7 @@ static void smsm_cb_snapshot(uint32_t use_wakeup_source)
 
 restore_snapshot_count:
 	if (use_wakeup_source) {
-		spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
+		raw_spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
 		if (smsm_snapshot_count) {
 			--smsm_snapshot_count;
 			if (smsm_snapshot_count == 0) {
@@ -2530,7 +2530,7 @@ restore_snapshot_count:
 		} else {
 			pr_err("%s: invalid snapshot count\n", __func__);
 		}
-		spin_unlock_irqrestore(&smsm_snapshot_count_lock, flags);
+		raw_spin_unlock_irqrestore(&smsm_snapshot_count_lock, flags);
 	}
 }
 
@@ -2538,7 +2538,7 @@ static irqreturn_t smsm_irq_handler(int irq, void *data)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&smem_lock, flags);
+	raw_spin_lock_irqsave(&smem_lock, flags);
 	if (!smsm_info.state) {
 		SMSM_INFO("<SM NO STATE>\n");
 	} else {
@@ -2565,7 +2565,7 @@ static irqreturn_t smsm_irq_handler(int irq, void *data)
 
 		smsm_cb_snapshot(1);
 	}
-	spin_unlock_irqrestore(&smem_lock, flags);
+	raw_spin_unlock_irqrestore(&smem_lock, flags);
 	return IRQ_HANDLED;
 }
 
@@ -2628,7 +2628,7 @@ int smsm_change_intr_mask(uint32_t smsm_entry,
 		return -EIO;
 	}
 
-	spin_lock_irqsave(&smem_lock, flags);
+	raw_spin_lock_irqsave(&smem_lock, flags);
 	smsm_states[smsm_entry].intr_mask_clear = clear_mask;
 	smsm_states[smsm_entry].intr_mask_set = set_mask;
 
@@ -2637,7 +2637,7 @@ int smsm_change_intr_mask(uint32_t smsm_entry,
 	__raw_writel(new_mask, SMSM_INTR_MASK_ADDR(smsm_entry, SMSM_APPS));
 
 	wmb();
-	spin_unlock_irqrestore(&smem_lock, flags);
+	raw_spin_unlock_irqrestore(&smem_lock, flags);
 
 	return 0;
 }
@@ -2677,7 +2677,7 @@ int smsm_change_state(uint32_t smsm_entry,
 		pr_err("smsm_change_state <SM NO STATE>\n");
 		return -EIO;
 	}
-	spin_lock_irqsave(&smem_lock, flags);
+	raw_spin_lock_irqsave(&smem_lock, flags);
 
 	old_state = __raw_readl(SMSM_STATE_ADDR(smsm_entry));
 	new_state = (old_state & ~clear_mask) | set_mask;
@@ -2686,7 +2686,7 @@ int smsm_change_state(uint32_t smsm_entry,
 			old_state, new_state);
 	notify_other_smsm(SMSM_APPS_STATE, (old_state ^ new_state));
 
-	spin_unlock_irqrestore(&smem_lock, flags);
+	raw_spin_unlock_irqrestore(&smem_lock, flags);
 
 	return 0;
 }
@@ -2782,7 +2782,7 @@ void notify_smsm_cb_clients_worker(struct work_struct *work)
 		mutex_unlock(&smsm_lock);
 
 		if (use_wakeup_source) {
-			spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
+			raw_spin_lock_irqsave(&smsm_snapshot_count_lock, flags);
 			if (smsm_snapshot_count) {
 				--smsm_snapshot_count;
 				if (smsm_snapshot_count == 0) {
@@ -2794,7 +2794,7 @@ void notify_smsm_cb_clients_worker(struct work_struct *work)
 				pr_err("%s: invalid snapshot count\n",
 						__func__);
 			}
-			spin_unlock_irqrestore(&smsm_snapshot_count_lock,
+			raw_spin_unlock_irqrestore(&smsm_snapshot_count_lock,
 					flags);
 		}
 
@@ -2877,13 +2877,13 @@ int smsm_state_cb_register(uint32_t smsm_entry, uint32_t mask,
 	if (smsm_info.intr_mask) {
 		unsigned long flags;
 
-		spin_lock_irqsave(&smem_lock, flags);
+		raw_spin_lock_irqsave(&smem_lock, flags);
 		new_mask = (new_mask & ~state->intr_mask_clear)
 				| state->intr_mask_set;
 		__raw_writel(new_mask,
 				SMSM_INTR_MASK_ADDR(smsm_entry, SMSM_APPS));
 		wmb();
-		spin_unlock_irqrestore(&smem_lock, flags);
+		raw_spin_unlock_irqrestore(&smem_lock, flags);
 	}
 
 cleanup:
@@ -2952,13 +2952,13 @@ int smsm_state_cb_deregister(uint32_t smsm_entry, uint32_t mask,
 	if (smsm_info.intr_mask) {
 		unsigned long flags;
 
-		spin_lock_irqsave(&smem_lock, flags);
+		raw_spin_lock_irqsave(&smem_lock, flags);
 		new_mask = (new_mask & ~state->intr_mask_clear)
 				| state->intr_mask_set;
 		__raw_writel(new_mask,
 				SMSM_INTR_MASK_ADDR(smsm_entry, SMSM_APPS));
 		wmb();
-		spin_unlock_irqrestore(&smem_lock, flags);
+		raw_spin_unlock_irqrestore(&smem_lock, flags);
 	}
 
 	mutex_unlock(&smsm_lock);

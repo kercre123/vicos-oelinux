@@ -71,21 +71,21 @@ DEFINE_SIMPLE_ATTRIBUTE(cma_maxchunk_fops, cma_maxchunk_get, NULL, "%llu\n");
 
 static void cma_add_to_cma_mem_list(struct cma *cma, struct cma_mem *mem)
 {
-	spin_lock(&cma->mem_head_lock);
+	raw_spin_lock(&cma->mem_head_lock);
 	hlist_add_head(&mem->node, &cma->mem_head);
-	spin_unlock(&cma->mem_head_lock);
+	raw_spin_unlock(&cma->mem_head_lock);
 }
 
 static struct cma_mem *cma_get_entry_from_list(struct cma *cma)
 {
 	struct cma_mem *mem = NULL;
 
-	spin_lock(&cma->mem_head_lock);
+	raw_spin_lock(&cma->mem_head_lock);
 	if (!hlist_empty(&cma->mem_head)) {
 		mem = hlist_entry(cma->mem_head.first, struct cma_mem, node);
 		hlist_del_init(&mem->node);
 	}
-	spin_unlock(&cma->mem_head_lock);
+	raw_spin_unlock(&cma->mem_head_lock);
 
 	return mem;
 }

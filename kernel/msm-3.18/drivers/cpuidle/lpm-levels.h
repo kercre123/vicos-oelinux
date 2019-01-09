@@ -100,7 +100,7 @@ struct lpm_cluster {
 	int last_level;
 	struct lpm_cpu *cpu;
 	struct cpuidle_driver *drv;
-	spinlock_t sync_lock;
+	raw_spinlock_t sync_lock;
 	struct cpumask child_cpus;
 	struct cpumask num_children_in_sync;
 	struct lpm_cluster *parent;

@@ -98,14 +98,14 @@ static ssize_t gpu_load_show(struct device *dev,
 	 * This will keep the average value in sync with
 	 * with the client sampling duration.
 	 */
-	spin_lock(&sample_lock);
+	raw_spin_lock(&sample_lock);
 	if (acc_total)
 		sysfs_busy_perc = (acc_relative_busy * 100) / acc_total;
 
 	/* Reset the parameters */
 	acc_total = 0;
 	acc_relative_busy = 0;
-	spin_unlock(&sample_lock);
+	raw_spin_unlock(&sample_lock);
 	return snprintf(buf, PAGE_SIZE, "%lu\n", sysfs_busy_perc);
 }
 
@@ -119,7 +119,7 @@ static ssize_t suspend_time_show(struct device *dev,
 {
 	u64 time_diff = 0;
 
-	spin_lock(&suspend_lock);
+	raw_spin_lock(&suspend_lock);
 	time_diff = suspend_time_ms();
 	/*
 	 * Adding the previous suspend time also as the gpu
@@ -129,7 +129,7 @@ static ssize_t suspend_time_show(struct device *dev,
 	 */
 	time_diff += suspend_time;
 	suspend_time = 0;
-	spin_unlock(&suspend_lock);
+	raw_spin_unlock(&suspend_lock);
 
 	return snprintf(buf, PAGE_SIZE, "%llu\n", time_diff);
 }
@@ -150,7 +150,7 @@ void compute_work_load(struct devfreq_dev_status *stats,
 		struct devfreq_msm_adreno_tz_data *priv,
 		struct devfreq *devfreq)
 {
-	spin_lock(&sample_lock);
+	raw_spin_lock(&sample_lock);
 	/*
 	 * Keep collecting the stats till the client
 	 * reads it. Average of all samples and reset
@@ -159,7 +159,7 @@ void compute_work_load(struct devfreq_dev_status *stats,
 	acc_total += stats->total_time;
 	acc_relative_busy += (stats->busy_time * stats->current_frequency) /
 				devfreq->profile->freq_table[0];
-	spin_unlock(&sample_lock);
+	raw_spin_unlock(&sample_lock);
 }
 
 /* Trap into the TrustZone, and call funcs there. */
@@ -171,10 +171,10 @@ static int __secure_tz_reset_entry2(unsigned int *scm_data, u32 size_scm_data,
 	__iowmb();
 
 	if (!is_64) {
-		spin_lock(&tz_lock);
+		raw_spin_lock(&tz_lock);
 		ret = scm_call_atomic2(SCM_SVC_IO, TZ_RESET_ID, scm_data[0],
 					scm_data[1]);
-		spin_unlock(&tz_lock);
+		raw_spin_unlock(&tz_lock);
 	} else {
 		if (is_scm_armv8()) {
 			struct scm_desc desc = {0};
@@ -197,10 +197,10 @@ static int __secure_tz_update_entry3(unsigned int *scm_data, u32 size_scm_data,
 	__iowmb();
 
 	if (!priv->is_64) {
-		spin_lock(&tz_lock);
+		raw_spin_lock(&tz_lock);
 		ret = scm_call_atomic3(SCM_SVC_IO, TZ_UPDATE_ID,
 					scm_data[0], scm_data[1], scm_data[2]);
-		spin_unlock(&tz_lock);
+		raw_spin_unlock(&tz_lock);
 		*val = ret;
 	} else {
 		if (is_scm_armv8()) {
@@ -546,28 +546,28 @@ static int tz_handler(struct devfreq *devfreq, unsigned int event, void *data)
 		if (partner_gpu_profile && partner_gpu_profile->bus_devfreq)
 			queue_work(workqueue,
 				&gpu_profile->partner_stop_event_ws);
-		spin_lock(&suspend_lock);
+		raw_spin_lock(&suspend_lock);
 		suspend_start = 0;
-		spin_unlock(&suspend_lock);
+		raw_spin_unlock(&suspend_lock);
 		result = tz_stop(devfreq);
 		break;
 
 	case DEVFREQ_GOV_SUSPEND:
 		result = tz_suspend(devfreq);
 		if (!result) {
-			spin_lock(&suspend_lock);
+			raw_spin_lock(&suspend_lock);
 			/* Collect the start sample for suspend time */
 			suspend_start = (u64)ktime_to_ms(ktime_get());
-			spin_unlock(&suspend_lock);
+			raw_spin_unlock(&suspend_lock);
 		}
 		break;
 
 	case DEVFREQ_GOV_RESUME:
-		spin_lock(&suspend_lock);
+		raw_spin_lock(&suspend_lock);
 		suspend_time += suspend_time_ms();
 		/* Reset the suspend_start when gpu resumes */
 		suspend_start = 0;
-		spin_unlock(&suspend_lock);
+		raw_spin_unlock(&suspend_lock);
 
 	case DEVFREQ_GOV_INTERVAL:
 		/* ignored, this governor doesn't use polling */

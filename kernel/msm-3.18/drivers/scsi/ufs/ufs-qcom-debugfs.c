@@ -225,7 +225,7 @@ static int ufs_qcom_dbg_pm_qos_show(struct seq_file *file, void *data)
 	unsigned long flags;
 	int i;
 
-	spin_lock_irqsave(host->hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(host->hba->host->host_lock, flags);
 
 	seq_printf(file, "enabled: %d\n", host->pm_qos.is_enabled);
 	for (i = 0; i < host->pm_qos.num_groups && host->pm_qos.groups; i++)
@@ -236,7 +236,7 @@ static int ufs_qcom_dbg_pm_qos_show(struct seq_file *file, void *data)
 			host->pm_qos.groups[i].state,
 			host->pm_qos.groups[i].latency_us);
 
-	spin_unlock_irqrestore(host->hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(host->hba->host->host_lock, flags);
 
 	return 0;
 }

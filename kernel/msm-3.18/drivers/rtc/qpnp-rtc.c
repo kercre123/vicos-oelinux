@@ -63,7 +63,7 @@ struct qpnp_rtc {
 	struct device *rtc_dev;
 	struct rtc_device *rtc;
 	struct spmi_device *spmi;
-	spinlock_t alarm_ctrl_lock;
+	raw_spinlock_t alarm_ctrl_lock;
 };
 
 static int qpnp_read_wrapper(struct qpnp_rtc *rtc_dd, u8 *rtc_val,
@@ -115,7 +115,7 @@ qpnp_rtc_set_time(struct device *dev, struct rtc_time *tm)
 
 	dev_dbg(dev, "Seconds value to be written to RTC = %lu\n", secs);
 
-	spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
+	raw_spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
 	ctrl_reg = rtc_dd->alarm_ctrl_reg1;
 
 	if (ctrl_reg & BIT_RTC_ALARM_ENABLE) {
@@ -128,7 +128,7 @@ qpnp_rtc_set_time(struct device *dev, struct rtc_time *tm)
 			goto rtc_rw_fail;
 		}
 	} else
-		spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
+		raw_spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 
 	/*
 	 * 32 bit seconds value is coverted to four 8 bit values
@@ -223,7 +223,7 @@ qpnp_rtc_set_time(struct device *dev, struct rtc_time *tm)
 
 rtc_rw_fail:
 	if (alarm_enabled)
-		spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
+		raw_spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 
 	return rc;
 }
@@ -314,7 +314,7 @@ qpnp_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 	value[2] = (secs >> 16) & 0xFF;
 	value[3] = (secs >> 24) & 0xFF;
 
-	spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
+	raw_spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
 
 	rc = qpnp_write_wrapper(rtc_dd, value,
 				rtc_dd->alarm_base + REG_OFFSET_ALARM_RW,
@@ -342,7 +342,7 @@ qpnp_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 			alarm->time.tm_sec, alarm->time.tm_mday,
 			alarm->time.tm_mon, alarm->time.tm_year);
 rtc_rw_fail:
-	spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
+	raw_spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 	return rc;
 }
 
@@ -398,7 +398,7 @@ qpnp_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	u8 ctrl_reg;
 	u8 value[4] = {0};
 
-	spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
+	raw_spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
 	ctrl_reg = rtc_dd->alarm_ctrl_reg1;
 	ctrl_reg = enabled ? (ctrl_reg | BIT_RTC_ALARM_ENABLE) :
 				(ctrl_reg & ~BIT_RTC_ALARM_ENABLE);
@@ -422,7 +422,7 @@ qpnp_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	}
 
 rtc_rw_fail:
-	spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
+	raw_spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 	return rc;
 }
 
@@ -442,7 +442,7 @@ static irqreturn_t qpnp_alarm_trigger(int irq, void *dev_id)
 
 	rtc_update_irq(rtc_dd->rtc, 1, RTC_IRQF | RTC_AF);
 
-	spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
+	raw_spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
 
 	/* Clear the alarm enable bit */
 	ctrl_reg = rtc_dd->alarm_ctrl_reg1;
@@ -451,14 +451,14 @@ static irqreturn_t qpnp_alarm_trigger(int irq, void *dev_id)
 	rc = qpnp_write_wrapper(rtc_dd, &ctrl_reg,
 			rtc_dd->alarm_base + REG_OFFSET_ALARM_CTRL1, 1);
 	if (rc) {
-		spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
+		raw_spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 		dev_err(rtc_dd->rtc_dev,
 				"Write to ALARM control reg failed\n");
 		goto rtc_alarm_handled;
 	}
 
 	rtc_dd->alarm_ctrl_reg1 = ctrl_reg;
-	spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
+	raw_spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 
 	/* Set ALARM_CLR bit */
 	ctrl_reg = 0x1;
@@ -505,7 +505,7 @@ static int qpnp_rtc_probe(struct spmi_device *spmi)
 	}
 
 	/* Initialise spinlock to protect RTC control register */
-	spin_lock_init(&rtc_dd->alarm_ctrl_lock);
+	raw_spin_lock_init(&rtc_dd->alarm_ctrl_lock);
 
 	rtc_dd->rtc_dev = &(spmi->dev);
 	rtc_dd->spmi = spmi;
@@ -660,7 +660,7 @@ static void qpnp_rtc_shutdown(struct spmi_device *spmi)
 	}
 	rtc_alarm_powerup = rtc_dd->rtc_alarm_powerup;
 	if (!rtc_alarm_powerup && !poweron_alarm) {
-		spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
+		raw_spin_lock_irqsave(&rtc_dd->alarm_ctrl_lock, irq_flags);
 		dev_dbg(&spmi->dev, "Disabling alarm interrupts\n");
 
 		/* Disable RTC alarms */
@@ -681,7 +681,7 @@ static void qpnp_rtc_shutdown(struct spmi_device *spmi)
 			dev_err(rtc_dd->rtc_dev, "SPMI write failed\n");
 
 fail_alarm_disable:
-		spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
+		raw_spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 	}
 }
 

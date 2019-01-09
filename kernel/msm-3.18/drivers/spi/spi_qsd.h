@@ -286,7 +286,7 @@ struct msm_spi {
 	const u8                *write_buf;
 	void __iomem            *base;
 	struct device           *dev;
-	spinlock_t               queue_lock;
+	raw_spinlock_t               queue_lock;
 	struct mutex             core_lock;
 	struct spi_device       *spi;
 	struct spi_transfer     *cur_transfer;

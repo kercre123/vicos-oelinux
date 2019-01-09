@@ -379,9 +379,9 @@ struct qpnp_lbc_chip {
 	struct qpnp_lbc_irq		irqs[MAX_IRQS];
 	struct mutex			jeita_configure_lock;
 	struct mutex			chg_enable_lock;
-	spinlock_t			ibat_change_lock;
-	spinlock_t			hw_access_lock;
-	spinlock_t			irq_lock;
+	raw_spinlock_t			ibat_change_lock;
+	raw_spinlock_t			hw_access_lock;
+	raw_spinlock_t			irq_lock;
 	struct power_supply		*usb_psy;
 	struct power_supply		*bms_psy;
 	struct power_supply		batt_psy;
@@ -401,14 +401,14 @@ static void qpnp_lbc_enable_irq(struct qpnp_lbc_chip *chip,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&chip->irq_lock, flags);
+	raw_spin_lock_irqsave(&chip->irq_lock, flags);
 	if (__test_and_clear_bit(0, &irq->disabled)) {
 		pr_debug("number = %d\n", irq->irq);
 		enable_irq(irq->irq);
 		if (irq->is_wake)
 			enable_irq_wake(irq->irq);
 	}
-	spin_unlock_irqrestore(&chip->irq_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->irq_lock, flags);
 }
 
 static void qpnp_lbc_disable_irq(struct qpnp_lbc_chip *chip,
@@ -416,14 +416,14 @@ static void qpnp_lbc_disable_irq(struct qpnp_lbc_chip *chip,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&chip->irq_lock, flags);
+	raw_spin_lock_irqsave(&chip->irq_lock, flags);
 	if (!__test_and_set_bit(0, &irq->disabled)) {
 		pr_debug("number = %d\n", irq->irq);
 		disable_irq_nosync(irq->irq);
 		if (irq->is_wake)
 			disable_irq_wake(irq->irq);
 	}
-	spin_unlock_irqrestore(&chip->irq_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->irq_lock, flags);
 }
 
 static int __qpnp_lbc_read(struct spmi_device *spmi, u16 base,
@@ -488,9 +488,9 @@ static int qpnp_lbc_read(struct qpnp_lbc_chip *chip, u16 base,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&chip->hw_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->hw_access_lock, flags);
 	rc = __qpnp_lbc_read(spmi, base, val, count);
-	spin_unlock_irqrestore(&chip->hw_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->hw_access_lock, flags);
 
 	return rc;
 }
@@ -508,9 +508,9 @@ static int qpnp_lbc_write(struct qpnp_lbc_chip *chip, u16 base,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&chip->hw_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->hw_access_lock, flags);
 	rc = __qpnp_lbc_write(spmi, base, val, count);
-	spin_unlock_irqrestore(&chip->hw_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->hw_access_lock, flags);
 
 	return rc;
 }
@@ -523,7 +523,7 @@ static int qpnp_lbc_masked_write(struct qpnp_lbc_chip *chip, u16 base,
 	struct spmi_device *spmi = chip->spmi;
 	unsigned long flags;
 
-	spin_lock_irqsave(&chip->hw_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->hw_access_lock, flags);
 	rc = __qpnp_lbc_read(spmi, base, &reg_val, 1);
 	if (rc) {
 		pr_err("spmi read failed: addr=%03X, rc=%d\n", base, rc);
@@ -541,7 +541,7 @@ static int qpnp_lbc_masked_write(struct qpnp_lbc_chip *chip, u16 base,
 		pr_err("spmi write failed: addr=%03X, rc=%d\n", base, rc);
 
 out:
-	spin_unlock_irqrestore(&chip->hw_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->hw_access_lock, flags);
 	return rc;
 }
 
@@ -877,7 +877,7 @@ static int qpnp_lbc_vddmax_set(struct qpnp_lbc_chip *chip, int voltage)
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&chip->hw_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->hw_access_lock, flags);
 	reg_val = (voltage - QPNP_LBC_VBAT_MIN_MV) / QPNP_LBC_VBAT_STEP_MV;
 	pr_debug("voltage=%d setting %02x\n", voltage, reg_val);
 	rc = __qpnp_lbc_write(chip->spmi, chip->chgr_base + CHG_VDD_MAX_REG,
@@ -921,7 +921,7 @@ static int qpnp_lbc_vddmax_set(struct qpnp_lbc_chip *chip, int voltage)
 	}
 
 out:
-	spin_unlock_irqrestore(&chip->hw_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->hw_access_lock, flags);
 	return rc;
 }
 
@@ -1177,7 +1177,7 @@ static int qpnp_lbc_vbatdet_override(struct qpnp_lbc_chip *chip, int ovr_val)
 	struct spmi_device *spmi = chip->spmi;
 	unsigned long flags;
 
-	spin_lock_irqsave(&chip->hw_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->hw_access_lock, flags);
 
 	rc = __qpnp_lbc_read(spmi, chip->chgr_base + CHG_COMP_OVR1,
 				&reg_val, 1);
@@ -1200,7 +1200,7 @@ static int qpnp_lbc_vbatdet_override(struct qpnp_lbc_chip *chip, int ovr_val)
 						chip->chgr_base, rc);
 
 out:
-	spin_unlock_irqrestore(&chip->hw_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->hw_access_lock, flags);
 	return rc;
 }
 
@@ -1392,7 +1392,7 @@ static void qpnp_batt_external_power_changed(struct power_supply *psy)
 	int current_ma;
 	unsigned long flags;
 
-	spin_lock_irqsave(&chip->ibat_change_lock, flags);
+	raw_spin_lock_irqsave(&chip->ibat_change_lock, flags);
 	if (!chip->bms_psy)
 		chip->bms_psy = power_supply_get_by_name("bms");
 
@@ -1418,7 +1418,7 @@ static void qpnp_batt_external_power_changed(struct power_supply *psy)
 	}
 
 skip_current_config:
-	spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
 	pr_debug("power supply changed batt_psy\n");
 	power_supply_changed(&chip->batt_psy);
 }
@@ -1449,7 +1449,7 @@ static int qpnp_lbc_system_temp_level_set(struct qpnp_lbc_chip *chip,
 	if (lvl_sel == chip->therm_lvl_sel)
 		return 0;
 
-	spin_lock_irqsave(&chip->ibat_change_lock, flags);
+	raw_spin_lock_irqsave(&chip->ibat_change_lock, flags);
 	prev_therm_lvl = chip->therm_lvl_sel;
 	chip->therm_lvl_sel = lvl_sel;
 	if (chip->therm_lvl_sel == (chip->cfg_thermal_levels - 1)) {
@@ -1475,7 +1475,7 @@ static int qpnp_lbc_system_temp_level_set(struct qpnp_lbc_chip *chip,
 		}
 	}
 out:
-	spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
 	return rc;
 }
 
@@ -1939,12 +1939,12 @@ static void qpnp_lbc_jeita_adc_notification(enum qpnp_tm_state state, void *ctx)
 	}
 
 	if (chip->bat_is_cool ^ bat_cool || chip->bat_is_warm ^ bat_warm) {
-		spin_lock_irqsave(&chip->ibat_change_lock, flags);
+		raw_spin_lock_irqsave(&chip->ibat_change_lock, flags);
 		chip->bat_is_cool = bat_cool;
 		chip->bat_is_warm = bat_warm;
 		qpnp_lbc_set_appropriate_vddmax(chip);
 		qpnp_lbc_set_appropriate_current(chip);
-		spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
+		raw_spin_unlock_irqrestore(&chip->ibat_change_lock, flags);
 	}
 
 	pr_debug("warm %d, cool %d, low = %d deciDegC, high = %d deciDegC\n",
@@ -2469,10 +2469,10 @@ static irqreturn_t qpnp_lbc_usbin_valid_irq_handler(int irq, void *_chip)
 		chip->usb_present = usb_present;
 		if (!usb_present) {
 			qpnp_lbc_charger_enable(chip, CURRENT, 0);
-			spin_lock_irqsave(&chip->ibat_change_lock, flags);
+			raw_spin_lock_irqsave(&chip->ibat_change_lock, flags);
 			chip->usb_psy_ma = QPNP_CHG_I_MAX_MIN_90;
 			qpnp_lbc_set_appropriate_current(chip);
-			spin_unlock_irqrestore(&chip->ibat_change_lock,
+			raw_spin_unlock_irqrestore(&chip->ibat_change_lock,
 								flags);
 			if (chip->cfg_collapsible_chgr_support)
 				chip->non_collapsible_chgr_detected = false;
@@ -3111,8 +3111,8 @@ static int qpnp_lbc_parallel_probe(struct spmi_device *spmi)
 	chip->spmi = spmi;
 	dev_set_drvdata(&spmi->dev, chip);
 	device_init_wakeup(&spmi->dev, 1);
-	spin_lock_init(&chip->hw_access_lock);
-	spin_lock_init(&chip->ibat_change_lock);
+	raw_spin_lock_init(&chip->hw_access_lock);
+	raw_spin_lock_init(&chip->ibat_change_lock);
 	INIT_DELAYED_WORK(&chip->parallel_work, qpnp_lbc_parallel_work);
 
 	OF_PROP_READ(chip, cfg_max_voltage_mv, "vddmax-mv", rc, 0);
@@ -3183,9 +3183,9 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 	device_init_wakeup(&spmi->dev, 1);
 	mutex_init(&chip->jeita_configure_lock);
 	mutex_init(&chip->chg_enable_lock);
-	spin_lock_init(&chip->hw_access_lock);
-	spin_lock_init(&chip->ibat_change_lock);
-	spin_lock_init(&chip->irq_lock);
+	raw_spin_lock_init(&chip->hw_access_lock);
+	raw_spin_lock_init(&chip->ibat_change_lock);
+	raw_spin_lock_init(&chip->irq_lock);
 	INIT_WORK(&chip->vddtrim_work, qpnp_lbc_vddtrim_work_fn);
 	alarm_init(&chip->vddtrim_alarm, ALARM_REALTIME, vddtrim_callback);
 	INIT_DELAYED_WORK(&chip->collapsible_detection_work,

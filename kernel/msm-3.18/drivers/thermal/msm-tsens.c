@@ -858,9 +858,9 @@ struct tsens_tm_device {
 	struct delayed_work		tsens_critical_poll_test;
 	struct completion		tsens_rslt_completion;
 	struct tsens_mtc_sysfs		mtcsys;
-	spinlock_t			tsens_crit_lock;
-	spinlock_t			tsens_upp_low_lock;
-	spinlock_t			tsens_debug_lock;
+	raw_spinlock_t			tsens_crit_lock;
+	raw_spinlock_t			tsens_upp_low_lock;
+	raw_spinlock_t			tsens_debug_lock;
 	bool				crit_set;
 	struct tsens_dbg_counter	crit_timestamp_last_run;
 	struct tsens_dbg_counter	crit_timestamp_last_interrupt_handled;
@@ -1496,7 +1496,7 @@ static int msm_tsens_get_temp(int sensor_client_id, unsigned long *temp)
 		*temp = last_temp;
 	}
 
-	spin_lock_irqsave(&tmdev->tsens_debug_lock, flags);
+	raw_spin_lock_irqsave(&tmdev->tsens_debug_lock, flags);
 	idx = tmdev->sensor_dbg_info[sensor_hw_num].idx;
 	tmdev->sensor_dbg_info[sensor_hw_num].temp[idx%10] = *temp;
 	tmdev->sensor_dbg_info[sensor_hw_num].time_stmp[idx%10] =
@@ -1507,7 +1507,7 @@ static int msm_tsens_get_temp(int sensor_client_id, unsigned long *temp)
 			code;
 	idx++;
 	tmdev->sensor_dbg_info[sensor_hw_num].idx = idx;
-	spin_unlock_irqrestore(&tmdev->tsens_debug_lock, flags);
+	raw_spin_unlock_irqrestore(&tmdev->tsens_debug_lock, flags);
 
 	trace_tsens_read(*temp, sensor_client_id);
 
@@ -1647,7 +1647,7 @@ static int tsens_tm_activate_trip_type(struct thermal_zone_device *thermal,
 	if (!tmdev)
 		return -EINVAL;
 
-	spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
 	mask = (tm_sensor->sensor_hw_num);
 	switch (trip) {
 	case TSENS_TM_TRIP_CRITICAL:
@@ -1696,7 +1696,7 @@ static int tsens_tm_activate_trip_type(struct thermal_zone_device *thermal,
 		rc = -EINVAL;
 	}
 
-	spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
 	/* Activate and enable the respective trip threshold setting */
 	mb();
 
@@ -1891,7 +1891,7 @@ static int tsens_tm_set_trip_temp(struct thermal_zone_device *thermal,
 	if (!tmdev)
 		return -EINVAL;
 
-	spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_lock_irqsave(&tmdev->tsens_upp_low_lock, flags);
 	switch (trip) {
 	case TSENS_TM_TRIP_CRITICAL:
 		tmdev->sensor[tm_sensor->sensor_hw_num].
@@ -1932,7 +1932,7 @@ static int tsens_tm_set_trip_temp(struct thermal_zone_device *thermal,
 		rc = -EINVAL;
 	}
 
-	spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
+	raw_spin_unlock_irqrestore(&tmdev->tsens_upp_low_lock, flags);
 	/* Set trip temperature thresholds */
 	mb();
 	return rc;
@@ -2049,7 +2049,7 @@ static void tsens_poll(struct work_struct *work)
 	tmdev->crit_timestamp_last_run.idx++;
 	tmdev->qtimer_val_detection_start = arch_counter_get_cntpct();
 
-	spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
+	raw_spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
 	/* Clear the sensor0 critical status */
 	int_mask_val = 1;
 	writel_relaxed(int_mask_val,
@@ -2069,16 +2069,16 @@ static void tsens_poll(struct work_struct *work)
 		/* Enable the critical int mask */
 		mb();
 	}
-	spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
+	raw_spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
 
 	if (tmdev->tsens_critical_poll) {
 		usleep_range(TSENS_DEBUG_POLL_MIN,
 				TSENS_DEBUG_POLL_MAX);
 		sensor_status_addr = TSENS_TM_SN_STATUS(tmdev->tsens_addr);
 
-		spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
+		raw_spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
 		status = readl_relaxed(sensor_status_addr);
-		spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
+		raw_spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
 
 		if (status & TSENS_TM_SN_STATUS_CRITICAL_STATUS)
 			goto re_schedule;
@@ -2099,16 +2099,16 @@ static void tsens_poll(struct work_struct *work)
 		sensor_critical_addr =
 			TSENS_TM_SN_CRITICAL_THRESHOLD(tmdev->tsens_addr);
 
-		spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
+		raw_spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
 		if (!tmdev->crit_set) {
 			pr_debug("Ignore this check cycle\n");
-			spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
+			raw_spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
 			goto re_schedule;
 		}
 		status = readl_relaxed(sensor_status_addr);
 		int_mask = readl_relaxed(sensor_int_mask_addr);
 		tmdev->crit_set = false;
-		spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
+		raw_spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
 
 		idx = tmdev->crit_timestamp_last_poll_request.idx;
 		tmdev->crit_timestamp_last_poll_request.time_stmp[idx%10] =
@@ -2118,7 +2118,7 @@ static void tsens_poll(struct work_struct *work)
 						arch_counter_get_cntpct();
 		if (status & TSENS_TM_SN_STATUS_CRITICAL_STATUS) {
 
-			spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
+			raw_spin_lock_irqsave(&tmdev->tsens_crit_lock, flags);
 			int_mask = readl_relaxed(sensor_int_mask_addr);
 			int_mask_val = 1;
 			/* Mask the corresponding interrupt for the sensors */
@@ -2131,7 +2131,7 @@ static void tsens_poll(struct work_struct *work)
 			writel_relaxed(0,
 				TSENS_TM_CRITICAL_INT_CLEAR(
 					tmdev->tsens_addr));
-			spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
+			raw_spin_unlock_irqrestore(&tmdev->tsens_crit_lock, flags);
 
 			/* Clear critical status */
 			mb();
@@ -2452,7 +2452,7 @@ static irqreturn_t tsens_tm_critical_irq_thread(int irq, void *data)
 		int int_mask, int_mask_val;
 		uint32_t addr_offset;
 
-		spin_lock_irqsave(&tm->tsens_crit_lock, flags);
+		raw_spin_lock_irqsave(&tm->tsens_crit_lock, flags);
 		addr_offset = tm->sensor[i].sensor_hw_num *
 						TSENS_SN_ADDR_OFFSET;
 		status = readl_relaxed(sensor_status_addr + addr_offset);
@@ -2476,7 +2476,7 @@ static irqreturn_t tsens_tm_critical_irq_thread(int irq, void *data)
 			tm->sensor[i].debug_thr_state_copy.
 					crit_th_state = THERMAL_DEVICE_DISABLED;
 		}
-		spin_unlock_irqrestore(&tm->tsens_crit_lock, flags);
+		raw_spin_unlock_irqrestore(&tm->tsens_crit_lock, flags);
 
 		if (critical_thr) {
 			unsigned long temp;
@@ -2529,7 +2529,7 @@ static irqreturn_t tsens_tm_irq_thread(int irq, void *data)
 		bool upper_thr = false, lower_thr = false;
 		int int_mask, int_mask_val = 0;
 
-		spin_lock_irqsave(&tm->tsens_upp_low_lock, flags);
+		raw_spin_lock_irqsave(&tm->tsens_upp_low_lock, flags);
 		addr_offset = tm->sensor[i].sensor_hw_num *
 						TSENS_SN_ADDR_OFFSET;
 		status = readl_relaxed(sensor_status_addr + addr_offset);
@@ -2579,7 +2579,7 @@ static irqreturn_t tsens_tm_irq_thread(int irq, void *data)
 			tm->sensor[i].debug_thr_state_copy.
 					low_th_state = THERMAL_DEVICE_DISABLED;
 		}
-		spin_unlock_irqrestore(&tm->tsens_upp_low_lock, flags);
+		raw_spin_unlock_irqrestore(&tm->tsens_upp_low_lock, flags);
 
 		if (upper_thr || lower_thr) {
 			unsigned long temp;
@@ -5770,9 +5770,9 @@ static int tsens_tm_probe(struct platform_device *pdev)
 	for (i = 0; i < 16; i++)
 		tmdev->sensor_dbg_info[i].idx = 0;
 
-	spin_lock_init(&tmdev->tsens_crit_lock);
-	spin_lock_init(&tmdev->tsens_upp_low_lock);
-	spin_lock_init(&tmdev->tsens_debug_lock);
+	raw_spin_lock_init(&tmdev->tsens_crit_lock);
+	raw_spin_lock_init(&tmdev->tsens_upp_low_lock);
+	raw_spin_lock_init(&tmdev->tsens_debug_lock);
 
 	tmdev->is_ready = true;
 

@@ -254,7 +254,7 @@ struct audio_dev {
 	struct list_head		idle_reqs;
 	struct usb_ep			*in_ep;
 
-	spinlock_t			lock;
+	raw_spinlock_t			lock;
 
 	/* beginning, end and current position in our buffer */
 	void				*buffer_start;
@@ -337,9 +337,9 @@ static void audio_req_put(struct audio_dev *audio, struct usb_request *req)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&audio->lock, flags);
+	raw_spin_lock_irqsave(&audio->lock, flags);
 	list_add_tail(&req->list, &audio->idle_reqs);
-	spin_unlock_irqrestore(&audio->lock, flags);
+	raw_spin_unlock_irqrestore(&audio->lock, flags);
 }
 
 static struct usb_request *audio_req_get(struct audio_dev *audio)
@@ -347,7 +347,7 @@ static struct usb_request *audio_req_get(struct audio_dev *audio)
 	unsigned long flags;
 	struct usb_request *req;
 
-	spin_lock_irqsave(&audio->lock, flags);
+	raw_spin_lock_irqsave(&audio->lock, flags);
 	if (list_empty(&audio->idle_reqs)) {
 		req = 0;
 	} else {
@@ -355,7 +355,7 @@ static struct usb_request *audio_req_get(struct audio_dev *audio)
 				list);
 		list_del(&req->list);
 	}
-	spin_unlock_irqrestore(&audio->lock, flags);
+	raw_spin_unlock_irqrestore(&audio->lock, flags);
 	return req;
 }
 
@@ -370,20 +370,20 @@ static void audio_send(struct audio_dev *audio)
 	ktime_t now;
 	unsigned long flags;
 
-	spin_lock_irqsave(&audio->lock, flags);
+	raw_spin_lock_irqsave(&audio->lock, flags);
 	/* audio->substream will be null if we have been closed */
 	if (!audio->substream) {
-		spin_unlock_irqrestore(&audio->lock, flags);
+		raw_spin_unlock_irqrestore(&audio->lock, flags);
 		return;
 	}
 	/* audio->buffer_pos will be null if we have been stopped */
 	if (!audio->buffer_pos) {
-		spin_unlock_irqrestore(&audio->lock, flags);
+		raw_spin_unlock_irqrestore(&audio->lock, flags);
 		return;
 	}
 
 	runtime = audio->substream->runtime;
-	spin_unlock_irqrestore(&audio->lock, flags);
+	raw_spin_unlock_irqrestore(&audio->lock, flags);
 
 	/* compute number of frames to send */
 	now = ktime_get();
@@ -407,19 +407,19 @@ static void audio_send(struct audio_dev *audio)
 
 	while (frames > 0) {
 		req = audio_req_get(audio);
-		spin_lock_irqsave(&audio->lock, flags);
+		raw_spin_lock_irqsave(&audio->lock, flags);
 		/* audio->substream will be null if we have been closed */
 		if (!audio->substream) {
-			spin_unlock_irqrestore(&audio->lock, flags);
+			raw_spin_unlock_irqrestore(&audio->lock, flags);
 			return;
 		}
 		/* audio->buffer_pos will be null if we have been stopped */
 		if (!audio->buffer_pos) {
-			spin_unlock_irqrestore(&audio->lock, flags);
+			raw_spin_unlock_irqrestore(&audio->lock, flags);
 			return;
 		}
 		if (!req) {
-			spin_unlock_irqrestore(&audio->lock, flags);
+			raw_spin_unlock_irqrestore(&audio->lock, flags);
 			break;
 		}
 
@@ -447,7 +447,7 @@ static void audio_send(struct audio_dev *audio)
 		}
 
 		req->length = length;
-		spin_unlock_irqrestore(&audio->lock, flags);
+		raw_spin_unlock_irqrestore(&audio->lock, flags);
 		ret = usb_ep_queue(audio->in_ep, req, GFP_ATOMIC);
 		if (ret < 0) {
 			pr_err("usb_ep_queue failed ret: %d\n", ret);
@@ -751,11 +751,11 @@ static void audio_pcm_playback_stop(struct audio_dev *audio)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&audio->lock, flags);
+	raw_spin_lock_irqsave(&audio->lock, flags);
 	audio->buffer_start = 0;
 	audio->buffer_end = 0;
 	audio->buffer_pos = 0;
-	spin_unlock_irqrestore(&audio->lock, flags);
+	raw_spin_unlock_irqrestore(&audio->lock, flags);
 }
 
 static int audio_pcm_open(struct snd_pcm_substream *substream)
@@ -777,9 +777,9 @@ static int audio_pcm_close(struct snd_pcm_substream *substream)
 	struct audio_dev *audio = substream->private_data;
 	unsigned long flags;
 
-	spin_lock_irqsave(&audio->lock, flags);
+	raw_spin_lock_irqsave(&audio->lock, flags);
 	audio->substream = NULL;
-	spin_unlock_irqrestore(&audio->lock, flags);
+	raw_spin_unlock_irqrestore(&audio->lock, flags);
 
 	return 0;
 }
@@ -897,7 +897,7 @@ static struct audio_dev _audio_dev = {
 		.setup = audio_setup,
 		.disable = audio_disable,
 	},
-	.lock = __SPIN_LOCK_UNLOCKED(_audio_dev.lock),
+	.lock = __RAW_SPIN_LOCK_UNLOCKED(_audio_dev.lock),
 	.idle_reqs = LIST_HEAD_INIT(_audio_dev.idle_reqs),
 };
 

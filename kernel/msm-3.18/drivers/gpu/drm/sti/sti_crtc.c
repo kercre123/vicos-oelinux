@@ -274,13 +274,13 @@ int sti_crtc_vblank_cb(struct notifier_block *nb,
 
 	drm_crtc_handle_vblank(crtc);
 
-	spin_lock_irqsave(&crtc->dev->event_lock, flags);
+	raw_spin_lock_irqsave(&crtc->dev->event_lock, flags);
 	if (mixer->pending_event) {
 		drm_crtc_send_vblank_event(crtc, mixer->pending_event);
 		drm_crtc_vblank_put(crtc);
 		mixer->pending_event = NULL;
 	}
-	spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
+	raw_spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
 
 	if (mixer->status == STI_MIXER_DISABLING) {
 		struct drm_plane *p;

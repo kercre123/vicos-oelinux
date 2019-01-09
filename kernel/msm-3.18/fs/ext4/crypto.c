@@ -79,9 +79,9 @@ void ext4_release_crypto_ctx(struct ext4_crypto_ctx *ctx)
 	if (ctx->flags & EXT4_CTX_REQUIRES_FREE_ENCRYPT_FL) {
 		kmem_cache_free(ext4_crypto_ctx_cachep, ctx);
 	} else {
-		spin_lock_irqsave(&ext4_crypto_ctx_lock, flags);
+		raw_spin_lock_irqsave(&ext4_crypto_ctx_lock, flags);
 		list_add(&ctx->free_list, &ext4_free_crypto_ctxs);
-		spin_unlock_irqrestore(&ext4_crypto_ctx_lock, flags);
+		raw_spin_unlock_irqrestore(&ext4_crypto_ctx_lock, flags);
 	}
 }
 
@@ -115,12 +115,12 @@ struct ext4_crypto_ctx *ext4_get_crypto_ctx(struct inode *inode,
 	 * should generally be a "last resort" option for a filesystem
 	 * to be able to do its job.
 	 */
-	spin_lock_irqsave(&ext4_crypto_ctx_lock, flags);
+	raw_spin_lock_irqsave(&ext4_crypto_ctx_lock, flags);
 	ctx = list_first_entry_or_null(&ext4_free_crypto_ctxs,
 				       struct ext4_crypto_ctx, free_list);
 	if (ctx)
 		list_del(&ctx->free_list);
-	spin_unlock_irqrestore(&ext4_crypto_ctx_lock, flags);
+	raw_spin_unlock_irqrestore(&ext4_crypto_ctx_lock, flags);
 	if (!ctx) {
 		ctx = kmem_cache_zalloc(ext4_crypto_ctx_cachep, gfp_flags);
 		if (!ctx) {

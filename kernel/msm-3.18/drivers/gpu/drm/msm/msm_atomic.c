@@ -36,14 +36,14 @@ static int start_atomic(struct msm_drm_private *priv, uint32_t crtc_mask)
 {
 	int ret;
 
-	spin_lock(&priv->pending_crtcs_event.lock);
+	raw_spin_lock(&priv->pending_crtcs_event.lock);
 	ret = wait_event_interruptible_locked(priv->pending_crtcs_event,
 			!(priv->pending_crtcs & crtc_mask));
 	if (ret == 0) {
 		DBG("start: %08x", crtc_mask);
 		priv->pending_crtcs |= crtc_mask;
 	}
-	spin_unlock(&priv->pending_crtcs_event.lock);
+	raw_spin_unlock(&priv->pending_crtcs_event.lock);
 
 	return ret;
 }
@@ -52,11 +52,11 @@ static int start_atomic(struct msm_drm_private *priv, uint32_t crtc_mask)
  */
 static void end_atomic(struct msm_drm_private *priv, uint32_t crtc_mask)
 {
-	spin_lock(&priv->pending_crtcs_event.lock);
+	raw_spin_lock(&priv->pending_crtcs_event.lock);
 	DBG("end: %08x", crtc_mask);
 	priv->pending_crtcs &= ~crtc_mask;
 	wake_up_all_locked(&priv->pending_crtcs_event);
-	spin_unlock(&priv->pending_crtcs_event.lock);
+	raw_spin_unlock(&priv->pending_crtcs_event.lock);
 }
 
 static void commit_destroy(struct msm_commit *commit)

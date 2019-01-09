@@ -197,7 +197,7 @@ static unsigned long measure_bw_and_set_irq(struct bw_hwmon *hw,
 	struct bwmon_data *data;
 	unsigned int sample_ms = hw->df->profile->polling_ms;
 
-	spin_lock(&bw_lock);
+	raw_spin_lock(&bw_lock);
 	on_each_cpu(get_beat_count, NULL, true);
 	for_each_possible_cpu(cpu) {
 		data = &per_cpu(gov_data, cpu);
@@ -212,7 +212,7 @@ static unsigned long measure_bw_and_set_irq(struct bw_hwmon *hw,
 		data->count = 0;
 	}
 	on_each_cpu(mon_enable, NULL, true);
-	spin_unlock(&bw_lock);
+	raw_spin_unlock(&bw_lock);
 	return bw;
 }
 
@@ -293,14 +293,14 @@ static int hotplug_notif(struct notifier_block *nb, unsigned long action,
 {
 	switch (action) {
 	case CPU_DYING:
-		spin_lock(&bw_lock);
+		raw_spin_lock(&bw_lock);
 		save_hotplugstate();
-		spin_unlock(&bw_lock);
+		raw_spin_unlock(&bw_lock);
 		break;
 	case CPU_STARTING:
-		spin_lock(&bw_lock);
+		raw_spin_lock(&bw_lock);
 		restore_hotplugstate();
-		spin_unlock(&bw_lock);
+		raw_spin_unlock(&bw_lock);
 		break;
 	}
 

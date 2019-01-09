@@ -385,10 +385,10 @@ static int __msm_mpm_enable_irq(struct irq_data *d, bool enable)
 	if (!msm_mpm_is_initialized())
 		return -EINVAL;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 
 	rc = msm_mpm_enable_irq_exclusive(d, enable, false);
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 
 	return rc;
 }
@@ -411,9 +411,9 @@ static int msm_mpm_set_irq_wake(struct irq_data *d, unsigned int on)
 	if (!msm_mpm_is_initialized())
 		return -EINVAL;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 	rc = msm_mpm_enable_irq_exclusive(d, (bool)on, true);
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 
 	return rc;
 }
@@ -426,9 +426,9 @@ static int msm_mpm_set_irq_type(struct irq_data *d, unsigned int flow_type)
 	if (!msm_mpm_is_initialized())
 		return -EINVAL;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 	rc = msm_mpm_set_irq_type_exclusive(d, flow_type);
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 
 	return rc;
 }
@@ -448,14 +448,14 @@ int msm_mpm_enable_pin(unsigned int pin, unsigned int enable)
 	if (pin >= MSM_MPM_NR_MPM_IRQS)
 		return -EINVAL;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 
 	if (enable)
 		msm_mpm_enabled_irq[index] |= mask;
 	else
 		msm_mpm_enabled_irq[index] &= ~mask;
 
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 	return 0;
 }
 
@@ -471,14 +471,14 @@ int msm_mpm_set_pin_wake(unsigned int pin, unsigned int on)
 	if (pin >= MSM_MPM_NR_MPM_IRQS)
 		return -EINVAL;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 
 	if (on)
 		msm_mpm_wake_irq[index] |= mask;
 	else
 		msm_mpm_wake_irq[index] &= ~mask;
 
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 	return 0;
 }
 
@@ -494,7 +494,7 @@ int msm_mpm_set_pin_type(unsigned int pin, unsigned int flow_type)
 	if (pin >= MSM_MPM_NR_MPM_IRQS)
 		return -EINVAL;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 
 	msm_mpm_set_edge_ctl(pin, flow_type);
 
@@ -503,7 +503,7 @@ int msm_mpm_set_pin_type(unsigned int pin, unsigned int flow_type)
 	else
 		msm_mpm_polarity[index] &= ~mask;
 
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 	return 0;
 }
 
@@ -650,13 +650,13 @@ void msm_mpm_suspend_prepare(void)
 	bool allow;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 
 	allow = msm_mpm_irqs_detectable(false) &&
 		msm_mpm_gpio_irqs_detectable(false);
 	msm_mpm_in_suspend = true;
 
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 	msm_mpm_sys_low_power_modes(allow);
 }
 EXPORT_SYMBOL(msm_mpm_suspend_prepare);
@@ -666,12 +666,12 @@ void msm_mpm_suspend_wake(void)
 	bool allow;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_mpm_lock, flags);
+	raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 
 	allow = msm_mpm_irqs_detectable(true) &&
 		msm_mpm_gpio_irqs_detectable(true);
 
-	spin_unlock_irqrestore(&msm_mpm_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 	msm_mpm_sys_low_power_modes(allow);
 	msm_mpm_in_suspend = false;
 }
@@ -683,15 +683,15 @@ static void msm_mpm_work_fn(struct work_struct *work)
 	while (1) {
 		bool allow;
 		wait_for_completion(&wake_wq);
-		spin_lock_irqsave(&msm_mpm_lock, flags);
+		raw_spin_lock_irqsave(&msm_mpm_lock, flags);
 		allow = msm_mpm_irqs_detectable(true) &&
 				msm_mpm_gpio_irqs_detectable(true);
 		if (msm_mpm_in_suspend) {
-			spin_unlock_irqrestore(&msm_mpm_lock, flags);
+			raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 			continue;
 		}
 
-		spin_unlock_irqrestore(&msm_mpm_lock, flags);
+		raw_spin_unlock_irqrestore(&msm_mpm_lock, flags);
 		msm_mpm_sys_low_power_modes(allow);
 	}
 }

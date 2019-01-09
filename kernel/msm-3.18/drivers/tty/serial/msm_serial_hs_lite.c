@@ -444,17 +444,17 @@ static int msm_hsl_loopback_enable_set(void *data, u64 val)
 
 	vid = msm_hsl_port->ver_id;
 	if (val) {
-		spin_lock_irqsave(&port->lock, flags);
+		raw_spin_lock_irqsave(&port->lock, flags);
 		ret = msm_hsl_read(port, regmap[vid][UARTDM_MR2]);
 		ret |= UARTDM_MR2_LOOP_MODE_BMSK;
 		msm_hsl_write(port, ret, regmap[vid][UARTDM_MR2]);
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 	} else {
-		spin_lock_irqsave(&port->lock, flags);
+		raw_spin_lock_irqsave(&port->lock, flags);
 		ret = msm_hsl_read(port, regmap[vid][UARTDM_MR2]);
 		ret &= ~UARTDM_MR2_LOOP_MODE_BMSK;
 		msm_hsl_write(port, ret, regmap[vid][UARTDM_MR2]);
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 	}
 
 	clk_en(port, 0);
@@ -476,9 +476,9 @@ static int msm_hsl_loopback_enable_get(void *data, u64 *val)
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	ret = msm_hsl_read(port, regmap[msm_hsl_port->ver_id][UARTDM_MR2]);
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 	clk_en(port, 0);
 
 	*val = (ret & UARTDM_MR2_LOOP_MODE_BMSK) ? 1 : 0;
@@ -715,7 +715,7 @@ static irqreturn_t msm_hsl_irq(int irq, void *dev_id)
 	unsigned int misr;
 	unsigned long flags;
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	vid = msm_hsl_port->ver_id;
 	misr = msm_hsl_read(port, regmap[vid][UARTDM_MISR]);
 	/* disable interrupt */
@@ -737,7 +737,7 @@ static irqreturn_t msm_hsl_irq(int irq, void *dev_id)
 
 	/* restore interrupt */
 	msm_hsl_write(port, msm_hsl_port->imr, regmap[vid][UARTDM_IMR]);
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -1015,7 +1015,7 @@ static int msm_hsl_startup(struct uart_port *port)
 	else
 		rfr_level = port->fifosize;
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 
 	vid = msm_hsl_port->ver_id;
 	/* set automatic RFR level */
@@ -1025,7 +1025,7 @@ static int msm_hsl_startup(struct uart_port *port)
 	data |= UARTDM_MR1_AUTO_RFR_LEVEL1_BMSK & (rfr_level << 2);
 	data |= UARTDM_MR1_AUTO_RFR_LEVEL0_BMSK & rfr_level;
 	msm_hsl_write(port, data, regmap[vid][UARTDM_MR1]);
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	ret = request_irq(port->irq, msm_hsl_irq, IRQF_TRIGGER_HIGH,
 			  msm_hsl_port->name, port);
@@ -1458,13 +1458,13 @@ static void msm_hsl_console_write(struct console *co, const char *s,
 		locked = spin_trylock(&port->lock);
 	else {
 		locked = 1;
-		spin_lock(&port->lock);
+		raw_spin_lock(&port->lock);
 	}
 	msm_hsl_write(port, 0, regmap[vid][UARTDM_IMR]);
 	uart_console_write(port, s, count, msm_hsl_console_putchar);
 	msm_hsl_write(port, msm_hsl_port->imr, regmap[vid][UARTDM_IMR]);
 	if (locked == 1)
-		spin_unlock(&port->lock);
+		raw_spin_unlock(&port->lock);
 }
 
 static int msm_hsl_console_setup(struct console *co, char *options)

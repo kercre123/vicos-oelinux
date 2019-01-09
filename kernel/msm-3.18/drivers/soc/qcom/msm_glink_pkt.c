@@ -124,11 +124,11 @@ struct glink_pkt_dev {
 	wait_queue_head_t ch_opened_wait_queue;
 	wait_queue_head_t ch_closed_wait_queue;
 	struct list_head pkt_list;
-	spinlock_t pkt_list_lock;
+	raw_spinlock_t pkt_list_lock;
 
 	struct wakeup_source pa_ws;	/* Packet Arrival Wakeup Source */
 	struct work_struct packet_arrival_work;
-	spinlock_t pa_spinlock;
+	raw_spinlock_t pa_spinlock;
 	int ws_locked;
 	int sigs_updated;
 	int open_time_wait;
@@ -298,7 +298,7 @@ static void packet_arrival_worker(struct work_struct *work)
 	devp = container_of(work, struct glink_pkt_dev,
 				    packet_arrival_work);
 	mutex_lock(&devp->ch_lock);
-	spin_lock_irqsave(&devp->pa_spinlock, flags);
+	raw_spin_lock_irqsave(&devp->pa_spinlock, flags);
 	if (devp->ws_locked) {
 		GLINK_PKT_INFO("%s locking glink_pkt_dev id:%d wakeup source\n",
 			__func__, devp->i);
@@ -308,7 +308,7 @@ static void packet_arrival_worker(struct work_struct *work)
 		 */
 		__pm_wakeup_event(&devp->pa_ws, WAKEUPSOURCE_TIMEOUT);
 	}
-	spin_unlock_irqrestore(&devp->pa_spinlock, flags);
+	raw_spin_unlock_irqrestore(&devp->pa_spinlock, flags);
 	mutex_unlock(&devp->ch_lock);
 }
 
@@ -370,14 +370,14 @@ void glink_pkt_notify_rx(void *handle, const void *priv,
 	pkt->data = ptr;
 	pkt->pkt_priv = pkt_priv;
 	pkt->size = size;
-	spin_lock_irqsave(&devp->pkt_list_lock, flags);
+	raw_spin_lock_irqsave(&devp->pkt_list_lock, flags);
 	list_add_tail(&pkt->list, &devp->pkt_list);
-	spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
+	raw_spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
 
-	spin_lock_irqsave(&devp->pa_spinlock, flags);
+	raw_spin_lock_irqsave(&devp->pa_spinlock, flags);
 	__pm_stay_awake(&devp->pa_ws);
 	devp->ws_locked = 1;
-	spin_unlock_irqrestore(&devp->pa_spinlock, flags);
+	raw_spin_unlock_irqrestore(&devp->pa_spinlock, flags);
 	wake_up(&devp->ch_read_wait_queue);
 	schedule_work(&devp->packet_arrival_work);
 	return;
@@ -457,10 +457,10 @@ bool glink_pkt_rmt_rx_intent_req_cb(void *handle, const void *priv, size_t sz)
 	GLINK_PKT_INFO("%s(): QUEUE RX INTENT to receive size[%zu]\n",
 		   __func__, sz);
 	if (devp->auto_intent_enabled) {
-		spin_lock_irqsave(&devp->pkt_list_lock, flags);
+		raw_spin_lock_irqsave(&devp->pkt_list_lock, flags);
 		list_for_each_entry(pkt, &devp->pkt_list, list)
 			pending_pkt_count++;
-		spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
+		raw_spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
 		if (pending_pkt_count > MAX_PENDING_GLINK_PKT) {
 			GLINK_PKT_ERR("%s failed, max limit reached\n",
 					__func__);
@@ -593,9 +593,9 @@ static bool glink_pkt_read_avail(struct glink_pkt_dev *devp)
 	bool list_is_empty;
 	unsigned long flags;
 
-	spin_lock_irqsave(&devp->pkt_list_lock, flags);
+	raw_spin_lock_irqsave(&devp->pkt_list_lock, flags);
 	list_is_empty = list_empty(&devp->pkt_list);
-	spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
+	raw_spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
 	return !list_is_empty;
 }
 
@@ -676,25 +676,25 @@ ssize_t glink_pkt_read(struct file *file,
 		return ret;
 	}
 
-	spin_lock_irqsave(&devp->pkt_list_lock, flags);
+	raw_spin_lock_irqsave(&devp->pkt_list_lock, flags);
 	pkt = list_first_entry(&devp->pkt_list, struct glink_rx_pkt, list);
 	if (pkt->size > count) {
 		GLINK_PKT_ERR("%s: Small Buff on dev Id:%d-[%zu > %zu]\n",
 				__func__, devp->i, pkt->size, count);
-		spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
+		raw_spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
 		return -ETOOSMALL;
 	}
 	list_del(&pkt->list);
-	spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
+	raw_spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
 
 	ret = copy_to_user(buf, pkt->data, pkt->size);
 	 if (ret) {
 		GLINK_PKT_ERR(
 		"%s copy_to_user failed ret[%d] on dev id:%d size %zu\n",
 		 __func__, ret, devp->i, pkt->size);
-		spin_lock_irqsave(&devp->pkt_list_lock, flags);
+		raw_spin_lock_irqsave(&devp->pkt_list_lock, flags);
 		list_add_tail(&pkt->list, &devp->pkt_list);
-		spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
+		raw_spin_unlock_irqrestore(&devp->pkt_list_lock, flags);
 		return -EFAULT;
 	}
 
@@ -704,7 +704,7 @@ ssize_t glink_pkt_read(struct file *file,
 	kfree(pkt);
 
 	mutex_lock(&devp->ch_lock);
-	spin_lock_irqsave(&devp->pa_spinlock, flags);
+	raw_spin_lock_irqsave(&devp->pa_spinlock, flags);
 	if (devp->poll_mode && !glink_pkt_read_avail(devp)) {
 		__pm_relax(&devp->pa_ws);
 		devp->ws_locked = 0;
@@ -712,7 +712,7 @@ ssize_t glink_pkt_read(struct file *file,
 		GLINK_PKT_INFO("%s unlocked pkt_dev id:%d wakeup_source\n",
 			__func__, devp->i);
 	}
-	spin_unlock_irqrestore(&devp->pa_spinlock, flags);
+	raw_spin_unlock_irqrestore(&devp->pa_spinlock, flags);
 	mutex_unlock(&devp->ch_lock);
 
 	GLINK_PKT_INFO("End %s on glink_pkt_dev id:%d ret[%d]\n",
@@ -1116,12 +1116,12 @@ int glink_pkt_release(struct inode *inode, struct file *file)
 			mutex_lock(&devp->ch_lock);
 		}
 		devp->poll_mode = 0;
-		spin_lock_irqsave(&devp->pa_spinlock, flags);
+		raw_spin_lock_irqsave(&devp->pa_spinlock, flags);
 		if (devp->ws_locked) {
 			__pm_relax(&devp->pa_ws);
 			devp->ws_locked = 0;
 		}
-		spin_unlock_irqrestore(&devp->pa_spinlock, flags);
+		raw_spin_unlock_irqrestore(&devp->pa_spinlock, flags);
 		devp->sigs_updated = false;
 		devp->in_reset = 0;
 	}
@@ -1178,9 +1178,9 @@ static int glink_pkt_init_add_device(struct glink_pkt_dev *devp, int i)
 	init_waitqueue_head(&devp->ch_read_wait_queue);
 	init_waitqueue_head(&devp->ch_opened_wait_queue);
 	init_waitqueue_head(&devp->ch_closed_wait_queue);
-	spin_lock_init(&devp->pa_spinlock);
+	raw_spin_lock_init(&devp->pa_spinlock);
 	INIT_LIST_HEAD(&devp->pkt_list);
-	spin_lock_init(&devp->pkt_list_lock);
+	raw_spin_lock_init(&devp->pkt_list_lock);
 	wakeup_source_init(&devp->pa_ws, devp->dev_name);
 	INIT_WORK(&devp->packet_arrival_work, packet_arrival_worker);
 

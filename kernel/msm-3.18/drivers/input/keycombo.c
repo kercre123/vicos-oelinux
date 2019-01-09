@@ -26,7 +26,7 @@ struct keycombo_state {
 	unsigned long keybit[BITS_TO_LONGS(KEY_CNT)];
 	unsigned long upbit[BITS_TO_LONGS(KEY_CNT)];
 	unsigned long key[BITS_TO_LONGS(KEY_CNT)];
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct  workqueue_struct *wq;
 	int key_down_target;
 	int key_down;
@@ -76,7 +76,7 @@ static void keycombo_event(struct input_handle *handle, unsigned int type,
 	if (!test_bit(code, state->keybit))
 		return;
 
-	spin_lock_irqsave(&state->lock, flags);
+	raw_spin_lock_irqsave(&state->lock, flags);
 	if (!test_bit(code, state->key) == !value)
 		goto done;
 	__change_bit(code, state->key);
@@ -106,7 +106,7 @@ static void keycombo_event(struct input_handle *handle, unsigned int type,
 		state->key_is_down = 0;
 	}
 done:
-	spin_unlock_irqrestore(&state->lock, flags);
+	raw_spin_unlock_irqrestore(&state->lock, flags);
 }
 
 static int keycombo_connect(struct input_handler *handler,
@@ -181,7 +181,7 @@ static int keycombo_probe(struct platform_device *pdev)
 	if (!state)
 		return -ENOMEM;
 
-	spin_lock_init(&state->lock);
+	raw_spin_lock_init(&state->lock);
 	keyp = pdata->keys_down;
 	while ((key = *keyp++)) {
 		if (key >= KEY_MAX)

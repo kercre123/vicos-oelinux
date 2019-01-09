@@ -123,9 +123,9 @@ struct ipc_router_mhi_xprt {
 	struct completion sft_close_complete;
 	unsigned xprt_version;
 	unsigned xprt_option;
-	spinlock_t tx_addr_map_list_lock;
+	raw_spinlock_t tx_addr_map_list_lock;
 	struct list_head tx_addr_map_list;
-	spinlock_t rx_addr_map_list_lock;
+	raw_spinlock_t rx_addr_map_list_lock;
 	struct list_head rx_addr_map_list;
 };
 
@@ -178,7 +178,7 @@ void ipc_router_mhi_release_pkt(struct kref *ref)
  * Return: The mapped virtual Address if found, NULL otherwise.
  */
 void *ipc_router_mhi_xprt_find_addr_map(struct list_head *addr_map_list,
-				spinlock_t *addr_map_list_lock, void *addr)
+				raw_spinlock_t *addr_map_list_lock, void *addr)
 {
 	struct ipc_router_mhi_addr_map *addr_mapping;
 	struct ipc_router_mhi_addr_map *tmp_addr_mapping;
@@ -187,7 +187,7 @@ void *ipc_router_mhi_xprt_find_addr_map(struct list_head *addr_map_list,
 
 	if (!addr_map_list || !addr_map_list_lock)
 		return NULL;
-	spin_lock_irqsave(addr_map_list_lock, flags);
+	raw_spin_lock_irqsave(addr_map_list_lock, flags);
 	list_for_each_entry_safe(addr_mapping, tmp_addr_mapping,
 				addr_map_list, list_node) {
 		if (addr_mapping->virt_addr == addr) {
@@ -197,11 +197,11 @@ void *ipc_router_mhi_xprt_find_addr_map(struct list_head *addr_map_list,
 				kref_put(&addr_mapping->pkt->ref,
 					ipc_router_mhi_release_pkt);
 			kfree(addr_mapping);
-			spin_unlock_irqrestore(addr_map_list_lock, flags);
+			raw_spin_unlock_irqrestore(addr_map_list_lock, flags);
 			return virt_addr;
 		}
 	}
-	spin_unlock_irqrestore(addr_map_list_lock, flags);
+	raw_spin_unlock_irqrestore(addr_map_list_lock, flags);
 	IPC_RTR_ERR(
 		"%s: Virtual address mapping [%p] not found\n",
 		__func__, (void *)addr);
@@ -218,7 +218,7 @@ void *ipc_router_mhi_xprt_find_addr_map(struct list_head *addr_map_list,
  * Return: 0 on success, standard Linux error code otherwise.
  */
 int ipc_router_mhi_xprt_add_addr_map(struct list_head *addr_map_list,
-				spinlock_t *addr_map_list_lock,
+				raw_spinlock_t *addr_map_list_lock,
 				struct rr_packet *pkt, void *virt_addr)
 {
 	struct ipc_router_mhi_addr_map *addr_mapping;
@@ -231,11 +231,11 @@ int ipc_router_mhi_xprt_add_addr_map(struct list_head *addr_map_list,
 		return -ENOMEM;
 	addr_mapping->virt_addr = virt_addr;
 	addr_mapping->pkt = pkt;
-	spin_lock_irqsave(addr_map_list_lock, flags);
+	raw_spin_lock_irqsave(addr_map_list_lock, flags);
 	if (addr_mapping->pkt)
 		kref_get(&addr_mapping->pkt->ref);
 	list_add_tail(&addr_mapping->list_node, addr_map_list);
-	spin_unlock_irqrestore(addr_map_list_lock, flags);
+	raw_spin_unlock_irqrestore(addr_map_list_lock, flags);
 	return 0;
 }
 
@@ -871,9 +871,9 @@ static int ipc_router_mhi_config_init(
 	mhi_xprtp->ch_hndl.num_trbs = IPC_ROUTER_MHI_XPRT_NUM_TRBS;
 	mhi_xprtp->ch_hndl.mhi_xprtp = mhi_xprtp;
 	INIT_LIST_HEAD(&mhi_xprtp->tx_addr_map_list);
-	spin_lock_init(&mhi_xprtp->tx_addr_map_list_lock);
+	raw_spin_lock_init(&mhi_xprtp->tx_addr_map_list_lock);
 	INIT_LIST_HEAD(&mhi_xprtp->rx_addr_map_list);
-	spin_lock_init(&mhi_xprtp->rx_addr_map_list_lock);
+	raw_spin_lock_init(&mhi_xprtp->rx_addr_map_list_lock);
 
 	rc = ipc_router_mhi_driver_register(mhi_xprtp, dev);
 	return rc;

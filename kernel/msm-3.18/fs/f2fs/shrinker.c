@@ -46,7 +46,7 @@ unsigned long f2fs_shrink_count(struct shrinker *shrink,
 	struct list_head *p;
 	unsigned long count = 0;
 
-	spin_lock(&f2fs_list_lock);
+	raw_spin_lock(&f2fs_list_lock);
 	p = f2fs_list.next;
 	while (p != &f2fs_list) {
 		sbi = list_entry(p, struct f2fs_sb_info, s_list);
@@ -56,7 +56,7 @@ unsigned long f2fs_shrink_count(struct shrinker *shrink,
 			p = p->next;
 			continue;
 		}
-		spin_unlock(&f2fs_list_lock);
+		raw_spin_unlock(&f2fs_list_lock);
 
 		/* count extent cache entries */
 		count += __count_extent_cache(sbi);
@@ -67,11 +67,11 @@ unsigned long f2fs_shrink_count(struct shrinker *shrink,
 		/* count free nids cache entries */
 		count += __count_free_nids(sbi);
 
-		spin_lock(&f2fs_list_lock);
+		raw_spin_lock(&f2fs_list_lock);
 		p = p->next;
 		mutex_unlock(&sbi->umount_mutex);
 	}
-	spin_unlock(&f2fs_list_lock);
+	raw_spin_unlock(&f2fs_list_lock);
 	return count;
 }
 
@@ -84,7 +84,7 @@ unsigned long f2fs_shrink_scan(struct shrinker *shrink,
 	unsigned int run_no;
 	unsigned long freed = 0;
 
-	spin_lock(&f2fs_list_lock);
+	raw_spin_lock(&f2fs_list_lock);
 	do {
 		run_no = ++shrinker_run_no;
 	} while (run_no == 0);
@@ -100,7 +100,7 @@ unsigned long f2fs_shrink_scan(struct shrinker *shrink,
 			p = p->next;
 			continue;
 		}
-		spin_unlock(&f2fs_list_lock);
+		raw_spin_unlock(&f2fs_list_lock);
 
 		sbi->shrinker_run_no = run_no;
 
@@ -115,29 +115,29 @@ unsigned long f2fs_shrink_scan(struct shrinker *shrink,
 		if (freed < nr)
 			freed += try_to_free_nids(sbi, nr - freed);
 
-		spin_lock(&f2fs_list_lock);
+		raw_spin_lock(&f2fs_list_lock);
 		p = p->next;
 		list_move_tail(&sbi->s_list, &f2fs_list);
 		mutex_unlock(&sbi->umount_mutex);
 		if (freed >= nr)
 			break;
 	}
-	spin_unlock(&f2fs_list_lock);
+	raw_spin_unlock(&f2fs_list_lock);
 	return freed;
 }
 
 void f2fs_join_shrinker(struct f2fs_sb_info *sbi)
 {
-	spin_lock(&f2fs_list_lock);
+	raw_spin_lock(&f2fs_list_lock);
 	list_add_tail(&sbi->s_list, &f2fs_list);
-	spin_unlock(&f2fs_list_lock);
+	raw_spin_unlock(&f2fs_list_lock);
 }
 
 void f2fs_leave_shrinker(struct f2fs_sb_info *sbi)
 {
 	f2fs_shrink_extent_tree(sbi, __count_extent_cache(sbi));
 
-	spin_lock(&f2fs_list_lock);
+	raw_spin_lock(&f2fs_list_lock);
 	list_del(&sbi->s_list);
-	spin_unlock(&f2fs_list_lock);
+	raw_spin_unlock(&f2fs_list_lock);
 }

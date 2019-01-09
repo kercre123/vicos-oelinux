@@ -117,7 +117,7 @@ struct ipc_log_context {
 	uint32_t write_avail;
 	struct dentry *dent;
 	struct list_head dfunc_info_list;
-	spinlock_t context_lock_lhb1;
+	raw_spinlock_t context_lock_lhb1;
 	struct completion read_avail;
 };
 

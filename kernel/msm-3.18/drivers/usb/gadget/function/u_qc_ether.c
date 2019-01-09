@@ -61,7 +61,7 @@ struct eth_qc_dev {
 	/* lock is held while accessing port_usb
 	 * or updating its backlink port_usb->ioport
 	 */
-	spinlock_t		lock;
+	raw_spinlock_t		lock;
 	struct qc_gether	*port_usb;
 
 	struct net_device	*net;
@@ -114,14 +114,14 @@ static int ueth_qc_change_mtu(struct net_device *net, int new_mtu)
 	int		status = 0;
 
 	/* don't change MTU on "live" link (peer won't know) */
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	if (dev->port_usb)
 		status = -EBUSY;
 	else if (new_mtu <= ETH_HLEN || new_mtu > ETH_FRAME_LEN)
 		status = -ERANGE;
 	else
 		net->mtu = new_mtu;
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	return status;
 }
@@ -163,11 +163,11 @@ static int eth_qc_open(struct net_device *net)
 		netif_wake_queue(dev->net);
 	}
 
-	spin_lock_irq(&dev->lock);
+	raw_spin_lock_irq(&dev->lock);
 	link = dev->port_usb;
 	if (link && link->open)
 		link->open(link);
-	spin_unlock_irq(&dev->lock);
+	raw_spin_unlock_irq(&dev->lock);
 
 	return 0;
 }
@@ -181,10 +181,10 @@ static int eth_qc_stop(struct net_device *net)
 	VDBG(dev, "%s\n", __func__);
 	netif_stop_queue(net);
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	if (dev->port_usb && link->close)
 			link->close(link);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	return 0;
 }
@@ -287,7 +287,7 @@ int gether_qc_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
 		return -ENOMEM;
 
 	dev = netdev_priv(net);
-	spin_lock_init(&dev->lock);
+	raw_spin_lock_init(&dev->lock);
 
 	/* network device setup */
 	dev->net = net;
@@ -393,7 +393,7 @@ struct net_device *gether_qc_connect_name(struct qc_gether *link,
 	dev->zlp = link->is_zlp_ok;
 	dev->header_len = link->header_len;
 
-	spin_lock(&dev->lock);
+	raw_spin_lock(&dev->lock);
 	dev->port_usb = link;
 	link->ioport = dev;
 	if (netif_running(dev->net)) {
@@ -403,7 +403,7 @@ struct net_device *gether_qc_connect_name(struct qc_gether *link,
 		if (link->close)
 			link->close(link);
 	}
-	spin_unlock(&dev->lock);
+	raw_spin_unlock(&dev->lock);
 
 	if (netif_enable) {
 		netif_carrier_on(dev->net);
@@ -447,8 +447,8 @@ void gether_qc_disconnect_name(struct qc_gether *link, const char *netname)
 	netif_stop_queue(dev->net);
 	netif_carrier_off(dev->net);
 
-	spin_lock(&dev->lock);
+	raw_spin_lock(&dev->lock);
 	dev->port_usb = NULL;
 	link->ioport = NULL;
-	spin_unlock(&dev->lock);
+	raw_spin_unlock(&dev->lock);
 }

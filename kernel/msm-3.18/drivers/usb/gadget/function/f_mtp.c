@@ -92,7 +92,7 @@ static const char mtp_shortname[] = DRIVER_NAME "_usb";
 struct mtp_dev {
 	struct usb_function function;
 	struct usb_composite_dev *cdev;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 
 	struct usb_ep *ep_in;
 	struct usb_ep *ep_out;
@@ -450,9 +450,9 @@ static void mtp_req_put(struct mtp_dev *dev, struct list_head *head,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	list_add_tail(&req->list, head);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 /* remove a request from the head of a list */
@@ -462,14 +462,14 @@ static struct usb_request
 	unsigned long flags;
 	struct usb_request *req;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	if (list_empty(head)) {
 		req = 0;
 	} else {
 		req = list_first_entry(head, struct usb_request, list);
 		list_del(&req->list);
 	}
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 	return req;
 }
 
@@ -634,15 +634,15 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 	if (len > mtp_rx_req_len)
 		return -EINVAL;
 
-	spin_lock_irq(&dev->lock);
+	raw_spin_lock_irq(&dev->lock);
 	if (dev->state == STATE_CANCELED) {
 		/* report cancelation to userspace */
 		dev->state = STATE_READY;
-		spin_unlock_irq(&dev->lock);
+		raw_spin_unlock_irq(&dev->lock);
 		return -ECANCELED;
 	}
 	dev->state = STATE_BUSY;
-	spin_unlock_irq(&dev->lock);
+	raw_spin_unlock_irq(&dev->lock);
 
 requeue_req:
 	/* queue a request */
@@ -664,9 +664,9 @@ requeue_req:
 		r = -ECANCELED;
 		if (!dev->rx_done)
 			usb_ep_dequeue(dev->ep_out, req);
-		spin_lock_irq(&dev->lock);
+		raw_spin_lock_irq(&dev->lock);
 		dev->state = STATE_CANCELED;
-		spin_unlock_irq(&dev->lock);
+		raw_spin_unlock_irq(&dev->lock);
 		goto done;
 	}
 	if (ret < 0) {
@@ -688,12 +688,12 @@ requeue_req:
 		r = -EIO;
 
 done:
-	spin_lock_irq(&dev->lock);
+	raw_spin_lock_irq(&dev->lock);
 	if (dev->state == STATE_CANCELED)
 		r = -ECANCELED;
 	else if (dev->state != STATE_OFFLINE)
 		dev->state = STATE_READY;
-	spin_unlock_irq(&dev->lock);
+	raw_spin_unlock_irq(&dev->lock);
 
 	DBG(cdev, "mtp_read returning %zd state:%d\n", r, dev->state);
 	return r;
@@ -712,19 +712,19 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 
 	DBG(cdev, "mtp_write(%zu) state:%d\n", count, dev->state);
 
-	spin_lock_irq(&dev->lock);
+	raw_spin_lock_irq(&dev->lock);
 	if (dev->state == STATE_CANCELED) {
 		/* report cancelation to userspace */
 		dev->state = STATE_READY;
-		spin_unlock_irq(&dev->lock);
+		raw_spin_unlock_irq(&dev->lock);
 		return -ECANCELED;
 	}
 	if (dev->state == STATE_OFFLINE) {
-		spin_unlock_irq(&dev->lock);
+		raw_spin_unlock_irq(&dev->lock);
 		return -ENODEV;
 	}
 	dev->state = STATE_BUSY;
-	spin_unlock_irq(&dev->lock);
+	raw_spin_unlock_irq(&dev->lock);
 
 	/* we need to send a zero length packet to signal the end of transfer
 	 * if the transfer size is aligned to a packet boundary.
@@ -782,12 +782,12 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 	if (req)
 		mtp_req_put(dev, &dev->tx_idle, req);
 
-	spin_lock_irq(&dev->lock);
+	raw_spin_lock_irq(&dev->lock);
 	if (dev->state == STATE_CANCELED)
 		r = -ECANCELED;
 	else if (dev->state != STATE_OFFLINE)
 		dev->state = STATE_READY;
-	spin_unlock_irq(&dev->lock);
+	raw_spin_unlock_irq(&dev->lock);
 
 	DBG(cdev, "mtp_write returning %zd state:%d\n", r, dev->state);
 	return r;
@@ -1065,21 +1065,21 @@ static long mtp_send_receive_ioctl(struct file *fp, unsigned code,
 		return -EBUSY;
 	}
 
-	spin_lock_irq(&dev->lock);
+	raw_spin_lock_irq(&dev->lock);
 	if (dev->state == STATE_CANCELED) {
 		/* report cancelation to userspace */
 		dev->state = STATE_READY;
-		spin_unlock_irq(&dev->lock);
+		raw_spin_unlock_irq(&dev->lock);
 		ret = -ECANCELED;
 		goto out;
 	}
 	if (dev->state == STATE_OFFLINE) {
-		spin_unlock_irq(&dev->lock);
+		raw_spin_unlock_irq(&dev->lock);
 		ret = -ENODEV;
 		goto out;
 	}
 	dev->state = STATE_BUSY;
-	spin_unlock_irq(&dev->lock);
+	raw_spin_unlock_irq(&dev->lock);
 
 	/* hold a reference to the file while we are working with it */
 	filp = fget(mfr->fd);
@@ -1120,12 +1120,12 @@ static long mtp_send_receive_ioctl(struct file *fp, unsigned code,
 	ret = dev->xfer_result;
 
 fail:
-	spin_lock_irq(&dev->lock);
+	raw_spin_lock_irq(&dev->lock);
 	if (dev->state == STATE_CANCELED)
 		ret = -ECANCELED;
 	else if (dev->state != STATE_OFFLINE)
 		dev->state = STATE_READY;
-	spin_unlock_irq(&dev->lock);
+	raw_spin_unlock_irq(&dev->lock);
 out:
 	mtp_unlock(&dev->ioctl_excl);
 	DBG(dev->cdev, "ioctl returning %d state:%d\n", ret, dev->state);
@@ -1337,13 +1337,13 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 				&& w_value == 0) {
 			DBG(cdev, "MTP_REQ_CANCEL\n");
 
-			spin_lock_irqsave(&dev->lock, flags);
+			raw_spin_lock_irqsave(&dev->lock, flags);
 			if (dev->state == STATE_BUSY) {
 				dev->state = STATE_CANCELED;
 				wake_up(&dev->read_wq);
 				wake_up(&dev->write_wq);
 			}
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 			/* We need to queue a request to read the remaining
 			 *  bytes, but we don't actually need to look at
@@ -1357,7 +1357,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 				__constant_cpu_to_le16(sizeof(*status));
 
 			DBG(cdev, "MTP_REQ_GET_DEVICE_STATUS\n");
-			spin_lock_irqsave(&dev->lock, flags);
+			raw_spin_lock_irqsave(&dev->lock, flags);
 			/* device status is "busy" until we report
 			 * the cancelation to userspace
 			 */
@@ -1367,7 +1367,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 			else
 				status->wCode =
 					__cpu_to_le16(MTP_RESPONSE_OK);
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 			value = sizeof(*status);
 		}
 	}
@@ -1571,7 +1571,7 @@ static int debug_mtp_read_stats(struct seq_file *s, void *unused)
 	seq_puts(s, "\n=======================\n");
 	seq_puts(s, "MTP Write Stats:\n");
 	seq_puts(s, "\n=======================\n");
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	min = dev->perf[0].vfs_wtime;
 	for (i = 0; i < MAX_ITERATION; i++) {
 		seq_printf(s, "vfs write: bytes:%ld\t\t time:%d\n",
@@ -1611,7 +1611,7 @@ static int debug_mtp_read_stats(struct seq_file *s, void *unused)
 
 	seq_printf(s, "vfs_read(time in usec) min:%d\t max:%d\t avg:%d\n",
 				min, max, (iteration ? (sum / iteration) : 0));
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 	return 0;
 }
 
@@ -1641,11 +1641,11 @@ static ssize_t debug_mtp_reset_stats(struct file *file, const char __user *buf,
 		return ret;
 	}
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	memset(&dev->perf[0], 0, MAX_ITERATION * sizeof(dev->perf[0]));
 	dev->dbg_read_index = 0;
 	dev->dbg_write_index = 0;
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	return count;
 }
@@ -1696,7 +1696,7 @@ static int __mtp_setup(struct mtp_instance *fi_mtp)
 	if (!dev)
 		return -ENOMEM;
 
-	spin_lock_init(&dev->lock);
+	raw_spin_lock_init(&dev->lock);
 	init_waitqueue_head(&dev->read_wq);
 	init_waitqueue_head(&dev->write_wq);
 	init_waitqueue_head(&dev->intr_wq);

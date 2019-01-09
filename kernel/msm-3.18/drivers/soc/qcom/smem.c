@@ -954,9 +954,9 @@ bool smem_initialized_check(void)
 		return is_inited;
 	}
 
-	spin_lock_irqsave(&smem_init_check_lock, flags);
+	raw_spin_lock_irqsave(&smem_init_check_lock, flags);
 	if (checked) {
-		spin_unlock_irqrestore(&smem_init_check_lock, flags);
+		raw_spin_unlock_irqrestore(&smem_init_check_lock, flags);
 		if (unlikely(!is_inited))
 			LOG_ERR("%s: smem not initialized\n", __func__);
 		return is_inited;
@@ -982,13 +982,13 @@ bool smem_initialized_check(void)
 
 	is_inited = 1;
 	checked = 1;
-	spin_unlock_irqrestore(&smem_init_check_lock, flags);
+	raw_spin_unlock_irqrestore(&smem_init_check_lock, flags);
 	return is_inited;
 
 failed:
 	is_inited = 0;
 	checked = 1;
-	spin_unlock_irqrestore(&smem_init_check_lock, flags);
+	raw_spin_unlock_irqrestore(&smem_init_check_lock, flags);
 	LOG_ERR(
 		"%s: shared memory needs to be initialized by SBL before booting\n",
 								__func__);

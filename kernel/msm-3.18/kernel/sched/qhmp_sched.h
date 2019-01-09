@@ -1724,7 +1724,7 @@ static inline void double_rq_lock(struct rq *rq1, struct rq *rq2);
  * fair double_lock_balance: Safely acquires both rq->locks in a fair
  * way at the expense of forcing extra atomic operations in all
  * invocations.  This assures that the double_lock is acquired using the
- * same underlying policy as the spinlock_t on this architecture, which
+ * same underlying policy as the raw_spinlock_t on this architecture, which
  * reduces latency compared to the unfair variant below.  However, it
  * also adds more overhead and therefore may reduce throughput.
  */
@@ -1791,22 +1791,22 @@ static inline void double_unlock_balance(struct rq *this_rq, struct rq *busiest)
 	lock_set_subclass(&this_rq->lock.dep_map, 0, _RET_IP_);
 }
 
-static inline void double_lock(spinlock_t *l1, spinlock_t *l2)
+static inline void double_lock(spinlock_t *l1, raw_spinlock_t *l2)
 {
 	if (l1 > l2)
 		swap(l1, l2);
 
-	spin_lock(l1);
-	spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
+	raw_spin_lock(l1);
+	raw_spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
 }
 
-static inline void double_lock_irq(spinlock_t *l1, spinlock_t *l2)
+static inline void double_lock_irq(spinlock_t *l1, raw_spinlock_t *l2)
 {
 	if (l1 > l2)
 		swap(l1, l2);
 
-	spin_lock_irq(l1);
-	spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
+	raw_spin_lock_irq(l1);
+	raw_spin_lock_nested(l2, SINGLE_DEPTH_NESTING);
 }
 
 static inline void double_raw_lock(raw_spinlock_t *l1, raw_spinlock_t *l2)

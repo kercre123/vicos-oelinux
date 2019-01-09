@@ -52,7 +52,7 @@ struct cpu_data {
 	s64 need_ts;
 	struct list_head lru;
 	bool pending;
-	spinlock_t pending_lock;
+	raw_spinlock_t pending_lock;
 	bool is_big_cluster;
 	int nrrun;
 	bool nrrun_changed;
@@ -243,13 +243,13 @@ static ssize_t show_cpus(struct cpu_data *state, char *buf)
 	ssize_t count = 0;
 	unsigned long flags;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 	list_for_each_entry(c, &state->lru, sib) {
 		count += snprintf(buf + count, PAGE_SIZE - count,
 					"CPU%u (%s)\n", c->cpu,
 					c->online ? "Online" : "Offline");
 	}
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 	return count;
 }
 
@@ -471,17 +471,17 @@ static void update_running_avg(bool trigger_update)
 	s64 now;
 	unsigned long flags;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 
 	now = ktime_to_ms(ktime_get());
 	if (now - rq_avg_timestamp_ms < rq_avg_period_ms - RQ_AVG_TOLERANCE) {
-		spin_unlock_irqrestore(&state_lock, flags);
+		raw_spin_unlock_irqrestore(&state_lock, flags);
 		return;
 	}
 	rq_avg_timestamp_ms = now;
 	sched_get_nr_running_avg(&avg, &iowait_avg, &big_avg);
 
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 
 	/*
 	 * Round up to the next integer if the average nr running tasks
@@ -570,7 +570,7 @@ static bool eval_need(struct cpu_data *f)
 	if (unlikely(!f->inited))
 		return 0;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 	thres_idx = f->online_cpus ? f->online_cpus - 1 : 0;
 	list_for_each_entry(c, &f->lru, sib) {
 		if (c->busy >= f->busy_up_thres[thres_idx])
@@ -587,7 +587,7 @@ static bool eval_need(struct cpu_data *f)
 
 	if (need_cpus == last_need) {
 		f->need_ts = now;
-		spin_unlock_irqrestore(&state_lock, flags);
+		raw_spin_unlock_irqrestore(&state_lock, flags);
 		return 0;
 	}
 
@@ -611,7 +611,7 @@ static bool eval_need(struct cpu_data *f)
 
 	trace_core_ctl_eval_need(f->cpu, last_need, need_cpus,
 				 ret && need_flag);
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 
 	return ret && need_flag;
 }
@@ -670,14 +670,14 @@ static void wake_up_hotplug_thread(struct cpu_data *state)
 		}
 	}
 
-	spin_lock_irqsave(&state->pending_lock, flags);
+	raw_spin_lock_irqsave(&state->pending_lock, flags);
 	state->pending = true;
-	spin_unlock_irqrestore(&state->pending_lock, flags);
+	raw_spin_unlock_irqrestore(&state->pending_lock, flags);
 
 	if (no_wakeup) {
-		spin_lock_irqsave(&state_lock, flags);
+		raw_spin_lock_irqsave(&state_lock, flags);
 		mod_timer(&state->timer, jiffies);
-		spin_unlock_irqrestore(&state_lock, flags);
+		raw_spin_unlock_irqrestore(&state_lock, flags);
 	} else {
 		wake_up_process(state->hotplug_thread);
 	}
@@ -689,9 +689,9 @@ static void core_ctl_timer_func(unsigned long cpu)
 	unsigned long flags;
 
 	if (eval_need(state) && !state->disabled) {
-		spin_lock_irqsave(&state->pending_lock, flags);
+		raw_spin_lock_irqsave(&state->pending_lock, flags);
 		state->pending = true;
-		spin_unlock_irqrestore(&state->pending_lock, flags);
+		raw_spin_unlock_irqrestore(&state->pending_lock, flags);
 		wake_up_process(state->hotplug_thread);
 	}
 
@@ -736,8 +736,8 @@ static void update_lru(struct cpu_data *f)
 	struct cpu_data *c, *tmp;
 	unsigned long flags;
 
-	spin_lock_irqsave(&pending_lru_lock, flags);
-	spin_lock(&state_lock);
+	raw_spin_lock_irqsave(&pending_lru_lock, flags);
+	raw_spin_lock(&state_lock);
 
 	list_for_each_entry_safe(c, tmp, &f->pending_lru, pending_sib) {
 		list_del_init(&c->pending_sib);
@@ -745,8 +745,8 @@ static void update_lru(struct cpu_data *f)
 		list_add_tail(&c->sib, &f->lru);
 	}
 
-	spin_unlock(&state_lock);
-	spin_unlock_irqrestore(&pending_lru_lock, flags);
+	raw_spin_unlock(&state_lock);
+	raw_spin_unlock_irqrestore(&pending_lru_lock, flags);
 }
 
 static void __ref do_hotplug(struct cpu_data *f)
@@ -832,17 +832,17 @@ static int __ref try_hotplug(void *data)
 
 	while (1) {
 		set_current_state(TASK_INTERRUPTIBLE);
-		spin_lock_irqsave(&f->pending_lock, flags);
+		raw_spin_lock_irqsave(&f->pending_lock, flags);
 		if (!f->pending) {
-			spin_unlock_irqrestore(&f->pending_lock, flags);
+			raw_spin_unlock_irqrestore(&f->pending_lock, flags);
 			schedule();
 			if (kthread_should_stop())
 				break;
-			spin_lock_irqsave(&f->pending_lock, flags);
+			raw_spin_lock_irqsave(&f->pending_lock, flags);
 		}
 		set_current_state(TASK_RUNNING);
 		f->pending = false;
-		spin_unlock_irqrestore(&f->pending_lock, flags);
+		raw_spin_unlock_irqrestore(&f->pending_lock, flags);
 
 		do_hotplug(f);
 	}
@@ -855,13 +855,13 @@ static void add_to_pending_lru(struct cpu_data *state)
 	unsigned long flags;
 	struct cpu_data *f = &per_cpu(cpu_state, state->first_cpu);
 
-	spin_lock_irqsave(&pending_lru_lock, flags);
+	raw_spin_lock_irqsave(&pending_lru_lock, flags);
 
 	if (!list_empty(&state->pending_sib))
 		list_del(&state->pending_sib);
 	list_add_tail(&state->pending_sib, &f->pending_lru);
 
-	spin_unlock_irqrestore(&pending_lru_lock, flags);
+	raw_spin_unlock_irqrestore(&pending_lru_lock, flags);
 }
 
 static int __ref cpu_callback(struct notifier_block *nfb,
@@ -921,10 +921,10 @@ static int __ref cpu_callback(struct notifier_block *nfb,
 		 */
 		ret = mutex_trylock(&lru_lock);
 		if (ret) {
-			spin_lock_irqsave(&state_lock, flags);
+			raw_spin_lock_irqsave(&state_lock, flags);
 			list_del(&state->sib);
 			list_add_tail(&state->sib, &f->lru);
-			spin_unlock_irqrestore(&state_lock, flags);
+			raw_spin_unlock_irqrestore(&state_lock, flags);
 			mutex_unlock(&lru_lock);
 		} else {
 			/*
@@ -941,10 +941,10 @@ static int __ref cpu_callback(struct notifier_block *nfb,
 		/* Move a CPU to the end of the LRU when it goes offline. */
 		ret = mutex_trylock(&lru_lock);
 		if (ret) {
-			spin_lock_irqsave(&state_lock, flags);
+			raw_spin_lock_irqsave(&state_lock, flags);
 			list_del(&state->sib);
 			list_add_tail(&state->sib, &f->lru);
-			spin_unlock_irqrestore(&state_lock, flags);
+			raw_spin_unlock_irqrestore(&state_lock, flags);
 			mutex_unlock(&lru_lock);
 		} else {
 			add_to_pending_lru(state);
@@ -1017,7 +1017,7 @@ static int group_init(struct cpumask *mask)
 	INIT_LIST_HEAD(&f->lru);
 	INIT_LIST_HEAD(&f->pending_lru);
 	init_timer(&f->timer);
-	spin_lock_init(&f->pending_lock);
+	raw_spin_lock_init(&f->pending_lock);
 	f->timer.function = core_ctl_timer_func;
 	f->timer.data = first_cpu;
 

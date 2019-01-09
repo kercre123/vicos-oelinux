@@ -323,7 +323,7 @@ struct qpnp_pwm_chip {
 	bool			enabled;
 	struct _qpnp_pwm_config	pwm_config;
 	struct	qpnp_lpg_config	lpg_config;
-	spinlock_t		lpg_lock;
+	raw_spinlock_t		lpg_lock;
 	enum qpnp_lpg_revision	revision;
 	u8			sub_type;
 	u32			flags;
@@ -1311,7 +1311,7 @@ static int _pwm_enable(struct qpnp_pwm_chip *chip)
 	int rc = 0;
 	unsigned long flags;
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	if (QPNP_IS_PWM_CONFIG_SELECTED(
 		chip->qpnp_lpg_registers[QPNP_ENABLE_CONTROL]) ||
@@ -1325,7 +1325,7 @@ static int _pwm_enable(struct qpnp_pwm_chip *chip)
 	if (!rc)
 		chip->enabled = true;
 
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 
 	return rc;
 }
@@ -1342,14 +1342,14 @@ static void qpnp_pwm_free(struct pwm_chip *pwm_chip,
 	struct qpnp_pwm_chip	*chip = qpnp_pwm_from_pwm_chip(pwm_chip);
 	unsigned long		flags;
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	qpnp_lpg_configure_pwm_state(chip, QPNP_PWM_DISABLE);
 	if (!(chip->flags & QPNP_PWM_LUT_NOT_SUPPORTED))
 		qpnp_lpg_configure_lut_state(chip, QPNP_LUT_DISABLE);
 
 	chip->enabled = false;
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 }
 
 /**
@@ -1371,7 +1371,7 @@ static int qpnp_pwm_config(struct pwm_chip *pwm_chip,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	if (prev_period_us > INT_MAX / NSEC_PER_USEC ||
 			prev_period_us * NSEC_PER_USEC != period_ns) {
@@ -1383,7 +1383,7 @@ static int qpnp_pwm_config(struct pwm_chip *pwm_chip,
 
 	rc = _pwm_config(chip, LVL_NSEC, duty_ns, period_ns);
 
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 
 	if (rc)
 		pr_err("Failed to configure PWM mode\n");
@@ -1421,7 +1421,7 @@ static void qpnp_pwm_disable(struct pwm_chip *pwm_chip,
 	unsigned long		flags;
 	int rc = 0;
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	if (QPNP_IS_PWM_CONFIG_SELECTED(
 		chip->qpnp_lpg_registers[QPNP_ENABLE_CONTROL]) ||
@@ -1435,7 +1435,7 @@ static void qpnp_pwm_disable(struct pwm_chip *pwm_chip,
 	if (!rc)
 		chip->enabled = false;
 
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 
 	if (rc)
 		pr_err("Failed to disable PWM channel: %d\n",
@@ -1479,9 +1479,9 @@ int pwm_change_mode(struct pwm_device *pwm, enum pm_pwm_mode mode)
 
 	chip = qpnp_pwm_from_pwm_dev(pwm);
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 	rc = _pwm_change_mode(chip, mode);
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 
 	return rc;
 }
@@ -1511,7 +1511,7 @@ int pwm_config_period(struct pwm_device *pwm,
 	pwm_config = &chip->pwm_config;
 	lpg_config = &chip->lpg_config;
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	pwm_config->period.pwm_size = period->pwm_size;
 	pwm_config->period.clk = period->clk;
@@ -1541,7 +1541,7 @@ int pwm_config_period(struct pwm_device *pwm,
 	}
 
 out_unlock:
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 	return rc;
 }
 EXPORT_SYMBOL(pwm_config_period);
@@ -1573,7 +1573,7 @@ int pwm_config_pwm_value(struct pwm_device *pwm, int pwm_value)
 	lpg_config = &chip->lpg_config;
 	pwm_config = &chip->pwm_config;
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	if (pwm_config->pwm_value == pwm_value)
 		goto out_unlock;
@@ -1587,7 +1587,7 @@ int pwm_config_pwm_value(struct pwm_device *pwm, int pwm_value)
 						chip->channel_id, rc);
 
 out_unlock:
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 	return rc;
 }
 EXPORT_SYMBOL_GPL(pwm_config_pwm_value);
@@ -1614,7 +1614,7 @@ int pwm_config_us(struct pwm_device *pwm, int duty_us, int period_us)
 
 	chip = qpnp_pwm_from_pwm_dev(pwm);
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	if (chip->pwm_config.pwm_period != period_us) {
 		qpnp_lpg_calc_period(LVL_USEC, period_us, chip);
@@ -1628,7 +1628,7 @@ int pwm_config_us(struct pwm_device *pwm, int duty_us, int period_us)
 
 	rc = _pwm_config(chip, LVL_USEC, duty_us, period_us);
 
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 
 	if (rc)
 		pr_err("Failed to configure PWM mode\n");
@@ -1683,7 +1683,7 @@ int pwm_lut_config(struct pwm_device *pwm, int period_us,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&chip->lpg_lock, flags);
+	raw_spin_lock_irqsave(&chip->lpg_lock, flags);
 
 	if (chip->pwm_config.pwm_period != period_us) {
 		qpnp_lpg_calc_period(LVL_USEC, period_us, chip);
@@ -1693,7 +1693,7 @@ int pwm_lut_config(struct pwm_device *pwm, int period_us,
 
 	rc = _pwm_lut_config(chip, period_us, duty_pct, lut_params);
 
-	spin_unlock_irqrestore(&chip->lpg_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->lpg_lock, flags);
 
 	if (rc)
 		pr_err("Failed to configure LUT\n");
@@ -2093,7 +2093,7 @@ static int qpnp_pwm_probe(struct spmi_device *spmi)
 		return -ENOMEM;
 	}
 
-	spin_lock_init(&pwm_chip->lpg_lock);
+	raw_spin_lock_init(&pwm_chip->lpg_lock);
 
 	pwm_chip->spmi_dev = spmi;
 	dev_set_drvdata(&spmi->dev, pwm_chip);

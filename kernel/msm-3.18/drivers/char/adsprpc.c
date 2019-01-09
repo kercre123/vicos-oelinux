@@ -210,7 +210,7 @@ struct fastrpc_apps {
 	dev_t dev_no;
 	int compat;
 	struct hlist_head drivers;
-	spinlock_t hlock;
+	raw_spinlock_t hlock;
 	struct ion_client *client;
 	struct device *dev;
 	struct device *modem_cma_dev;
@@ -238,7 +238,7 @@ struct fastrpc_mmap {
 
 struct fastrpc_file {
 	struct hlist_node hn;
-	spinlock_t hlock;
+	raw_spinlock_t hlock;
 	struct hlist_head maps;
 	struct hlist_head bufs;
 	struct fastrpc_ctx_lst clst;
@@ -281,9 +281,9 @@ static void fastrpc_buf_free(struct fastrpc_buf *buf, int cache)
 	if (!fl)
 		return;
 	if (cache) {
-		spin_lock(&fl->hlock);
+		raw_spin_lock(&fl->hlock);
 		hlist_add_head(&buf->hn, &fl->bufs);
-		spin_unlock(&fl->hlock);
+		raw_spin_unlock(&fl->hlock);
 		return;
 	}
 	if (!IS_ERR_OR_NULL(buf->virt)) {
@@ -311,13 +311,13 @@ static void fastrpc_buf_list_free(struct fastrpc_file *fl)
 	do {
 		struct hlist_node *n;
 		free = 0;
-		spin_lock(&fl->hlock);
+		raw_spin_lock(&fl->hlock);
 		hlist_for_each_entry_safe(buf, n, &fl->bufs, hn) {
 			hlist_del_init(&buf->hn);
 			free = buf;
 			break;
 		}
-		spin_unlock(&fl->hlock);
+		raw_spin_unlock(&fl->hlock);
 		if (free)
 			fastrpc_buf_free(free, 0);
 	} while (free);
@@ -328,15 +328,15 @@ static void fastrpc_mmap_add(struct fastrpc_mmap *map)
 	if (map->flags == ADSP_MMAP_HEAP_ADDR) {
 		struct fastrpc_apps *me = &gfa;
 
-		spin_lock(&me->hlock);
+		raw_spin_lock(&me->hlock);
 		hlist_add_head(&map->hn, &me->maps);
-		spin_unlock(&me->hlock);
+		raw_spin_unlock(&me->hlock);
 	} else {
 		struct fastrpc_file *fl = map->fl;
 
-		spin_lock(&fl->hlock);
+		raw_spin_lock(&fl->hlock);
 		hlist_add_head(&map->hn, &fl->maps);
-		spin_unlock(&fl->hlock);
+		raw_spin_unlock(&fl->hlock);
 	}
 }
 
@@ -347,7 +347,7 @@ static int fastrpc_mmap_find(struct fastrpc_file *fl, int fd, uintptr_t va,
 	struct fastrpc_mmap *match = 0, *map;
 	struct hlist_node *n;
 	if (mflags == ADSP_MMAP_HEAP_ADDR) {
-		spin_lock(&me->hlock);
+		raw_spin_lock(&me->hlock);
 		hlist_for_each_entry_safe(map, n, &me->maps, hn) {
 			if (va >= map->va &&
 				va + len <= map->va + map->len &&
@@ -357,9 +357,9 @@ static int fastrpc_mmap_find(struct fastrpc_file *fl, int fd, uintptr_t va,
 				break;
 			}
 		}
-		spin_unlock(&me->hlock);
+		raw_spin_unlock(&me->hlock);
 	} else {
-		spin_lock(&fl->hlock);
+		raw_spin_lock(&fl->hlock);
 		hlist_for_each_entry_safe(map, n, &fl->maps, hn) {
 			if (va >= map->va &&
 				va + len <= map->va + map->len &&
@@ -369,7 +369,7 @@ static int fastrpc_mmap_find(struct fastrpc_file *fl, int fd, uintptr_t va,
 				break;
 			}
 		}
-		spin_unlock(&fl->hlock);
+		raw_spin_unlock(&fl->hlock);
 	}
 	if (match) {
 		*ppmap = match;
@@ -407,7 +407,7 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, uintptr_t va,
 	struct hlist_node *n;
 	struct fastrpc_apps *me = &gfa;
 
-	spin_lock(&me->hlock);
+	raw_spin_lock(&me->hlock);
 	hlist_for_each_entry_safe(map, n, &me->maps, hn) {
 		if (map->raddr == va &&
 			map->raddr + map->len == va + len &&
@@ -417,12 +417,12 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, uintptr_t va,
 			break;
 		}
 	}
-	spin_unlock(&me->hlock);
+	raw_spin_unlock(&me->hlock);
 	if (match) {
 		*ppmap = match;
 		return 0;
 	}
-	spin_lock(&fl->hlock);
+	raw_spin_lock(&fl->hlock);
 	hlist_for_each_entry_safe(map, n, &fl->maps, hn) {
 		if (map->raddr == va &&
 			map->raddr + map->len == va + len &&
@@ -432,7 +432,7 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, uintptr_t va,
 			break;
 		}
 	}
-	spin_unlock(&fl->hlock);
+	raw_spin_unlock(&fl->hlock);
 	if (match) {
 		*ppmap = match;
 		return 0;
@@ -450,17 +450,17 @@ static void fastrpc_mmap_free(struct fastrpc_mmap *map)
 		return;
 	fl = map->fl;
 	if (map->flags == ADSP_MMAP_HEAP_ADDR) {
-		spin_lock(&me->hlock);
+		raw_spin_lock(&me->hlock);
 		map->refs--;
 		if (!map->refs)
 			hlist_del_init(&map->hn);
-		spin_unlock(&me->hlock);
+		raw_spin_unlock(&me->hlock);
 	} else {
-		spin_lock(&fl->hlock);
+		raw_spin_lock(&fl->hlock);
 		map->refs--;
 		if (!map->refs)
 			hlist_del_init(&map->hn);
-		spin_unlock(&fl->hlock);
+		raw_spin_unlock(&fl->hlock);
 	}
 	if (map->refs > 0)
 		return;
@@ -620,14 +620,14 @@ static int fastrpc_buf_alloc(struct fastrpc_file *fl, ssize_t size,
 		goto bail;
 
 	/* find the smallest buffer that fits in the cache */
-	spin_lock(&fl->hlock);
+	raw_spin_lock(&fl->hlock);
 	hlist_for_each_entry_safe(buf, n, &fl->bufs, hn) {
 		if (buf->size >= size && (!fr || fr->size > buf->size))
 			fr = buf;
 	}
 	if (fr)
 		hlist_del_init(&fr->hn);
-	spin_unlock(&fl->hlock);
+	raw_spin_unlock(&fl->hlock);
 	if (fr) {
 		*obuf = fr;
 		return 0;
@@ -682,7 +682,7 @@ static int context_restore_interrupted(struct fastrpc_file *fl,
 	struct smq_invoke_ctx *ctx = 0, *ictx = 0;
 	struct hlist_node *n;
 	struct fastrpc_ioctl_invoke *invoke = &invokefd->inv;
-	spin_lock(&fl->hlock);
+	raw_spin_lock(&fl->hlock);
 	hlist_for_each_entry_safe(ictx, n, &fl->clst.interrupted, hn) {
 		if (ictx->pid == current->pid) {
 			if (invoke->sc != ictx->sc || ictx->fl != fl)
@@ -695,7 +695,7 @@ static int context_restore_interrupted(struct fastrpc_file *fl,
 			break;
 		}
 	}
-	spin_unlock(&fl->hlock);
+	raw_spin_unlock(&fl->hlock);
 	if (ctx)
 		*po = ctx;
 	return err;
@@ -829,9 +829,9 @@ static int context_alloc(struct fastrpc_file *fl, uint32_t kernel,
 	ctx->tgid = current->tgid;
 	init_completion(&ctx->work);
 
-	spin_lock(&fl->hlock);
+	raw_spin_lock(&fl->hlock);
 	hlist_add_head(&ctx->hn, &clst->pending);
-	spin_unlock(&fl->hlock);
+	raw_spin_unlock(&fl->hlock);
 
 	*po = ctx;
 bail:
@@ -843,10 +843,10 @@ bail:
 static void context_save_interrupted(struct smq_invoke_ctx *ctx)
 {
 	struct fastrpc_ctx_lst *clst = &ctx->fl->clst;
-	spin_lock(&ctx->fl->hlock);
+	raw_spin_lock(&ctx->fl->hlock);
 	hlist_del_init(&ctx->hn);
 	hlist_add_head(&ctx->hn, &clst->interrupted);
-	spin_unlock(&ctx->fl->hlock);
+	raw_spin_unlock(&ctx->fl->hlock);
 	/* free the cache on power collapse */
 	fastrpc_buf_list_free(ctx->fl);
 }
@@ -856,9 +856,9 @@ static void context_free(struct smq_invoke_ctx *ctx)
 	int i;
 	int nbufs = REMOTE_SCALARS_INBUFS(ctx->sc) +
 		    REMOTE_SCALARS_OUTBUFS(ctx->sc);
-	spin_lock(&ctx->fl->hlock);
+	raw_spin_lock(&ctx->fl->hlock);
 	hlist_del_init(&ctx->hn);
-	spin_unlock(&ctx->fl->hlock);
+	raw_spin_unlock(&ctx->fl->hlock);
 	for (i = 0; i < nbufs; ++i)
 		fastrpc_mmap_free(ctx->maps[i]);
 	fastrpc_buf_free(ctx->buf, 1);
@@ -876,14 +876,14 @@ static void fastrpc_notify_users(struct fastrpc_file *me)
 {
 	struct smq_invoke_ctx *ictx;
 	struct hlist_node *n;
-	spin_lock(&me->hlock);
+	raw_spin_lock(&me->hlock);
 	hlist_for_each_entry_safe(ictx, n, &me->clst.pending, hn) {
 		complete(&ictx->work);
 	}
 	hlist_for_each_entry_safe(ictx, n, &me->clst.interrupted, hn) {
 		complete(&ictx->work);
 	}
-	spin_unlock(&me->hlock);
+	raw_spin_unlock(&me->hlock);
 
 }
 
@@ -891,12 +891,12 @@ static void fastrpc_notify_drivers(struct fastrpc_apps *me, int cid)
 {
 	struct fastrpc_file *fl;
 	struct hlist_node *n;
-	spin_lock(&me->hlock);
+	raw_spin_lock(&me->hlock);
 	hlist_for_each_entry_safe(fl, n, &me->drivers, hn) {
 		if (fl->cid == cid)
 			fastrpc_notify_users(fl);
 	}
-	spin_unlock(&me->hlock);
+	raw_spin_unlock(&me->hlock);
 
 }
 static void context_list_ctor(struct fastrpc_ctx_lst *me)
@@ -912,25 +912,25 @@ static void fastrpc_context_list_dtor(struct fastrpc_file *fl)
 	struct hlist_node *n;
 	do {
 		ctxfree = 0;
-		spin_lock(&fl->hlock);
+		raw_spin_lock(&fl->hlock);
 		hlist_for_each_entry_safe(ictx, n, &clst->interrupted, hn) {
 			hlist_del_init(&ictx->hn);
 			ctxfree = ictx;
 			break;
 		}
-		spin_unlock(&fl->hlock);
+		raw_spin_unlock(&fl->hlock);
 		if (ctxfree)
 			context_free(ctxfree);
 	} while (ctxfree);
 	do {
 		ctxfree = 0;
-		spin_lock(&fl->hlock);
+		raw_spin_lock(&fl->hlock);
 		hlist_for_each_entry_safe(ictx, n, &clst->pending, hn) {
 			hlist_del_init(&ictx->hn);
 			ctxfree = ictx;
 			break;
 		}
-		spin_unlock(&fl->hlock);
+		raw_spin_unlock(&fl->hlock);
 		if (ctxfree)
 			context_free(ctxfree);
 	} while (ctxfree);
@@ -943,13 +943,13 @@ static void fastrpc_file_list_dtor(struct fastrpc_apps *me)
 	struct hlist_node *n;
 	do {
 		free = 0;
-		spin_lock(&me->hlock);
+		raw_spin_lock(&me->hlock);
 		hlist_for_each_entry_safe(fl, n, &me->drivers, hn) {
 			hlist_del_init(&fl->hn);
 			free = fl;
 			break;
 		}
-		spin_unlock(&me->hlock);
+		raw_spin_unlock(&me->hlock);
 		if (free)
 			fastrpc_file_free(free);
 	} while (free);
@@ -1269,11 +1269,11 @@ static int fastrpc_invoke_send(struct smq_invoke_ctx *ctx,
 			(void *)&fl->apps->channel[fl->cid], msg, sizeof(*msg),
 			GLINK_TX_REQ_INTENT);
 	} else {
-		spin_lock(&fl->apps->hlock);
+		raw_spin_lock(&fl->apps->hlock);
 		len = smd_write((smd_channel_t *)
 				fl->apps->channel[fl->cid].chan,
 				msg, sizeof(*msg));
-		spin_unlock(&fl->apps->hlock);
+		raw_spin_unlock(&fl->apps->hlock);
 		VERIFY(err, len == sizeof(*msg));
 	}
  bail:
@@ -1318,7 +1318,7 @@ static void fastrpc_init(struct fastrpc_apps *me)
 	int i;
 	INIT_HLIST_HEAD(&me->drivers);
 	INIT_HLIST_HEAD(&me->fls);
-	spin_lock_init(&me->hlock);
+	raw_spin_lock_init(&me->hlock);
 	mutex_init(&me->smd_mutex);
 	me->channel = &gcinfo[0];
 	for (i = 0; i < NUM_CHANNELS; i++) {
@@ -1646,13 +1646,13 @@ static int fastrpc_mmap_remove_ssr(struct fastrpc_file *fl)
 	struct fastrpc_apps *me = &gfa;
 	struct ramdump_segment *ramdump_segments_rh = NULL;
 
-	spin_lock(&me->hlock);
+	raw_spin_lock(&me->hlock);
 	hlist_for_each_entry_safe(map, n, &me->maps, hn) {
 			match = map;
 			hlist_del_init(&map->hn);
 			break;
 	}
-	spin_unlock(&me->hlock);
+	raw_spin_unlock(&me->hlock);
 
 	if (match) {
 		VERIFY(err, !fastrpc_munmap_on_dsp_rh(fl, match));
@@ -1759,9 +1759,9 @@ static int fastrpc_file_free(struct fastrpc_file *fl)
 		return 0;
 	cid = fl->cid;
 
-	spin_lock(&fl->apps->hlock);
+	raw_spin_lock(&fl->apps->hlock);
 	hlist_del_init(&fl->hn);
-	spin_unlock(&fl->apps->hlock);
+	raw_spin_unlock(&fl->apps->hlock);
 
 	if (!fl->sctx) {
 		kfree(fl);
@@ -2024,7 +2024,7 @@ static int fastrpc_device_open(struct inode *inode, struct file *filp)
 	mutex_lock(&me->smd_mutex);
 
 	context_list_ctor(&fl->clst);
-	spin_lock_init(&fl->hlock);
+	raw_spin_lock_init(&fl->hlock);
 	INIT_HLIST_HEAD(&fl->maps);
 	INIT_HLIST_HEAD(&fl->bufs);
 	INIT_HLIST_NODE(&fl->hn);
@@ -2068,9 +2068,9 @@ static int fastrpc_device_open(struct inode *inode, struct file *filp)
 						me->channel[cid].ssrcount;
 		}
 	}
-	spin_lock(&me->hlock);
+	raw_spin_lock(&me->hlock);
 	hlist_add_head(&fl->hn, &me->drivers);
-	spin_unlock(&me->hlock);
+	raw_spin_unlock(&me->hlock);
 
 bail:
 	mutex_unlock(&me->smd_mutex);

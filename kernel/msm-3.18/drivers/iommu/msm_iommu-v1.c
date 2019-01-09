@@ -974,7 +974,7 @@ static void msm_iommu_domain_destroy(struct iommu_domain *domain)
 	unsigned long flags;
 
 	mutex_lock(&msm_iommu_lock);
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	priv = domain->priv;
 	domain->priv = NULL;
 
@@ -982,7 +982,7 @@ static void msm_iommu_domain_destroy(struct iommu_domain *domain)
 		msm_iommu_pagetable_free(&priv->pt);
 
 	kfree(priv);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	mutex_unlock(&msm_iommu_lock);
 }
 
@@ -1055,21 +1055,21 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (ctx_drvdata->attach_count > 1)
 		goto already_attached;
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	if (!list_empty(&ctx_drvdata->attached_elm)) {
 		ret = -EBUSY;
-		spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+		raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 		goto unlock;
 	}
 
 	list_for_each_entry(tmp_drvdata, &priv->list_attached, attached_elm)
 		if (tmp_drvdata == ctx_drvdata) {
 			ret = -EBUSY;
-			spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+			raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 			goto unlock;
 		}
 
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	is_secure = iommu_drvdata->sec_id != -1;
 
@@ -1121,9 +1121,9 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	__disable_clocks(iommu_drvdata);
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	list_add(&(ctx_drvdata->attached_elm), &priv->list_attached);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	ctx_drvdata->attached_domain = domain;
 	++iommu_drvdata->ctx_attach_count;
@@ -1235,9 +1235,9 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 
 	__disable_regulators(iommu_drvdata);
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	list_del_init(&ctx_drvdata->attached_elm);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	ctx_drvdata->attached_domain = NULL;
 	BUG_ON(iommu_drvdata->ctx_attach_count == 0);
@@ -1253,7 +1253,7 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 	int ret = 0;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	priv = domain->priv;
 	if (!priv) {
 		ret = -EINVAL;
@@ -1266,7 +1266,7 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 
 	msm_iommu_flush_pagetable(&priv->pt, va, len);
 fail:
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
 }
 
@@ -1277,7 +1277,7 @@ static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 	int ret = -ENODEV;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	priv = domain->priv;
 	if (!priv)
 		goto fail;
@@ -1294,7 +1294,7 @@ static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 
 	msm_iommu_pagetable_free_tables(&priv->pt, va, len);
 fail:
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	/* the IOMMU API requires us to return how many bytes were unmapped */
 	len = ret ? 0 : len;
 	return len;
@@ -1308,7 +1308,7 @@ static int msm_iommu_map_range(struct iommu_domain *domain, unsigned long va,
 	struct msm_iommu_priv *priv;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	priv = domain->priv;
 	if (!priv) {
 		ret = -EINVAL;
@@ -1319,7 +1319,7 @@ static int msm_iommu_map_range(struct iommu_domain *domain, unsigned long va,
 	msm_iommu_flush_pagetable(&priv->pt, va, len);
 
 fail:
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
 }
 
@@ -1330,7 +1330,7 @@ static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned long va,
 	struct msm_iommu_priv *priv;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	priv = domain->priv;
 	msm_iommu_pagetable_unmap_range(&priv->pt, va, len);
 
@@ -1338,7 +1338,7 @@ static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned long va,
 	__flush_iotlb(domain);
 
 	msm_iommu_pagetable_free_tables(&priv->pt, va, len);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return 0;
 }
 
@@ -1370,9 +1370,9 @@ static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 	phys_addr_t ret;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	ret = msm_iommu_iova_to_phys_soft(domain, va);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
 }
 
@@ -1396,10 +1396,10 @@ static phys_addr_t msm_iommu_iova_to_phys_hard(struct iommu_domain *domain,
 		goto fail;
 
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	ctx_drvdata = list_entry(priv->list_attached.next,
 				 struct msm_iommu_ctx_drvdata, attached_elm);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	if (is_domain_dynamic(priv) || ctx_drvdata->dynamic)
 		goto fail;
@@ -1421,7 +1421,7 @@ static phys_addr_t msm_iommu_iova_to_phys_hard(struct iommu_domain *domain,
 		goto fail;
 	}
 
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
+	raw_spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	SET_ATS1PR(base, ctx, va & CB_ATS1PR_ADDR);
 	/* make sure ATS1PR is visible */
 	mb();
@@ -1439,7 +1439,7 @@ static phys_addr_t msm_iommu_iova_to_phys_hard(struct iommu_domain *domain,
 	}
 
 	par = GET_PAR(base, ctx);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	__disable_clocks(iommu_drvdata);
 

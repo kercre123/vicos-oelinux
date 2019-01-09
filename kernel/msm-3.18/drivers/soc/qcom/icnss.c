@@ -94,7 +94,7 @@ static struct {
 	void __iomem *mem_base_va;
 	struct qmi_handle *wlfw_clnt;
 	struct list_head qmi_event_list;
-	spinlock_t qmi_event_lock;
+	raw_spinlock_t qmi_event_lock;
 	struct work_struct qmi_event_work;
 	struct work_struct qmi_recv_msg_work;
 	struct workqueue_struct *qmi_event_wq;
@@ -129,9 +129,9 @@ static int icnss_qmi_event_post(enum icnss_qmi_event_type type, void *data)
 
 	event->type = type;
 	event->data = data;
-	spin_lock_irqsave(&penv->qmi_event_lock, flags);
+	raw_spin_lock_irqsave(&penv->qmi_event_lock, flags);
 	list_add_tail(&event->list, &penv->qmi_event_list);
-	spin_unlock_irqrestore(&penv->qmi_event_lock, flags);
+	raw_spin_unlock_irqrestore(&penv->qmi_event_lock, flags);
 
 	queue_work(penv->qmi_event_wq, &penv->qmi_event_work);
 
@@ -869,13 +869,13 @@ static void icnss_qmi_wlfw_event_work(struct work_struct *work)
 	struct icnss_qmi_event *event;
 	unsigned long flags;
 
-	spin_lock_irqsave(&penv->qmi_event_lock, flags);
+	raw_spin_lock_irqsave(&penv->qmi_event_lock, flags);
 
 	while (!list_empty(&penv->qmi_event_list)) {
 		event = list_first_entry(&penv->qmi_event_list,
 					 struct icnss_qmi_event, list);
 		list_del(&event->list);
-		spin_unlock_irqrestore(&penv->qmi_event_lock, flags);
+		raw_spin_unlock_irqrestore(&penv->qmi_event_lock, flags);
 
 		switch (event->type) {
 		case ICNSS_QMI_EVENT_SERVER_ARRIVE:
@@ -893,9 +893,9 @@ static void icnss_qmi_wlfw_event_work(struct work_struct *work)
 			break;
 		}
 		kfree(event);
-		spin_lock_irqsave(&penv->qmi_event_lock, flags);
+		raw_spin_lock_irqsave(&penv->qmi_event_lock, flags);
 	}
-	spin_unlock_irqrestore(&penv->qmi_event_lock, flags);
+	raw_spin_unlock_irqrestore(&penv->qmi_event_lock, flags);
 }
 
 static struct notifier_block wlfw_clnt_nb = {
@@ -1446,7 +1446,7 @@ static int icnss_probe(struct platform_device *pdev)
 		goto err_wlan_mode;
 	}
 
-	spin_lock_init(&penv->qmi_event_lock);
+	raw_spin_lock_init(&penv->qmi_event_lock);
 
 	penv->qmi_event_wq = alloc_workqueue("icnss_qmi_event", 0, 0);
 	if (!penv->qmi_event_wq) {

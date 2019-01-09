@@ -214,7 +214,7 @@ struct afe_audio_port_data {
 	uint32_t	    tmp_hdl;
 	/* read or write locks */
 	struct mutex	    lock;
-	spinlock_t	    dsp_lock;
+	raw_spinlock_t	    dsp_lock;
 };
 
 struct afe_audio_client {

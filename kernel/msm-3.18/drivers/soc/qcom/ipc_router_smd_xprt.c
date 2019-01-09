@@ -82,7 +82,7 @@ struct msm_ipc_router_smd_xprt {
 	struct rr_packet *in_pkt;
 	int is_partial_in_pkt;
 	struct delayed_work read_work;
-	spinlock_t ss_reset_lock;	/*Subsystem reset lock*/
+	raw_spinlock_t ss_reset_lock;	/*Subsystem reset lock*/
 	int ss_reset;
 	void *pil;
 	struct completion sft_close_complete;
@@ -202,15 +202,15 @@ static int msm_ipc_router_smd_remote_write(void *data,
 		return -EINVAL;
 
 	do {
-		spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
+		raw_spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
 		if (smd_xprtp->ss_reset) {
-			spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock,
+			raw_spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock,
 						flags);
 			IPC_RTR_ERR("%s: %s chnl reset\n",
 					__func__, xprt->name);
 			return -ENETRESET;
 		}
-		spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
+		raw_spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
 		ret = smd_write_start(smd_xprtp->channel, len);
 		if (ret < 0 && num_retries >= 5) {
 			IPC_RTR_ERR("%s: Error %d @smd_write_start for %s\n",
@@ -233,15 +233,15 @@ static int msm_ipc_router_smd_remote_write(void *data,
 				(smd_write_segment_avail(smd_xprtp->channel) ||
 				smd_xprtp->ss_reset));
 			smd_disable_read_intr(smd_xprtp->channel);
-			spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
+			raw_spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
 			if (smd_xprtp->ss_reset) {
-				spin_unlock_irqrestore(
+				raw_spin_unlock_irqrestore(
 					&smd_xprtp->ss_reset_lock, flags);
 				IPC_RTR_ERR("%s: %s chnl reset\n",
 					__func__, xprt->name);
 				return -ENETRESET;
 			}
-			spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock,
+			raw_spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock,
 						flags);
 
 			sz_written = smd_write_segment(smd_xprtp->channel,
@@ -291,9 +291,9 @@ static void smd_xprt_read_data(struct work_struct *work)
 	struct msm_ipc_router_smd_xprt *smd_xprtp =
 		container_of(rwork, struct msm_ipc_router_smd_xprt, read_work);
 
-	spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
+	raw_spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
 	if (smd_xprtp->ss_reset) {
-		spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
+		raw_spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
 		if (smd_xprtp->in_pkt)
 			release_pkt(smd_xprtp->in_pkt);
 		smd_xprtp->is_partial_in_pkt = 0;
@@ -301,7 +301,7 @@ static void smd_xprt_read_data(struct work_struct *work)
 			__func__, smd_xprtp->xprt.name);
 		return;
 	}
-	spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
 
 	D("%s pkt_size: %d, read_avail: %d\n", __func__,
 		smd_cur_packet_size(smd_xprtp->channel),
@@ -379,9 +379,9 @@ static void smd_xprt_open_event(struct work_struct *work)
 			     struct msm_ipc_router_smd_xprt, xprt);
 	unsigned long flags;
 
-	spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
+	raw_spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
 	smd_xprtp->ss_reset = 0;
-	spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
+	raw_spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
 	msm_ipc_router_xprt_notify(xprt_work->xprt,
 				IPC_ROUTER_XPRT_EVENT_OPEN, NULL);
 	D("%s: Notified IPC Router of %s OPEN\n",
@@ -445,9 +445,9 @@ static void msm_ipc_router_smd_remote_notify(void *_dev, unsigned event)
 		break;
 
 	case SMD_EVENT_CLOSE:
-		spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
+		raw_spin_lock_irqsave(&smd_xprtp->ss_reset_lock, flags);
 		smd_xprtp->ss_reset = 1;
-		spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
+		raw_spin_unlock_irqrestore(&smd_xprtp->ss_reset_lock, flags);
 		wake_up(&smd_xprtp->write_avail_wait_q);
 		xprt_work = kmalloc(sizeof(struct msm_ipc_router_smd_xprt_work),
 				    GFP_ATOMIC);
@@ -688,7 +688,7 @@ static int msm_ipc_router_smd_config_init(
 	smd_xprtp->in_pkt = NULL;
 	smd_xprtp->is_partial_in_pkt = 0;
 	INIT_DELAYED_WORK(&smd_xprtp->read_work, smd_xprt_read_data);
-	spin_lock_init(&smd_xprtp->ss_reset_lock);
+	raw_spin_lock_init(&smd_xprtp->ss_reset_lock);
 	smd_xprtp->ss_reset = 0;
 
 	msm_ipc_router_smd_driver_register(smd_xprtp);

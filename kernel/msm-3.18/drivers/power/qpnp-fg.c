@@ -488,7 +488,7 @@ struct fg_chip {
 	struct completion	batt_id_avail;
 	struct completion	first_soc_done;
 	struct power_supply	bms_psy;
-	spinlock_t		sec_access_lock;
+	raw_spinlock_t		sec_access_lock;
 	struct mutex		rw_lock;
 	struct mutex		sysfs_restart_lock;
 	struct delayed_work	batt_profile_init;
@@ -810,9 +810,9 @@ static int fg_masked_write(struct fg_chip *chip, u16 addr,
 	int rc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&chip->sec_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->sec_access_lock, flags);
 	rc = fg_masked_write_raw(chip, addr, mask, val, len);
-	spin_unlock_irqrestore(&chip->sec_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->sec_access_lock, flags);
 
 	return rc;
 }
@@ -828,7 +828,7 @@ static int fg_sec_masked_write(struct fg_chip *chip, u16 addr, u8 mask, u8 val,
 	u8 temp;
 	u16 base = addr & (~PERIPHERAL_MASK);
 
-	spin_lock_irqsave(&chip->sec_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->sec_access_lock, flags);
 	temp = SEC_ACCESS_VALUE;
 	rc = fg_write(chip, &temp, base + SEC_ACCESS_OFFSET, 1);
 	if (rc) {
@@ -841,7 +841,7 @@ static int fg_sec_masked_write(struct fg_chip *chip, u16 addr, u8 mask, u8 val,
 		pr_err("Unable to write securely to address 0x%x: %d", addr,
 			rc);
 out:
-	spin_unlock_irqrestore(&chip->sec_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->sec_access_lock, flags);
 	return rc;
 }
 
@@ -8737,7 +8737,7 @@ static int fg_probe(struct spmi_device *spmi)
 			"qpnp_fg_cc_soc");
 	wakeup_source_init(&chip->sanity_wakeup_source.source,
 			"qpnp_fg_sanity_check");
-	spin_lock_init(&chip->sec_access_lock);
+	raw_spin_lock_init(&chip->sec_access_lock);
 	mutex_init(&chip->rw_lock);
 	mutex_init(&chip->cyc_ctr.lock);
 	mutex_init(&chip->learning_data.learning_lock);

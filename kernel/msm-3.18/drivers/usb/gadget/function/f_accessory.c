@@ -72,7 +72,7 @@ struct acc_hid_dev {
 struct acc_dev {
 	struct usb_function function;
 	struct usb_composite_dev *cdev;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 
 	struct usb_ep *ep_in;
 	struct usb_ep *ep_out;
@@ -282,9 +282,9 @@ static void req_put(struct acc_dev *dev, struct list_head *head,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	list_add_tail(&req->list, head);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 /* remove a request from the head of a list */
@@ -293,14 +293,14 @@ static struct usb_request *req_get(struct acc_dev *dev, struct list_head *head)
 	unsigned long flags;
 	struct usb_request *req;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	if (list_empty(head)) {
 		req = 0;
 	} else {
 		req = list_first_entry(head, struct usb_request, list);
 		list_del(&req->list);
 	}
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 	return req;
 }
 
@@ -374,11 +374,11 @@ static void acc_complete_set_string(struct usb_ep *ep, struct usb_request *req)
 		if (length >= ACC_STRING_SIZE)
 			length = ACC_STRING_SIZE - 1;
 
-		spin_lock_irqsave(&dev->lock, flags);
+		raw_spin_lock_irqsave(&dev->lock, flags);
 		memcpy(string_dest, req->buf, length);
 		/* ensure zero termination */
 		string_dest[length] = 0;
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 	} else {
 		pr_err("unknown accessory string index %d\n",
 			dev->string_index);
@@ -503,7 +503,7 @@ static int acc_register_hid(struct acc_dev *dev, int id, int desc_length)
 	if (desc_length <= 0)
 		return -EINVAL;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	/* replace HID if one already exists with this ID */
 	hid = acc_hid_get(&dev->hid_list, id);
 	if (!hid)
@@ -513,12 +513,12 @@ static int acc_register_hid(struct acc_dev *dev, int id, int desc_length)
 
 	hid = acc_hid_new(dev, id, desc_length);
 	if (!hid) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		return -ENOMEM;
 	}
 
 	list_add(&hid->list, &dev->new_hid_list);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	/* schedule work to register the HID device */
 	schedule_work(&dev->hid_work);
@@ -530,17 +530,17 @@ static int acc_unregister_hid(struct acc_dev *dev, int id)
 	struct acc_hid_dev *hid;
 	unsigned long flags;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	hid = acc_hid_get(&dev->hid_list, id);
 	if (!hid)
 		hid = acc_hid_get(&dev->new_hid_list, id);
 	if (!hid) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		return -EINVAL;
 	}
 
 	list_move(&hid->list, &dev->dead_hid_list);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	schedule_work(&dev->hid_work);
 	return 0;
@@ -905,9 +905,9 @@ int acc_ctrlrequest(struct usb_composite_dev *cdev,
 		} else if (b_request == ACCESSORY_UNREGISTER_HID) {
 			value = acc_unregister_hid(dev, w_value);
 		} else if (b_request == ACCESSORY_SET_HID_REPORT_DESC) {
-			spin_lock_irqsave(&dev->lock, flags);
+			raw_spin_lock_irqsave(&dev->lock, flags);
 			hid = acc_hid_get(&dev->new_hid_list, w_value);
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 			if (!hid) {
 				value = -EINVAL;
 				goto err;
@@ -922,9 +922,9 @@ int acc_ctrlrequest(struct usb_composite_dev *cdev,
 			cdev->req->complete = acc_complete_set_hid_report_desc;
 			value = w_length;
 		} else if (b_request == ACCESSORY_SEND_HID_EVENT) {
-			spin_lock_irqsave(&dev->lock, flags);
+			raw_spin_lock_irqsave(&dev->lock, flags);
 			hid = acc_hid_get(&dev->hid_list, w_value);
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 			if (!hid) {
 				value = -EINVAL;
 				goto err;
@@ -1055,7 +1055,7 @@ kill_all_hid_devices(struct acc_dev *dev)
 	if (!dev)
 		return;
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	list_for_each_safe(entry, temp, &dev->hid_list) {
 		hid = list_entry(entry, struct acc_hid_dev, list);
 		list_del(&hid->list);
@@ -1066,7 +1066,7 @@ kill_all_hid_devices(struct acc_dev *dev)
 		list_del(&hid->list);
 		list_add(&hid->list, &dev->dead_hid_list);
 	}
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	schedule_work(&dev->hid_work);
 }
@@ -1142,7 +1142,7 @@ static void acc_hid_work(struct work_struct *data)
 
 	INIT_LIST_HEAD(&new_list);
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 
 	/* copy hids that are ready for initialization to new_list */
 	list_for_each_safe(entry, temp, &dev->new_hid_list) {
@@ -1162,7 +1162,7 @@ static void acc_hid_work(struct work_struct *data)
 		INIT_LIST_HEAD(&dev->dead_hid_list);
 	}
 
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	/* register new HID devices */
 	list_for_each_safe(entry, temp, &new_list) {
@@ -1171,9 +1171,9 @@ static void acc_hid_work(struct work_struct *data)
 			pr_err("can't add HID device %pK\n", hid);
 			acc_hid_delete(hid);
 		} else {
-			spin_lock_irqsave(&dev->lock, flags);
+			raw_spin_lock_irqsave(&dev->lock, flags);
 			list_move(&hid->list, &dev->hid_list);
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 		}
 	}
 
@@ -1289,7 +1289,7 @@ static int acc_setup(void)
 	if (!dev)
 		return -ENOMEM;
 
-	spin_lock_init(&dev->lock);
+	raw_spin_lock_init(&dev->lock);
 	init_waitqueue_head(&dev->read_wq);
 	init_waitqueue_head(&dev->write_wq);
 	atomic_set(&dev->open_excl, 0);

@@ -200,10 +200,10 @@ static void mon_init(struct m4m_hwmon *m)
 	unsigned long flags;
 	int i;
 
-	spin_lock_irqsave(&init_lock, flags);
+	raw_spin_lock_irqsave(&init_lock, flags);
 	if (!mon_inited)
 		mon_global_init(m);
-	spin_unlock_irqrestore(&init_lock, flags);
+	raw_spin_unlock_irqrestore(&init_lock, flags);
 
 	/* configure counter events */
 	for (i = 0; i < m->num_cntr; i++)

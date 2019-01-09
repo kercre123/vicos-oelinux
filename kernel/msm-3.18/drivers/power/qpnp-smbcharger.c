@@ -254,7 +254,7 @@ struct smbchg_chip {
 	struct work_struct		usb_set_online_work;
 	struct delayed_work		vfloat_adjust_work;
 	struct delayed_work		hvdcp_det_work;
-	spinlock_t			sec_access_lock;
+	raw_spinlock_t			sec_access_lock;
 	struct mutex			therm_lvl_lock;
 	struct mutex			usb_set_online_lock;
 	struct mutex			pm_lock;
@@ -599,9 +599,9 @@ static int smbchg_masked_write(struct smbchg_chip *chip, u16 base, u8 mask,
 	unsigned long flags;
 	int rc;
 
-	spin_lock_irqsave(&chip->sec_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->sec_access_lock, flags);
 	rc = smbchg_masked_write_raw(chip, base, mask, val);
-	spin_unlock_irqrestore(&chip->sec_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->sec_access_lock, flags);
 
 	return rc;
 }
@@ -622,7 +622,7 @@ static int smbchg_sec_masked_write(struct smbchg_chip *chip, u16 base, u8 mask,
 	int rc;
 	u16 peripheral_base = base & (~PERIPHERAL_MASK);
 
-	spin_lock_irqsave(&chip->sec_access_lock, flags);
+	raw_spin_lock_irqsave(&chip->sec_access_lock, flags);
 
 	rc = smbchg_masked_write_raw(chip, peripheral_base + SEC_ACCESS_OFFSET,
 				SEC_ACCESS_VALUE, SEC_ACCESS_VALUE);
@@ -634,7 +634,7 @@ static int smbchg_sec_masked_write(struct smbchg_chip *chip, u16 base, u8 mask,
 	rc = smbchg_masked_write_raw(chip, base, mask, val);
 
 out:
-	spin_unlock_irqrestore(&chip->sec_access_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->sec_access_lock, flags);
 	return rc;
 }
 
@@ -8576,7 +8576,7 @@ static int smbchg_probe(struct spmi_device *spmi)
 	chip->usb_online = -EINVAL;
 	dev_set_drvdata(&spmi->dev, chip);
 
-	spin_lock_init(&chip->sec_access_lock);
+	raw_spin_lock_init(&chip->sec_access_lock);
 	mutex_init(&chip->therm_lvl_lock);
 	mutex_init(&chip->usb_set_online_lock);
 	mutex_init(&chip->parallel.lock);

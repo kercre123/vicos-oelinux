@@ -41,7 +41,7 @@ static LIST_HEAD(wakeup_irqs);
 
 static struct kmem_cache *wakeup_irq_nodes_cache;
 static struct kobject *wakeup_reason;
-static spinlock_t resume_reason_lock;
+static raw_spinlock_t resume_reason_lock;
 bool log_wakeups __read_mostly;
 struct completion wakeups_completion;
 
@@ -249,12 +249,12 @@ static ssize_t last_resume_reason_show(struct kobject *kobj,
 		.buf_offset = 0
 	};
 
-	spin_lock_irqsave(&resume_reason_lock, flags);
+	raw_spin_lock_irqsave(&resume_reason_lock, flags);
 	if (suspend_abort)
 		b.buf_offset = snprintf(buf, PAGE_SIZE, "Abort: %s", abort_reason);
 	else
 		walk_irq_node_tree(base_irq_nodes, print_leaf_node, &b);
-	spin_unlock_irqrestore(&resume_reason_lock, flags);
+	raw_spin_unlock_irqrestore(&resume_reason_lock, flags);
 
 	return b.buf_offset;
 }
@@ -442,11 +442,11 @@ void log_suspend_abort_reason(const char *fmt, ...)
 {
 	va_list args;
 
-	spin_lock(&resume_reason_lock);
+	raw_spin_lock(&resume_reason_lock);
 
 	//Suspend abort reason has already been logged.
 	if (suspend_abort) {
-		spin_unlock(&resume_reason_lock);
+		raw_spin_unlock(&resume_reason_lock);
 		return;
 	}
 
@@ -455,7 +455,7 @@ void log_suspend_abort_reason(const char *fmt, ...)
 	vsnprintf(abort_reason, MAX_SUSPEND_ABORT_LEN, fmt, args);
 	va_end(args);
 
-	spin_unlock(&resume_reason_lock);
+	raw_spin_unlock(&resume_reason_lock);
 }
 
 static bool match_node(struct wakeup_irq_node *n, void *_p)
@@ -467,9 +467,9 @@ static bool match_node(struct wakeup_irq_node *n, void *_p)
 int check_wakeup_reason(int irq)
 {
 	bool found;
-	spin_lock(&resume_reason_lock);
+	raw_spin_lock(&resume_reason_lock);
 	found = !walk_irq_node_tree(base_irq_nodes, match_node, &irq);
-	spin_unlock(&resume_reason_lock);
+	raw_spin_unlock(&resume_reason_lock);
 	return found;
 }
 
@@ -532,7 +532,7 @@ static bool delete_node(struct wakeup_irq_node *n, void *unused)
 void clear_wakeup_reasons(void)
 {
 	unsigned long flags;
-	spin_lock_irqsave(&resume_reason_lock, flags);
+	raw_spin_lock_irqsave(&resume_reason_lock, flags);
 
 	BUG_ON(logging_wakeup_reasons());
 	walk_irq_node_tree(base_irq_nodes, delete_node, NULL);
@@ -542,7 +542,7 @@ void clear_wakeup_reasons(void)
 	INIT_LIST_HEAD(&wakeup_irqs);
 	suspend_abort = false;
 
-	spin_unlock_irqrestore(&resume_reason_lock, flags);
+	raw_spin_unlock_irqrestore(&resume_reason_lock, flags);
 }
 
 /* Detects a suspend and clears all the previous wake up reasons*/
@@ -551,9 +551,9 @@ static int wakeup_reason_pm_event(struct notifier_block *notifier,
 {
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
-		spin_lock(&resume_reason_lock);
+		raw_spin_lock(&resume_reason_lock);
 		suspend_abort = false;
-		spin_unlock(&resume_reason_lock);
+		raw_spin_unlock(&resume_reason_lock);
 		/* monotonic time since boot */
 		last_monotime = ktime_get();
 		/* monotonic time since boot including the time spent in suspend */
@@ -636,7 +636,7 @@ late_initcall(suspend_time_debug_init);
  */
 int __init wakeup_reason_init(void)
 {
-	spin_lock_init(&resume_reason_lock);
+	raw_spin_lock_init(&resume_reason_lock);
 
 	if (register_pm_notifier(&wakeup_reason_pm_notifier_block)) {
 		pr_warning("[%s] failed to register PM notifier\n",

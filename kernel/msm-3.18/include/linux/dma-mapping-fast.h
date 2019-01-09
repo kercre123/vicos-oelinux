@@ -32,7 +32,7 @@ struct dma_fast_smmu_mapping {
 	dma_addr_t	pgtbl_dma_handle;
 	av8l_fast_iopte	*pgtbl_pmds;
 
-	spinlock_t	lock;
+	raw_spinlock_t	lock;
 	struct notifier_block notifier;
 };
 

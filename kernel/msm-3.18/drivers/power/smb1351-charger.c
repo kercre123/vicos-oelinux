@@ -463,7 +463,7 @@ enum wakeup_src {
 struct smb1351_wakeup_source {
 	struct wakeup_source	source;
 	unsigned long		enabled_bitmap;
-	spinlock_t		ws_lock;
+	raw_spinlock_t		ws_lock;
 };
 
 /* parallel primary charger */
@@ -646,10 +646,10 @@ static void smb1351_stay_awake(struct smb1351_wakeup_source *source,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&source->ws_lock, flags);
+	raw_spin_lock_irqsave(&source->ws_lock, flags);
 	if (!__test_and_set_bit(wk_src, &source->enabled_bitmap))
 		__pm_stay_awake(&source->source);
-	spin_unlock_irqrestore(&source->ws_lock, flags);
+	raw_spin_unlock_irqrestore(&source->ws_lock, flags);
 }
 
 static void smb1351_relax(struct smb1351_wakeup_source *source,
@@ -657,18 +657,18 @@ static void smb1351_relax(struct smb1351_wakeup_source *source,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&source->ws_lock, flags);
+	raw_spin_lock_irqsave(&source->ws_lock, flags);
 	if (__test_and_clear_bit(wk_src, &source->enabled_bitmap) &&
 		!(source->enabled_bitmap & WAKEUP_SRC_MASK)) {
 		__pm_relax(&source->source);
 	}
-	spin_unlock_irqrestore(&source->ws_lock, flags);
+	raw_spin_unlock_irqrestore(&source->ws_lock, flags);
 
 }
 
 static void smb1351_wakeup_src_init(struct smb1351_charger *chip)
 {
-	spin_lock_init(&chip->smb1351_ws.ws_lock);
+	raw_spin_lock_init(&chip->smb1351_ws.ws_lock);
 	wakeup_source_init(&chip->smb1351_ws.source, "smb1351");
 }
 

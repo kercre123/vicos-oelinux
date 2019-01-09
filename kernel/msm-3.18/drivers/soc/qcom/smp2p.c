@@ -59,7 +59,7 @@ struct msm_smp2p_out {
  * @restart_ack: Current cached state of the local ack bit
  */
 struct smp2p_out_list_item {
-	spinlock_t out_item_lock_lha1;
+	raw_spinlock_t out_item_lock_lha1;
 
 	struct list_head list;
 	struct smp2p_smem __iomem *smem_edge_out;
@@ -105,7 +105,7 @@ struct smp2p_in {
  * @smem_edge_in: Pointer to the remote smem item.
  */
 struct smp2p_in_list_item {
-	spinlock_t in_item_lock_lhb1;
+	raw_spinlock_t in_item_lock_lhb1;
 	struct list_head list;
 	struct smp2p_smem __iomem *smem_edge_in;
 	uint32_t item_size;
@@ -274,10 +274,10 @@ struct smp2p_smem __iomem *smp2p_get_in_item(int remote_pid)
 	void *ret = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&in_list[remote_pid].in_item_lock_lhb1, flags);
+	raw_spin_lock_irqsave(&in_list[remote_pid].in_item_lock_lhb1, flags);
 	if (remote_pid < SMP2P_NUM_PROCS)
 		ret = in_list[remote_pid].smem_edge_in;
-	spin_unlock_irqrestore(&in_list[remote_pid].in_item_lock_lhb1,
+	raw_spin_unlock_irqrestore(&in_list[remote_pid].in_item_lock_lhb1,
 								flags);
 
 	return ret;
@@ -295,13 +295,13 @@ struct smp2p_smem __iomem *smp2p_get_out_item(int remote_pid, int *state)
 	void *ret = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&out_list[remote_pid].out_item_lock_lha1, flags);
+	raw_spin_lock_irqsave(&out_list[remote_pid].out_item_lock_lha1, flags);
 	if (remote_pid < SMP2P_NUM_PROCS) {
 		ret = out_list[remote_pid].smem_edge_out;
 		if (state)
 			*state = out_list[remote_pid].smem_edge_state;
 	}
-	spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1, flags);
+	raw_spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1, flags);
 
 	return ret;
 }
@@ -1039,9 +1039,9 @@ static int smp2p_do_negotiation(int remote_pid,
 	l_smem_ptr = out_item->smem_edge_out;
 
 	/* retrieve remote side and version */
-	spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
+	raw_spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
 	r_smem_ptr = smp2p_get_remote_smem_item(remote_pid, out_item);
-	spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
+	raw_spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
 
 	r_version = 0;
 	if (r_smem_ptr) {
@@ -1112,11 +1112,11 @@ static int smp2p_do_negotiation(int remote_pid,
 		}
 
 		/* update inbound edge */
-		spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
+		raw_spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
 		(void)out_item->ops_ptr->validate_size(remote_pid, r_smem_ptr,
 				in_list[remote_pid].item_size);
 		in_list[remote_pid].smem_edge_in = r_smem_ptr;
-		spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
+		raw_spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
 	} else {
 		SMP2P_INFO("%s: negotiation pid %d: State %d->%d F0x%08x\n",
 			__func__, remote_pid, prev_state,
@@ -1170,11 +1170,11 @@ int msm_smp2p_out_open(int remote_pid, const char *name,
 		return -ENOMEM;
 
 	/* Handle duplicate registration */
-	spin_lock_irqsave(&out_list[remote_pid].out_item_lock_lha1, flags);
+	raw_spin_lock_irqsave(&out_list[remote_pid].out_item_lock_lha1, flags);
 	list_for_each_entry(pos, &out_list[remote_pid].list,
 			out_edge_list) {
 		if (!strcmp(pos->name, name)) {
-			spin_unlock_irqrestore(
+			raw_spin_unlock_irqrestore(
 				&out_list[remote_pid].out_item_lock_lha1,
 				flags);
 			kfree(out_entry);
@@ -1198,14 +1198,14 @@ int msm_smp2p_out_open(int remote_pid, const char *name,
 		raw_notifier_chain_unregister(
 			&out_entry->msm_smp2p_notifier_list,
 			out_entry->open_nb);
-		spin_unlock_irqrestore(
+		raw_spin_unlock_irqrestore(
 			&out_list[remote_pid].out_item_lock_lha1, flags);
 		kfree(out_entry);
 		SMP2P_ERR("%s: unable to open '%s':%d error %d\n",
 				__func__, name, remote_pid, ret);
 		return ret;
 	}
-	spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1,
+	raw_spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1,
 			flags);
 	*handle = out_entry;
 
@@ -1242,11 +1242,11 @@ int msm_smp2p_out_close(struct msm_smp2p_out **handle)
 	}
 
 	out_item = &out_list[out_entry->remote_pid];
-	spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
+	raw_spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
 	list_del(&out_entry->out_edge_list);
 	raw_notifier_chain_unregister(&out_entry->msm_smp2p_notifier_list,
 		out_entry->open_nb);
-	spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
+	raw_spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
 
 	kfree(out_entry);
 
@@ -1281,9 +1281,9 @@ int msm_smp2p_out_read(struct msm_smp2p_out *handle, uint32_t *data)
 	}
 
 	out_item = &out_list[handle->remote_pid];
-	spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
+	raw_spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
 	ret = out_item->ops_ptr->read_entry(handle, data);
-	spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
+	raw_spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
 
 	return ret;
 }
@@ -1319,9 +1319,9 @@ int msm_smp2p_out_write(struct msm_smp2p_out *handle, uint32_t data)
 	}
 
 	out_item = &out_list[handle->remote_pid];
-	spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
+	raw_spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
 	ret = out_item->ops_ptr->write_entry(handle, data);
-	spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
+	raw_spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
 
 	return ret;
 
@@ -1364,10 +1364,10 @@ int msm_smp2p_out_modify(struct msm_smp2p_out *handle, uint32_t set_mask,
 	}
 
 	out_item = &out_list[handle->remote_pid];
-	spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
+	raw_spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
 	ret = out_item->ops_ptr->modify_entry(handle, set_mask,
 						clear_mask, send_irq);
-	spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
+	raw_spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
 
 	return ret;
 }
@@ -1398,8 +1398,8 @@ int msm_smp2p_in_read(int remote_pid, const char *name, uint32_t *data)
 	}
 
 	out_item = &out_list[remote_pid];
-	spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
-	spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
+	raw_spin_lock_irqsave(&out_item->out_item_lock_lha1, flags);
+	raw_spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
 
 	if (in_list[remote_pid].smem_edge_in)
 		out_item->ops_ptr->find_entry(
@@ -1407,8 +1407,8 @@ int msm_smp2p_in_read(int remote_pid, const char *name, uint32_t *data)
 			in_list[remote_pid].safe_total_entries,
 			(char *)name, &entry_ptr, NULL);
 
-	spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
-	spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
+	raw_spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
+	raw_spin_unlock_irqrestore(&out_item->out_item_lock_lha1, flags);
 
 	if (!entry_ptr)
 		return -ENODEV;
@@ -1459,8 +1459,8 @@ int msm_smp2p_in_register(int pid, const char *name,
 		return -ENOMEM;
 
 	/* Search for existing entry */
-	spin_lock_irqsave(&out_list[pid].out_item_lock_lha1, flags);
-	spin_lock(&in_list[pid].in_item_lock_lhb1);
+	raw_spin_lock_irqsave(&out_list[pid].out_item_lock_lha1, flags);
+	raw_spin_lock(&in_list[pid].in_item_lock_lhb1);
 
 	list_for_each_entry(pos, &in_list[pid].list, in_edge_list) {
 		if (!strncmp(pos->name, name,
@@ -1509,8 +1509,8 @@ int msm_smp2p_in_register(int pid, const char *name,
 	SMP2P_DBG("%s: '%s':%d registered\n", __func__, name, pid);
 
 bail:
-	spin_unlock(&in_list[pid].in_item_lock_lhb1);
-	spin_unlock_irqrestore(&out_list[pid].out_item_lock_lha1, flags);
+	raw_spin_unlock(&in_list[pid].in_item_lock_lhb1);
+	raw_spin_unlock_irqrestore(&out_list[pid].out_item_lock_lha1, flags);
 	return ret;
 
 }
@@ -1542,7 +1542,7 @@ int msm_smp2p_in_unregister(int remote_pid, const char *name,
 		return -EPROBE_DEFER;
 	}
 
-	spin_lock_irqsave(&in_list[remote_pid].in_item_lock_lhb1, flags);
+	raw_spin_lock_irqsave(&in_list[remote_pid].in_item_lock_lhb1, flags);
 	list_for_each_entry(pos, &in_list[remote_pid].list,
 			in_edge_list) {
 		if (!strncmp(pos->name, name, SMP2P_MAX_ENTRY_NAME)) {
@@ -1569,7 +1569,7 @@ int msm_smp2p_in_unregister(int remote_pid, const char *name,
 	}
 
 fail:
-	spin_unlock_irqrestore(&in_list[remote_pid].in_item_lock_lhb1, flags);
+	raw_spin_unlock_irqrestore(&in_list[remote_pid].in_item_lock_lhb1, flags);
 
 	return ret;
 }
@@ -1621,12 +1621,12 @@ static void smp2p_in_edge_notify(int pid)
 	uint32_t curr_data;
 	struct  msm_smp2p_update_notif data;
 
-	spin_lock_irqsave(&in_list[pid].in_item_lock_lhb1, flags);
+	raw_spin_lock_irqsave(&in_list[pid].in_item_lock_lhb1, flags);
 	smem_h_ptr = in_list[pid].smem_edge_in;
 	if (!smem_h_ptr) {
 		SMP2P_DBG("%s: No remote SMEM item for pid %d\n",
 			__func__, pid);
-		spin_unlock_irqrestore(&in_list[pid].in_item_lock_lhb1, flags);
+		raw_spin_unlock_irqrestore(&in_list[pid].in_item_lock_lhb1, flags);
 		return;
 	}
 
@@ -1661,7 +1661,7 @@ static void smp2p_in_edge_notify(int pid)
 			}
 		}
 	}
-	spin_unlock_irqrestore(&in_list[pid].in_item_lock_lhb1, flags);
+	raw_spin_unlock_irqrestore(&in_list[pid].in_item_lock_lhb1, flags);
 }
 
 /**
@@ -1686,7 +1686,7 @@ static irqreturn_t smp2p_interrupt_handler(int irq, void *data)
 		SMP2P_DBG("SMP2P Int %s(%d)->Apps\n",
 			smp2p_int_cfgs[remote_pid].name, remote_pid);
 
-	spin_lock_irqsave(&out_list[remote_pid].out_item_lock_lha1, flags);
+	raw_spin_lock_irqsave(&out_list[remote_pid].out_item_lock_lha1, flags);
 	++smp2p_int_cfgs[remote_pid].in_interrupt_count;
 
 	if (out_list[remote_pid].smem_edge_state != SMP2P_EDGE_STATE_OPENED)
@@ -1707,29 +1707,29 @@ static irqreturn_t smp2p_interrupt_handler(int irq, void *data)
 		 * necessary to handle the race condition exposed by
 		 * unlocking the spinlocks.
 		 */
-		spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
+		raw_spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
 		do_restart_ack = smp2p_ssr_ack_needed(remote_pid);
-		spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
-		spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1,
+		raw_spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
+		raw_spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1,
 			flags);
 
 		smp2p_in_edge_notify(remote_pid);
 
 		if (do_restart_ack) {
-			spin_lock_irqsave(
+			raw_spin_lock_irqsave(
 				&out_list[remote_pid].out_item_lock_lha1,
 				flags);
-			spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
+			raw_spin_lock(&in_list[remote_pid].in_item_lock_lhb1);
 
 			smp2p_do_ssr_ack(remote_pid);
 
-			spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
-			spin_unlock_irqrestore(
+			raw_spin_unlock(&in_list[remote_pid].in_item_lock_lhb1);
+			raw_spin_unlock_irqrestore(
 				&out_list[remote_pid].out_item_lock_lha1,
 				flags);
 		}
 	} else {
-		spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1,
+		raw_spin_unlock_irqrestore(&out_list[remote_pid].out_item_lock_lha1,
 			flags);
 	}
 
@@ -1749,8 +1749,8 @@ int smp2p_reset_mock_edge(void)
 	unsigned long flags;
 	int ret = 0;
 
-	spin_lock_irqsave(&out_list[rpid].out_item_lock_lha1, flags);
-	spin_lock(&in_list[rpid].in_item_lock_lhb1);
+	raw_spin_lock_irqsave(&out_list[rpid].out_item_lock_lha1, flags);
+	raw_spin_lock(&in_list[rpid].in_item_lock_lhb1);
 
 	if (!list_empty(&out_list[rpid].list) ||
 			!list_empty(&in_list[rpid].list)) {
@@ -1770,8 +1770,8 @@ int smp2p_reset_mock_edge(void)
 	in_list[rpid].safe_total_entries = 0;
 
 fail:
-	spin_unlock(&in_list[rpid].in_item_lock_lhb1);
-	spin_unlock_irqrestore(&out_list[rpid].out_item_lock_lha1, flags);
+	raw_spin_unlock(&in_list[rpid].in_item_lock_lhb1);
+	raw_spin_unlock_irqrestore(&out_list[rpid].out_item_lock_lha1, flags);
 
 	return ret;
 }
@@ -1919,7 +1919,7 @@ static int __init msm_smp2p_init(void)
 	int rc;
 
 	for (i = 0; i < SMP2P_NUM_PROCS; i++) {
-		spin_lock_init(&out_list[i].out_item_lock_lha1);
+		raw_spin_lock_init(&out_list[i].out_item_lock_lha1);
 		INIT_LIST_HEAD(&out_list[i].list);
 		out_list[i].smem_edge_out = NULL;
 		out_list[i].smem_edge_state = SMP2P_EDGE_STATE_CLOSED;
@@ -1927,7 +1927,7 @@ static int __init msm_smp2p_init(void)
 		out_list[i].feature_ssr_ack_enabled = false;
 		out_list[i].restart_ack = false;
 
-		spin_lock_init(&in_list[i].in_item_lock_lhb1);
+		raw_spin_lock_init(&in_list[i].in_item_lock_lhb1);
 		INIT_LIST_HEAD(&in_list[i].list);
 		in_list[i].smem_edge_in = NULL;
 	}

@@ -35,41 +35,41 @@
  *    CPU in some board/machine types.
  */
 typedef struct {
-	spinlock_t local;
+	raw_spinlock_t local;
 	_remote_spinlock_t remote;
 } remote_spinlock_t;
 
 #define remote_spin_lock_init(lock, id) \
 	({ \
-		spin_lock_init(&((lock)->local)); \
+		raw_spin_lock_init(&((lock)->local)); \
 		_remote_spin_lock_init(id, &((lock)->remote)); \
 	})
 #define remote_spin_lock(lock) \
 	do { \
-		spin_lock(&((lock)->local)); \
+		raw_spin_lock(&((lock)->local)); \
 		_remote_spin_lock(&((lock)->remote)); \
 	} while (0)
 #define remote_spin_unlock(lock) \
 	do { \
 		_remote_spin_unlock(&((lock)->remote)); \
-		spin_unlock(&((lock)->local)); \
+		raw_spin_unlock(&((lock)->local)); \
 	} while (0)
 #define remote_spin_lock_irqsave(lock, flags) \
 	do { \
-		spin_lock_irqsave(&((lock)->local), flags); \
+		raw_spin_lock_irqsave(&((lock)->local), flags); \
 		_remote_spin_lock(&((lock)->remote)); \
 	} while (0)
 #define remote_spin_unlock_irqrestore(lock, flags) \
 	do { \
 		_remote_spin_unlock(&((lock)->remote)); \
-		spin_unlock_irqrestore(&((lock)->local), flags); \
+		raw_spin_unlock_irqrestore(&((lock)->local), flags); \
 	} while (0)
 #define remote_spin_trylock(lock) \
 	({ \
 		spin_trylock(&((lock)->local)) \
 		? _remote_spin_trylock(&((lock)->remote)) \
 			? 1 \
-			: ({ spin_unlock(&((lock)->local)); 0; }) \
+			: ({ raw_spin_unlock(&((lock)->local)); 0; }) \
 		: 0; \
 	})
 #define remote_spin_trylock_irqsave(lock, flags) \
@@ -77,7 +77,7 @@ typedef struct {
 		spin_trylock_irqsave(&((lock)->local), flags) \
 		? _remote_spin_trylock(&((lock)->remote)) \
 			? 1 \
-			: ({ spin_unlock_irqrestore(&((lock)->local), flags); \
+			: ({ raw_spin_unlock_irqrestore(&((lock)->local), flags); \
 				0; }) \
 		: 0; \
 	})

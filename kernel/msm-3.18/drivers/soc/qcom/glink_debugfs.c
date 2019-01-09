@@ -62,7 +62,7 @@ struct glink_dbgfs_dent {
 	char self_name[GLINK_DBGFS_NAME_SIZE];
 	struct dentry *parent;
 	struct dentry *self;
-	spinlock_t file_list_lock_lhb0;
+	raw_spinlock_t file_list_lock_lhb0;
 	struct list_head file_list;
 };
 
@@ -259,7 +259,7 @@ static void glink_dfs_update_ch_intent(struct seq_file *s)
 					"INT_SIZE");
 		seq_puts(s,
 		"---------------------------------------------------------------\n");
-		spin_lock_irqsave(ch_intent_info.li_lst_lock, flags);
+		raw_spin_lock_irqsave(ch_intent_info.li_lst_lock, flags);
 		list_for_each_entry_safe(intent, intent_temp,
 				ch_intent_info.li_avail_list, list) {
 			count++;
@@ -272,16 +272,16 @@ static void glink_dfs_update_ch_intent(struct seq_file *s)
 			count++;
 			write_ch_intent(s, intent, "LOCAL_USED_LIST", count);
 		}
-		spin_unlock_irqrestore(ch_intent_info.li_lst_lock, flags);
+		raw_spin_unlock_irqrestore(ch_intent_info.li_lst_lock, flags);
 
 		count = 0;
-		spin_lock_irqsave(ch_intent_info.ri_lst_lock, flags);
+		raw_spin_lock_irqsave(ch_intent_info.ri_lst_lock, flags);
 		list_for_each_entry_safe(intent, intent_temp,
 				ch_intent_info.ri_list, list) {
 			count++;
 			write_ch_intent(s, intent, "REMOTE_LIST", count);
 		}
-		spin_unlock_irqrestore(ch_intent_info.ri_lst_lock,
+		raw_spin_unlock_irqrestore(ch_intent_info.ri_lst_lock,
 					flags);
 		seq_puts(s,
 		"---------------------------------------------------------------\n");
@@ -555,7 +555,7 @@ void glink_dfs_update_list(struct dentry *curr_dent, struct dentry *parent,
 				GFP_KERNEL);
 		if (dbgfs_dent_s != NULL) {
 			INIT_LIST_HEAD(&dbgfs_dent_s->file_list);
-			spin_lock_init(&dbgfs_dent_s->file_list_lock_lhb0);
+			raw_spin_lock_init(&dbgfs_dent_s->file_list_lock_lhb0);
 			dbgfs_dent_s->parent = parent;
 			dbgfs_dent_s->self = curr_dent;
 			strlcpy(dbgfs_dent_s->self_name,
@@ -589,7 +589,7 @@ void glink_remove_dfs_entry(struct glink_dbgfs_dent *entry)
 	if (entry == NULL)
 		return;
 	if (!list_empty(&entry->file_list)) {
-		spin_lock_irqsave(&entry->file_list_lock_lhb0, flags);
+		raw_spin_lock_irqsave(&entry->file_list_lock_lhb0, flags);
 		list_for_each_entry_safe(fentry, fentry_temp,
 				&entry->file_list, flist) {
 			if (fentry->b_priv_free_req)
@@ -598,7 +598,7 @@ void glink_remove_dfs_entry(struct glink_dbgfs_dent *entry)
 			kfree(fentry);
 			fentry = NULL;
 		}
-		spin_unlock_irqrestore(&entry->file_list_lock_lhb0, flags);
+		raw_spin_unlock_irqrestore(&entry->file_list_lock_lhb0, flags);
 	}
 	list_del(&entry->list_node);
 	kfree(entry);
@@ -696,11 +696,11 @@ struct dentry *glink_debugfs_create(const char *name,
 		} else {
 			file_data = glink_dfs_create_file(name, parent, show,
 							dbgfs_data, b_free_req);
-			spin_lock_irqsave(&entry->file_list_lock_lhb0, flags);
+			raw_spin_lock_irqsave(&entry->file_list_lock_lhb0, flags);
 			if (file_data != NULL)
 				list_add_tail(&file_data->flist,
 						&entry->file_list);
-			spin_unlock_irqrestore(&entry->file_list_lock_lhb0,
+			raw_spin_unlock_irqrestore(&entry->file_list_lock_lhb0,
 						flags);
 		}
 	} else {

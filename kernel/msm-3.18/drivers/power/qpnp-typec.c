@@ -93,7 +93,7 @@ struct qpnp_typec_chip {
 	struct power_supply	type_c_psy;
 	struct regulator	*ss_mux_vreg;
 	struct mutex		typec_lock;
-	spinlock_t		rw_lock;
+	raw_spinlock_t		rw_lock;
 
 	u16			base;
 
@@ -167,9 +167,9 @@ static int qpnp_typec_read(struct qpnp_typec_chip *chip, u8 *val, u16 addr,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&chip->rw_lock, flags);
+	raw_spin_lock_irqsave(&chip->rw_lock, flags);
 	rc = __qpnp_typec_read(spmi, val, addr, count);
-	spin_unlock_irqrestore(&chip->rw_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->rw_lock, flags);
 
 	return rc;
 }
@@ -182,7 +182,7 @@ static int qpnp_typec_masked_write(struct qpnp_typec_chip *chip, u16 base,
 	unsigned long flags;
 	struct spmi_device *spmi = chip->spmi;
 
-	spin_lock_irqsave(&chip->rw_lock, flags);
+	raw_spin_lock_irqsave(&chip->rw_lock, flags);
 	rc = __qpnp_typec_read(spmi, &reg, base, 1);
 	if (rc) {
 		pr_err("spmi read failed: addr=%03X, rc=%d\n", base, rc);
@@ -201,7 +201,7 @@ static int qpnp_typec_masked_write(struct qpnp_typec_chip *chip, u16 base,
 	}
 
 out:
-	spin_unlock_irqrestore(&chip->rw_lock, flags);
+	raw_spin_unlock_irqrestore(&chip->rw_lock, flags);
 	return rc;
 }
 
@@ -900,7 +900,7 @@ static int qpnp_typec_probe(struct spmi_device *spmi)
 	dev_set_drvdata(&spmi->dev, chip);
 	device_init_wakeup(&spmi->dev, 1);
 	mutex_init(&chip->typec_lock);
-	spin_lock_init(&chip->rw_lock);
+	raw_spin_lock_init(&chip->rw_lock);
 
 	/* determine initial status */
 	rc = qpnp_typec_determine_initial_status(chip);

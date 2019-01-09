@@ -60,8 +60,8 @@ struct msm_rpm_driver_data {
 	uint32_t ch_type;
 	smd_channel_t *ch_info;
 	struct work_struct work;
-	spinlock_t smd_lock_write;
-	spinlock_t smd_lock_read;
+	raw_spinlock_t smd_lock_write;
+	raw_spinlock_t smd_lock_read;
 	struct completion smd_open;
 };
 
@@ -422,13 +422,13 @@ int msm_rpm_smd_buffer_request(struct msm_rpm_request *cdata,
 	if (size > MAX_SLEEP_BUFFER)
 		return -ENOMEM;
 
-	spin_lock_irqsave(&slp_buffer_lock, flags);
+	raw_spin_lock_irqsave(&slp_buffer_lock, flags);
 	slp = tr_search(&tr_root, buf);
 
 	if (!slp) {
 		slp = kzalloc(sizeof(struct slp_buf), GFP_ATOMIC);
 		if (!slp) {
-			spin_unlock_irqrestore(&slp_buffer_lock, flags);
+			raw_spin_unlock_irqrestore(&slp_buffer_lock, flags);
 			return -ENOMEM;
 		}
 		slp->buf = PTR_ALIGN(&slp->ubuf[0], sizeof(u32));
@@ -443,7 +443,7 @@ int msm_rpm_smd_buffer_request(struct msm_rpm_request *cdata,
 				cdata->msg_hdr.resource_type,
 				cdata->msg_hdr.resource_id);
 
-	spin_unlock_irqrestore(&slp_buffer_lock, flags);
+	raw_spin_unlock_irqrestore(&slp_buffer_lock, flags);
 
 	return 0;
 }
@@ -826,9 +826,9 @@ bool msm_rpm_waiting_for_ack(void)
 	bool ret;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_rpm_list_lock, flags);
+	raw_spin_lock_irqsave(&msm_rpm_list_lock, flags);
 	ret = list_empty(&msm_rpm_wait_list);
-	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 
 	return !ret;
 }
@@ -839,7 +839,7 @@ static struct msm_rpm_wait_data *msm_rpm_get_entry_from_msg_id(uint32_t msg_id)
 	struct msm_rpm_wait_data *elem = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_rpm_list_lock, flags);
+	raw_spin_lock_irqsave(&msm_rpm_list_lock, flags);
 
 	list_for_each(ptr, &msm_rpm_wait_list) {
 		elem = list_entry(ptr, struct msm_rpm_wait_data, list);
@@ -847,7 +847,7 @@ static struct msm_rpm_wait_data *msm_rpm_get_entry_from_msg_id(uint32_t msg_id)
 			break;
 		elem = NULL;
 	}
-	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 	return elem;
 }
 
@@ -883,12 +883,12 @@ static int msm_rpm_add_wait_list(uint32_t msg_id, bool delete_on_ack)
 	data->msg_id = msg_id;
 	data->errno = INIT_ERROR;
 	data->delete_on_ack = delete_on_ack;
-	spin_lock_irqsave(&msm_rpm_list_lock, flags);
+	raw_spin_lock_irqsave(&msm_rpm_list_lock, flags);
 	if (delete_on_ack)
 		list_add_tail(&data->list, &msm_rpm_wait_list);
 	else
 		list_add(&data->list, &msm_rpm_wait_list);
-	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 
 	return 0;
 }
@@ -897,9 +897,9 @@ static void msm_rpm_free_list_entry(struct msm_rpm_wait_data *elem)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_rpm_list_lock, flags);
+	raw_spin_lock_irqsave(&msm_rpm_list_lock, flags);
 	list_del(&elem->list);
-	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 	kfree(elem);
 }
 
@@ -909,7 +909,7 @@ static void msm_rpm_process_ack(uint32_t msg_id, int errno)
 	struct msm_rpm_wait_data *elem = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&msm_rpm_list_lock, flags);
+	raw_spin_lock_irqsave(&msm_rpm_list_lock, flags);
 
 	list_for_each_safe(ptr, next, &msm_rpm_wait_list) {
 		elem = list_entry(ptr, struct msm_rpm_wait_data, list);
@@ -932,7 +932,7 @@ static void msm_rpm_process_ack(uint32_t msg_id, int errno)
 	if (!elem)
 		trace_rpm_smd_ack_recvd(0, msg_id, 0xDEADBEEF);
 
-	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 }
 
 struct msm_rpm_kvp_packet {
@@ -985,7 +985,7 @@ static void data_fn_tasklet(unsigned long data)
 	int errno;
 	char buf[MAX_ERR_BUFFER_SIZE] = {0};
 
-	spin_lock(&msm_rpm_data.smd_lock_read);
+	raw_spin_lock(&msm_rpm_data.smd_lock_read);
 	while (smd_is_pkt_avail(msm_rpm_data.ch_info)) {
 		if (msm_rpm_read_smd_data(buf))
 			break;
@@ -994,7 +994,7 @@ static void data_fn_tasklet(unsigned long data)
 		trace_rpm_smd_ack_recvd(0, msg_id, errno);
 		msm_rpm_process_ack(msg_id, errno);
 	}
-	spin_unlock(&msm_rpm_data.smd_lock_read);
+	raw_spin_unlock(&msm_rpm_data.smd_lock_read);
 }
 
 static void msm_rpm_log_request(struct msm_rpm_request *cdata)
@@ -1135,17 +1135,17 @@ static int msm_rpm_send_smd_buffer(char *buf, uint32_t size, bool noirq)
 	unsigned long flags;
 	int ret;
 
-	spin_lock_irqsave(&msm_rpm_data.smd_lock_write, flags);
+	raw_spin_lock_irqsave(&msm_rpm_data.smd_lock_write, flags);
 	ret = smd_write_avail(msm_rpm_data.ch_info);
 
 	while ((ret = smd_write_avail(msm_rpm_data.ch_info)) < size) {
 		if (ret < 0)
 			break;
 		if (!noirq) {
-			spin_unlock_irqrestore(
+			raw_spin_unlock_irqrestore(
 				&msm_rpm_data.smd_lock_write, flags);
 			cpu_relax();
-			spin_lock_irqsave(
+			raw_spin_lock_irqsave(
 				&msm_rpm_data.smd_lock_write, flags);
 		} else
 			udelay(5);
@@ -1153,13 +1153,13 @@ static int msm_rpm_send_smd_buffer(char *buf, uint32_t size, bool noirq)
 
 	if (ret < 0) {
 		pr_err("SMD not initialized\n");
-		spin_unlock_irqrestore(
+		raw_spin_unlock_irqrestore(
 			&msm_rpm_data.smd_lock_write, flags);
 		return ret;
 	}
 
 	ret = smd_write(msm_rpm_data.ch_info, buf, size);
-	spin_unlock_irqrestore(&msm_rpm_data.smd_lock_write, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_data.smd_lock_write, flags);
 	return ret;
 }
 
@@ -1169,16 +1169,16 @@ static int msm_rpm_glink_send_buffer(char *buf, uint32_t size, bool noirq)
 	unsigned long flags;
 	int timeout = 5;
 
-	spin_lock_irqsave(&msm_rpm_data.smd_lock_write, flags);
+	raw_spin_lock_irqsave(&msm_rpm_data.smd_lock_write, flags);
 	do {
 		ret = glink_tx(glink_data->glink_handle, buf, buf,
 					size, GLINK_TX_SINGLE_THREADED);
 		if (ret == -EBUSY || ret == -ENOSPC) {
 			if (!noirq) {
-				spin_unlock_irqrestore(
+				raw_spin_unlock_irqrestore(
 					&msm_rpm_data.smd_lock_write, flags);
 				cpu_relax();
-				spin_lock_irqsave(
+				raw_spin_lock_irqsave(
 					&msm_rpm_data.smd_lock_write, flags);
 			} else {
 				udelay(100);
@@ -1188,7 +1188,7 @@ static int msm_rpm_glink_send_buffer(char *buf, uint32_t size, bool noirq)
 			ret = 0;
 		}
 	} while (ret && timeout);
-	spin_unlock_irqrestore(&msm_rpm_data.smd_lock_write, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_data.smd_lock_write, flags);
 
 	if (!timeout)
 		return 0;
@@ -1426,7 +1426,7 @@ int msm_rpm_wait_for_ack_noirq(uint32_t msg_id)
 	if (standalone)
 		return 0;
 
-	spin_lock_irqsave(&msm_rpm_data.smd_lock_read, flags);
+	raw_spin_lock_irqsave(&msm_rpm_data.smd_lock_read, flags);
 
 	elem = msm_rpm_get_entry_from_msg_id(msg_id);
 
@@ -1451,7 +1451,7 @@ int msm_rpm_wait_for_ack_noirq(uint32_t msg_id)
 
 	msm_rpm_free_list_entry(elem);
 wait_ack_cleanup:
-	spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read, flags);
+	raw_spin_unlock_irqrestore(&msm_rpm_data.smd_lock_read, flags);
 
 	if (!glink_enabled)
 		if (smd_is_pkt_avail(msm_rpm_data.ch_info))
@@ -1618,7 +1618,7 @@ static void msm_rpm_trans_notify_rx(void *handle, const void *priv,
 
 	BUG_ON(size > MAX_ERR_BUFFER_SIZE);
 
-	spin_lock_irqsave(&rx_notify_lock, flags);
+	raw_spin_lock_irqsave(&rx_notify_lock, flags);
 	memcpy(buf, ptr, size);
 	msg_id = msm_rpm_get_msg_id_from_ack(buf);
 	errno = msm_rpm_get_error_from_ack(buf);
@@ -1631,13 +1631,13 @@ static void msm_rpm_trans_notify_rx(void *handle, const void *priv,
 	 * run into NULL pointer deferrence issue.
 	 */
 	if (!elem) {
-		spin_unlock_irqrestore(&rx_notify_lock, flags);
+		raw_spin_unlock_irqrestore(&rx_notify_lock, flags);
 		glink_rx_done(handle, ptr, 0);
 		return;
 	}
 
 	msm_rpm_process_ack(msg_id, errno);
-	spin_unlock_irqrestore(&rx_notify_lock, flags);
+	raw_spin_unlock_irqrestore(&rx_notify_lock, flags);
 
 	glink_rx_done(handle, ptr, 0);
 }
@@ -1794,8 +1794,8 @@ static int msm_rpm_glink_link_setup(struct glink_apps_rpm_data *glink_data,
 		return ret;
 	}
 
-	spin_lock_init(&msm_rpm_data.smd_lock_read);
-	spin_lock_init(&msm_rpm_data.smd_lock_write);
+	raw_spin_lock_init(&msm_rpm_data.smd_lock_read);
+	raw_spin_lock_init(&msm_rpm_data.smd_lock_write);
 
 	return ret;
 }
@@ -1889,8 +1889,8 @@ static int msm_rpm_dev_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	spin_lock_init(&msm_rpm_data.smd_lock_write);
-	spin_lock_init(&msm_rpm_data.smd_lock_read);
+	raw_spin_lock_init(&msm_rpm_data.smd_lock_write);
+	raw_spin_lock_init(&msm_rpm_data.smd_lock_read);
 	tasklet_init(&data_tasklet, data_fn_tasklet, 0);
 
 	wait_for_completion(&msm_rpm_data.smd_open);

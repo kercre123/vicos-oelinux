@@ -55,7 +55,7 @@ struct keychord_device {
 	/* second input_device_id is needed for null termination */
 	struct input_device_id  device_ids[2];
 
-	spinlock_t		lock;
+	raw_spinlock_t		lock;
 	wait_queue_head_t	waitq;
 	unsigned char		head;
 	unsigned char		tail;
@@ -94,7 +94,7 @@ static void keychord_event(struct input_handle *handle, unsigned int type,
 	if (type != EV_KEY || code >= KEY_MAX)
 		return;
 
-	spin_lock_irqsave(&kdev->lock, flags);
+	raw_spin_lock_irqsave(&kdev->lock, flags);
 	/* do nothing if key state did not change */
 	if (!test_bit(code, kdev->keystate) == !value)
 		goto done;
@@ -128,7 +128,7 @@ static void keychord_event(struct input_handle *handle, unsigned int type,
 	}
 
 done:
-	spin_unlock_irqrestore(&kdev->lock, flags);
+	raw_spin_unlock_irqrestore(&kdev->lock, flags);
 
 	if (got_chord) {
 		pr_info("keychord: got keychord id %d. Any tasks: %d\n",
@@ -215,11 +215,11 @@ static ssize_t keychord_read(struct file *file, char __user *buffer,
 	if (retval)
 		return retval;
 
-	spin_lock_irqsave(&kdev->lock, flags);
+	raw_spin_lock_irqsave(&kdev->lock, flags);
 	/* pop a keychord ID off the queue */
 	id = kdev->buff[kdev->tail];
 	kdev->tail = (kdev->tail + 1) % BUFFER_SIZE;
-	spin_unlock_irqrestore(&kdev->lock, flags);
+	raw_spin_unlock_irqrestore(&kdev->lock, flags);
 
 	if (copy_to_user(buffer, &id, count))
 		return -EFAULT;
@@ -237,17 +237,17 @@ keychord_write_lock(struct keychord_device *kdev)
 	int ret;
 	unsigned long flags;
 
-	spin_lock_irqsave(&kdev->lock, flags);
+	raw_spin_lock_irqsave(&kdev->lock, flags);
 	while (kdev->flags & KEYCHORD_BUSY) {
-		spin_unlock_irqrestore(&kdev->lock, flags);
+		raw_spin_unlock_irqrestore(&kdev->lock, flags);
 		ret = wait_event_interruptible(kdev->write_waitq,
 			       ((kdev->flags & KEYCHORD_BUSY) == 0));
 		if (ret)
 			return ret;
-		spin_lock_irqsave(&kdev->lock, flags);
+		raw_spin_lock_irqsave(&kdev->lock, flags);
 	}
 	kdev->flags |= KEYCHORD_BUSY;
-	spin_unlock_irqrestore(&kdev->lock, flags);
+	raw_spin_unlock_irqrestore(&kdev->lock, flags);
 	return 0;
 }
 
@@ -256,9 +256,9 @@ keychord_write_unlock(struct keychord_device *kdev)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&kdev->lock, flags);
+	raw_spin_lock_irqsave(&kdev->lock, flags);
 	kdev->flags &= ~KEYCHORD_BUSY;
-	spin_unlock_irqrestore(&kdev->lock, flags);
+	raw_spin_unlock_irqrestore(&kdev->lock, flags);
 	wake_up_interruptible(&kdev->write_waitq);
 }
 
@@ -310,7 +310,7 @@ static ssize_t keychord_write(struct file *file, const char __user *buffer,
 		kdev->registered = 0;
 	}
 
-	spin_lock_irqsave(&kdev->lock, flags);
+	raw_spin_lock_irqsave(&kdev->lock, flags);
 	/* clear any existing configuration */
 	kfree(kdev->keychords);
 	kdev->keychords = 0;
@@ -366,7 +366,7 @@ static ssize_t keychord_write(struct file *file, const char __user *buffer,
 	}
 
 	kdev->keychords = keychords;
-	spin_unlock_irqrestore(&kdev->lock, flags);
+	raw_spin_unlock_irqrestore(&kdev->lock, flags);
 
 	ret = input_register_handler(&kdev->input_handler);
 	if (ret) {
@@ -382,7 +382,7 @@ static ssize_t keychord_write(struct file *file, const char __user *buffer,
 	return count;
 
 err_unlock_return:
-	spin_unlock_irqrestore(&kdev->lock, flags);
+	raw_spin_unlock_irqrestore(&kdev->lock, flags);
 	kfree(keychords);
 	keychord_write_unlock(kdev);
 	return -EINVAL;
@@ -408,7 +408,7 @@ static int keychord_open(struct inode *inode, struct file *file)
 	if (!kdev)
 		return -ENOMEM;
 
-	spin_lock_init(&kdev->lock);
+	raw_spin_lock_init(&kdev->lock);
 	init_waitqueue_head(&kdev->waitq);
 	init_waitqueue_head(&kdev->write_waitq);
 

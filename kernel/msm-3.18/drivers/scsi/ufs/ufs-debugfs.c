@@ -494,7 +494,7 @@ static int ufsdbg_tag_stats_show(struct seq_file *file, void *data)
 
 	max_depth = hba->nutrs;
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 	/* Header */
 	seq_printf(file, " Tag Stat\t\t%s Number of pending reqs upon issue (Q fullness)\n",
 		sep);
@@ -532,7 +532,7 @@ static int ufsdbg_tag_stats_show(struct seq_file *file, void *data)
 		}
 		seq_puts(file, "\n");
 	}
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 
 	if (is_tag_empty)
 		pr_debug("%s: All tags statistics are empty", __func__);
@@ -563,7 +563,7 @@ static ssize_t ufsdbg_tag_stats_write(struct file *filp,
 	}
 
 	ufs_stats = &hba->ufs_stats;
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 
 	if (!val) {
 		ufs_stats->enabled = false;
@@ -583,7 +583,7 @@ static ssize_t ufsdbg_tag_stats_write(struct file *filp,
 		pr_debug("%s: Enabled UFS tag statistics", __func__);
 	}
 
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 	return cnt;
 }
 
@@ -676,7 +676,7 @@ static int ufsdbg_err_stats_show(struct seq_file *file, void *data)
 
 	err_stats = hba->ufs_stats.err_stats;
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 
 	seq_puts(file, "\n==UFS errors that caused controller reset==\n");
 
@@ -734,7 +734,7 @@ static int ufsdbg_err_stats_show(struct seq_file *file, void *data)
 		seq_puts(file,
 		"so far, no other UFS related errors\n\n");
 
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 exit:
 	return 0;
 }
@@ -753,12 +753,12 @@ static ssize_t ufsdbg_err_stats_write(struct file *filp,
 	unsigned long flags;
 
 	ufs_stats = &hba->ufs_stats;
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 
 	pr_debug("%s: Resetting UFS error statistics", __func__);
 	memset(ufs_stats->err_stats, 0, sizeof(hba->ufs_stats.err_stats));
 
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 	return cnt;
 }
 
@@ -1341,9 +1341,9 @@ static ssize_t ufsdbg_req_stats_write(struct file *filp,
 		return ret;
 	}
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 	ufshcd_init_req_stats(hba);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 
 	return cnt;
 }
@@ -1358,7 +1358,7 @@ static int ufsdbg_req_stats_show(struct seq_file *file, void *data)
 	seq_printf(file, "\t%-10s %-10s %-10s %-10s %-10s %-10s",
 		"All", "Write", "Read", "Read(urg)", "Write(urg)", "Flush");
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 
 	seq_printf(file, "\n%s:\t", "Min");
 	for (i = 0; i < TS_NUM_STATS; i++)
@@ -1375,7 +1375,7 @@ static int ufsdbg_req_stats_show(struct seq_file *file, void *data)
 	for (i = 0; i < TS_NUM_STATS; i++)
 		seq_printf(file, "%-10llu ", hba->ufs_stats.req_stats[i].count);
 	seq_puts(file, "\n");
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 
 	return 0;
 }
@@ -1415,7 +1415,7 @@ static ssize_t ufsdbg_reset_controller_write(struct file *filp,
 	pm_runtime_get_sync(hba->dev);
 	ufshcd_hold(hba, false);
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
+	raw_spin_lock_irqsave(hba->host->host_lock, flags);
 	/*
 	 * simulating a dummy error in order to "convince"
 	 * eh_work to actually reset the controller
@@ -1423,7 +1423,7 @@ static ssize_t ufsdbg_reset_controller_write(struct file *filp,
 	hba->saved_err |= INT_FATAL_ERRORS;
 	hba->silence_err_logs = true;
 	schedule_work(&hba->eh_work);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	raw_spin_unlock_irqrestore(hba->host->host_lock, flags);
 
 	flush_work(&hba->eh_work);
 

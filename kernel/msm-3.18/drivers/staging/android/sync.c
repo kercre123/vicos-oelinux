@@ -59,14 +59,14 @@ struct sync_timeline *sync_timeline_create(const struct sync_timeline_ops *ops,
 	strlcpy(obj->name, name, sizeof(obj->name));
 
 	INIT_LIST_HEAD(&obj->child_list_head);
-	spin_lock_init(&obj->child_list_lock);
+	raw_spin_lock_init(&obj->child_list_lock);
 
 	INIT_LIST_HEAD(&obj->active_list_head);
-	spin_lock_init(&obj->active_list_lock);
+	raw_spin_lock_init(&obj->active_list_lock);
 
-	spin_lock_irqsave(&sync_timeline_list_lock, flags);
+	raw_spin_lock_irqsave(&sync_timeline_list_lock, flags);
 	list_add_tail(&obj->sync_timeline_list, &sync_timeline_list_head);
-	spin_unlock_irqrestore(&sync_timeline_list_lock, flags);
+	raw_spin_unlock_irqrestore(&sync_timeline_list_lock, flags);
 
 	return obj;
 }
@@ -78,9 +78,9 @@ static void sync_timeline_free(struct kref *kref)
 		container_of(kref, struct sync_timeline, kref);
 	unsigned long flags;
 
-	spin_lock_irqsave(&sync_timeline_list_lock, flags);
+	raw_spin_lock_irqsave(&sync_timeline_list_lock, flags);
 	list_del(&obj->sync_timeline_list);
-	spin_unlock_irqrestore(&sync_timeline_list_lock, flags);
+	raw_spin_unlock_irqrestore(&sync_timeline_list_lock, flags);
 
 	if (obj->ops->release_obj)
 		obj->ops->release_obj(obj);
@@ -112,9 +112,9 @@ static void sync_timeline_add_pt(struct sync_timeline *obj, struct sync_pt *pt)
 
 	pt->parent = obj;
 
-	spin_lock_irqsave(&obj->child_list_lock, flags);
+	raw_spin_lock_irqsave(&obj->child_list_lock, flags);
 	list_add_tail(&pt->child_list, &obj->child_list_head);
-	spin_unlock_irqrestore(&obj->child_list_lock, flags);
+	raw_spin_unlock_irqrestore(&obj->child_list_lock, flags);
 }
 
 static void sync_timeline_remove_pt(struct sync_pt *pt)
@@ -122,16 +122,16 @@ static void sync_timeline_remove_pt(struct sync_pt *pt)
 	struct sync_timeline *obj = pt->parent;
 	unsigned long flags;
 
-	spin_lock_irqsave(&obj->active_list_lock, flags);
+	raw_spin_lock_irqsave(&obj->active_list_lock, flags);
 	if (!list_empty(&pt->active_list))
 		list_del_init(&pt->active_list);
-	spin_unlock_irqrestore(&obj->active_list_lock, flags);
+	raw_spin_unlock_irqrestore(&obj->active_list_lock, flags);
 
-	spin_lock_irqsave(&obj->child_list_lock, flags);
+	raw_spin_lock_irqsave(&obj->child_list_lock, flags);
 	if (!list_empty(&pt->child_list))
 		list_del_init(&pt->child_list);
 
-	spin_unlock_irqrestore(&obj->child_list_lock, flags);
+	raw_spin_unlock_irqrestore(&obj->child_list_lock, flags);
 }
 
 void sync_timeline_signal(struct sync_timeline *obj)
@@ -142,7 +142,7 @@ void sync_timeline_signal(struct sync_timeline *obj)
 
 	trace_sync_timeline(obj);
 
-	spin_lock_irqsave(&obj->active_list_lock, flags);
+	raw_spin_lock_irqsave(&obj->active_list_lock, flags);
 
 	list_for_each_safe(pos, n, &obj->active_list_head) {
 		struct sync_pt *pt =
@@ -155,7 +155,7 @@ void sync_timeline_signal(struct sync_timeline *obj)
 		}
 	}
 
-	spin_unlock_irqrestore(&obj->active_list_lock, flags);
+	raw_spin_unlock_irqrestore(&obj->active_list_lock, flags);
 
 	list_for_each_safe(pos, n, &signaled_pts) {
 		struct sync_pt *pt =
@@ -229,7 +229,7 @@ static void sync_pt_activate(struct sync_pt *pt)
 	unsigned long flags;
 	int err;
 
-	spin_lock_irqsave(&obj->active_list_lock, flags);
+	raw_spin_lock_irqsave(&obj->active_list_lock, flags);
 
 	err = _sync_pt_has_signaled(pt);
 	if (err != 0)
@@ -238,7 +238,7 @@ static void sync_pt_activate(struct sync_pt *pt)
 	list_add_tail(&pt->active_list, &obj->active_list_head);
 
 out:
-	spin_unlock_irqrestore(&obj->active_list_lock, flags);
+	raw_spin_unlock_irqrestore(&obj->active_list_lock, flags);
 }
 
 static int sync_fence_release(struct inode *inode, struct file *file);
@@ -273,13 +273,13 @@ static struct sync_fence *sync_fence_alloc(const char *name)
 
 	INIT_LIST_HEAD(&fence->pt_list_head);
 	INIT_LIST_HEAD(&fence->waiter_list_head);
-	spin_lock_init(&fence->waiter_list_lock);
+	raw_spin_lock_init(&fence->waiter_list_lock);
 
 	init_waitqueue_head(&fence->wq);
 
-	spin_lock_irqsave(&sync_fence_list_lock, flags);
+	raw_spin_lock_irqsave(&sync_fence_list_lock, flags);
 	list_add_tail(&fence->sync_fence_list, &sync_fence_list_head);
-	spin_unlock_irqrestore(&sync_fence_list_lock, flags);
+	raw_spin_unlock_irqrestore(&sync_fence_list_lock, flags);
 
 	return fence;
 
@@ -505,7 +505,7 @@ static void sync_fence_signal_pt(struct sync_pt *pt)
 
 	status = sync_fence_get_status(fence);
 
-	spin_lock_irqsave(&fence->waiter_list_lock, flags);
+	raw_spin_lock_irqsave(&fence->waiter_list_lock, flags);
 	/*
 	 * this should protect against two threads racing on the signaled
 	 * false -> true transition
@@ -518,7 +518,7 @@ static void sync_fence_signal_pt(struct sync_pt *pt)
 	} else {
 		status = 0;
 	}
-	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
+	raw_spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
 
 	if (status) {
 		list_for_each_safe(pos, n, &signaled_waiters) {
@@ -539,7 +539,7 @@ int sync_fence_wait_async(struct sync_fence *fence,
 	unsigned long flags;
 	int err = 0;
 
-	spin_lock_irqsave(&fence->waiter_list_lock, flags);
+	raw_spin_lock_irqsave(&fence->waiter_list_lock, flags);
 
 	if (fence->status) {
 		err = fence->status;
@@ -548,7 +548,7 @@ int sync_fence_wait_async(struct sync_fence *fence,
 
 	list_add_tail(&waiter->waiter_list, &fence->waiter_list_head);
 out:
-	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
+	raw_spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
 
 	return err;
 }
@@ -562,7 +562,7 @@ int sync_fence_cancel_async(struct sync_fence *fence,
 	unsigned long flags;
 	int ret = -ENOENT;
 
-	spin_lock_irqsave(&fence->waiter_list_lock, flags);
+	raw_spin_lock_irqsave(&fence->waiter_list_lock, flags);
 	/*
 	 * Make sure waiter is still in waiter_list because it is possible for
 	 * the waiter to be removed from the list while the callback is still
@@ -578,7 +578,7 @@ int sync_fence_cancel_async(struct sync_fence *fence,
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
+	raw_spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
 	return ret;
 }
 EXPORT_SYMBOL(sync_fence_cancel_async);
@@ -655,9 +655,9 @@ static int sync_fence_release(struct inode *inode, struct file *file)
 	 *
 	 * start with its membership in the global fence list
 	 */
-	spin_lock_irqsave(&sync_fence_list_lock, flags);
+	raw_spin_lock_irqsave(&sync_fence_list_lock, flags);
 	list_del(&fence->sync_fence_list);
-	spin_unlock_irqrestore(&sync_fence_list_lock, flags);
+	raw_spin_unlock_irqrestore(&sync_fence_list_lock, flags);
 
 	/*
 	 * remove its pts from their parents so that sync_timeline_signal()
@@ -911,13 +911,13 @@ static void sync_print_obj(struct seq_file *s, struct sync_timeline *obj)
 
 	seq_puts(s, "\n");
 
-	spin_lock_irqsave(&obj->child_list_lock, flags);
+	raw_spin_lock_irqsave(&obj->child_list_lock, flags);
 	list_for_each(pos, &obj->child_list_head) {
 		struct sync_pt *pt =
 			container_of(pos, struct sync_pt, child_list);
 		sync_print_pt(s, pt, false);
 	}
-	spin_unlock_irqrestore(&obj->child_list_lock, flags);
+	raw_spin_unlock_irqrestore(&obj->child_list_lock, flags);
 }
 
 static void sync_print_fence(struct seq_file *s, struct sync_fence *fence)
@@ -934,7 +934,7 @@ static void sync_print_fence(struct seq_file *s, struct sync_fence *fence)
 		sync_print_pt(s, pt, true);
 	}
 
-	spin_lock_irqsave(&fence->waiter_list_lock, flags);
+	raw_spin_lock_irqsave(&fence->waiter_list_lock, flags);
 	list_for_each(pos, &fence->waiter_list_head) {
 		struct sync_fence_waiter *waiter =
 			container_of(pos, struct sync_fence_waiter,
@@ -942,7 +942,7 @@ static void sync_print_fence(struct seq_file *s, struct sync_fence *fence)
 
 		seq_printf(s, "waiter %pF\n", waiter->callback);
 	}
-	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
+	raw_spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
 }
 
 static int sync_debugfs_show(struct seq_file *s, void *unused)
@@ -952,7 +952,7 @@ static int sync_debugfs_show(struct seq_file *s, void *unused)
 
 	seq_puts(s, "objs:\n--------------\n");
 
-	spin_lock_irqsave(&sync_timeline_list_lock, flags);
+	raw_spin_lock_irqsave(&sync_timeline_list_lock, flags);
 	list_for_each(pos, &sync_timeline_list_head) {
 		struct sync_timeline *obj =
 			container_of(pos, struct sync_timeline,
@@ -961,11 +961,11 @@ static int sync_debugfs_show(struct seq_file *s, void *unused)
 		sync_print_obj(s, obj);
 		seq_puts(s, "\n");
 	}
-	spin_unlock_irqrestore(&sync_timeline_list_lock, flags);
+	raw_spin_unlock_irqrestore(&sync_timeline_list_lock, flags);
 
 	seq_puts(s, "fences:\n--------------\n");
 
-	spin_lock_irqsave(&sync_fence_list_lock, flags);
+	raw_spin_lock_irqsave(&sync_fence_list_lock, flags);
 	list_for_each(pos, &sync_fence_list_head) {
 		struct sync_fence *fence =
 			container_of(pos, struct sync_fence, sync_fence_list);
@@ -973,7 +973,7 @@ static int sync_debugfs_show(struct seq_file *s, void *unused)
 		sync_print_fence(s, fence);
 		seq_puts(s, "\n");
 	}
-	spin_unlock_irqrestore(&sync_fence_list_lock, flags);
+	raw_spin_unlock_irqrestore(&sync_fence_list_lock, flags);
 	return 0;
 }
 

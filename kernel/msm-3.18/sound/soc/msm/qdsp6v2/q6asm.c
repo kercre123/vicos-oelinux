@@ -432,13 +432,13 @@ static void q6asm_session_free(struct audio_client *ac)
 	ac->perf_mode = LEGACY_PCM_MODE;
 	ac->fptr_cache_ops = NULL;
 
-	spin_lock_irqsave(&ac->no_wait_que_spinlock, flags);
+	raw_spin_lock_irqsave(&ac->no_wait_que_spinlock, flags);
 	list_for_each_safe(ptr, next, &ac->no_wait_que) {
 		node = list_entry(ptr, struct asm_no_wait_node, list);
 		list_del(&node->list);
 		kfree(node);
 	}
-	spin_unlock_irqrestore(&ac->no_wait_que_spinlock, flags);
+	raw_spin_unlock_irqrestore(&ac->no_wait_que_spinlock, flags);
 	return;
 }
 
@@ -456,9 +456,9 @@ static int q6asm_add_nowait_opcode(struct audio_client *ac, uint32_t opcode)
 	new_node->opcode = opcode;
 	INIT_LIST_HEAD(&new_node->list);
 
-	spin_lock_irqsave(&ac->no_wait_que_spinlock, flags);
+	raw_spin_lock_irqsave(&ac->no_wait_que_spinlock, flags);
 	list_add_tail(&new_node->list, &ac->no_wait_que);
-	spin_unlock_irqrestore(&ac->no_wait_que_spinlock, flags);
+	raw_spin_unlock_irqrestore(&ac->no_wait_que_spinlock, flags);
 
 done:
 	return ret;
@@ -472,7 +472,7 @@ static bool q6asm_remove_nowait_opcode(struct audio_client *ac,
 	unsigned long flags;
 	bool ret = false;
 
-	spin_lock_irqsave(&ac->no_wait_que_spinlock, flags);
+	raw_spin_lock_irqsave(&ac->no_wait_que_spinlock, flags);
 	list_for_each_safe(ptr, next, &ac->no_wait_que) {
 		node = list_entry(ptr,
 			struct asm_no_wait_node, list);
@@ -486,7 +486,7 @@ static bool q6asm_remove_nowait_opcode(struct audio_client *ac,
 
 	pr_debug("%s: nowait opcode NOT found 0x%x\n", __func__, opcode);
 done:
-	spin_unlock_irqrestore(&ac->no_wait_que_spinlock, flags);
+	raw_spin_unlock_irqrestore(&ac->no_wait_que_spinlock, flags);
 	return ret;
 }
 
@@ -1079,7 +1079,7 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	/* DSP expects stream id from 1 */
 	ac->stream_id = 1;
 	INIT_LIST_HEAD(&ac->no_wait_que);
-	spin_lock_init(&ac->no_wait_que_spinlock);
+	raw_spin_lock_init(&ac->no_wait_que_spinlock);
 	ac->apr = apr_register("ADSP", "ASM", \
 			(apr_fn)q6asm_callback,\
 			((ac->session) << 8 | 0x0001),\
@@ -1121,7 +1121,7 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	mutex_init(&ac->cmd_lock);
 	for (lcnt = 0; lcnt <= OUT; lcnt++) {
 		mutex_init(&ac->port[lcnt].lock);
-		spin_lock_init(&ac->port[lcnt].dsp_lock);
+		raw_spin_lock_init(&ac->port[lcnt].dsp_lock);
 	}
 	atomic_set(&ac->cmd_state, 0);
 	atomic_set(&ac->cmd_state_pp, 0);
@@ -1480,21 +1480,21 @@ static int32_t q6asm_srvc_callback(struct apr_client_data *data, void *priv)
 	case ASM_CMDRSP_SHARED_MEM_MAP_REGIONS:{
 		pr_debug("%s:PL#0[0x%x] dir=0x%x s_id=0x%x\n",
 				__func__, payload[0], dir, sid);
-		spin_lock_irqsave(&port->dsp_lock, dsp_flags);
+		raw_spin_lock_irqsave(&port->dsp_lock, dsp_flags);
 		if (atomic_cmpxchg(&ac->mem_state, -1, 0) == -1) {
 			ac->port[dir].tmp_hdl = payload[0];
 			swait_wake(&ac->mem_wait);
 		}
-		spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
+		raw_spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
 		break;
 	}
 	case ASM_CMD_SHARED_MEM_UNMAP_REGIONS:{
 		pr_debug("%s: PL#0[0x%x]PL#1 [0x%x]\n",
 					__func__, payload[0], payload[1]);
-		spin_lock_irqsave(&port->dsp_lock, dsp_flags);
+		raw_spin_lock_irqsave(&port->dsp_lock, dsp_flags);
 		if (atomic_cmpxchg(&ac->mem_state, -1, 0) == -1)
 			swait_wake(&ac->mem_wait);
-		spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
+		raw_spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
 
 		break;
 	}
@@ -1782,7 +1782,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 								__func__);
 				return -EINVAL;
 			}
-			spin_lock_irqsave(&port->dsp_lock, dsp_flags);
+			raw_spin_lock_irqsave(&port->dsp_lock, dsp_flags);
 			if (lower_32_bits(port->buf[data->token].phys) !=
 			payload[0] ||
 			msm_audio_populate_upper_32_bits(
@@ -1791,13 +1791,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 				__func__, &port->buf[data->token].phys);
 				pr_err("%s: rxedl[0x%x] rxedu [0x%x]\n",
 					__func__, payload[0], payload[1]);
-				spin_unlock_irqrestore(&port->dsp_lock,
+				raw_spin_unlock_irqrestore(&port->dsp_lock,
 								dsp_flags);
 				return -EINVAL;
 			}
 			token = data->token;
 			port->buf[token].used = 1;
-			spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
+			raw_spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
 
 			config_debug_fs_write_cb();
 
@@ -1866,7 +1866,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 				pr_err("%s: Unexpected Write Done\n", __func__);
 				return -EINVAL;
 			}
-			spin_lock_irqsave(&port->dsp_lock, dsp_flags);
+			raw_spin_lock_irqsave(&port->dsp_lock, dsp_flags);
 			token = data->token;
 			port->buf[token].used = 0;
 			if (lower_32_bits(port->buf[token].phys) !=
@@ -1880,13 +1880,13 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 					__func__,
 				payload[READDONE_IDX_BUFADD_LSW],
 				payload[READDONE_IDX_BUFADD_MSW]);
-				spin_unlock_irqrestore(&port->dsp_lock,
+				raw_spin_unlock_irqrestore(&port->dsp_lock,
 							dsp_flags);
 				break;
 			}
 			port->buf[token].actual_size =
 				payload[READDONE_IDX_SIZE];
-			spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
+			raw_spin_unlock_irqrestore(&port->dsp_lock, dsp_flags);
 		}
 		break;
 	}
@@ -7960,11 +7960,11 @@ static int __init q6asm_init(void)
 	mutex_init(&common_client.cmd_lock);
 	for (lcnt = 0; lcnt <= OUT; lcnt++) {
 		mutex_init(&common_client.port[lcnt].lock);
-		spin_lock_init(&common_client.port[lcnt].dsp_lock);
+		raw_spin_lock_init(&common_client.port[lcnt].dsp_lock);
 	}
 	atomic_set(&common_client.cmd_state, 0);
 	atomic_set(&common_client.nowait_cmd_cnt, 0);
-	spin_lock_init(&common_client.no_wait_que_spinlock);
+	raw_spin_lock_init(&common_client.no_wait_que_spinlock);
 	INIT_LIST_HEAD(&common_client.no_wait_que);
 	atomic_set(&common_client.mem_state, 0);
 

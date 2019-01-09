@@ -122,7 +122,7 @@ struct f_mbim {
 	u8				ctrl_id, data_id;
 	bool				data_interface_up;
 
-	spinlock_t			lock;
+	raw_spinlock_t			lock;
 
 	struct list_head	cpkt_req_q;
 	struct list_head	cpkt_resp_q;
@@ -625,17 +625,17 @@ static void mbim_reset_function_queue(struct f_mbim *dev)
 
 	pr_debug("Queue empty packet for QBI\n");
 
-	spin_lock(&dev->lock);
+	raw_spin_lock(&dev->lock);
 
 	cpkt = mbim_alloc_ctrl_pkt(0, GFP_ATOMIC);
 	if (!cpkt) {
 		pr_err("%s: Unable to allocate reset function pkt\n", __func__);
-		spin_unlock(&dev->lock);
+		raw_spin_unlock(&dev->lock);
 		return;
 	}
 
 	list_add_tail(&cpkt->list, &dev->cpkt_req_q);
-	spin_unlock(&dev->lock);
+	raw_spin_unlock(&dev->lock);
 
 	pr_debug("%s: Wake up read queue\n", __func__);
 	wake_up(&dev->read_wq);
@@ -653,7 +653,7 @@ static void mbim_clear_queues(struct f_mbim *mbim)
 	struct ctrl_pkt	*cpkt = NULL;
 	struct list_head *act, *tmp;
 
-	spin_lock(&mbim->lock);
+	raw_spin_lock(&mbim->lock);
 	list_for_each_safe(act, tmp, &mbim->cpkt_req_q) {
 		cpkt = list_entry(act, struct ctrl_pkt, list);
 		list_del(&cpkt->list);
@@ -664,7 +664,7 @@ static void mbim_clear_queues(struct f_mbim *mbim)
 		list_del(&cpkt->list);
 		mbim_free_ctrl_pkt(cpkt);
 	}
-	spin_unlock(&mbim->lock);
+	raw_spin_unlock(&mbim->lock);
 }
 
 /*
@@ -701,11 +701,11 @@ static void mbim_do_notify(struct f_mbim *mbim)
 			return;
 		}
 
-		spin_unlock(&mbim->lock);
+		raw_spin_unlock(&mbim->lock);
 		status = usb_func_ep_queue(&mbim->function,
 				mbim->not_port.notify,
 				req, GFP_ATOMIC);
-		spin_lock(&mbim->lock);
+		raw_spin_lock(&mbim->lock);
 		if (status) {
 			atomic_dec(&mbim->not_port.notify_count);
 			pr_err("Queue notify request failed, err: %d\n",
@@ -726,10 +726,10 @@ static void mbim_do_notify(struct f_mbim *mbim)
 	atomic_inc(&mbim->not_port.notify_count);
 	pr_debug("queue request: notify_count = %d\n",
 		atomic_read(&mbim->not_port.notify_count));
-	spin_unlock(&mbim->lock);
+	raw_spin_unlock(&mbim->lock);
 	status = usb_func_ep_queue(&mbim->function, mbim->not_port.notify, req,
 			GFP_ATOMIC);
-	spin_lock(&mbim->lock);
+	raw_spin_lock(&mbim->lock);
 	if (status) {
 		atomic_dec(&mbim->not_port.notify_count);
 		pr_err("usb_func_ep_queue failed, err: %d\n", status);
@@ -743,7 +743,7 @@ static void mbim_notify_complete(struct usb_ep *ep, struct usb_request *req)
 
 	pr_debug("dev:%pK\n", mbim);
 
-	spin_lock(&mbim->lock);
+	raw_spin_lock(&mbim->lock);
 	switch (req->status) {
 	case 0:
 		atomic_dec(&mbim->not_port.notify_count);
@@ -757,10 +757,10 @@ static void mbim_notify_complete(struct usb_ep *ep, struct usb_request *req)
 		mbim->not_port.notify_state = MBIM_NOTIFY_NONE;
 		atomic_set(&mbim->not_port.notify_count, 0);
 		pr_info("ESHUTDOWN/ECONNRESET, connection gone\n");
-		spin_unlock(&mbim->lock);
+		raw_spin_unlock(&mbim->lock);
 		mbim_clear_queues(mbim);
 		mbim_reset_function_queue(mbim);
-		spin_lock(&mbim->lock);
+		raw_spin_lock(&mbim->lock);
 		break;
 	default:
 		pr_err("Unknown event %02x --> %d\n",
@@ -768,7 +768,7 @@ static void mbim_notify_complete(struct usb_ep *ep, struct usb_request *req)
 		break;
 	}
 
-	spin_unlock(&mbim->lock);
+	raw_spin_unlock(&mbim->lock);
 
 	pr_debug("dev:%pK Exit\n", mbim);
 }
@@ -865,10 +865,10 @@ fmbim_cmd_complete(struct usb_ep *ep, struct usb_request *req)
 	pr_debug("Add to cpkt_req_q packet with len = %d\n", len);
 	memcpy(cpkt->buf, req->buf, len);
 
-	spin_lock(&dev->lock);
+	raw_spin_lock(&dev->lock);
 
 	list_add_tail(&cpkt->list, &dev->cpkt_req_q);
-	spin_unlock(&dev->lock);
+	raw_spin_unlock(&dev->lock);
 
 	/* wakeup read thread */
 	pr_debug("Wake up read queue\n");
@@ -883,9 +883,9 @@ static void mbim_response_complete(struct usb_ep *ep, struct usb_request *req)
 
 	pr_debug("%s: queue notify request if any new response available\n"
 			, __func__);
-	spin_lock(&mbim->lock);
+	raw_spin_lock(&mbim->lock);
 	mbim_do_notify(mbim);
-	spin_unlock(&mbim->lock);
+	raw_spin_unlock(&mbim->lock);
 }
 
 static int
@@ -948,17 +948,17 @@ mbim_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 			ctrl->bRequestType, ctrl->bRequest,
 			w_value, w_index, w_length);
 
-		spin_lock(&mbim->lock);
+		raw_spin_lock(&mbim->lock);
 		if (list_empty(&mbim->cpkt_resp_q)) {
 			pr_err("ctrl resp queue empty\n");
-			spin_unlock(&mbim->lock);
+			raw_spin_unlock(&mbim->lock);
 			break;
 		}
 
 		cpkt = list_first_entry(&mbim->cpkt_resp_q,
 					struct ctrl_pkt, list);
 		list_del(&cpkt->list);
-		spin_unlock(&mbim->lock);
+		raw_spin_unlock(&mbim->lock);
 
 		value = min_t(unsigned, w_length, cpkt->len);
 		memcpy(req->buf, cpkt->buf, value);
@@ -1243,9 +1243,9 @@ static int mbim_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 		}
 notify_ready:
 		mbim->data_interface_up = alt;
-		spin_lock(&mbim->lock);
+		raw_spin_lock(&mbim->lock);
 		mbim->not_port.notify_state = MBIM_NOTIFY_RESPONSE_AVAILABLE;
-		spin_unlock(&mbim->lock);
+		raw_spin_unlock(&mbim->lock);
 	} else {
 		goto fail;
 	}
@@ -1380,9 +1380,9 @@ static void mbim_resume(struct usb_function *f)
 		return;
 
 	/* resume control path by queuing notify req */
-	spin_lock(&mbim->lock);
+	raw_spin_lock(&mbim->lock);
 	mbim_do_notify(mbim);
-	spin_unlock(&mbim->lock);
+	raw_spin_unlock(&mbim->lock);
 
 	/* MBIM data interface is up only when alt setting is set to 1. */
 	if (!mbim->data_interface_up) {
@@ -1787,10 +1787,10 @@ mbim_read(struct file *fp, char __user *buf, size_t count, loff_t *pos)
 		return -EIO;
 	}
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	while (list_empty(&dev->cpkt_req_q)) {
 		pr_debug("Requests list is empty. Wait.\n");
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		ret = wait_event_interruptible(dev->read_wq,
 			!list_empty(&dev->cpkt_req_q));
 		if (ret < 0) {
@@ -1799,13 +1799,13 @@ mbim_read(struct file *fp, char __user *buf, size_t count, loff_t *pos)
 			return -ERESTARTSYS;
 		}
 		pr_debug("Received request packet\n");
-		spin_lock_irqsave(&dev->lock, flags);
+		raw_spin_lock_irqsave(&dev->lock, flags);
 	}
 
 	cpkt = list_first_entry(&dev->cpkt_req_q, struct ctrl_pkt,
 							list);
 	if (cpkt->len > count) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		mbim_unlock(&dev->read_excl);
 		pr_err("cpkt size too big:%d > buf size:%zu\n",
 				cpkt->len, count);
@@ -1815,7 +1815,7 @@ mbim_read(struct file *fp, char __user *buf, size_t count, loff_t *pos)
 	pr_debug("cpkt size:%d\n", cpkt->len);
 
 	list_del(&cpkt->list);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 	mbim_unlock(&dev->read_excl);
 
 	ret = copy_to_user(buf, cpkt->buf, cpkt->len);
@@ -1894,22 +1894,22 @@ mbim_write(struct file *fp, const char __user *buf, size_t count, loff_t *pos)
 		return ret;
 	}
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	list_add_tail(&cpkt->list, &dev->cpkt_resp_q);
 
 	if (atomic_inc_return(&dev->not_port.notify_count) != 1) {
 		pr_debug("delay ep_queue: notifications queue is busy[%d]\n",
 			atomic_read(&dev->not_port.notify_count));
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		mbim_unlock(&dev->write_excl);
 		return count;
 	}
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	ret = usb_func_ep_queue(&dev->function, dev->not_port.notify,
 			   req, GFP_ATOMIC);
 	if (ret == -ENOTSUPP || (ret < 0 && ret != -EAGAIN)) {
-		spin_lock_irqsave(&dev->lock, flags);
+		raw_spin_lock_irqsave(&dev->lock, flags);
 		/* check if device disconnected while we dropped lock */
 		if (atomic_read(&dev->online)) {
 			list_del(&cpkt->list);
@@ -1917,7 +1917,7 @@ mbim_write(struct file *fp, const char __user *buf, size_t count, loff_t *pos)
 			mbim_free_ctrl_pkt(cpkt);
 		}
 		dev->cpkt_drop_cnt++;
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		pr_err("drop ctrl pkt of len %d error %d\n", cpkt->len, ret);
 	} else {
 		ret = 0;
@@ -2105,7 +2105,7 @@ static int mbim_init(int instances)
 		dev->bam_port.ipa_consumer_ep = -1;
 		dev->bam_port.ipa_producer_ep = -1;
 
-		spin_lock_init(&dev->lock);
+		raw_spin_lock_init(&dev->lock);
 		INIT_LIST_HEAD(&dev->cpkt_req_q);
 		INIT_LIST_HEAD(&dev->cpkt_resp_q);
 

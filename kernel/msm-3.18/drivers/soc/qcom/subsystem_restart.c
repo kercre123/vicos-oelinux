@@ -106,7 +106,7 @@ static const char * const restart_levels[] = {
  */
 struct subsys_tracking {
 	enum p_subsys_state p_state;
-	spinlock_t s_lock;
+	raw_spinlock_t s_lock;
 	enum subsys_state state;
 	struct mutex lock;
 };
@@ -342,14 +342,14 @@ static void subsys_set_state(struct subsys_device *subsys,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&subsys->track.s_lock, flags);
+	raw_spin_lock_irqsave(&subsys->track.s_lock, flags);
 	if (subsys->track.state != state) {
 		subsys->track.state = state;
-		spin_unlock_irqrestore(&subsys->track.s_lock, flags);
+		raw_spin_unlock_irqrestore(&subsys->track.s_lock, flags);
 		sysfs_notify(&subsys->dev.kobj, NULL, "state");
 		return;
 	}
-	spin_unlock_irqrestore(&subsys->track.s_lock, flags);
+	raw_spin_unlock_irqrestore(&subsys->track.s_lock, flags);
 }
 
 static ssize_t error_show(struct device *dev,
@@ -1005,9 +1005,9 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	notify_each_subsys_device(list, count, SUBSYS_RAMDUMP_NOTIFICATION,
 									NULL);
 
-	spin_lock_irqsave(&track->s_lock, flags);
+	raw_spin_lock_irqsave(&track->s_lock, flags);
 	track->p_state = SUBSYS_RESTARTING;
-	spin_unlock_irqrestore(&track->s_lock, flags);
+	raw_spin_unlock_irqrestore(&track->s_lock, flags);
 
 	/* Collect ram dumps for all subsystems in order here */
 	for_each_subsys_device(list, count, NULL, subsystem_ramdump);
@@ -1031,10 +1031,10 @@ err:
 	mutex_unlock(&soc_order_reg_lock);
 	mutex_unlock(&track->lock);
 
-	spin_lock_irqsave(&track->s_lock, flags);
+	raw_spin_lock_irqsave(&track->s_lock, flags);
 	track->p_state = SUBSYS_NORMAL;
 	__pm_relax(&dev->ssr_wlock);
-	spin_unlock_irqrestore(&track->s_lock, flags);
+	raw_spin_unlock_irqrestore(&track->s_lock, flags);
 }
 
 static void __subsystem_restart_dev(struct subsys_device *dev)
@@ -1052,7 +1052,7 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 	 * Allow drivers to call subsystem_restart{_dev}() as many times as
 	 * they want up until the point where the subsystem is shutdown.
 	 */
-	spin_lock_irqsave(&track->s_lock, flags);
+	raw_spin_lock_irqsave(&track->s_lock, flags);
 	if (track->p_state != SUBSYS_CRASHED &&
 					dev->track.state == SUBSYS_ONLINE) {
 		if (track->p_state != SUBSYS_RESTARTING) {
@@ -1065,7 +1065,7 @@ static void __subsystem_restart_dev(struct subsys_device *dev)
 	} else
 		WARN(dev->track.state == SUBSYS_OFFLINE,
 			"SSR aborted: %s subsystem not online\n", name);
-	spin_unlock_irqrestore(&track->s_lock, flags);
+	raw_spin_unlock_irqrestore(&track->s_lock, flags);
 }
 
 static void device_restart_work_hdlr(struct work_struct *work)
@@ -1426,7 +1426,7 @@ static struct subsys_soc_restart_order *ssr_parse_restart_orders(struct
 
 	order->count = count;
 	mutex_init(&order->track.lock);
-	spin_lock_init(&order->track.s_lock);
+	raw_spin_lock_init(&order->track.s_lock);
 
 	INIT_LIST_HEAD(&order->list);
 	list_add_tail(&order->list, &ssr_order_list);
@@ -1650,7 +1650,7 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 	wakeup_source_init(&subsys->ssr_wlock, subsys->wlname);
 	INIT_WORK(&subsys->work, subsystem_restart_wq_func);
 	INIT_WORK(&subsys->device_restart_work, device_restart_work_hdlr);
-	spin_lock_init(&subsys->track.s_lock);
+	raw_spin_lock_init(&subsys->track.s_lock);
 
 	subsys->id = ida_simple_get(&subsys_ida, 0, 0, GFP_KERNEL);
 	if (subsys->id < 0) {

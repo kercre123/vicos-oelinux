@@ -72,7 +72,7 @@ struct rmnet_ctrl_port {
 	unsigned int		port_num;
 	struct grmnet		*port_usb;
 
-	spinlock_t		port_lock;
+	raw_spinlock_t		port_lock;
 	struct delayed_work	connect_w;
 	struct delayed_work	disconnect_w;
 };
@@ -123,13 +123,13 @@ static void grmnet_ctrl_smd_read_w(struct work_struct *w)
 	void *buf;
 	unsigned long flags;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	while (c->ch) {
 		sz = smd_cur_packet_size(c->ch);
 		if (sz <= 0)
 			break;
 
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 		buf = kmalloc(sz, GFP_KERNEL);
 		if (!buf)
@@ -166,7 +166,7 @@ static void grmnet_ctrl_smd_read_w(struct work_struct *w)
 		}
 
 		/* send it to USB here */
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		if (port->port_usb && port->port_usb->send_cpkt_response) {
 			port->port_usb->send_cpkt_response(port->port_usb,
 							buf, sz);
@@ -174,7 +174,7 @@ static void grmnet_ctrl_smd_read_w(struct work_struct *w)
 		}
 		kfree(buf);
 	}
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 }
 
 static void grmnet_ctrl_smd_write_w(struct work_struct *w)
@@ -185,7 +185,7 @@ static void grmnet_ctrl_smd_write_w(struct work_struct *w)
 	struct rmnet_ctrl_pkt *cpkt;
 	int ret;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	while (c->ch) {
 		if (list_empty(&c->tx_q))
 			break;
@@ -196,9 +196,9 @@ static void grmnet_ctrl_smd_write_w(struct work_struct *w)
 			break;
 
 		list_del(&cpkt->list);
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		ret = smd_write(c->ch, cpkt->buf, cpkt->len);
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		if (ret != cpkt->len) {
 			pr_err("%s: smd_write failed err:%d\n", __func__, ret);
 			free_rmnet_ctrl_pkt(cpkt);
@@ -207,7 +207,7 @@ static void grmnet_ctrl_smd_write_w(struct work_struct *w)
 		free_rmnet_ctrl_pkt(cpkt);
 		c->to_modem++;
 	}
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 }
 static int is_legal_port_num(u8 portno)
 {
@@ -244,7 +244,7 @@ grmnet_ctrl_smd_send_cpkt_tomodem(u8 portno,
 	memcpy(cpkt->buf, buf, len);
 	cpkt->len = len;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	c = &port->ctrl_ch;
 
 	/* queue cpkt if ch is not open, would be sent once ch is opened */
@@ -257,13 +257,13 @@ grmnet_ctrl_smd_send_cpkt_tomodem(u8 portno,
 			pr_debug("%s: Dropping SMD CTRL packet: limit %u\n",
 					__func__, c->offline_pkt_for_modem);
 		}
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		return 0;
 	}
 
 	list_add_tail(&cpkt->list, &c->tx_q);
 	queue_work(grmnet_ctrl_wq, &c->write_w);
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	return 0;
 }
@@ -366,7 +366,7 @@ static void grmnet_ctrl_smd_notify(void *p, unsigned event)
 		if (port && port->port_usb && port->port_usb->disconnect)
 			port->port_usb->disconnect(port->port_usb);
 
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		while (!list_empty(&c->tx_q)) {
 			cpkt = list_first_entry(&c->tx_q,
 					struct rmnet_ctrl_pkt, list);
@@ -374,7 +374,7 @@ static void grmnet_ctrl_smd_notify(void *p, unsigned event)
 			list_del(&cpkt->list);
 			free_rmnet_ctrl_pkt(cpkt);
 		}
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 		break;
 	}
@@ -423,10 +423,10 @@ static void grmnet_ctrl_smd_connect_w(struct work_struct *w)
 
 	set_bits = c->cbits_tomodem;
 	clear_bits = ~(c->cbits_tomodem | TIOCM_RTS);
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (port->port_usb)
 		smd_tiocmset(c->ch, set_bits, clear_bits);
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 }
 
 int gsmd_ctrl_connect(struct grmnet *gr, int port_num)
@@ -450,11 +450,11 @@ int gsmd_ctrl_connect(struct grmnet *gr, int port_num)
 	port = ctrl_smd_ports[port_num].port;
 	c = &port->ctrl_ch;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	port->port_usb = gr;
 	gr->send_encap_cmd = grmnet_ctrl_smd_send_cpkt_tomodem;
 	gr->notify_modem = gsmd_ctrl_send_cbits_tomodem;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	queue_delayed_work(grmnet_ctrl_wq, &port->connect_w, 0);
 
@@ -506,7 +506,7 @@ void gsmd_ctrl_disconnect(struct grmnet *gr, u8 port_num)
 	port = ctrl_smd_ports[port_num].port;
 	c = &port->ctrl_ch;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	port->port_usb = 0;
 	gr->send_encap_cmd = 0;
 	gr->notify_modem = 0;
@@ -520,7 +520,7 @@ void gsmd_ctrl_disconnect(struct grmnet *gr, u8 port_num)
 	}
 	c->offline_pkt_for_modem = 0;
 
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	if (test_and_clear_bit(CH_OPENED, &c->flags)) {
 		clear_bits = ~(c->cbits_tomodem | TIOCM_RTS);
@@ -553,11 +553,11 @@ static int grmnet_ctrl_smd_ch_probe(struct platform_device *pdev)
 			set_bit(CH_READY, &c->flags);
 
 			/* if usb is online, try opening smd_ch */
-			spin_lock_irqsave(&port->port_lock, flags);
+			raw_spin_lock_irqsave(&port->port_lock, flags);
 			if (port->port_usb)
 				queue_delayed_work(grmnet_ctrl_wq,
 							&port->connect_w, 0);
-			spin_unlock_irqrestore(&port->port_lock, flags);
+			raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 			break;
 		}
@@ -624,7 +624,7 @@ static int grmnet_ctrl_smd_port_alloc(int portno)
 
 	port->port_num = portno;
 
-	spin_lock_init(&port->port_lock);
+	raw_spin_lock_init(&port->port_lock);
 	INIT_DELAYED_WORK(&port->connect_w, grmnet_ctrl_smd_connect_w);
 	INIT_DELAYED_WORK(&port->disconnect_w, grmnet_ctrl_smd_disconnect_w);
 
@@ -730,7 +730,7 @@ static ssize_t gsmd_ctrl_read_stats(struct file *file, char __user *ubuf,
 			continue;
 		port = ctrl_smd_ports[i].port;
 
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 
 		c = &port->ctrl_ch;
 
@@ -751,7 +751,7 @@ static ssize_t gsmd_ctrl_read_stats(struct file *file, char __user *ubuf,
 				c->ch ? smd_read_avail(c->ch) : 0,
 				c->ch ? smd_write_avail(c->ch) : 0);
 
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	}
 
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, temp);
@@ -774,14 +774,14 @@ static ssize_t gsmd_ctrl_reset_stats(struct file *file, const char __user *buf,
 			continue;
 		port = ctrl_smd_ports[i].port;
 
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 
 		c = &port->ctrl_ch;
 
 		c->to_host = 0;
 		c->to_modem = 0;
 
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	}
 	return count;
 }

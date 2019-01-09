@@ -206,7 +206,7 @@ struct edge_info {
 	uint32_t rx_fifo_size;
 	void * (*read_from_fifo)(void *dest, const void *src, size_t num_bytes);
 	void * (*write_to_fifo)(void *dest, const void *src, size_t num_bytes);
-	spinlock_t write_lock;
+	raw_spinlock_t write_lock;
 	wait_queue_head_t tx_blocked_queue;
 	bool tx_resume_needed;
 	bool tx_blocked_signal_sent;
@@ -216,7 +216,7 @@ struct edge_info {
 	struct tasklet_struct tasklet;
 	struct srcu_struct use_ref;
 	bool in_ssr;
-	spinlock_t rx_lock;
+	raw_spinlock_t rx_lock;
 	struct list_head deferred_cmds;
 	uint32_t num_pw_states;
 	unsigned long *ramp_time_us;
@@ -624,23 +624,23 @@ static int fifo_tx(struct edge_info *einfo, const void *data, int len)
 
 	DEFINE_WAIT(wait);
 
-	spin_lock_irqsave(&einfo->write_lock, flags);
+	raw_spin_lock_irqsave(&einfo->write_lock, flags);
 	while (fifo_write_avail(einfo) < len) {
 		send_tx_blocked_signal(einfo);
-		spin_unlock_irqrestore(&einfo->write_lock, flags);
+		raw_spin_unlock_irqrestore(&einfo->write_lock, flags);
 		prepare_to_wait(&einfo->tx_blocked_queue, &wait,
 							TASK_UNINTERRUPTIBLE);
 		if (fifo_write_avail(einfo) < len && !einfo->in_ssr)
 			schedule();
 		finish_wait(&einfo->tx_blocked_queue, &wait);
-		spin_lock_irqsave(&einfo->write_lock, flags);
+		raw_spin_lock_irqsave(&einfo->write_lock, flags);
 		if (einfo->in_ssr) {
-			spin_unlock_irqrestore(&einfo->write_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->write_lock, flags);
 			return -EFAULT;
 		}
 	}
 	ret = fifo_write(einfo, data, len);
-	spin_unlock_irqrestore(&einfo->write_lock, flags);
+	raw_spin_unlock_irqrestore(&einfo->write_lock, flags);
 
 	return ret;
 }
@@ -855,12 +855,12 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 			einfo->xprt_if.glink_core_if_ptr->tx_resume(
 							&einfo->xprt_if);
 		}
-		spin_lock_irqsave(&einfo->write_lock, flags);
+		raw_spin_lock_irqsave(&einfo->write_lock, flags);
 		if (waitqueue_active(&einfo->tx_blocked_queue)) {
 			einfo->tx_blocked_signal_sent = false;
 			trigger_wakeup = true;
 		}
-		spin_unlock_irqrestore(&einfo->write_lock, flags);
+		raw_spin_unlock_irqrestore(&einfo->write_lock, flags);
 		if (trigger_wakeup)
 			wake_up_all(&einfo->tx_blocked_queue);
 	}
@@ -877,7 +877,7 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 	 * all the channel open commands are processed by the core, thus
 	 * eliminating a race.
 	 */
-	spin_lock_irqsave(&einfo->rx_lock, flags);
+	raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 	while (fifo_read_avail(einfo) ||
 			(!atomic_ctx && !list_empty(&einfo->deferred_cmds))) {
 		if (einfo->in_ssr)
@@ -903,24 +903,24 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_version(
 								&einfo->xprt_if,
 								cmd.param1,
 								cmd.param2);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case VERSION_ACK_CMD:
 			if (atomic_ctx) {
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_version_ack(
 								&einfo->xprt_if,
 								cmd.param1,
 								cmd.param2);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case OPEN_CMD:
 			rcid = cmd.param1;
@@ -948,38 +948,38 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 				break;
 			}
 
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_remote_open(
 								&einfo->xprt_if,
 								rcid,
 								name,
 								SMEM_XPRT_ID);
 			kfree(name);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case CLOSE_CMD:
 			if (atomic_ctx) {
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->
 							rx_cmd_ch_remote_close(
 								&einfo->xprt_if,
 								cmd.param1);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case OPEN_ACK_CMD:
 			if (atomic_ctx) {
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_open_ack(
 								&einfo->xprt_if,
 								cmd.param1,
 								SMEM_XPRT_ID);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case RX_INTENT_CMD:
 			/*
@@ -1015,14 +1015,14 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 						kfree(cmd_data);
 					break;
 				}
-				spin_unlock_irqrestore(&einfo->rx_lock, flags);
+				raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 				einfo->xprt_if.glink_core_if_ptr->
 						rx_cmd_remote_rx_intent_put(
 								&einfo->xprt_if,
 								cmd.param1,
 								intent.id,
 								intent.size);
-				spin_lock_irqsave(&einfo->rx_lock, flags);
+				raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 				break;
 			}
 
@@ -1046,7 +1046,7 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 					kfree(intents);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			for (i = 0; i < cmd.param2; ++i) {
 				einfo->xprt_if.glink_core_if_ptr->
 					rx_cmd_remote_rx_intent_put(
@@ -1056,40 +1056,40 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 							intents[i].size);
 			}
 			kfree(intents);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case RX_DONE_CMD:
 			if (atomic_ctx) {
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_tx_done(
 								&einfo->xprt_if,
 								cmd.param1,
 								cmd.param2,
 								false);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case RX_INTENT_REQ_CMD:
 			if (atomic_ctx) {
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->
 						rx_cmd_remote_rx_intent_req(
 								&einfo->xprt_if,
 								cmd.param1,
 								cmd.param2);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case RX_INTENT_REQ_ACK_CMD:
 			if (atomic_ctx) {
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			granted = false;
 			if (cmd.param2 == 1)
 				granted = true;
@@ -1098,7 +1098,7 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 								&einfo->xprt_if,
 								cmd.param1,
 								granted);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case TX_DATA_CMD:
 		case TX_DATA_CONT_CMD:
@@ -1111,11 +1111,11 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_close_ack(
 								&einfo->xprt_if,
 								cmd.param1);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case READ_NOTIF_CMD:
 			send_irq(einfo);
@@ -1125,32 +1125,32 @@ static void __rx_worker(struct edge_info *einfo, bool atomic_ctx)
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_remote_sigs(
 								&einfo->xprt_if,
 								cmd.param1,
 								cmd.param2);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		case RX_DONE_W_REUSE_CMD:
 			if (atomic_ctx) {
 				queue_cmd(einfo, &cmd, NULL);
 				break;
 			}
-			spin_unlock_irqrestore(&einfo->rx_lock, flags);
+			raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_tx_done(
 								&einfo->xprt_if,
 								cmd.param1,
 								cmd.param2,
 								true);
-			spin_lock_irqsave(&einfo->rx_lock, flags);
+			raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 			break;
 		default:
 			pr_err("Unrecognized command: %d\n", cmd.id);
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&einfo->rx_lock, flags);
+	raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 	srcu_read_unlock(&einfo->use_ref, rcu_id);
 }
 
@@ -1936,12 +1936,12 @@ static int tx_data(struct glink_transport_if *if_ptr, uint16_t cmd_id,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&einfo->write_lock, flags);
+	raw_spin_lock_irqsave(&einfo->write_lock, flags);
 	size = fifo_write_avail(einfo);
 
 	/* Intentless clients expect a complete commit or instant failure */
 	if (einfo->intentless && size < sizeof(cmd) + pctx->size) {
-		spin_unlock_irqrestore(&einfo->write_lock, flags);
+		raw_spin_unlock_irqrestore(&einfo->write_lock, flags);
 		srcu_read_unlock(&einfo->use_ref, rcu_id);
 		return -ENOSPC;
 	}
@@ -1949,7 +1949,7 @@ static int tx_data(struct glink_transport_if *if_ptr, uint16_t cmd_id,
 	/* Need enough space to write the command and some data */
 	if (size <= sizeof(cmd)) {
 		einfo->tx_resume_needed = true;
-		spin_unlock_irqrestore(&einfo->write_lock, flags);
+		raw_spin_unlock_irqrestore(&einfo->write_lock, flags);
 		srcu_read_unlock(&einfo->use_ref, rcu_id);
 		return -EAGAIN;
 	}
@@ -1969,15 +1969,15 @@ static int tx_data(struct glink_transport_if *if_ptr, uint16_t cmd_id,
 	GLINK_DBG("%s %s: lcid[%u] riid[%u] cmd[%d], size[%d], size_left[%d]\n",
 		"<SMEM>", __func__, cmd.lcid, cmd.riid, cmd.id, cmd.size,
 		cmd.size_left);
-	spin_unlock_irqrestore(&einfo->write_lock, flags);
+	raw_spin_unlock_irqrestore(&einfo->write_lock, flags);
 
 	/* Fake tx_done for intentless since its not supported over the wire */
 	if (einfo->intentless) {
-		spin_lock_irqsave(&einfo->rx_lock, flags);
+		raw_spin_lock_irqsave(&einfo->rx_lock, flags);
 		cmd.id = RX_DONE_CMD;
 		cmd.lcid = pctx->rcid;
 		queue_cmd(einfo, &cmd, NULL);
-		spin_unlock_irqrestore(&einfo->rx_lock, flags);
+		raw_spin_unlock_irqrestore(&einfo->rx_lock, flags);
 	}
 
 	srcu_read_unlock(&einfo->use_ref, rcu_id);
@@ -2262,7 +2262,7 @@ static int glink_smem_native_probe(struct platform_device *pdev)
 
 	init_xprt_cfg(einfo, subsys_name);
 	init_xprt_if(einfo);
-	spin_lock_init(&einfo->write_lock);
+	raw_spin_lock_init(&einfo->write_lock);
 	init_waitqueue_head(&einfo->tx_blocked_queue);
 	init_kthread_work(&einfo->kwork, rx_worker);
 	init_kthread_worker(&einfo->kworker);
@@ -2270,7 +2270,7 @@ static int glink_smem_native_probe(struct platform_device *pdev)
 	einfo->read_from_fifo = read_from_fifo;
 	einfo->write_to_fifo = write_to_fifo;
 	init_srcu_struct(&einfo->use_ref);
-	spin_lock_init(&einfo->rx_lock);
+	raw_spin_lock_init(&einfo->rx_lock);
 	INIT_LIST_HEAD(&einfo->deferred_cmds);
 
 	mutex_lock(&probe_lock);
@@ -2449,7 +2449,7 @@ static int glink_rpm_native_probe(struct platform_device *pdev)
 
 	init_xprt_cfg(einfo, subsys_name);
 	init_xprt_if(einfo);
-	spin_lock_init(&einfo->write_lock);
+	raw_spin_lock_init(&einfo->write_lock);
 	init_waitqueue_head(&einfo->tx_blocked_queue);
 	init_kthread_work(&einfo->kwork, rx_worker);
 	init_kthread_worker(&einfo->kworker);
@@ -2458,7 +2458,7 @@ static int glink_rpm_native_probe(struct platform_device *pdev)
 	einfo->read_from_fifo = memcpy32_fromio;
 	einfo->write_to_fifo = memcpy32_toio;
 	init_srcu_struct(&einfo->use_ref);
-	spin_lock_init(&einfo->rx_lock);
+	raw_spin_lock_init(&einfo->rx_lock);
 	INIT_LIST_HEAD(&einfo->deferred_cmds);
 
 	mutex_lock(&probe_lock);
@@ -2740,7 +2740,7 @@ static int glink_mailbox_probe(struct platform_device *pdev)
 	init_xprt_cfg(einfo, subsys_name);
 	einfo->xprt_cfg.name = "mailbox";
 	init_xprt_if(einfo);
-	spin_lock_init(&einfo->write_lock);
+	raw_spin_lock_init(&einfo->write_lock);
 	init_waitqueue_head(&einfo->tx_blocked_queue);
 	init_kthread_work(&einfo->kwork, rx_worker);
 	init_kthread_worker(&einfo->kworker);
@@ -2748,7 +2748,7 @@ static int glink_mailbox_probe(struct platform_device *pdev)
 	einfo->read_from_fifo = read_from_fifo;
 	einfo->write_to_fifo = write_to_fifo;
 	init_srcu_struct(&einfo->use_ref);
-	spin_lock_init(&einfo->rx_lock);
+	raw_spin_lock_init(&einfo->rx_lock);
 	INIT_LIST_HEAD(&einfo->deferred_cmds);
 
 	mutex_lock(&probe_lock);

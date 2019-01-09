@@ -692,7 +692,7 @@ static unsigned long *its_lpi_alloc_chunks(int nr_irqs, int *base, int *nr_ids)
 
 	nr_chunks = DIV_ROUND_UP(nr_irqs, IRQS_PER_CHUNK);
 
-	spin_lock(&lpi_lock);
+	raw_spin_lock(&lpi_lock);
 
 	do {
 		chunk_id = bitmap_find_next_zero_area(lpi_bitmap, lpi_chunks,
@@ -718,7 +718,7 @@ static unsigned long *its_lpi_alloc_chunks(int nr_irqs, int *base, int *nr_ids)
 	*nr_ids = nr_chunks * IRQS_PER_CHUNK;
 
 out:
-	spin_unlock(&lpi_lock);
+	raw_spin_unlock(&lpi_lock);
 
 	if (!bitmap)
 		*base = *nr_ids = 0;
@@ -732,7 +732,7 @@ static void its_lpi_free(struct event_lpi_map *map)
 	int nr_ids = map->nr_lpis;
 	int lpi;
 
-	spin_lock(&lpi_lock);
+	raw_spin_lock(&lpi_lock);
 
 	for (lpi = base; lpi < (base + nr_ids); lpi += IRQS_PER_CHUNK) {
 		int chunk = its_lpi_to_chunk(lpi);
@@ -744,7 +744,7 @@ static void its_lpi_free(struct event_lpi_map *map)
 		}
 	}
 
-	spin_unlock(&lpi_lock);
+	raw_spin_unlock(&lpi_lock);
 
 	kfree(map->lpi_map);
 	kfree(map->col_map);
@@ -1057,7 +1057,7 @@ static void its_cpu_init_collection(void)
 	struct its_node *its;
 	int cpu;
 
-	spin_lock(&its_lock);
+	raw_spin_lock(&its_lock);
 	cpu = smp_processor_id();
 
 	list_for_each_entry(its, &its_nodes, entry) {
@@ -1089,7 +1089,7 @@ static void its_cpu_init_collection(void)
 		its_send_invall(its, &its->collections[cpu]);
 	}
 
-	spin_unlock(&its_lock);
+	raw_spin_unlock(&its_lock);
 }
 
 static struct its_device *its_find_device(struct its_node *its, u32 dev_id)
@@ -1488,9 +1488,9 @@ static int its_probe(struct device_node *node, struct irq_domain *parent)
 		inner_domain->host_data = info;
 	}
 
-	spin_lock(&its_lock);
+	raw_spin_lock(&its_lock);
 	list_add(&its->entry, &its_nodes);
-	spin_unlock(&its_lock);
+	raw_spin_unlock(&its_lock);
 
 	return 0;
 

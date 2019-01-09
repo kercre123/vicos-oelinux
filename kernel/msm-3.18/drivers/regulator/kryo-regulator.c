@@ -83,7 +83,7 @@
 
 struct kryo_regulator {
 	struct list_head		link;
-	spinlock_t			slock;
+	raw_spinlock_t			slock;
 	struct regulator_desc		desc;
 	struct regulator_dev		*rdev;
 	struct regulator_dev		*retention_rdev;
@@ -292,7 +292,7 @@ static int kryo_regulator_enable(struct regulator_dev *rdev)
 	if (kvreg->vreg_en == true)
 		return 0;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 	rc = kryo_set_ldo_volt(kvreg, kvreg->volt);
 	if (rc) {
 		kvreg_err(kvreg, "set voltage failed, rc=%d\n", rc);
@@ -303,7 +303,7 @@ static int kryo_regulator_enable(struct regulator_dev *rdev)
 	kvreg_debug(kvreg, "enabled\n");
 
 done:
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return rc;
 }
@@ -317,10 +317,10 @@ static int kryo_regulator_disable(struct regulator_dev *rdev)
 	if (kvreg->vreg_en == false)
 		return 0;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 	kvreg->vreg_en = false;
 	kvreg_debug(kvreg, "disabled\n");
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return rc;
 }
@@ -339,11 +339,11 @@ static int kryo_regulator_set_voltage(struct regulator_dev *rdev,
 	int rc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 
 	if (!kvreg->vreg_en) {
 		kvreg->volt = min_volt;
-		spin_unlock_irqrestore(&kvreg->slock, flags);
+		raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 		return 0;
 	}
 
@@ -351,7 +351,7 @@ static int kryo_regulator_set_voltage(struct regulator_dev *rdev,
 	if (rc)
 		kvreg_err(kvreg, "set voltage failed, rc=%d\n", rc);
 
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return rc;
 }
@@ -370,7 +370,7 @@ static int kryo_regulator_set_bypass(struct regulator_dev *rdev,
 	int rc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 
 	/*
 	 * LDO Vref voltage must be programmed before switching
@@ -384,7 +384,7 @@ static int kryo_regulator_set_bypass(struct regulator_dev *rdev,
 	if (rc)
 		kvreg_err(kvreg, "could not configure to %s mode\n",
 			  enable == LDO_MODE ? "LDO" : "BHS");
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return rc;
 }
@@ -417,12 +417,12 @@ static int kryo_regulator_retention_set_voltage(struct regulator_dev *rdev,
 	int rc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 	rc = kryo_set_retention_volt(kvreg, min_volt);
 	if (rc)
 		kvreg_err(kvreg, "set voltage failed, rc=%d\n", rc);
 
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return rc;
 }
@@ -443,7 +443,7 @@ static int kryo_regulator_retention_set_bypass(struct regulator_dev *rdev,
 	u32 reg_val;
 	unsigned long flags;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 
 	kryo_pm_apcc_masked_write(kvreg,
 				  APCC_PWR_CTL_OVERRIDE,
@@ -483,7 +483,7 @@ static int kryo_regulator_retention_set_bypass(struct regulator_dev *rdev,
 		: BHS_MODE;
 
 done:
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return rc;
 }
@@ -575,7 +575,7 @@ static ssize_t kryo_dbg_mode_read(struct file *file, char __user *buff,
 		return -ENODEV;
 
 	/* Confirm HW state matches Kryo regulator device state */
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 	reg_val = readl_relaxed(kvreg->reg_base + APC_PWR_GATE_MODE);
 	if (((reg_val & PWR_GATE_SWITCH_MODE_MASK) == PWR_GATE_SWITCH_MODE_LDO
 	     && kvreg->mode != LDO_MODE) ||
@@ -589,7 +589,7 @@ static ssize_t kryo_dbg_mode_read(struct file *file, char __user *buff,
 			       kvreg->mode == LDO_MODE ?
 			       "LDO" : "BHS");
 	}
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return simple_read_from_buffer(buff, count, ppos, buf, len);
 }
@@ -854,7 +854,7 @@ static int kryo_regulator_lpm_prepare(struct kryo_regulator *kvreg)
 	int vdd_volt_uv, bhs_volt, vdd_vlvl = 0;
 	unsigned long flags;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 
 	kvreg->pre_lpm_state_mode = kvreg->mode;
 	kvreg->pre_lpm_state_volt = kvreg->volt;
@@ -865,7 +865,7 @@ static int kryo_regulator_lpm_prepare(struct kryo_regulator *kvreg)
 			if (vdd_vlvl < 0) {
 				kvreg_err(kvreg, "could not get vdd supply voltage level, rc=%d\n",
 					  vdd_vlvl);
-				spin_unlock_irqrestore(&kvreg->slock, flags);
+				raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 				return NOTIFY_BAD;
 			}
 
@@ -894,7 +894,7 @@ static int kryo_regulator_lpm_prepare(struct kryo_regulator *kvreg)
 	}
 
 	kvreg->lpm_enter_count++;
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	return NOTIFY_OK;
 }
@@ -903,7 +903,7 @@ static int kryo_regulator_lpm_resume(struct kryo_regulator *kvreg)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&kvreg->slock, flags);
+	raw_spin_lock_irqsave(&kvreg->slock, flags);
 
 	if (kvreg->mode == BHS_MODE &&
 	    kvreg->pre_lpm_state_mode == LDO_MODE) {
@@ -924,7 +924,7 @@ static int kryo_regulator_lpm_resume(struct kryo_regulator *kvreg)
 	}
 
 	kvreg->lpm_exit_count++;
-	spin_unlock_irqrestore(&kvreg->slock, flags);
+	raw_spin_unlock_irqrestore(&kvreg->slock, flags);
 
 	if (kvreg->lpm_exit_count != kvreg->lpm_enter_count) {
 		kvreg_err(kvreg, "LPM entry/exit counter mismatch, this is not expected: enter=%lx exit=%lx\n",
@@ -999,7 +999,7 @@ static int kryo_regulator_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	spin_lock_init(&kvreg->slock);
+	raw_spin_lock_init(&kvreg->slock);
 	kvreg->name		= init_data->constraints.name;
 	kvreg->desc.name	= kvreg->name;
 	kvreg->desc.n_voltages	= LDO_N_VOLTAGES;

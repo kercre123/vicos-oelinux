@@ -37,11 +37,11 @@ void mmc_trace_write(struct mmc_host *mmc,
 	 * index within array bounds. The cast to unsigned is
 	 * necessary so increment and rolover wraps to 0 correctly
 	 */
-	spin_lock_irqsave(&mmc->trace_buf.trace_lock, flags);
+	raw_spin_lock_irqsave(&mmc->trace_buf.trace_lock, flags);
 	mmc->trace_buf.wr_idx += 1;
 	idx = ((unsigned int)mmc->trace_buf.wr_idx) &
 			(MMC_TRACE_RBUF_NUM_EVENTS - 1);
-	spin_unlock_irqrestore(&mmc->trace_buf.trace_lock, flags);
+	raw_spin_unlock_irqrestore(&mmc->trace_buf.trace_lock, flags);
 
 	/* Catch some unlikely machine specific wrap-around bug */
 	if (unlikely(idx > (MMC_TRACE_RBUF_NUM_EVENTS - 1))) {
@@ -76,7 +76,7 @@ void mmc_trace_init(struct mmc_host *mmc)
 		return;
 	}
 
-	spin_lock_init(&mmc->trace_buf.trace_lock);
+	raw_spin_lock_init(&mmc->trace_buf.trace_lock);
 	mmc->trace_buf.wr_idx = -1;
 }
 
@@ -97,7 +97,7 @@ void mmc_dump_trace_buffer(struct mmc_host *mmc, struct seq_file *s)
 	if (!mmc->trace_buf.data)
 		return;
 
-	spin_lock_irqsave(&mmc->trace_buf.trace_lock, flags);
+	raw_spin_lock_irqsave(&mmc->trace_buf.trace_lock, flags);
 	idx = ((unsigned int)mmc->trace_buf.wr_idx) & N;
 	cur_idx = (idx + 1) & N;
 
@@ -119,5 +119,5 @@ void mmc_dump_trace_buffer(struct mmc_host *mmc, struct seq_file *s)
 			break;
 		}
 	} while (1);
-	spin_unlock_irqrestore(&mmc->trace_buf.trace_lock, flags);
+	raw_spin_unlock_irqrestore(&mmc->trace_buf.trace_lock, flags);
 }

@@ -152,7 +152,7 @@ struct dev_data {
 
 static unsigned short    panel_id;
 static struct list_head  dev_list;
-static spinlock_t        dev_lock;
+static raw_spinlock_t        dev_lock;
 
 static irqreturn_t irq_handler(int irq, void *context);
 static void service_irq(struct dev_data *dd);
@@ -1630,11 +1630,11 @@ nl_callback_driver(struct sk_buff *skb, struct genl_info *info)
 	unsigned long    flags;
 
 	/* locate device structure */
-	spin_lock_irqsave(&dev_lock, flags);
+	raw_spin_lock_irqsave(&dev_lock, flags);
 	list_for_each_entry(dd, &dev_list, dev_list)
 		if (dd->nl_family.id == NL_TYPE(skb->data))
 			break;
-	spin_unlock_irqrestore(&dev_lock, flags);
+	raw_spin_unlock_irqrestore(&dev_lock, flags);
 	if (&dd->dev_list == &dev_list)
 		return -ENODEV;
 	if (!dd->nl_enabled)
@@ -1659,11 +1659,11 @@ nl_callback_fusion(struct sk_buff *skb, struct genl_info *info)
 	unsigned long    flags;
 
 	/* locate device structure */
-	spin_lock_irqsave(&dev_lock, flags);
+	raw_spin_lock_irqsave(&dev_lock, flags);
 	list_for_each_entry(dd, &dev_list, dev_list)
 		if (dd->nl_family.id == NL_TYPE(skb->data))
 			break;
-	spin_unlock_irqrestore(&dev_lock, flags);
+	raw_spin_unlock_irqrestore(&dev_lock, flags);
 	if (&dd->dev_list == &dev_list)
 		return -ENODEV;
 	if (!dd->nl_enabled)
@@ -2651,9 +2651,9 @@ static int probe(struct spi_device *spi)
 	mutex_init(&dd->sysfs_update_mutex);
 
 	/* add us to the devices list */
-	spin_lock_irqsave(&dev_lock, flags);
+	raw_spin_lock_irqsave(&dev_lock, flags);
 	list_add_tail(&dd->dev_list, &dev_list);
-	spin_unlock_irqrestore(&dev_lock, flags);
+	raw_spin_unlock_irqrestore(&dev_lock, flags);
 
 	ret = create_sysfs_entries(dd);
 	if (ret) {
@@ -2673,9 +2673,9 @@ static int probe(struct spi_device *spi)
 
 sysfs_failure:
 	dd->nl_enabled = false;
-	spin_lock_irqsave(&dev_lock, flags);
+	raw_spin_lock_irqsave(&dev_lock, flags);
 	list_del(&dd->dev_list);
-	spin_unlock_irqrestore(&dev_lock, flags);
+	raw_spin_unlock_irqrestore(&dev_lock, flags);
 	(void)kthread_stop(dd->thread);
 kthread_failure:
 	if (dd->outgoing_skb)
@@ -2748,9 +2748,9 @@ static int remove(struct spi_device *spi)
 		free_irq(dd->spi->irq, dd);
 	}
 
-	spin_lock_irqsave(&dev_lock, flags);
+	raw_spin_lock_irqsave(&dev_lock, flags);
 	list_del(&dd->dev_list);
-	spin_unlock_irqrestore(&dev_lock, flags);
+	raw_spin_unlock_irqrestore(&dev_lock, flags);
 
 	pdata->reset(pdata, 0);
 	usleep_range(100, 120);
@@ -2821,7 +2821,7 @@ static struct spi_driver driver = {
 static int maxim_sti_init(void)
 {
 	INIT_LIST_HEAD(&dev_list);
-	spin_lock_init(&dev_lock);
+	raw_spin_lock_init(&dev_lock);
 	return spi_register_driver(&driver);
 }
 

@@ -495,14 +495,14 @@ void msm_usb_irq_disable(bool disable)
 	struct ci13xxx *udc = _udc;
 	unsigned long flags;
 
-	spin_lock_irqsave(udc->lock, flags);
+	raw_spin_lock_irqsave(udc->lock, flags);
 
 	if (_udc_ctxt.irq_disabled == disable) {
 		pr_debug("Interrupt state already disable = %d\n", disable);
 		if (disable)
 			mod_timer(&_udc_ctxt.irq_enable_timer,
 					IRQ_ENABLE_DELAY);
-		spin_unlock_irqrestore(udc->lock, flags);
+		raw_spin_unlock_irqrestore(udc->lock, flags);
 		return;
 	}
 
@@ -520,7 +520,7 @@ void msm_usb_irq_disable(bool disable)
 		_udc_ctxt.irq_disabled = false;
 	}
 
-	spin_unlock_irqrestore(udc->lock, flags);
+	raw_spin_unlock_irqrestore(udc->lock, flags);
 }
 
 static void enable_usb_irq_timer_func(unsigned long data)

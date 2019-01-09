@@ -106,14 +106,14 @@ static struct uid_stat *find_or_create_uid_stat(uid_t uid)
 {
 	struct uid_stat *entry;
 	unsigned long flags;
-	spin_lock_irqsave(&uid_lock, flags);
+	raw_spin_lock_irqsave(&uid_lock, flags);
 	entry = find_uid_stat(uid);
 	if (entry) {
-		spin_unlock_irqrestore(&uid_lock, flags);
+		raw_spin_unlock_irqrestore(&uid_lock, flags);
 		return entry;
 	}
 	entry = create_stat(uid);
-	spin_unlock_irqrestore(&uid_lock, flags);
+	raw_spin_unlock_irqrestore(&uid_lock, flags);
 	if (entry)
 		create_stat_proc(entry);
 	return entry;

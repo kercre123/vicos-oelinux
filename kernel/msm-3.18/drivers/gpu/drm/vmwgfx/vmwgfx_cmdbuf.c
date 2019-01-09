@@ -113,7 +113,7 @@ struct vmw_cmdbuf_man {
 	size_t cur_pos;
 	size_t default_size;
 	unsigned max_hw_submitted;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct dma_pool *headers;
 	struct dma_pool *dheaders;
 	struct tasklet_struct tasklet;
@@ -277,9 +277,9 @@ void vmw_cmdbuf_header_free(struct vmw_cmdbuf_header *header)
 		vmw_cmdbuf_header_inline_free(header);
 		return;
 	}
-	spin_lock_bh(&man->lock);
+	raw_spin_lock_bh(&man->lock);
 	__vmw_cmdbuf_header_free(header);
-	spin_unlock_bh(&man->lock);
+	raw_spin_unlock_bh(&man->lock);
 }
 
 
@@ -484,9 +484,9 @@ static void vmw_cmdbuf_man_tasklet(unsigned long data)
 {
 	struct vmw_cmdbuf_man *man = (struct vmw_cmdbuf_man *) data;
 
-	spin_lock(&man->lock);
+	raw_spin_lock(&man->lock);
 	vmw_cmdbuf_man_process(man);
-	spin_unlock(&man->lock);
+	raw_spin_unlock(&man->lock);
 }
 
 /**
@@ -506,7 +506,7 @@ static void vmw_cmdbuf_work_func(struct work_struct *work)
 	uint32_t dummy;
 	bool restart = false;
 
-	spin_lock_bh(&man->lock);
+	raw_spin_lock_bh(&man->lock);
 	list_for_each_entry_safe(entry, next, &man->error, list) {
 		restart = true;
 		DRM_ERROR("Command buffer error.\n");
@@ -515,7 +515,7 @@ static void vmw_cmdbuf_work_func(struct work_struct *work)
 		__vmw_cmdbuf_header_free(entry);
 		wake_up_all(&man->idle_queue);
 	}
-	spin_unlock_bh(&man->lock);
+	raw_spin_unlock_bh(&man->lock);
 
 	if (restart && vmw_cmdbuf_startstop(man, true))
 		DRM_ERROR("Failed restarting command buffer context 0.\n");
@@ -538,7 +538,7 @@ static bool vmw_cmdbuf_man_idle(struct vmw_cmdbuf_man *man,
 	bool idle = false;
 	int i;
 
-	spin_lock_bh(&man->lock);
+	raw_spin_lock_bh(&man->lock);
 	vmw_cmdbuf_man_process(man);
 	for_each_cmdbuf_ctx(man, i, ctx) {
 		if (!list_empty(&ctx->submitted) ||
@@ -550,7 +550,7 @@ static bool vmw_cmdbuf_man_idle(struct vmw_cmdbuf_man *man,
 	idle = list_empty(&man->error);
 
 out_unlock:
-	spin_unlock_bh(&man->lock);
+	raw_spin_unlock_bh(&man->lock);
 
 	return idle;
 }
@@ -573,7 +573,7 @@ static void __vmw_cmdbuf_cur_flush(struct vmw_cmdbuf_man *man)
 	if (!cur)
 		return;
 
-	spin_lock_bh(&man->lock);
+	raw_spin_lock_bh(&man->lock);
 	if (man->cur_pos == 0) {
 		__vmw_cmdbuf_header_free(cur);
 		goto out_unlock;
@@ -582,7 +582,7 @@ static void __vmw_cmdbuf_cur_flush(struct vmw_cmdbuf_man *man)
 	man->cur->cb_header->length = man->cur_pos;
 	vmw_cmdbuf_ctx_add(man, man->cur, SVGA_CB_CONTEXT_0);
 out_unlock:
-	spin_unlock_bh(&man->lock);
+	raw_spin_unlock_bh(&man->lock);
 	man->cur = NULL;
 	man->cur_pos = 0;
 }
@@ -675,7 +675,7 @@ static bool vmw_cmdbuf_try_alloc(struct vmw_cmdbuf_man *man,
 		return true;
  
 	memset(info->node, 0, sizeof(*info->node));
-	spin_lock_bh(&man->lock);
+	raw_spin_lock_bh(&man->lock);
 	ret = drm_mm_insert_node_generic(&man->mm, info->node, info->page_size,
 					 0, 0,
 					 DRM_MM_SEARCH_DEFAULT,
@@ -688,7 +688,7 @@ static bool vmw_cmdbuf_try_alloc(struct vmw_cmdbuf_man *man,
 						 DRM_MM_CREATE_DEFAULT);
 	}
 
-	spin_unlock_bh(&man->lock);
+	raw_spin_unlock_bh(&man->lock);
 	info->done = !ret;
 
 	return info->done;
@@ -810,9 +810,9 @@ static int vmw_cmdbuf_space_pool(struct vmw_cmdbuf_man *man,
 	return 0;
 
 out_no_cb_header:
-	spin_lock_bh(&man->lock);
+	raw_spin_lock_bh(&man->lock);
 	drm_mm_remove_node(&header->node);
-	spin_unlock_bh(&man->lock);
+	raw_spin_unlock_bh(&man->lock);
 
 	return ret;
 }
@@ -1069,9 +1069,9 @@ static int vmw_cmdbuf_send_device_command(struct vmw_cmdbuf_man *man,
 	memcpy(cmd, command, size);
 	header->cb_header->length = size;
 	header->cb_context = SVGA_CB_CONTEXT_DEVICE;
-	spin_lock_bh(&man->lock);
+	raw_spin_lock_bh(&man->lock);
 	status = vmw_cmdbuf_header_submit(header);
-	spin_unlock_bh(&man->lock);
+	raw_spin_unlock_bh(&man->lock);
 	vmw_cmdbuf_header_free(header);
 
 	if (status != SVGA_CB_STATUS_COMPLETED) {
@@ -1233,7 +1233,7 @@ struct vmw_cmdbuf_man *vmw_cmdbuf_man_create(struct vmw_private *dev_priv)
 		vmw_cmdbuf_ctx_init(ctx);
 
 	INIT_LIST_HEAD(&man->error);
-	spin_lock_init(&man->lock);
+	raw_spin_lock_init(&man->lock);
 	mutex_init(&man->cur_mutex);
 	mutex_init(&man->space_mutex);
 	tasklet_init(&man->tasklet, vmw_cmdbuf_man_tasklet,

@@ -27,7 +27,7 @@
 struct smb23x_wakeup_source {
 	struct wakeup_source source;
 	unsigned long enabled_bitmap;
-	spinlock_t ws_lock;
+	raw_spinlock_t ws_lock;
 };
 
 enum wakeup_src {
@@ -454,7 +454,7 @@ i2c_error:
 
 static void smb23x_wakeup_src_init(struct smb23x_chip *chip)
 {
-	spin_lock_init(&chip->smb23x_ws.ws_lock);
+	raw_spin_lock_init(&chip->smb23x_ws.ws_lock);
 	wakeup_source_init(&chip->smb23x_ws.source, "smb23x");
 }
 
@@ -463,14 +463,14 @@ static void smb23x_stay_awake(struct smb23x_wakeup_source *source,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&source->ws_lock, flags);
+	raw_spin_lock_irqsave(&source->ws_lock, flags);
 
 	if (!__test_and_set_bit(wk_src, &source->enabled_bitmap)) {
 		__pm_stay_awake(&source->source);
 		pr_debug("enabled source %s, wakeup_src %d\n",
 			source->source.name, wk_src);
 	}
-	spin_unlock_irqrestore(&source->ws_lock, flags);
+	raw_spin_unlock_irqrestore(&source->ws_lock, flags);
 }
 
 static void smb23x_relax(struct smb23x_wakeup_source *source,
@@ -478,13 +478,13 @@ static void smb23x_relax(struct smb23x_wakeup_source *source,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&source->ws_lock, flags);
+	raw_spin_lock_irqsave(&source->ws_lock, flags);
 	if (__test_and_clear_bit(wk_src, &source->enabled_bitmap) &&
 		!(source->enabled_bitmap & WAKEUP_SRC_MASK)) {
 		__pm_relax(&source->source);
 		pr_debug("disabled source %s\n", source->source.name);
 	}
-	spin_unlock_irqrestore(&source->ws_lock, flags);
+	raw_spin_unlock_irqrestore(&source->ws_lock, flags);
 
 	pr_debug("relax source %s, wakeup_src %d\n",
 		source->source.name, wk_src);

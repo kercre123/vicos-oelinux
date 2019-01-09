@@ -242,7 +242,7 @@ static void msm_l2_erp_local_handler(void *force)
 	bool parity_ue, parity_ce, misc_ue;
 	int cpu;
 
-	spin_lock_irqsave(&local_handler_lock, flags);
+	raw_spin_lock_irqsave(&local_handler_lock, flags);
 
 	esr0 = get_l2_indirect_reg(L2ESR0_IA);
 	esr1 = get_l2_indirect_reg(L2ESR1_IA);
@@ -286,7 +286,7 @@ static void msm_l2_erp_local_handler(void *force)
 	else
 		WARN_ON(parity_ce);
 
-	spin_unlock_irqrestore(&local_handler_lock, flags);
+	raw_spin_unlock_irqrestore(&local_handler_lock, flags);
 }
 
 static irqreturn_t msm_l2_erp_irq(int irq, void *dev_id)

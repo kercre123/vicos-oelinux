@@ -29,7 +29,7 @@ struct mmc_host;
 struct mmc_trace_buffer {
 	int	wr_idx;
 	bool stop_tracing;
-	spinlock_t trace_lock;
+	raw_spinlock_t trace_lock;
 	char *data;
 };
 

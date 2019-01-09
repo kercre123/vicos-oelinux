@@ -52,7 +52,7 @@ struct mdp5_ctl {
 	struct op_mode pipeline;
 
 	/* REG_MDP5_CTL_*(<id>) registers access info + lock: */
-	spinlock_t hw_lock;
+	raw_spinlock_t hw_lock;
 	u32 reg_offset;
 
 	/* when do CTL registers need to be flushed? (mask of trigger bits) */
@@ -84,7 +84,7 @@ struct mdp5_ctl_manager {
 	u32 single_flush_pending_mask;
 
 	/* pool of CTLs + lock to protect resource allocation (ctls[i].busy) */
-	spinlock_t pool_lock;
+	raw_spinlock_t pool_lock;
 	struct mdp5_ctl ctls[MAX_CTL];
 };
 
@@ -120,7 +120,7 @@ static void set_display_intf(struct mdp5_kms *mdp5_kms,
 	unsigned long flags;
 	u32 intf_sel;
 
-	spin_lock_irqsave(&mdp5_kms->resource_lock, flags);
+	raw_spin_lock_irqsave(&mdp5_kms->resource_lock, flags);
 	intf_sel = mdp5_read(mdp5_kms, REG_MDP5_MDP_DISP_INTF_SEL(0));
 
 	switch (intf->num) {
@@ -146,7 +146,7 @@ static void set_display_intf(struct mdp5_kms *mdp5_kms,
 	}
 
 	mdp5_write(mdp5_kms, REG_MDP5_MDP_DISP_INTF_SEL(0), intf_sel);
-	spin_unlock_irqrestore(&mdp5_kms->resource_lock, flags);
+	raw_spin_unlock_irqrestore(&mdp5_kms->resource_lock, flags);
 }
 
 static void set_ctl_op(struct mdp5_ctl *ctl, struct mdp5_interface *intf)
@@ -172,9 +172,9 @@ static void set_ctl_op(struct mdp5_ctl *ctl, struct mdp5_interface *intf)
 		break;
 	}
 
-	spin_lock_irqsave(&ctl->hw_lock, flags);
+	raw_spin_lock_irqsave(&ctl->hw_lock, flags);
 	ctl_write(ctl, REG_MDP5_CTL_OP(ctl->id), ctl_op);
-	spin_unlock_irqrestore(&ctl->hw_lock, flags);
+	raw_spin_unlock_irqrestore(&ctl->hw_lock, flags);
 }
 
 int mdp5_ctl_set_pipeline(struct mdp5_ctl *ctl,
@@ -252,9 +252,9 @@ static void send_start_signal(struct mdp5_ctl *ctl)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&ctl->hw_lock, flags);
+	raw_spin_lock_irqsave(&ctl->hw_lock, flags);
 	ctl_write(ctl, REG_MDP5_CTL_START(ctl->id), 1);
-	spin_unlock_irqrestore(&ctl->hw_lock, flags);
+	raw_spin_unlock_irqrestore(&ctl->hw_lock, flags);
 }
 
 static void refill_start_mask(struct mdp5_ctl *ctl)
@@ -314,7 +314,7 @@ int mdp5_ctl_set_cursor(struct mdp5_ctl *ctl, int cursor_id, bool enable)
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&ctl->hw_lock, flags);
+	raw_spin_lock_irqsave(&ctl->hw_lock, flags);
 
 	blend_ext_cfg = ctl_read(ctl, REG_MDP5_CTL_LAYER_EXT_REG(ctl->id, lm));
 
@@ -332,7 +332,7 @@ int mdp5_ctl_set_cursor(struct mdp5_ctl *ctl, int cursor_id, bool enable)
 	ctl->cursor_on = enable;
 	ctl->cursor_id = cursor_id;
 
-	spin_unlock_irqrestore(&ctl->hw_lock, flags);
+	raw_spin_unlock_irqrestore(&ctl->hw_lock, flags);
 
 	ctl->pending_ctl_trigger = (mdp_ctl_flush_mask_cursor(cursor_id)|
 					mdp_ctl_flush_mask_lm(ctl->lm));
@@ -400,13 +400,13 @@ int mdp5_ctl_blend(struct mdp5_ctl *ctl, u8 *stage, u32 stage_cnt,
 		blend_ext_cfg |= mdp_ctl_blend_ext_mask(stage[i], i);
 	}
 
-	spin_lock_irqsave(&ctl->hw_lock, flags);
+	raw_spin_lock_irqsave(&ctl->hw_lock, flags);
 	if (ctl->cursor_on)
 		blend_ext_cfg |= cursor_blend_value(ctl->cursor_id, STAGE6);
 
 	ctl_write(ctl, REG_MDP5_CTL_LAYER_REG(ctl->id, ctl->lm), blend_cfg);
 	ctl_write(ctl, REG_MDP5_CTL_LAYER_EXT_REG(ctl->id, ctl->lm), blend_ext_cfg);
-	spin_unlock_irqrestore(&ctl->hw_lock, flags);
+	raw_spin_unlock_irqrestore(&ctl->hw_lock, flags);
 
 	ctl->pending_ctl_trigger = mdp_ctl_flush_mask_lm(ctl->lm);
 
@@ -549,9 +549,9 @@ u32 mdp5_ctl_commit(struct mdp5_ctl *ctl, u32 flush_mask)
 	fix_for_single_flush(ctl, &flush_mask, &flush_id);
 
 	if (flush_mask) {
-		spin_lock_irqsave(&ctl->hw_lock, flags);
+		raw_spin_lock_irqsave(&ctl->hw_lock, flags);
 		ctl_write(ctl, REG_MDP5_CTL_FLUSH(flush_id), flush_mask);
-		spin_unlock_irqrestore(&ctl->hw_lock, flags);
+		raw_spin_unlock_irqrestore(&ctl->hw_lock, flags);
 	}
 
 	if (start_signal_needed(ctl)) {
@@ -623,7 +623,7 @@ struct mdp5_ctl *mdp5_ctlm_request(struct mdp5_ctl_manager *ctl_mgr,
 	unsigned long flags;
 	int c;
 
-	spin_lock_irqsave(&ctl_mgr->pool_lock, flags);
+	raw_spin_lock_irqsave(&ctl_mgr->pool_lock, flags);
 
 	/* search the preferred */
 	for (c = 0; c < ctl_mgr->nctl; c++)
@@ -650,7 +650,7 @@ found:
 	DBG("CTL %d allocated", ctl->id);
 
 unlock:
-	spin_unlock_irqrestore(&ctl_mgr->pool_lock, flags);
+	raw_spin_unlock_irqrestore(&ctl_mgr->pool_lock, flags);
 	return ctl;
 }
 
@@ -662,9 +662,9 @@ void mdp5_ctlm_hw_reset(struct mdp5_ctl_manager *ctl_mgr)
 	for (c = 0; c < ctl_mgr->nctl; c++) {
 		struct mdp5_ctl *ctl = &ctl_mgr->ctls[c];
 
-		spin_lock_irqsave(&ctl->hw_lock, flags);
+		raw_spin_lock_irqsave(&ctl->hw_lock, flags);
 		ctl_write(ctl, REG_MDP5_CTL_OP(ctl->id), 0);
-		spin_unlock_irqrestore(&ctl->hw_lock, flags);
+		raw_spin_unlock_irqrestore(&ctl->hw_lock, flags);
 	}
 }
 
@@ -702,24 +702,24 @@ struct mdp5_ctl_manager *mdp5_ctlm_init(struct drm_device *dev,
 	ctl_mgr->nlm = hw_cfg->lm.count;
 	ctl_mgr->nctl = ctl_cfg->count;
 	ctl_mgr->flush_hw_mask = ctl_cfg->flush_hw_mask;
-	spin_lock_init(&ctl_mgr->pool_lock);
+	raw_spin_lock_init(&ctl_mgr->pool_lock);
 
 	/* initialize each CTL of the pool: */
-	spin_lock_irqsave(&ctl_mgr->pool_lock, flags);
+	raw_spin_lock_irqsave(&ctl_mgr->pool_lock, flags);
 	for (c = 0; c < ctl_mgr->nctl; c++) {
 		struct mdp5_ctl *ctl = &ctl_mgr->ctls[c];
 
 		if (WARN_ON(!ctl_cfg->base[c])) {
 			dev_err(dev->dev, "CTL_%d: base is null!\n", c);
 			ret = -EINVAL;
-			spin_unlock_irqrestore(&ctl_mgr->pool_lock, flags);
+			raw_spin_unlock_irqrestore(&ctl_mgr->pool_lock, flags);
 			goto fail;
 		}
 		ctl->ctlm = ctl_mgr;
 		ctl->id = c;
 		ctl->reg_offset = ctl_cfg->base[c];
 		ctl->status = 0;
-		spin_lock_init(&ctl->hw_lock);
+		raw_spin_lock_init(&ctl->hw_lock);
 	}
 
 	/*
@@ -734,7 +734,7 @@ struct mdp5_ctl_manager *mdp5_ctlm_init(struct drm_device *dev,
 		ctl_mgr->ctls[0].status |= CTL_STAT_BOOKED;
 		ctl_mgr->ctls[1].status |= CTL_STAT_BOOKED;
 	}
-	spin_unlock_irqrestore(&ctl_mgr->pool_lock, flags);
+	raw_spin_unlock_irqrestore(&ctl_mgr->pool_lock, flags);
 	DBG("Pool of %d CTLs created.", ctl_mgr->nctl);
 
 	return ctl_mgr;

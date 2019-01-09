@@ -113,7 +113,7 @@ struct ci13xxx_ep {
 	int                                    wedge;
 
 	/* global resources */
-	spinlock_t                            *lock;
+	raw_spinlock_t                            *lock;
 	struct device                         *device;
 	struct dma_pool                       *td_pool;
 	struct ci13xxx_td                     *last_zptr;
@@ -154,7 +154,7 @@ struct ci13xxx_udc_driver {
 
 /* CI13XXX UDC descriptor & global resources */
 struct ci13xxx {
-	spinlock_t		  *lock;      /* ctrl register bank access */
+	raw_spinlock_t		  *lock;      /* ctrl register bank access */
 	void __iomem              *regs;      /* registers address space */
 
 	struct dma_pool           *qh_pool;   /* DMA pool for queue heads */

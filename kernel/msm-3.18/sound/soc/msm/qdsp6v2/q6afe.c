@@ -3633,7 +3633,7 @@ struct afe_audio_client *q6afe_audio_client_alloc(void *priv)
 	mutex_init(&ac->cmd_lock);
 	for (lcnt = 0; lcnt <= OUT; lcnt++) {
 		mutex_init(&ac->port[lcnt].lock);
-		spin_lock_init(&ac->port[lcnt].dsp_lock);
+		raw_spin_lock_init(&ac->port[lcnt].dsp_lock);
 	}
 	atomic_set(&ac->cmd_state, 0);
 

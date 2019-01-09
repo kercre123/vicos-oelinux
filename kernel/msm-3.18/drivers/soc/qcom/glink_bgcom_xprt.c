@@ -167,7 +167,7 @@ struct edge_info {
 	uint32_t bgcom_status;
 	struct work_struct wakeup_work;
 	uint32_t activity_flag;
-	spinlock_t activity_lock;
+	raw_spinlock_t activity_lock;
 	struct bgcom_open_config_type bgcom_config;
 	void *bgcom_handle;
 };
@@ -1356,9 +1356,9 @@ static int power_vote(struct glink_transport_if *if_ptr, uint32_t state)
 	struct edge_info *einfo;
 
 	einfo = container_of(if_ptr, struct edge_info, xprt_if);
-	spin_lock_irqsave(&einfo->activity_lock, flags);
+	raw_spin_lock_irqsave(&einfo->activity_lock, flags);
 	einfo->activity_flag |= ACTIVE_TX;
-	spin_unlock_irqrestore(&einfo->activity_lock, flags);
+	raw_spin_unlock_irqrestore(&einfo->activity_lock, flags);
 	return 0;
 }
 
@@ -1374,9 +1374,9 @@ static int power_unvote(struct glink_transport_if *if_ptr)
 	struct edge_info *einfo;
 
 	einfo = container_of(if_ptr, struct edge_info, xprt_if);
-	spin_lock_irqsave(&einfo->activity_lock, flags);
+	raw_spin_lock_irqsave(&einfo->activity_lock, flags);
 	einfo->activity_flag &= ~ACTIVE_TX;
-	spin_unlock_irqrestore(&einfo->activity_lock, flags);
+	raw_spin_unlock_irqrestore(&einfo->activity_lock, flags);
 	return 0;
 }
 
@@ -1597,12 +1597,12 @@ static int glink_bgcom_probe(struct platform_device *pdev)
 	init_srcu_struct(&einfo->use_ref);
 	mutex_init(&einfo->write_lock);
 	init_waitqueue_head(&einfo->tx_blocked_queue);
-	spin_lock_init(&einfo->activity_lock);
+	raw_spin_lock_init(&einfo->activity_lock);
 	mutex_init(&einfo->tx_avail_lock);
 
-	spin_lock_irqsave(&edge_infos_lock, flags);
+	raw_spin_lock_irqsave(&edge_infos_lock, flags);
 	list_add_tail(&einfo->list, &edge_infos);
-	spin_unlock_irqrestore(&edge_infos_lock, flags);
+	raw_spin_unlock_irqrestore(&edge_infos_lock, flags);
 
 	einfo->task = kthread_run(kthread_worker_fn, &einfo->kworker,
 				  "bgcom_%s", subsys_name);
@@ -1650,9 +1650,9 @@ reg_xprt_fail:
 	kthread_stop(einfo->task);
 	einfo->task = NULL;
 kthread_fail:
-	spin_lock_irqsave(&edge_infos_lock, flags);
+	raw_spin_lock_irqsave(&edge_infos_lock, flags);
 	list_del(&einfo->list);
-	spin_unlock_irqrestore(&edge_infos_lock, flags);
+	raw_spin_unlock_irqrestore(&edge_infos_lock, flags);
 missing_key:
 	kfree(einfo);
 edge_info_alloc_fail:
@@ -1670,9 +1670,9 @@ static int glink_bgcom_remove(struct platform_device *pdev)
 	flush_kthread_worker(&einfo->kworker);
 	kthread_stop(einfo->task);
 	einfo->task = NULL;
-	spin_lock_irqsave(&edge_infos_lock, flags);
+	raw_spin_lock_irqsave(&edge_infos_lock, flags);
 	list_del(&einfo->list);
-	spin_unlock_irqrestore(&edge_infos_lock, flags);
+	raw_spin_unlock_irqrestore(&edge_infos_lock, flags);
 	return 0;
 }
 
@@ -1693,9 +1693,9 @@ static int glink_bgcom_suspend(struct platform_device *pdev,
 	if (strcmp(einfo->xprt_cfg.edge, "bgcom"))
 		return 0;
 
-	spin_lock_irqsave(&einfo->activity_lock, flags);
+	raw_spin_lock_irqsave(&einfo->activity_lock, flags);
 	suspend = !(einfo->activity_flag);
-	spin_unlock_irqrestore(&einfo->activity_lock, flags);
+	raw_spin_unlock_irqrestore(&einfo->activity_lock, flags);
 	if (suspend)
 		rc = bgcom_suspend(&einfo->bgcom_handle);
 	if (rc < 0)

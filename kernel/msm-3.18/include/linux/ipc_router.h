@@ -131,7 +131,7 @@ struct msm_ipc_port {
 	wait_queue_head_t port_tx_wait_q;
 
 	int restart_state;
-	spinlock_t restart_lock;
+	raw_spinlock_t restart_lock;
 	wait_queue_head_t restart_wait;
 
 	void *rport_info;

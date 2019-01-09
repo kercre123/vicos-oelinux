@@ -209,7 +209,7 @@ struct dbg_ctx {
 	bool			enable;
 	void __iomem		*base;
 	uint32_t		*state;
-	spinlock_t		spinlock;
+	raw_spinlock_t		spinlock;
 	struct mutex		mutex;
 };
 static struct dbg_ctx *dbg[NR_CPUS];
@@ -229,7 +229,7 @@ struct etm_ctx {
 	void __iomem		*base;
 	struct device		*dev;
 	uint32_t		*state;
-	spinlock_t		spinlock;
+	raw_spinlock_t		spinlock;
 	struct mutex		mutex;
 };
 
@@ -688,12 +688,12 @@ static int jtag_mm_etm_callback(struct notifier_block *nfb,
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
 	case CPU_STARTING:
-		spin_lock(&etm[cpu]->spinlock);
+		raw_spin_lock(&etm[cpu]->spinlock);
 		if (!etm[cpu]->init) {
 			etm_init_arch_data(etm[cpu]);
 			etm[cpu]->init = true;
 		}
-		spin_unlock(&etm[cpu]->spinlock);
+		raw_spin_unlock(&etm[cpu]->spinlock);
 		break;
 
 	case CPU_ONLINE:
@@ -752,7 +752,7 @@ static int jtag_mm_etm_probe(struct platform_device *pdev, uint32_t cpu)
 	if (!etmdata->state)
 		return -ENOMEM;
 
-	spin_lock_init(&etmdata->spinlock);
+	raw_spin_lock_init(&etmdata->spinlock);
 	mutex_init(&etmdata->mutex);
 
 	if (cnt == 0)
@@ -812,12 +812,12 @@ static int jtag_mm_dbg_callback(struct notifier_block *nfb,
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
 	case CPU_STARTING:
-		spin_lock(&dbg[cpu]->spinlock);
+		raw_spin_lock(&dbg[cpu]->spinlock);
 		if (!dbg[cpu]->init) {
 			dbg_init_arch_data(dbg[cpu]);
 			dbg[cpu]->init = true;
 		}
-		spin_unlock(&dbg[cpu]->spinlock);
+		raw_spin_unlock(&dbg[cpu]->spinlock);
 		break;
 
 	case CPU_ONLINE:
@@ -876,7 +876,7 @@ static int jtag_mm_dbg_probe(struct platform_device *pdev,
 	if (!dbgdata->state)
 		return -ENOMEM;
 
-	spin_lock_init(&dbgdata->spinlock);
+	raw_spin_lock_init(&dbgdata->spinlock);
 	mutex_init(&dbgdata->mutex);
 
 	if (cnt == 0)

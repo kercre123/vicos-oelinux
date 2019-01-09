@@ -53,7 +53,7 @@ struct qti_ctrl_port {
 
 	struct list_head	cpkt_req_q;
 
-	spinlock_t	lock;
+	raw_spinlock_t	lock;
 	enum gadget_type	gtype;
 	unsigned	host_to_modem;
 	unsigned	copied_to_modem;
@@ -86,23 +86,23 @@ static void qti_ctrl_queue_notify(struct qti_ctrl_port *port)
 	pr_debug("%s: Queue empty packet for QTI for port%d",
 		 __func__, port->index);
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	if (!port->is_open) {
 		pr_err("%s: rmnet ctrl file handler %pK is not open",
 			   __func__, port);
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 		return;
 	}
 
 	cpkt = alloc_rmnet_ctrl_pkt(0, GFP_ATOMIC);
 	if (IS_ERR(cpkt)) {
 		pr_err("%s: Unable to allocate reset function pkt\n", __func__);
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 		return;
 	}
 
 	list_add_tail(&cpkt->list, &port->cpkt_req_q);
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	pr_debug("%s: Wake up read queue", __func__);
 	wake_up(&port->read_wq);
@@ -137,21 +137,21 @@ static int gqti_ctrl_send_cpkt_tomodem(u8 portno, void *buf, size_t len)
 
 	pr_debug("%s: gtype:%d: Add to cpkt_req_q packet with len = %zu\n",
 			__func__, port->gtype, len);
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 
 	/* drop cpkt if port is not open */
 	if (!port->is_open) {
 		pr_debug("rmnet file handler %pK(index=%d) is not open",
 		       port, port->index);
 		port->drp_cpkt_cnt++;
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 		free_rmnet_ctrl_pkt(cpkt);
 		return 0;
 	}
 
 	list_add_tail(&cpkt->list, &port->cpkt_req_q);
 	port->host_to_modem++;
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	/* wakeup read thread */
 	pr_debug("%s: Wake up read queue", __func__);
@@ -197,7 +197,7 @@ int gqti_ctrl_connect(void *gr, u8 port_num, unsigned intf,
 		return -ENODEV;
 	}
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	port->gtype = gtype;
 	if (dxport == USB_GADGET_XPORT_BAM_DMUX) {
 		/*
@@ -232,7 +232,7 @@ int gqti_ctrl_connect(void *gr, u8 port_num, unsigned intf,
 		g_dpl->notify_modem = gqti_ctrl_notify_modem;
 		atomic_set(&port->line_state, 1);
 	} else {
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 		pr_err("%s(): Port is used without gtype.\n", __func__);
 		return -ENODEV;
 	}
@@ -243,7 +243,7 @@ int gqti_ctrl_connect(void *gr, u8 port_num, unsigned intf,
 	port->modem_to_host = 0;
 	port->drp_cpkt_cnt = 0;
 
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	atomic_set(&port->connected, 1);
 	wake_up(&port->read_wq);
@@ -277,7 +277,7 @@ void gqti_ctrl_disconnect(void *gr, u8 port_num)
 
 	atomic_set(&port->connected, 0);
 	atomic_set(&port->line_state, 0);
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 
 	/* reset ipa eps to -1 */
 	port->ipa_prod_idx = -1;
@@ -305,7 +305,7 @@ void gqti_ctrl_disconnect(void *gr, u8 port_num)
 		free_rmnet_ctrl_pkt(cpkt);
 	}
 
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	/* send 0 len pkt to qti to notify state change */
 	qti_ctrl_queue_notify(port);
@@ -344,9 +344,9 @@ static int qti_ctrl_open(struct inode *ip, struct file *fp)
 		return -EBUSY;
 	}
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	port->is_open = true;
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	return 0;
 }
@@ -360,9 +360,9 @@ static int qti_ctrl_release(struct inode *ip, struct file *fp)
 
 	pr_debug("Close rmnet control file");
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	port->is_open = false;
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	qti_ctrl_unlock(&port->open_excl);
 
@@ -394,10 +394,10 @@ qti_ctrl_read(struct file *fp, char __user *buf, size_t count, loff_t *pos)
 
 	/* block until a new packet is available */
 	do {
-		spin_lock_irqsave(&port->lock, flags);
+		raw_spin_lock_irqsave(&port->lock, flags);
 		if (!list_empty(&port->cpkt_req_q))
 			break;
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 
 		pr_debug("%s: Requests list is empty. Wait.\n", __func__);
 		ret = wait_event_interruptible(port->read_wq,
@@ -412,7 +412,7 @@ qti_ctrl_read(struct file *fp, char __user *buf, size_t count, loff_t *pos)
 	cpkt = list_first_entry(&port->cpkt_req_q, struct rmnet_ctrl_pkt,
 							list);
 	list_del(&cpkt->list);
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	if (cpkt->len > count) {
 		pr_err("cpkt size too big:%d > buf size:%zu\n",
@@ -493,12 +493,12 @@ qti_ctrl_write(struct file *fp, const char __user *buf, size_t count,
 	}
 	port->copied_from_modem++;
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	if (port && port->port_usb) {
 		if (port->gtype == USB_GADGET_RMNET) {
 			g_rmnet = (struct grmnet *)port->port_usb;
 		} else {
-			spin_unlock_irqrestore(&port->lock, flags);
+			raw_spin_unlock_irqrestore(&port->lock, flags);
 			pr_err("%s(): unrecognized gadget type(%d).\n",
 						__func__, port->gtype);
 			return -EINVAL;
@@ -516,7 +516,7 @@ qti_ctrl_write(struct file *fp, const char __user *buf, size_t count,
 		}
 	}
 
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 	kfree(kbuf);
 	qti_ctrl_unlock(&port->write_excl);
 
@@ -637,12 +637,12 @@ static unsigned int qti_ctrl_poll(struct file *file, poll_table *wait)
 
 	poll_wait(file, &port->read_wq, wait);
 
-	spin_lock_irqsave(&port->lock, flags);
+	raw_spin_lock_irqsave(&port->lock, flags);
 	if (!list_empty(&port->cpkt_req_q)) {
 		mask |= POLLIN | POLLRDNORM;
 		pr_debug("%s sets POLLIN for rmnet_ctrl_qti_port\n", __func__);
 	}
-	spin_unlock_irqrestore(&port->lock, flags);
+	raw_spin_unlock_irqrestore(&port->lock, flags);
 
 	return mask;
 }
@@ -657,7 +657,7 @@ static int qti_ctrl_read_stats(struct seq_file *s, void *unused)
 		port = ctrl_port[i];
 		if (!port)
 			continue;
-		spin_lock_irqsave(&port->lock, flags);
+		raw_spin_lock_irqsave(&port->lock, flags);
 
 		seq_printf(s, "\n#PORT:%d port: %pK\n", i, port);
 		seq_printf(s, "name:			%s\n", port->name);
@@ -671,7 +671,7 @@ static int qti_ctrl_read_stats(struct seq_file *s, void *unused)
 				port->modem_to_host);
 		seq_printf(s, "cpkt_drp_cnt:		%d\n",
 				port->drp_cpkt_cnt);
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 	}
 
 	return 0;
@@ -695,13 +695,13 @@ static ssize_t qti_ctrl_reset_stats(struct file *file,
 		if (!port)
 			continue;
 
-		spin_lock_irqsave(&port->lock, flags);
+		raw_spin_lock_irqsave(&port->lock, flags);
 		port->host_to_modem = 0;
 		port->copied_to_modem = 0;
 		port->copied_from_modem = 0;
 		port->modem_to_host = 0;
 		port->drp_cpkt_cnt = 0;
-		spin_unlock_irqrestore(&port->lock, flags);
+		raw_spin_unlock_irqrestore(&port->lock, flags);
 	}
 	return count;
 }
@@ -774,7 +774,7 @@ int gqti_ctrl_init(void)
 		}
 
 		INIT_LIST_HEAD(&port->cpkt_req_q);
-		spin_lock_init(&port->lock);
+		raw_spin_lock_init(&port->lock);
 
 		atomic_set(&port->open_excl, 0);
 		atomic_set(&port->read_excl, 0);

@@ -1658,9 +1658,9 @@ static int msm_spi_transfer_one(struct spi_master *master,
 
 	mutex_lock(&dd->core_lock);
 
-	spin_lock_irqsave(&dd->queue_lock, flags);
+	raw_spin_lock_irqsave(&dd->queue_lock, flags);
 	dd->transfer_pending = 1;
-	spin_unlock_irqrestore(&dd->queue_lock, flags);
+	raw_spin_unlock_irqrestore(&dd->queue_lock, flags);
 	/*
 	 * get local resources for each transfer to ensure we're in a good
 	 * state and not interfering with other EE's using this device
@@ -1692,9 +1692,9 @@ static int msm_spi_transfer_one(struct spi_master *master,
 		status_error =
 			msm_spi_process_transfer(dd);
 
-	spin_lock_irqsave(&dd->queue_lock, flags);
+	raw_spin_lock_irqsave(&dd->queue_lock, flags);
 	dd->transfer_pending = 0;
-	spin_unlock_irqrestore(&dd->queue_lock, flags);
+	raw_spin_unlock_irqrestore(&dd->queue_lock, flags);
 
 	/*
 	 * Put local resources prior to calling finalize to ensure the hw
@@ -2554,7 +2554,7 @@ static int msm_spi_probe(struct platform_device *pdev)
 
 skip_dma_resources:
 
-	spin_lock_init(&dd->queue_lock);
+	raw_spin_lock_init(&dd->queue_lock);
 	mutex_init(&dd->core_lock);
 	init_waitqueue_head(&dd->continue_suspend);
 
@@ -2620,9 +2620,9 @@ static int msm_spi_pm_suspend_runtime(struct device *device)
 	 * Make sure nothing is added to the queue while we're
 	 * suspending
 	 */
-	spin_lock_irqsave(&dd->queue_lock, flags);
+	raw_spin_lock_irqsave(&dd->queue_lock, flags);
 	dd->suspended = 1;
-	spin_unlock_irqrestore(&dd->queue_lock, flags);
+	raw_spin_unlock_irqrestore(&dd->queue_lock, flags);
 
 	/* Wait for transactions to end, or time out */
 	wait_event_interruptible(dd->continue_suspend,

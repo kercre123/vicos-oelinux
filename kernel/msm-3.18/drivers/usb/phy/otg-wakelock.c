@@ -81,11 +81,11 @@ static void otgwl_handle_event(unsigned long event)
 {
 	unsigned long irqflags;
 
-	spin_lock_irqsave(&otgwl_spinlock, irqflags);
+	raw_spin_lock_irqsave(&otgwl_spinlock, irqflags);
 
 	if (!enabled) {
 		otgwl_drop(&vbus_lock);
-		spin_unlock_irqrestore(&otgwl_spinlock, irqflags);
+		raw_spin_unlock_irqrestore(&otgwl_spinlock, irqflags);
 		return;
 	}
 
@@ -105,7 +105,7 @@ static void otgwl_handle_event(unsigned long event)
 		break;
 	}
 
-	spin_unlock_irqrestore(&otgwl_spinlock, irqflags);
+	raw_spin_unlock_irqrestore(&otgwl_spinlock, irqflags);
 }
 
 static int otgwl_otg_notifications(struct notifier_block *nb,

@@ -77,7 +77,7 @@ struct svc_addr {
  *			<service_id:instance_id>.
  */
 struct svc_event_nb {
-	spinlock_t nb_lock;
+	raw_spinlock_t nb_lock;
 	uint32_t service_id;
 	uint32_t instance_id;
 	struct raw_notifier_head svc_event_rcvr_list;

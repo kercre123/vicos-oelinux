@@ -293,7 +293,7 @@ void ipc_log_write(void *ctxt, struct encode_context *ectxt)
 	}
 
 	read_lock_irqsave(&context_list_lock_lha1, flags);
-	spin_lock(&ilctxt->context_lock_lhb1);
+	raw_spin_lock(&ilctxt->context_lock_lhb1);
 	while (ilctxt->write_avail <= ectxt->offset)
 		msg_drop(ilctxt);
 
@@ -323,7 +323,7 @@ void ipc_log_write(void *ctxt, struct encode_context *ectxt)
 	ilctxt->write_page->hdr.write_offset += bytes_to_write;
 	ilctxt->write_avail -= ectxt->offset;
 	complete(&ilctxt->read_avail);
-	spin_unlock(&ilctxt->context_lock_lhb1);
+	raw_spin_unlock(&ilctxt->context_lock_lhb1);
 	read_unlock_irqrestore(&context_list_lock_lha1, flags);
 }
 EXPORT_SYMBOL(ipc_log_write);
@@ -546,13 +546,13 @@ int ipc_log_extract(void *ctxt, char *buff, int size)
 	dctxt.buff = buff;
 	dctxt.size = size;
 	read_lock_irqsave(&context_list_lock_lha1, flags);
-	spin_lock(&ilctxt->context_lock_lhb1);
+	raw_spin_lock(&ilctxt->context_lock_lhb1);
 	while (dctxt.size >= MAX_MSG_DECODED_SIZE &&
 	       !is_nd_read_empty(ilctxt)) {
 		msg_read(ilctxt, &ectxt);
 		deserialize_func = get_deserialization_func(ilctxt,
 							ectxt.hdr.type);
-		spin_unlock(&ilctxt->context_lock_lhb1);
+		raw_spin_unlock(&ilctxt->context_lock_lhb1);
 		read_unlock_irqrestore(&context_list_lock_lha1, flags);
 		if (deserialize_func)
 			deserialize_func(&ectxt, &dctxt);
@@ -560,11 +560,11 @@ int ipc_log_extract(void *ctxt, char *buff, int size)
 			pr_err("%s: unknown message 0x%x\n",
 				__func__, ectxt.hdr.type);
 		read_lock_irqsave(&context_list_lock_lha1, flags);
-		spin_lock(&ilctxt->context_lock_lhb1);
+		raw_spin_lock(&ilctxt->context_lock_lhb1);
 	}
 	if ((size - dctxt.size) == 0)
 		reinit_completion(&ilctxt->read_avail);
-	spin_unlock(&ilctxt->context_lock_lhb1);
+	raw_spin_unlock(&ilctxt->context_lock_lhb1);
 	read_unlock_irqrestore(&context_list_lock_lha1, flags);
 	return size - dctxt.size;
 }
@@ -727,11 +727,11 @@ int add_deserialization_func(void *ctxt, int type,
 		return -ENOSPC;
 
 	read_lock_irqsave(&context_list_lock_lha1, flags);
-	spin_lock(&ilctxt->context_lock_lhb1);
+	raw_spin_lock(&ilctxt->context_lock_lhb1);
 	df_info->type = type;
 	df_info->dfunc = dfunc;
 	list_add_tail(&df_info->list, &ilctxt->dfunc_info_list);
-	spin_unlock(&ilctxt->context_lock_lhb1);
+	raw_spin_unlock(&ilctxt->context_lock_lhb1);
 	read_unlock_irqrestore(&context_list_lock_lha1, flags);
 	return 0;
 }
@@ -779,7 +779,7 @@ void *ipc_log_context_create(int max_num_pages,
 	init_completion(&ctxt->read_avail);
 	INIT_LIST_HEAD(&ctxt->page_list);
 	INIT_LIST_HEAD(&ctxt->dfunc_info_list);
-	spin_lock_init(&ctxt->context_lock_lhb1);
+	raw_spin_lock_init(&ctxt->context_lock_lhb1);
 	for (page_cnt = 0; page_cnt < max_num_pages; page_cnt++) {
 		pg = kzalloc(sizeof(struct ipc_log_page), GFP_KERNEL);
 		if (!pg) {
@@ -795,9 +795,9 @@ void *ipc_log_context_create(int max_num_pages,
 		pg->hdr.magic = IPC_LOGGING_MAGIC_NUM;
 		pg->hdr.nmagic = ~(IPC_LOGGING_MAGIC_NUM);
 
-		spin_lock_irqsave(&ctxt->context_lock_lhb1, flags);
+		raw_spin_lock_irqsave(&ctxt->context_lock_lhb1, flags);
 		list_add_tail(&pg->hdr.list, &ctxt->page_list);
-		spin_unlock_irqrestore(&ctxt->context_lock_lhb1, flags);
+		raw_spin_unlock_irqrestore(&ctxt->context_lock_lhb1, flags);
 	}
 
 	ctxt->log_id = (uint64_t)(uintptr_t)ctxt;

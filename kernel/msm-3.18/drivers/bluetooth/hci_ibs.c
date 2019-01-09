@@ -103,7 +103,7 @@ struct ibs_struct {
 	struct sk_buff *rx_skb;
 	struct sk_buff_head txq;
 	struct sk_buff_head tx_wait_q;	/* HCI_IBS wait queue	*/
-	spinlock_t hci_ibs_lock;	/* HCI_IBS state lock	*/
+	raw_spinlock_t hci_ibs_lock;	/* HCI_IBS state lock	*/
 	unsigned long tx_ibs_state;	/* HCI_IBS transmit side power state */
 	unsigned long rx_ibs_state;	/* HCI_IBS receive side power state */
 	unsigned long tx_vote;		/* clock must be on for TX */
@@ -259,7 +259,7 @@ static void ibs_wq_awake_device(struct work_struct *work)
 	/* Vote for serial clock */
 	ibs_msm_serial_clock_vote(HCI_IBS_TX_VOTE_CLOCK_ON, hu);
 
-	spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
+	raw_spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
 
 	/* send wake indication to device */
 	if (send_hci_ibs_cmd(HCI_IBS_WAKE_IND, hu) < 0)
@@ -270,7 +270,7 @@ static void ibs_wq_awake_device(struct work_struct *work)
 	/* start retransmit timer */
 	mod_timer(&ibs->wake_retrans_timer, jiffies + msecs_to_jiffies(10));
 
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 
 }
 
@@ -285,7 +285,7 @@ static void ibs_wq_awake_rx(struct work_struct *work)
 
 	ibs_msm_serial_clock_vote(HCI_IBS_RX_VOTE_CLOCK_ON, hu);
 
-	spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
+	raw_spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
 
 	ibs->rx_ibs_state = HCI_IBS_RX_AWAKE;
 	/* Always acknowledge device wake up,
@@ -296,7 +296,7 @@ static void ibs_wq_awake_rx(struct work_struct *work)
 
 	ibs->ibs_sent_wacks++; /* debug */
 
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 
 	/* actually send the packets */
 	hci_uart_tx_wakeup(hu);
@@ -339,7 +339,7 @@ static void hci_ibs_tx_idle_timeout(unsigned long arg)
 
 	BT_DBG("hu %pK idle timeout in %lu state", hu, ibs->tx_ibs_state);
 
-	spin_lock_irqsave_nested(&ibs->hci_ibs_lock,
+	raw_spin_lock_irqsave_nested(&ibs->hci_ibs_lock,
 					flags, SINGLE_DEPTH_NESTING);
 
 	switch (ibs->tx_ibs_state) {
@@ -361,7 +361,7 @@ static void hci_ibs_tx_idle_timeout(unsigned long arg)
 	queue_work(ibs->workqueue, &ibs->ws_tx_vote_off);
 
 out:
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 }
 
 static void hci_ibs_wake_retrans_timeout(unsigned long arg)
@@ -374,7 +374,7 @@ static void hci_ibs_wake_retrans_timeout(unsigned long arg)
 	BT_DBG("hu %pK wake retransmit timeout in %lu state",
 		hu, ibs->tx_ibs_state);
 
-	spin_lock_irqsave_nested(&ibs->hci_ibs_lock,
+	raw_spin_lock_irqsave_nested(&ibs->hci_ibs_lock,
 					flags, SINGLE_DEPTH_NESTING);
 
 	switch (ibs->tx_ibs_state) {
@@ -394,7 +394,7 @@ static void hci_ibs_wake_retrans_timeout(unsigned long arg)
 		break;
 	}
 out:
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 	if (retransmit)
 		hci_uart_tx_wakeup(hu);
 }
@@ -412,7 +412,7 @@ static int ibs_open(struct hci_uart *hu)
 
 	skb_queue_head_init(&ibs->txq);
 	skb_queue_head_init(&ibs->tx_wait_q);
-	spin_lock_init(&ibs->hci_ibs_lock);
+	raw_spin_lock_init(&ibs->hci_ibs_lock);
 	ibs->workqueue = create_singlethread_workqueue("ibs_wq");
 	if (!ibs->workqueue) {
 		BT_ERR("IBS Workqueue not initialized properly");
@@ -545,7 +545,7 @@ static void ibs_device_want_to_wakeup(struct hci_uart *hu)
 	BT_DBG("hu %pK", hu);
 
 	/* lock hci_ibs state */
-	spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
+	raw_spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
 
 	/* debug */
 	ibs->ibs_recv_wakes++;
@@ -557,7 +557,7 @@ static void ibs_device_want_to_wakeup(struct hci_uart *hu)
 		 */
 		/* awake rx clock */
 		queue_work(ibs->workqueue, &ibs->ws_awake_rx);
-		spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+		raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 		return;
 	case HCI_IBS_RX_AWAKE:
 		/* Always acknowledge device wake up,
@@ -577,7 +577,7 @@ static void ibs_device_want_to_wakeup(struct hci_uart *hu)
 	}
 
 out:
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 
 	/* actually send the packets */
 	hci_uart_tx_wakeup(hu);
@@ -594,7 +594,7 @@ static void ibs_device_want_to_sleep(struct hci_uart *hu)
 	BT_DBG("hu %pK", hu);
 
 	/* lock hci_ibs state */
-	spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
+	raw_spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
 
 	/* debug */
 	ibs->ibs_recv_slps++;
@@ -615,7 +615,7 @@ static void ibs_device_want_to_sleep(struct hci_uart *hu)
 		break;
 	}
 
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 }
 
 /*
@@ -630,7 +630,7 @@ static void ibs_device_woke_up(struct hci_uart *hu)
 	BT_DBG("hu %pK", hu);
 
 	/* lock hci_ibs state */
-	spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
+	raw_spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
 
 	/* debug */
 	ibs->ibs_recv_wacks++;
@@ -659,7 +659,7 @@ static void ibs_device_woke_up(struct hci_uart *hu)
 		ibs->tx_ibs_state = HCI_IBS_TX_AWAKE;
 	}
 
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 
 	/* actually send the packets */
 	hci_uart_tx_wakeup(hu);
@@ -678,7 +678,7 @@ static int ibs_enqueue(struct hci_uart *hu, struct sk_buff *skb)
 	memcpy(skb_push(skb, 1), &bt_cb(skb)->pkt_type, 1);
 
 	/* lock hci_ibs state */
-	spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
+	raw_spin_lock_irqsave(&ibs->hci_ibs_lock, flags);
 
 	/* act according to current state */
 	switch (ibs->tx_ibs_state) {
@@ -712,7 +712,7 @@ static int ibs_enqueue(struct hci_uart *hu, struct sk_buff *skb)
 		break;
 	}
 
-	spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
+	raw_spin_unlock_irqrestore(&ibs->hci_ibs_lock, flags);
 
 	return 0;
 }

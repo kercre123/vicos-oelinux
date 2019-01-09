@@ -202,7 +202,7 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer)
 	unsigned long flags;
 	int cpu;
 
-	spin_lock_irqsave(&event_timer_lock, flags);
+	raw_spin_lock_irqsave(&event_timer_lock, flags);
 	cpu = smp_processor_id();
 	next = timerqueue_getnext(&per_cpu(timer_head, cpu));
 
@@ -231,7 +231,7 @@ static enum hrtimer_restart event_hrtimer_cb(struct hrtimer *hrtimer)
 		create_hrtimer(event);
 	}
 hrtimer_cb_exit:
-	spin_unlock_irqrestore(&event_timer_lock, flags);
+	raw_spin_unlock_irqrestore(&event_timer_lock, flags);
 	return HRTIMER_NORESTART;
 }
 
@@ -245,7 +245,7 @@ static void create_timer_smp(void *data)
 		(struct event_timer_info *)data;
 	struct timerqueue_node *next;
 
-	spin_lock_irqsave(&event_timer_lock, flags);
+	raw_spin_lock_irqsave(&event_timer_lock, flags);
 
 	if (is_event_active(event))
 		timerqueue_del(&per_cpu(timer_head, event->cpu), &event->node);
@@ -267,7 +267,7 @@ static void create_timer_smp(void *data)
 
 		create_hrtimer(event);
 	}
-	spin_unlock_irqrestore(&event_timer_lock, flags);
+	raw_spin_unlock_irqrestore(&event_timer_lock, flags);
 }
 
 /**
@@ -323,7 +323,7 @@ static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
 	if (old_cpu == new_cpu)
 		return;
 
-	spin_lock_irqsave(&event_timer_lock, flags);
+	raw_spin_lock_irqsave(&event_timer_lock, flags);
 
 	/* If the event is not active OR
 	 * If it is the next event
@@ -335,7 +335,7 @@ static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
 		(hrtimer_try_to_cancel(&per_cpu(per_cpu_hrtimer.
 				event_hrtimer, old_cpu)) < 0))) {
 		event->cpu = new_cpu;
-		spin_unlock_irqrestore(&event_timer_lock, flags);
+		raw_spin_unlock_irqrestore(&event_timer_lock, flags);
 		if (msm_event_debug_mask && MSM_EVENT_TIMER_DEBUG)
 			pr_debug("Event:%p is not active or in callback\n",
 					event);
@@ -357,7 +357,7 @@ static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
 	if (msm_event_debug_mask && MSM_EVENT_TIMER_DEBUG)
 		pr_debug("Event:%p is in the list\n", event);
 
-	spin_unlock_irqrestore(&event_timer_lock, flags);
+	raw_spin_unlock_irqrestore(&event_timer_lock, flags);
 
 	/*
 	 * Migrating event timer to a new CPU is automatically
@@ -387,7 +387,7 @@ static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
 	 * Here after moving the E1 to C1. Need to start
 	 * E2 on C0.
 	 */
-	spin_lock(&event_setup_lock);
+	raw_spin_lock(&event_setup_lock);
 	/* Setup event timer on new cpu*/
 	setup_event_hrtimer(event);
 
@@ -402,7 +402,7 @@ static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
 			setup_event_hrtimer(event);
 		}
 	}
-	spin_unlock(&event_setup_lock);
+	raw_spin_unlock(&event_setup_lock);
 }
 
 /**
@@ -422,11 +422,11 @@ void activate_event_timer(struct event_timer_info *event, ktime_t event_time)
 				(unsigned long)ktime_to_us(event_time),
 				event->cpu);
 
-	spin_lock(&event_setup_lock);
+	raw_spin_lock(&event_setup_lock);
 	event->node.expires = event_time;
 	/* Start hrtimer and add event to rb tree */
 	setup_event_hrtimer(event);
-	spin_unlock(&event_setup_lock);
+	raw_spin_unlock(&event_setup_lock);
 }
 EXPORT_SYMBOL(activate_event_timer);
 
@@ -442,7 +442,7 @@ void deactivate_event_timer(struct event_timer_info *event)
 	if (msm_event_debug_mask && MSM_EVENT_TIMER_DEBUG)
 		pr_debug("Deactivate timer\n");
 
-	spin_lock_irqsave(&event_timer_lock, flags);
+	raw_spin_lock_irqsave(&event_timer_lock, flags);
 	if (is_event_active(event)) {
 		if (is_event_next(event))
 			hrtimer_try_to_cancel(&per_cpu(
@@ -450,7 +450,7 @@ void deactivate_event_timer(struct event_timer_info *event)
 
 		timerqueue_del(&per_cpu(timer_head, event->cpu), &event->node);
 	}
-	spin_unlock_irqrestore(&event_timer_lock, flags);
+	raw_spin_unlock_irqrestore(&event_timer_lock, flags);
 }
 
 /**
@@ -462,7 +462,7 @@ void destroy_event_timer(struct event_timer_info *event)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&event_timer_lock, flags);
+	raw_spin_lock_irqsave(&event_timer_lock, flags);
 	if (is_event_active(event)) {
 		if (is_event_next(event))
 			hrtimer_try_to_cancel(&per_cpu(
@@ -470,7 +470,7 @@ void destroy_event_timer(struct event_timer_info *event)
 
 		timerqueue_del(&per_cpu(timer_head, event->cpu), &event->node);
 	}
-	spin_unlock_irqrestore(&event_timer_lock, flags);
+	raw_spin_unlock_irqrestore(&event_timer_lock, flags);
 	kfree(event);
 }
 EXPORT_SYMBOL(destroy_event_timer);
@@ -486,10 +486,10 @@ ktime_t get_next_event_time(int cpu)
 	struct event_timer_info *event;
 	ktime_t next_event = ns_to_ktime(0);
 
-	spin_lock_irqsave(&event_timer_lock, flags);
+	raw_spin_lock_irqsave(&event_timer_lock, flags);
 	next = timerqueue_getnext(&per_cpu(timer_head, cpu));
 	event = container_of(next, struct event_timer_info, node);
-	spin_unlock_irqrestore(&event_timer_lock, flags);
+	raw_spin_unlock_irqrestore(&event_timer_lock, flags);
 
 	if (!next || event->cpu != cpu)
 		return next_event;

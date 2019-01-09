@@ -75,7 +75,7 @@ struct ehci_timer {
 
 struct msm_hsic_hcd {
 	struct ehci_hcd		ehci;
-	spinlock_t		wakeup_lock;
+	raw_spinlock_t		wakeup_lock;
 	struct device		*dev;
 	struct clk		*ahb_clk;
 	struct clk		*core_clk;
@@ -929,13 +929,13 @@ static int msm_hsic_resume(struct msm_hsic_hcd *mehci)
 			pdata->standalone_latency + 1);
 
 	if (mehci->wakeup_irq) {
-		spin_lock_irqsave(&mehci->wakeup_lock, flags);
+		raw_spin_lock_irqsave(&mehci->wakeup_lock, flags);
 		if (mehci->wakeup_irq_enabled) {
 			disable_irq_wake(mehci->wakeup_irq);
 			disable_irq_nosync(mehci->wakeup_irq);
 			mehci->wakeup_irq_enabled = 0;
 		}
-		spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
+		raw_spin_unlock_irqrestore(&mehci->wakeup_lock, flags);
 	}
 
 	wake_lock(&mehci->wlock);
@@ -1204,7 +1204,7 @@ retry:
 	dbg_log_event(NULL, "RESET: start", retries);
 	pr_debug("reset begin %d\n", retries);
 	mehci->reset_again = 0;
-	spin_lock_irqsave(&ehci->lock, flags);
+	raw_spin_lock_irqsave(&ehci->lock, flags);
 	ehci_writel(ehci, val, status_reg);
 	ehci_writel(ehci, GPT_LD(RESET_SIGNAL_TIME_USEC - 1),
 					&mehci->timer->gptimer0_ld);
@@ -1218,7 +1218,7 @@ retry:
 	ehci_writel(ehci, GPT_RESET | GPT_RUN,
 		&mehci->timer->gptimer1_ctrl);
 
-	spin_unlock_irqrestore(&ehci->lock, flags);
+	raw_spin_unlock_irqrestore(&ehci->lock, flags);
 	wait_for_completion(&mehci->gpt0_completion);
 
 	if (!mehci->reset_again)
@@ -1237,12 +1237,12 @@ retry:
 	pr_info("RESET in tight loop\n");
 	dbg_log_event(NULL, "RESET: tight", 0);
 
-	spin_lock_irqsave(&ehci->lock, flags);
+	raw_spin_lock_irqsave(&ehci->lock, flags);
 	ehci_writel(ehci, val, status_reg);
 	while (cnt--)
 		udelay(1);
 	ret = msm_hsic_reset_done(hcd);
-	spin_unlock_irqrestore(&ehci->lock, flags);
+	raw_spin_unlock_irqrestore(&ehci->lock, flags);
 	if (ret) {
 		pr_err("RESET in tight loop failed\n");
 		dbg_log_event(NULL, "RESET: tight failed", 0);
@@ -1303,7 +1303,7 @@ static int msm_hsic_resume_thread(void *data)
 	if (time_before_eq(jiffies, ehci->next_statechange))
 		usleep_range(10000, 10000);
 
-	spin_lock_irq(&ehci->lock);
+	raw_spin_lock_irq(&ehci->lock);
 	if (!HCD_HW_ACCESSIBLE(hcd)) {
 		mehci->resume_status = -ESHUTDOWN;
 		goto exit;
@@ -1377,9 +1377,9 @@ resume_again:
 			ehci_writel(ehci, GPT_RESET | GPT_RUN,
 				&mehci->timer->gptimer1_ctrl);
 
-			spin_unlock_irq(&ehci->lock);
+			raw_spin_unlock_irq(&ehci->lock);
 			wait_for_completion(&mehci->gpt0_completion);
-			spin_lock_irq(&ehci->lock);
+			raw_spin_lock_irq(&ehci->lock);
 		} else {
 			dbg_log_event(NULL, "FPR: Tightloop", 0);
 			/* do the resume in a tight loop */
@@ -1395,7 +1395,7 @@ resume_again:
 
 			dbg_log_event(NULL, "FPR: Re-Resume", retry_cnt);
 			pr_info("FPR: retry count: %d\n", retry_cnt);
-			spin_unlock_irq(&ehci->lock);
+			raw_spin_unlock_irq(&ehci->lock);
 			temp = ehci_readl(ehci, &ehci->regs->port_status[0]);
 			temp &= ~PORT_RWC_BITS;
 			temp |= PORT_SUSPEND;
@@ -1407,7 +1407,7 @@ resume_again:
 			dbg_log_event(NULL,
 				"FPR: RResume",
 				ehci_readl(ehci, &ehci->regs->port_status[0]));
-			spin_lock_irq(&ehci->lock);
+			raw_spin_lock_irq(&ehci->lock);
 			mehci->resume_again = 0;
 			retry_cnt++;
 			goto resume_again;
@@ -1417,7 +1417,7 @@ resume_again:
 	dbg_log_event(NULL, "FPR: RT-Done", 0);
 	mehci->resume_status = 1;
 exit:
-	spin_unlock_irq(&ehci->lock);
+	raw_spin_unlock_irq(&ehci->lock);
 	complete(&mehci->rt_completion);
 	if (next_latency)
 		pm_qos_update_request(&mehci->pm_qos_req_dma, next_latency);
@@ -1453,7 +1453,7 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 			return mehci->resume_status;
 
 		dbg_log_event(NULL, "FPR: Wokeup", 0);
-		spin_lock_irq(&ehci->lock);
+		raw_spin_lock_irq(&ehci->lock);
 
 		ehci->next_statechange = jiffies + msecs_to_jiffies(5);
 		hcd->state = HC_STATE_RUNNING;
@@ -1464,7 +1464,7 @@ static int ehci_hsic_bus_resume(struct usb_hcd *hcd)
 		ehci_writel(ehci, INTR_MASK, &ehci->regs->intr_enable);
 		(void) ehci_readl(ehci, &ehci->regs->intr_enable);
 
-		spin_unlock_irq(&ehci->lock);
+		raw_spin_unlock_irq(&ehci->lock);
 	}
 
 	if (pdata->resume_gpio)
@@ -1704,13 +1704,13 @@ static irqreturn_t msm_hsic_wakeup_irq(int irq, void *data)
 	wake_lock(&mehci->wlock);
 
 	if (mehci->wakeup_irq) {
-		spin_lock(&mehci->wakeup_lock);
+		raw_spin_lock(&mehci->wakeup_lock);
 		if (mehci->wakeup_irq_enabled) {
 			mehci->wakeup_irq_enabled = 0;
 			disable_irq_wake(irq);
 			disable_irq_nosync(irq);
 		}
-		spin_unlock(&mehci->wakeup_lock);
+		raw_spin_unlock(&mehci->wakeup_lock);
 	}
 
 	if (!atomic_read(&mehci->pm_usage_cnt)) {
@@ -2071,7 +2071,7 @@ static int ehci_hsic_msm_probe(struct platform_device *pdev)
 		}
 	}
 
-	spin_lock_init(&mehci->wakeup_lock);
+	raw_spin_lock_init(&mehci->wakeup_lock);
 
 	if (pdata->phy_sof_workaround) {
 		/* Enable ALL workarounds related to PHY SOF bugs */

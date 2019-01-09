@@ -47,7 +47,7 @@ struct gctrl_port {
 	unsigned		port_num;
 
 	/* gadget */
-	spinlock_t		port_lock;
+	raw_spinlock_t		port_lock;
 	void			*port_usb;
 
 	/* work queue*/
@@ -193,10 +193,10 @@ static void ghsic_ctrl_connect_w(struct work_struct *w)
 		return;
 	}
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (!port->port_usb) {
 		ctrl_bridge_close(port->brdg.ch_id);
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		return;
 	}
 	set_bit(CH_OPENED, &port->bridge_sts);
@@ -204,7 +204,7 @@ static void ghsic_ctrl_connect_w(struct work_struct *w)
 	if (port->cbits_tomodem)
 		ctrl_bridge_set_cbits(port->brdg.ch_id, port->cbits_tomodem);
 
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	cbits = ctrl_bridge_get_cbits_tohost(port->brdg.ch_id);
 
@@ -242,7 +242,7 @@ int ghsic_ctrl_connect(void *gptr, int port_num)
 		return -ENODEV;
 	}
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (port->gtype == USB_GADGET_SERIAL) {
 		gser = gptr;
 		gser->notify_modem = ghsic_send_cbits_tomodem;
@@ -259,7 +259,7 @@ int ghsic_ctrl_connect(void *gptr, int port_num)
 	port->to_host = 0;
 	port->to_modem = 0;
 	port->drp_cpkt_cnt = 0;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	queue_work(port->wq, &port->connect_w);
 
@@ -305,7 +305,7 @@ void ghsic_ctrl_disconnect(void *gptr, int port_num)
 	 else
 		gr = gptr;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (gr) {
 		gr->send_encap_cmd = 0;
 		gr->notify_modem = 0;
@@ -316,7 +316,7 @@ void ghsic_ctrl_disconnect(void *gptr, int port_num)
 	port->cbits_tomodem = 0;
 	port->port_usb = 0;
 	port->send_cpkt_response = 0;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	queue_work(port->wq, &port->disconnect_w);
 }
@@ -374,10 +374,10 @@ static int ghsic_ctrl_probe(struct platform_device *pdev)
 	set_bit(CH_READY, &port->bridge_sts);
 
 	/* if usb is online, start read */
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (port->port_usb)
 		queue_work(port->wq, &port->connect_w);
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	return 0;
 }
@@ -400,9 +400,9 @@ static int ghsic_ctrl_remove(struct platform_device *pdev)
 
 	port = gctrl_ports[id].port;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (!port->port_usb) {
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		goto not_ready;
 	}
 
@@ -412,7 +412,7 @@ static int ghsic_ctrl_remove(struct platform_device *pdev)
 		gr = port->port_usb;
 
 	port->cbits_tohost = 0;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	if (gr && gr->disconnect)
 		gr->disconnect(gr);
@@ -462,7 +462,7 @@ static int gctrl_port_alloc(int portno, enum gadget_type gtype)
 	port->port_num = portno;
 	port->gtype = gtype;
 
-	spin_lock_init(&port->port_lock);
+	raw_spin_lock_init(&port->port_lock);
 
 	INIT_WORK(&port->connect_w, ghsic_ctrl_connect_w);
 	INIT_WORK(&port->disconnect_w, gctrl_disconnect_w);
@@ -570,7 +570,7 @@ static ssize_t gctrl_read_stats(struct file *file, char __user *ubuf,
 		if (!port)
 			continue;
 		pdrv = &gctrl_ports[i].pdrv;
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 
 		temp += scnprintf(buf + temp, DEBUG_BUF_SIZE - temp,
 				"\nName:        %s\n"
@@ -589,7 +589,7 @@ static ssize_t gctrl_read_stats(struct file *file, char __user *ubuf,
 				test_bit(CH_OPENED, &port->bridge_sts),
 				test_bit(CH_READY, &port->bridge_sts));
 
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	}
 
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, temp);
@@ -611,11 +611,11 @@ static ssize_t gctrl_reset_stats(struct file *file,
 		if (!port)
 			continue;
 
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		port->to_host = 0;
 		port->to_modem = 0;
 		port->drp_cpkt_cnt = 0;
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	}
 	return count;
 }

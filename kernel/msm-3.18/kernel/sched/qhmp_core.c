@@ -4612,7 +4612,7 @@ again:
  *
  *         - in syscall or exception context, at the next outmost
  *           preempt_enable(). (this might be as soon as the wake_up()'s
- *           spin_unlock()!)
+ *           raw_spin_unlock()!)
  *
  *         - in IRQ context, return from interrupt-handler to
  *           preemptible context
@@ -5294,7 +5294,7 @@ static int __sched_setscheduler(struct task_struct *p,
 	int reset_on_fork;
 	int queue_flags = DEQUEUE_SAVE | DEQUEUE_MOVE;
 
-	/* may grab non-irq protected spin_locks */
+	/* may grab non-irq protected raw_spin_locks */
 	BUG_ON(in_interrupt());
 recheck:
 	/* double check policy once rq lock held */
@@ -6123,7 +6123,7 @@ EXPORT_SYMBOL(_cond_resched);
  *
  * This works OK both with and without CONFIG_PREEMPT. We do strange low-level
  * operations here to prevent schedule() from being called twice (once via
- * spin_unlock(), once by hand).
+ * raw_spin_unlock(), once by hand).
  */
 int __cond_resched_lock(spinlock_t *lock)
 {
@@ -6133,13 +6133,13 @@ int __cond_resched_lock(spinlock_t *lock)
 	lockdep_assert_held(lock);
 
 	if (spin_needbreak(lock) || resched) {
-		spin_unlock(lock);
+		raw_spin_unlock(lock);
 		if (resched)
 			__cond_resched();
 		else
 			cpu_relax();
 		ret = 1;
-		spin_lock(lock);
+		raw_spin_lock(lock);
 	}
 	return ret;
 }
@@ -9344,7 +9344,7 @@ void sched_online_group(struct task_group *tg, struct task_group *parent)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&task_group_lock, flags);
+	raw_spin_lock_irqsave(&task_group_lock, flags);
 	list_add_rcu(&tg->list, &task_groups);
 
 	WARN_ON(!parent); /* root should already exist */
@@ -9352,7 +9352,7 @@ void sched_online_group(struct task_group *tg, struct task_group *parent)
 	tg->parent = parent;
 	INIT_LIST_HEAD(&tg->children);
 	list_add_rcu(&tg->siblings, &parent->children);
-	spin_unlock_irqrestore(&task_group_lock, flags);
+	raw_spin_unlock_irqrestore(&task_group_lock, flags);
 }
 
 /* rcu callback to free various structures associated with a task group */
@@ -9378,10 +9378,10 @@ void sched_offline_group(struct task_group *tg)
 	for_each_possible_cpu(i)
 		unregister_fair_sched_group(tg, i);
 
-	spin_lock_irqsave(&task_group_lock, flags);
+	raw_spin_lock_irqsave(&task_group_lock, flags);
 	list_del_rcu(&tg->list);
 	list_del_rcu(&tg->siblings);
-	spin_unlock_irqrestore(&task_group_lock, flags);
+	raw_spin_unlock_irqrestore(&task_group_lock, flags);
 }
 
 /* change task's runqueue when it moves between groups.

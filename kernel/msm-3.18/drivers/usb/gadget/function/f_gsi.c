@@ -84,7 +84,7 @@ void post_event(struct gsi_data_port *port, u8 event)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&port->evt_q.q_lock, flags);
+	raw_spin_lock_irqsave(&port->evt_q.q_lock, flags);
 
 	port->evt_q.tail++;
 	/* Check for wraparound and make room */
@@ -93,12 +93,12 @@ void post_event(struct gsi_data_port *port, u8 event)
 	/* Check for overflow */
 	if (port->evt_q.tail == port->evt_q.head) {
 		log_event_err("%s: event queue overflow error", __func__);
-		spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
+		raw_spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
 		return;
 	}
 	/* Add event to queue */
 	port->evt_q.event[port->evt_q.tail] = event;
-	spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
+	raw_spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
 }
 
 void post_event_to_evt_queue(struct gsi_data_port *port, u8 event)
@@ -112,10 +112,10 @@ u8 read_event(struct gsi_data_port *port)
 	u8 event;
 	unsigned long flags;
 
-	spin_lock_irqsave(&port->evt_q.q_lock, flags);
+	raw_spin_lock_irqsave(&port->evt_q.q_lock, flags);
 	if (port->evt_q.head == port->evt_q.tail) {
 		log_event_dbg("%s: event queue empty", __func__);
-		spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
+		raw_spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
 		return EVT_NONE;
 	}
 
@@ -124,7 +124,7 @@ u8 read_event(struct gsi_data_port *port)
 	port->evt_q.head = port->evt_q.head % MAXQUEUELEN;
 
 	 event = port->evt_q.event[port->evt_q.head];
-	 spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
+	 raw_spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
 
 	 return event;
 }
@@ -135,16 +135,16 @@ u8 peek_event(struct gsi_data_port *port)
 	unsigned long flags;
 	u8 peek_index = 0;
 
-	spin_lock_irqsave(&port->evt_q.q_lock, flags);
+	raw_spin_lock_irqsave(&port->evt_q.q_lock, flags);
 	if (port->evt_q.head == port->evt_q.tail) {
 		log_event_dbg("%s: event queue empty", __func__);
-		spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
+		raw_spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
 		return EVT_NONE;
 	}
 
 	peek_index = (port->evt_q.head + 1) % MAXQUEUELEN;
 	event = port->evt_q.event[peek_index];
-	spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
+	raw_spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
 
 	return event;
 }
@@ -153,10 +153,10 @@ void reset_event_queue(struct gsi_data_port *port)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&port->evt_q.q_lock, flags);
+	raw_spin_lock_irqsave(&port->evt_q.q_lock, flags);
 	port->evt_q.head = port->evt_q.tail = MAXQUEUELEN - 1;
 	memset(&port->evt_q.event[0], EVT_NONE, MAXQUEUELEN);
-	spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
+	raw_spin_unlock_irqrestore(&port->evt_q.q_lock, flags);
 }
 
 int gsi_wakeup_host(struct f_gsi *gsi)
@@ -597,13 +597,13 @@ int ipa_usb_notify_cb(enum ipa_usb_notify_event event,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&gsi->d_port.lock, flags);
+	raw_spin_lock_irqsave(&gsi->d_port.lock, flags);
 
 	switch (event) {
 	case IPA_USB_DEVICE_READY:
 
 		if (gsi->d_port.net_ready_trigger) {
-			spin_unlock_irqrestore(&gsi->d_port.lock, flags);
+			raw_spin_unlock_irqrestore(&gsi->d_port.lock, flags);
 			log_event_dbg("%s: Already triggered", __func__);
 			return 1;
 		}
@@ -614,7 +614,7 @@ int ipa_usb_notify_cb(enum ipa_usb_notify_event event,
 		if (gsi->prot_id == IPA_USB_ECM) {
 			cpkt_notify_connect = gsi_ctrl_pkt_alloc(0, GFP_ATOMIC);
 			if (IS_ERR(cpkt_notify_connect)) {
-				spin_unlock_irqrestore(&gsi->d_port.lock,
+				raw_spin_unlock_irqrestore(&gsi->d_port.lock,
 								flags);
 				log_event_dbg("%s: err cpkt_notify_connect\n",
 								__func__);
@@ -624,7 +624,7 @@ int ipa_usb_notify_cb(enum ipa_usb_notify_event event,
 
 			cpkt_notify_speed = gsi_ctrl_pkt_alloc(0, GFP_ATOMIC);
 			if (IS_ERR(cpkt_notify_speed)) {
-				spin_unlock_irqrestore(&gsi->d_port.lock,
+				raw_spin_unlock_irqrestore(&gsi->d_port.lock,
 								flags);
 				gsi_ctrl_pkt_free(cpkt_notify_connect);
 				log_event_dbg("%s: err cpkt_notify_speed\n",
@@ -632,12 +632,12 @@ int ipa_usb_notify_cb(enum ipa_usb_notify_event event,
 				return -ENOMEM;
 			}
 			cpkt_notify_speed->type = GSI_CTRL_NOTIFY_SPEED;
-			spin_lock_irqsave(&gsi->c_port.lock, flags);
+			raw_spin_lock_irqsave(&gsi->c_port.lock, flags);
 			list_add_tail(&cpkt_notify_connect->list,
 					&gsi->c_port.cpkt_resp_q);
 			list_add_tail(&cpkt_notify_speed->list,
 					&gsi->c_port.cpkt_resp_q);
-			spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+			raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 			gsi_ctrl_send_notification(gsi);
 		}
 
@@ -661,7 +661,7 @@ int ipa_usb_notify_cb(enum ipa_usb_notify_event event,
 		break;
 	}
 
-	spin_unlock_irqrestore(&gsi->d_port.lock, flags);
+	raw_spin_unlock_irqrestore(&gsi->d_port.lock, flags);
 	return 1;
 }
 
@@ -1283,7 +1283,7 @@ static void gsi_ctrl_clear_cpkt_queues(struct f_gsi *gsi, bool skip_req_q)
 	struct gsi_ctrl_pkt *cpkt = NULL;
 	struct list_head *act, *tmp;
 
-	spin_lock(&gsi->c_port.lock);
+	raw_spin_lock(&gsi->c_port.lock);
 	if (skip_req_q)
 		goto clean_resp_q;
 
@@ -1298,7 +1298,7 @@ clean_resp_q:
 		list_del(&cpkt->list);
 		gsi_ctrl_pkt_free(cpkt);
 	}
-	spin_unlock(&gsi->c_port.lock);
+	raw_spin_unlock(&gsi->c_port.lock);
 }
 
 static int gsi_ctrl_send_cpkt_tomodem(struct f_gsi *gsi, void *buf, size_t len)
@@ -1307,20 +1307,20 @@ static int gsi_ctrl_send_cpkt_tomodem(struct f_gsi *gsi, void *buf, size_t len)
 	struct gsi_ctrl_port *c_port = &gsi->c_port;
 	struct gsi_ctrl_pkt *cpkt;
 
-	spin_lock_irqsave(&c_port->lock, flags);
+	raw_spin_lock_irqsave(&c_port->lock, flags);
 	/* drop cpkt if port is not open */
 	if (!gsi->c_port.is_open) {
 		log_event_dbg("%s: ctrl device %s is not open",
 			   __func__, gsi->c_port.name);
 		c_port->cpkt_drop_cnt++;
-		spin_unlock_irqrestore(&c_port->lock, flags);
+		raw_spin_unlock_irqrestore(&c_port->lock, flags);
 		return -ENODEV;
 	}
 
 	cpkt = gsi_ctrl_pkt_alloc(len, GFP_ATOMIC);
 	if (IS_ERR(cpkt)) {
 		log_event_err("%s: Reset func pkt allocation failed", __func__);
-		spin_unlock_irqrestore(&c_port->lock, flags);
+		raw_spin_unlock_irqrestore(&c_port->lock, flags);
 		return -ENOMEM;
 	}
 
@@ -1329,7 +1329,7 @@ static int gsi_ctrl_send_cpkt_tomodem(struct f_gsi *gsi, void *buf, size_t len)
 
 	list_add_tail(&cpkt->list, &c_port->cpkt_req_q);
 	c_port->host_to_modem++;
-	spin_unlock_irqrestore(&c_port->lock, flags);
+	raw_spin_unlock_irqrestore(&c_port->lock, flags);
 
 	log_event_dbg("%s: Wake up read queue", __func__);
 	wake_up(&c_port->read_wq);
@@ -1403,10 +1403,10 @@ gsi_ctrl_dev_read(struct file *fp, char __user *buf, size_t count, loff_t *pos)
 	}
 
 	/* block until a new packet is available */
-	spin_lock_irqsave(&c_port->lock, flags);
+	raw_spin_lock_irqsave(&c_port->lock, flags);
 	while (list_empty(&c_port->cpkt_req_q)) {
 		log_event_dbg("Requests list is empty. Wait.");
-		spin_unlock_irqrestore(&c_port->lock, flags);
+		raw_spin_unlock_irqrestore(&c_port->lock, flags);
 		ret = wait_event_interruptible(c_port->read_wq,
 			!list_empty(&c_port->cpkt_req_q));
 		if (ret < 0) {
@@ -1414,13 +1414,13 @@ gsi_ctrl_dev_read(struct file *fp, char __user *buf, size_t count, loff_t *pos)
 			return -ERESTARTSYS;
 		}
 		log_event_dbg("Received request packet");
-		spin_lock_irqsave(&c_port->lock, flags);
+		raw_spin_lock_irqsave(&c_port->lock, flags);
 	}
 
 	cpkt = list_first_entry(&c_port->cpkt_req_q, struct gsi_ctrl_pkt,
 							list);
 	list_del(&cpkt->list);
-	spin_unlock_irqrestore(&c_port->lock, flags);
+	raw_spin_unlock_irqrestore(&c_port->lock, flags);
 
 	if (cpkt->len > count) {
 		log_event_err("cpkt size large:%d > buf size:%zu",
@@ -1507,9 +1507,9 @@ static ssize_t gsi_ctrl_dev_write(struct file *fp, const char __user *buf,
 		print_hex_dump(KERN_DEBUG, "WRITE:", DUMP_PREFIX_OFFSET, 16, 1,
 			cpkt->buf, min_t(int, 30, count), false);
 
-	spin_lock_irqsave(&c_port->lock, flags);
+	raw_spin_lock_irqsave(&c_port->lock, flags);
 	list_add_tail(&cpkt->list, &c_port->cpkt_resp_q);
-	spin_unlock_irqrestore(&c_port->lock, flags);
+	raw_spin_unlock_irqrestore(&c_port->lock, flags);
 
 	if (!gsi_ctrl_send_notification(gsi))
 		c_port->modem_to_host++;
@@ -1550,9 +1550,9 @@ static long gsi_ctrl_dev_ioctl(struct file *fp, unsigned cmd,
 			return -ENOMEM;
 		}
 		cpkt->type = GSI_CTRL_NOTIFY_OFFLINE;
-		spin_lock_irqsave(&c_port->lock, flags);
+		raw_spin_lock_irqsave(&c_port->lock, flags);
 		list_add_tail(&cpkt->list, &c_port->cpkt_resp_q);
-		spin_unlock_irqrestore(&c_port->lock, flags);
+		raw_spin_unlock_irqrestore(&c_port->lock, flags);
 		gsi_ctrl_send_notification(gsi);
 		break;
 	case QTI_CTRL_MODEM_ONLINE:
@@ -1664,12 +1664,12 @@ static unsigned int gsi_ctrl_dev_poll(struct file *fp, poll_table *wait)
 
 	poll_wait(fp, &c_port->read_wq, wait);
 
-	spin_lock_irqsave(&c_port->lock, flags);
+	raw_spin_lock_irqsave(&c_port->lock, flags);
 	if (!list_empty(&c_port->cpkt_req_q)) {
 		mask |= POLLIN | POLLRDNORM;
 		log_event_dbg("%s sets POLLIN for %s", __func__, c_port->name);
 	}
-	spin_unlock_irqrestore(&c_port->lock, flags);
+	raw_spin_unlock_irqrestore(&c_port->lock, flags);
 
 	return mask;
 }
@@ -1714,7 +1714,7 @@ int gsi_function_ctrl_port_init(enum ipa_usb_teth_prot prot_id)
 	INIT_LIST_HEAD(&gsi->c_port.cpkt_req_q);
 	INIT_LIST_HEAD(&gsi->c_port.cpkt_resp_q);
 
-	spin_lock_init(&gsi->c_port.lock);
+	raw_spin_lock_init(&gsi->c_port.lock);
 
 	init_waitqueue_head(&gsi->c_port.read_wq);
 
@@ -1781,15 +1781,15 @@ static void gsi_rndis_ipa_reset_trigger(void)
 		return;
 	}
 
-	spin_lock_irqsave(&rndis->d_port.lock, flags);
+	raw_spin_lock_irqsave(&rndis->d_port.lock, flags);
 	if (!rndis) {
 		log_event_err("%s: No RNDIS instance", __func__);
-		spin_unlock_irqrestore(&rndis->d_port.lock, flags);
+		raw_spin_unlock_irqrestore(&rndis->d_port.lock, flags);
 		return;
 	}
 
 	rndis->d_port.net_ready_trigger = false;
-	spin_unlock_irqrestore(&rndis->d_port.lock, flags);
+	raw_spin_unlock_irqrestore(&rndis->d_port.lock, flags);
 }
 
 void gsi_rndis_flow_ctrl_enable(bool enable)
@@ -1882,9 +1882,9 @@ static int queue_notification_request(struct f_gsi *gsi)
 	ret = usb_func_ep_queue(&gsi->function, gsi->c_port.notify,
 			   gsi->c_port.notify_req, GFP_ATOMIC);
 	if (ret < 0) {
-		spin_lock_irqsave(&gsi->c_port.lock, flags);
+		raw_spin_lock_irqsave(&gsi->c_port.lock, flags);
 		gsi->c_port.notify_req_queued = false;
-		spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+		raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 	}
 
 	log_event_dbg("%s: ret:%d req_queued:%d",
@@ -1908,9 +1908,9 @@ static int gsi_ctrl_send_notification(struct f_gsi *gsi)
 		return -ENODEV;
 	}
 
-	spin_lock_irqsave(&gsi->c_port.lock, flags);
+	raw_spin_lock_irqsave(&gsi->c_port.lock, flags);
 	if (list_empty(&gsi->c_port.cpkt_resp_q)) {
-		spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+		raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 		log_event_dbg("%s: cpkt_resp_q is empty\n", __func__);
 		return 0;
 	}
@@ -1919,7 +1919,7 @@ static int gsi_ctrl_send_notification(struct f_gsi *gsi)
 		__func__, gsi->c_port.notify_req_queued);
 
 	if (gsi->c_port.notify_req_queued) {
-		spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+		raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 		log_event_dbg("%s: notify_req is already queued.\n", __func__);
 		return 0;
 	}
@@ -1981,7 +1981,7 @@ static int gsi_ctrl_send_notification(struct f_gsi *gsi)
 		}
 		break;
 	default:
-		spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+		raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 		log_event_err("%s:unknown notify state", __func__);
 		WARN_ON(1);
 		return -EINVAL;
@@ -1998,7 +1998,7 @@ static int gsi_ctrl_send_notification(struct f_gsi *gsi)
 	}
 
 	gsi->c_port.notify_req_queued = true;
-	spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+	raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 	log_event_dbg("send Notify type %02x", event->bNotificationType);
 
 	return queue_notification_request(gsi);
@@ -2012,9 +2012,9 @@ static void gsi_ctrl_notify_resp_complete(struct usb_ep *ep,
 	int status = req->status;
 	unsigned long flags;
 
-	spin_lock_irqsave(&gsi->c_port.lock, flags);
+	raw_spin_lock_irqsave(&gsi->c_port.lock, flags);
 	gsi->c_port.notify_req_queued = false;
-	spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+	raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 
 	switch (status) {
 	case -ECONNRESET:
@@ -2046,9 +2046,9 @@ static void gsi_rndis_response_available(void *_rndis)
 	}
 
 	cpkt->type = GSI_CTRL_NOTIFY_RESPONSE_AVAILABLE;
-	spin_lock_irqsave(&gsi->c_port.lock, flags);
+	raw_spin_lock_irqsave(&gsi->c_port.lock, flags);
 	list_add_tail(&cpkt->list, &gsi->c_port.cpkt_resp_q);
-	spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+	raw_spin_unlock_irqrestore(&gsi->c_port.lock, flags);
 	gsi_ctrl_send_notification(gsi);
 }
 
@@ -2205,10 +2205,10 @@ gsi_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 			break;
 		}
 
-		spin_lock(&gsi->c_port.lock);
+		raw_spin_lock(&gsi->c_port.lock);
 		if (list_empty(&gsi->c_port.cpkt_resp_q)) {
 			log_event_dbg("ctrl resp queue empty");
-			spin_unlock(&gsi->c_port.lock);
+			raw_spin_unlock(&gsi->c_port.lock);
 			break;
 		}
 
@@ -2216,7 +2216,7 @@ gsi_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 					struct gsi_ctrl_pkt, list);
 		list_del(&cpkt->list);
 		gsi->c_port.get_encap_cnt++;
-		spin_unlock(&gsi->c_port.lock);
+		raw_spin_unlock(&gsi->c_port.lock);
 
 		value = min_t(unsigned, w_length, cpkt->len);
 		memcpy(req->buf, cpkt->buf, value);
@@ -2844,7 +2844,7 @@ skip_string_id_alloc:
 	}
 
 	/* Initialize event queue */
-	spin_lock_init(&gsi->d_port.evt_q.q_lock);
+	raw_spin_lock_init(&gsi->d_port.evt_q.q_lock);
 	gsi->d_port.evt_q.head = gsi->d_port.evt_q.tail = MAXQUEUELEN - 1;
 
 	/* copy descriptors, and track endpoint copies */
@@ -3315,7 +3315,7 @@ static int gsi_function_init(enum ipa_usb_teth_prot prot_id)
 		goto error;
 	}
 
-	spin_lock_init(&gsi->d_port.lock);
+	raw_spin_lock_init(&gsi->d_port.lock);
 
 	init_waitqueue_head(&gsi->d_port.wait_for_ipa_ready);
 

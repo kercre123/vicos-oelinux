@@ -469,9 +469,9 @@ static void qmi_notify_event_worker(struct work_struct *work)
 
 	switch (notify_work->event) {
 	case IPC_ROUTER_CTRL_CMD_DATA:
-		spin_lock_irqsave(&handle->notify_lock, flags);
+		raw_spin_lock_irqsave(&handle->notify_lock, flags);
 		handle->notify(handle, QMI_RECV_MSG, handle->notify_priv);
-		spin_unlock_irqrestore(&handle->notify_lock, flags);
+		raw_spin_unlock_irqrestore(&handle->notify_lock, flags);
 		break;
 
 	case IPC_ROUTER_CTRL_CMD_RESUME_TX:
@@ -637,9 +637,9 @@ static int handle_rmv_server(struct qmi_handle *handle,
 		handle->handle_reset = 1;
 		clean_txn_info(handle);
 
-		spin_lock_irqsave(&handle->notify_lock, flags);
+		raw_spin_lock_irqsave(&handle->notify_lock, flags);
 		handle->notify(handle, QMI_SERVER_EXIT, handle->notify_priv);
-		spin_unlock_irqrestore(&handle->notify_lock, flags);
+		raw_spin_unlock_irqrestore(&handle->notify_lock, flags);
 	}
 	return 0;
 }
@@ -665,9 +665,9 @@ static int handle_rmv_client(struct qmi_handle *handle,
 	clnt_addr.addr.port_addr.port_id = ctl_msg->cli.port_id;
 	conn_h = find_svc_clnt_conn(handle, &clnt_addr, sizeof(clnt_addr));
 	if (conn_h) {
-		spin_lock_irqsave(&handle->notify_lock, flags);
+		raw_spin_lock_irqsave(&handle->notify_lock, flags);
 		handle->svc_ops_options->disconnect_cb(handle, conn_h);
-		spin_unlock_irqrestore(&handle->notify_lock, flags);
+		raw_spin_unlock_irqrestore(&handle->notify_lock, flags);
 		rmv_svc_clnt_conn(conn_h);
 	}
 	return 0;
@@ -749,7 +749,7 @@ struct qmi_handle *qmi_handle_create(
 	temp_handle->handle_type = QMI_CLIENT_HANDLE;
 	temp_handle->next_txn_id = 1;
 	mutex_init(&temp_handle->handle_lock);
-	spin_lock_init(&temp_handle->notify_lock);
+	raw_spin_lock_init(&temp_handle->notify_lock);
 	temp_handle->notify = notify;
 	temp_handle->notify_priv = notify_priv;
 	init_waitqueue_head(&temp_handle->reset_waitq);
@@ -1834,10 +1834,10 @@ static int qmi_notify_svc_event_arrive(uint32_t service,
 		 * service during registration.
 		 */
 		svc_event_add_svc_addr(temp, node_id, port_id);
-		spin_lock_irqsave(&temp->nb_lock, flags);
+		raw_spin_lock_irqsave(&temp->nb_lock, flags);
 		raw_notifier_call_chain(&temp->svc_event_rcvr_list,
 				QMI_SERVER_ARRIVE, NULL);
-		spin_unlock_irqrestore(&temp->nb_lock, flags);
+		raw_spin_unlock_irqrestore(&temp->nb_lock, flags);
 	}
 	mutex_unlock(&temp->svc_addr_list_lock);
 
@@ -1880,10 +1880,10 @@ static int qmi_notify_svc_event_exit(uint32_t service,
 			 * Notify only if an already notified service has
 			 * gone down.
 			 */
-			spin_lock_irqsave(&temp->nb_lock, flags);
+			raw_spin_lock_irqsave(&temp->nb_lock, flags);
 			raw_notifier_call_chain(&temp->svc_event_rcvr_list,
 						QMI_SERVER_EXIT, NULL);
-			spin_unlock_irqrestore(&temp->nb_lock, flags);
+			raw_spin_unlock_irqrestore(&temp->nb_lock, flags);
 			list_del(&addr->list_node);
 			kfree(addr);
 		}
@@ -1931,7 +1931,7 @@ static struct svc_event_nb *find_and_add_svc_event_nb(uint32_t service_id,
 		return temp;
 	}
 
-	spin_lock_init(&temp->nb_lock);
+	raw_spin_lock_init(&temp->nb_lock);
 	temp->service_id = service_id;
 	temp->instance_id = instance_id;
 	INIT_LIST_HEAD(&temp->list);
@@ -1972,14 +1972,14 @@ int qmi_svc_event_notifier_register(uint32_t service_id,
 	mutex_unlock(&svc_event_nb_list_lock);
 
 	mutex_lock(&temp->svc_addr_list_lock);
-	spin_lock_irqsave(&temp->nb_lock, flags);
+	raw_spin_lock_irqsave(&temp->nb_lock, flags);
 	ret = raw_notifier_chain_register(&temp->svc_event_rcvr_list, nb);
-	spin_unlock_irqrestore(&temp->nb_lock, flags);
+	raw_spin_unlock_irqrestore(&temp->nb_lock, flags);
 	if (!list_empty(&temp->svc_addr_list)) {
 		/* Notify this client only if Some services already exist. */
-		spin_lock_irqsave(&temp->nb_lock, flags);
+		raw_spin_lock_irqsave(&temp->nb_lock, flags);
 		nb->notifier_call(nb, QMI_SERVER_ARRIVE, NULL);
-		spin_unlock_irqrestore(&temp->nb_lock, flags);
+		raw_spin_unlock_irqrestore(&temp->nb_lock, flags);
 	} else {
 		/*
 		 * Check if we have missed a new server event that happened
@@ -2007,10 +2007,10 @@ int qmi_svc_event_notifier_register(uint32_t service_id,
 						svc_info_arr[i].port_id);
 			kfree(svc_info_arr);
 
-			spin_lock_irqsave(&temp->nb_lock, flags);
+			raw_spin_lock_irqsave(&temp->nb_lock, flags);
 			raw_notifier_call_chain(&temp->svc_event_rcvr_list,
 						QMI_SERVER_ARRIVE, NULL);
-			spin_unlock_irqrestore(&temp->nb_lock, flags);
+			raw_spin_unlock_irqrestore(&temp->nb_lock, flags);
 		}
 	}
 	mutex_unlock(&temp->svc_addr_list_lock);
@@ -2037,9 +2037,9 @@ int qmi_svc_event_notifier_unregister(uint32_t service_id,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&temp->nb_lock, flags);
+	raw_spin_lock_irqsave(&temp->nb_lock, flags);
 	ret = raw_notifier_chain_unregister(&temp->svc_event_rcvr_list, nb);
-	spin_unlock_irqrestore(&temp->nb_lock, flags);
+	raw_spin_unlock_irqrestore(&temp->nb_lock, flags);
 	mutex_unlock(&svc_event_nb_list_lock);
 
 	return ret;

@@ -569,7 +569,7 @@ static void arm64_erp_local_handler(void *info)
 	unsigned long flags, flags2;
 	u32 l2ectlr;
 
-	spin_lock_irqsave(&local_handler_lock, flags);
+	raw_spin_lock_irqsave(&local_handler_lock, flags);
 	edac_printk(KERN_CRIT, EDAC_CPU, "%s error information from CPU %d, MIDR=%#08x:\n",
 		       err_name[errdata->err], raw_smp_processor_id(), cpuid);
 
@@ -596,7 +596,7 @@ static void arm64_erp_local_handler(void *info)
 	};
 
 	/* Acklowledge internal error in L2ECTLR */
-	spin_lock_irqsave(&l2ectlr_lock, flags2);
+	raw_spin_lock_irqsave(&l2ectlr_lock, flags2);
 
 	l2ectlr = read_l2ectlr_el1;
 
@@ -605,8 +605,8 @@ static void arm64_erp_local_handler(void *info)
 		write_l2ectlr_el1(l2ectlr);
 	}
 
-	spin_unlock_irqrestore(&l2ectlr_lock, flags2);
-	spin_unlock_irqrestore(&local_handler_lock, flags);
+	raw_spin_unlock_irqrestore(&l2ectlr_lock, flags2);
+	raw_spin_unlock_irqrestore(&local_handler_lock, flags);
 }
 
 static irqreturn_t arm64_dbe_handler(int irq, void *drvdata)
@@ -628,10 +628,10 @@ static void arm64_ext_local_handler(void *info)
 	unsigned long flags, flags2;
 	u32 l2ectlr;
 
-	spin_lock_irqsave(&local_handler_lock, flags);
+	raw_spin_lock_irqsave(&local_handler_lock, flags);
 
 	/* TODO: Shared locking for L2ECTLR access */
-	spin_lock_irqsave(&l2ectlr_lock, flags2);
+	raw_spin_lock_irqsave(&l2ectlr_lock, flags2);
 
 	l2ectlr = read_l2ectlr_el1;
 
@@ -647,8 +647,8 @@ static void arm64_ext_local_handler(void *info)
 		write_l2ectlr_el1(l2ectlr);
 	}
 
-	spin_unlock_irqrestore(&l2ectlr_lock, flags2);
-	spin_unlock_irqrestore(&local_handler_lock, flags);
+	raw_spin_unlock_irqrestore(&l2ectlr_lock, flags2);
+	raw_spin_unlock_irqrestore(&local_handler_lock, flags);
 }
 
 static irqreturn_t arm64_ext_handler(int irq, void *drvdata)
@@ -745,7 +745,7 @@ static void check_sbe_event(struct erp_drvdata *drv)
 	errdata.drv = drv;
 	errdata.err = SBE;
 
-	spin_lock_irqsave(&local_handler_lock, flags);
+	raw_spin_lock_irqsave(&local_handler_lock, flags);
 	switch (partnum) {
 	case ARM_CPU_PART_CORTEX_A53:
 	case ARM_CPU_PART_KRYO2XX_SILVER:
@@ -763,7 +763,7 @@ static void check_sbe_event(struct erp_drvdata *drv)
 		kryo2xx_gold_parse_l2merrsr(&errdata);
 	break;
 	};
-	spin_unlock_irqrestore(&local_handler_lock, flags);
+	raw_spin_unlock_irqrestore(&local_handler_lock, flags);
 }
 
 #ifdef CONFIG_EDAC_CORTEX_ARM64_DBE_IRQ_ONLY

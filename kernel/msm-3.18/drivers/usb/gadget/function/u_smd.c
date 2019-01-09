@@ -58,7 +58,7 @@ struct smd_port_info smd_pi[SMD_N_PORTS] = {
 
 struct gsmd_port {
 	unsigned		port_num;
-	spinlock_t		port_lock;
+	raw_spinlock_t		port_lock;
 
 	unsigned		n_read;
 	struct list_head	read_pool;
@@ -177,7 +177,7 @@ static void gsmd_start_rx(struct gsmd_port *port)
 		return;
 	}
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 
 	if (!port->port_usb) {
 		pr_debug("%s: USB disconnected\n", __func__);
@@ -194,9 +194,9 @@ static void gsmd_start_rx(struct gsmd_port *port)
 		list_del(&req->list);
 		req->length = SMD_RX_BUF_SIZE;
 
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		ret = usb_ep_queue(out, req, GFP_KERNEL);
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		if (ret) {
 			pr_err("%s: usb ep out queue failed"
 					"port:%pK, port#%d\n",
@@ -206,7 +206,7 @@ static void gsmd_start_rx(struct gsmd_port *port)
 		}
 	}
 start_rx_end:
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 }
 
 static void gsmd_rx_push(struct work_struct *w)
@@ -217,7 +217,7 @@ static void gsmd_rx_push(struct work_struct *w)
 
 	pr_debug("%s: port:%pK port#%d", __func__, port, port->port_num);
 
-	spin_lock_irq(&port->port_lock);
+	raw_spin_lock_irq(&port->port_lock);
 
 	q = &port->read_queue;
 	while (pi->ch && !list_empty(q)) {
@@ -276,7 +276,7 @@ static void gsmd_rx_push(struct work_struct *w)
 	}
 
 rx_push_end:
-	spin_unlock_irq(&port->port_lock);
+	raw_spin_unlock_irq(&port->port_lock);
 
 	gsmd_start_rx(port);
 }
@@ -308,11 +308,11 @@ static void gsmd_tx_pull(struct work_struct *w)
 	pr_debug("%s: port:%pK port#%d pool:%pK\n", __func__,
 			port, port->port_num, pool);
 
-	spin_lock_irq(&port->port_lock);
+	raw_spin_lock_irq(&port->port_lock);
 
 	if (!port->port_usb) {
 		pr_debug("%s: usb is disconnected\n", __func__);
-		spin_unlock_irq(&port->port_lock);
+		raw_spin_unlock_irq(&port->port_lock);
 		gsmd_read_pending(port);
 		return;
 	}
@@ -321,7 +321,7 @@ static void gsmd_tx_pull(struct work_struct *w)
 	func = &port->port_usb->func;
 	gadget = func->config->cdev->gadget;
 	if (port->is_suspended) {
-		spin_unlock_irq(&port->port_lock);
+		raw_spin_unlock_irq(&port->port_lock);
 		if ((gadget->speed == USB_SPEED_SUPER) &&
 		    (func->func_is_suspended))
 			ret = usb_func_wakeup(func);
@@ -333,14 +333,14 @@ static void gsmd_tx_pull(struct work_struct *w)
 		else if (ret)
 			pr_err("Failed to wake up the USB core. ret=%d\n", ret);
 
-		spin_lock_irq(&port->port_lock);
+		raw_spin_lock_irq(&port->port_lock);
 		if (!port->port_usb) {
 			pr_debug("%s: USB disconnected\n", __func__);
-			spin_unlock_irq(&port->port_lock);
+			raw_spin_unlock_irq(&port->port_lock);
 			gsmd_read_pending(port);
 			return;
 		}
-		spin_unlock_irq(&port->port_lock);
+		raw_spin_unlock_irq(&port->port_lock);
 		return;
 	}
 
@@ -360,9 +360,9 @@ static void gsmd_tx_pull(struct work_struct *w)
 		req->length = smd_read(pi->ch, req->buf, avail);
 		req->zero = 1;
 
-		spin_unlock_irq(&port->port_lock);
+		raw_spin_unlock_irq(&port->port_lock);
 		ret = usb_ep_queue(in, req, GFP_KERNEL);
-		spin_lock_irq(&port->port_lock);
+		raw_spin_lock_irq(&port->port_lock);
 		if (ret) {
 			pr_err("%s: usb ep in queue failed"
 					"port:%pK, port#%d err:%d\n",
@@ -383,7 +383,7 @@ tx_pull_end:
 	if (port->port_usb && smd_read_avail(port->pi->ch) && !list_empty(pool))
 		queue_work(gsmd_wq, &port->pull);
 
-	spin_unlock_irq(&port->port_lock);
+	raw_spin_unlock_irq(&port->port_lock);
 
 	return;
 }
@@ -399,17 +399,17 @@ static void gsmd_read_complete(struct usb_ep *ep, struct usb_request *req)
 		return;
 	}
 
-	spin_lock(&port->port_lock);
+	raw_spin_lock(&port->port_lock);
 	if (!test_bit(CH_OPENED, &port->pi->flags) ||
 			req->status == -ESHUTDOWN) {
-		spin_unlock(&port->port_lock);
+		raw_spin_unlock(&port->port_lock);
 		gsmd_free_req(ep, req);
 		return;
 	}
 
 	list_add_tail(&req->list, &port->read_queue);
 	queue_work(gsmd_wq, &port->push);
-	spin_unlock(&port->port_lock);
+	raw_spin_unlock(&port->port_lock);
 
 	return;
 }
@@ -425,10 +425,10 @@ static void gsmd_write_complete(struct usb_ep *ep, struct usb_request *req)
 		return;
 	}
 
-	spin_lock(&port->port_lock);
+	raw_spin_lock(&port->port_lock);
 	if (!test_bit(CH_OPENED, &port->pi->flags) ||
 			req->status == -ESHUTDOWN) {
-		spin_unlock(&port->port_lock);
+		raw_spin_unlock(&port->port_lock);
 		gsmd_free_req(ep, req);
 		return;
 	}
@@ -440,7 +440,7 @@ static void gsmd_write_complete(struct usb_ep *ep, struct usb_request *req)
 
 	list_add(&req->list, &port->write_pool);
 	queue_work(gsmd_wq, &port->pull);
-	spin_unlock(&port->port_lock);
+	raw_spin_unlock(&port->port_lock);
 
 	return;
 }
@@ -451,7 +451,7 @@ static void gsmd_start_io(struct gsmd_port *port)
 
 	pr_debug("%s: port: %pK\n", __func__, port);
 
-	spin_lock(&port->port_lock);
+	raw_spin_lock(&port->port_lock);
 
 	if (!port->port_usb)
 		goto start_io_out;
@@ -482,7 +482,7 @@ static void gsmd_start_io(struct gsmd_port *port)
 	}
 
 start_io_out:
-	spin_unlock(&port->port_lock);
+	raw_spin_unlock(&port->port_lock);
 
 	if (ret)
 		return;
@@ -529,19 +529,19 @@ static void gsmd_stop_io(struct gsmd_port *port)
 	struct usb_ep	*out;
 	unsigned long	flags;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	if (!port->port_usb) {
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 		return;
 	}
 	in = port->port_usb->in;
 	out = port->port_usb->out;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	usb_ep_fifo_flush(in);
 	usb_ep_fifo_flush(out);
 
-	spin_lock(&port->port_lock);
+	raw_spin_lock(&port->port_lock);
 	if (port->port_usb) {
 		gsmd_free_requests(out, &port->read_pool);
 		gsmd_free_requests(out, &port->read_queue);
@@ -549,7 +549,7 @@ static void gsmd_stop_io(struct gsmd_port *port)
 		port->n_read = 0;
 		port->cbits_to_laptop = 0;
 	} else {
-		spin_unlock(&port->port_lock);
+		raw_spin_unlock(&port->port_lock);
 		return;
 	}
 
@@ -557,7 +557,7 @@ static void gsmd_stop_io(struct gsmd_port *port)
 		port->port_usb->send_modem_ctrl_bits(
 					port->port_usb,
 					port->cbits_to_laptop);
-	spin_unlock(&port->port_lock);
+	raw_spin_unlock(&port->port_lock);
 
 }
 
@@ -715,13 +715,13 @@ int gsmd_connect(struct gserial *gser, u8 portno)
 
 	port = smd_ports[portno].port;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	port->port_usb = gser;
 	gser->notify_modem = gsmd_notify_modem;
 	port->nbytes_tomodem = 0;
 	port->nbytes_tolaptop = 0;
 	port->is_suspended = false;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	ret = usb_ep_enable(gser->in);
 	if (ret) {
@@ -766,10 +766,10 @@ void gsmd_disconnect(struct gserial *gser, u8 portno)
 
 	port = smd_ports[portno].port;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	port->port_usb = 0;
 	port->is_suspended = false;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	/* disable endpoints, aborting down any active I/O */
 	usb_ep_disable(gser->out);
@@ -777,12 +777,12 @@ void gsmd_disconnect(struct gserial *gser, u8 portno)
 	usb_ep_disable(gser->in);
 	gser->in->driver_data = NULL;
 
-	spin_lock_irqsave(&port->port_lock, flags);
+	raw_spin_lock_irqsave(&port->port_lock, flags);
 	gsmd_free_requests(gser->out, &port->read_pool);
 	gsmd_free_requests(gser->out, &port->read_queue);
 	gsmd_free_requests(gser->in, &port->write_pool);
 	port->n_read = 0;
-	spin_unlock_irqrestore(&port->port_lock, flags);
+	raw_spin_unlock_irqrestore(&port->port_lock, flags);
 
 	if (test_and_clear_bit(CH_OPENED, &port->pi->flags)) {
 		/* lower the dtr */
@@ -814,11 +814,11 @@ static int gsmd_ch_probe(struct platform_device *pdev)
 
 		if (!strncmp(pi->name, pdev->name, SMD_CH_MAX_LEN)) {
 			set_bit(CH_READY, &pi->flags);
-			spin_lock_irqsave(&port->port_lock, flags);
+			raw_spin_lock_irqsave(&port->port_lock, flags);
 			if (port->port_usb)
 				queue_delayed_work(gsmd_wq, &port->connect_work,
 					msecs_to_jiffies(0));
-			spin_unlock_irqrestore(&port->port_lock, flags);
+			raw_spin_unlock_irqrestore(&port->port_lock, flags);
 			break;
 		}
 	}
@@ -870,7 +870,7 @@ static int gsmd_port_alloc(int portno, struct usb_cdc_line_coding *coding)
 	port->port_num = portno;
 	port->pi = &smd_pi[portno];
 
-	spin_lock_init(&port->port_lock);
+	raw_spin_lock_init(&port->port_lock);
 
 	INIT_LIST_HEAD(&port->read_pool);
 	INIT_LIST_HEAD(&port->read_queue);
@@ -914,7 +914,7 @@ static ssize_t debug_smd_read_stats(struct file *file, char __user *ubuf,
 	for (i = 0; i < n_smd_ports; i++) {
 		port = smd_ports[i].port;
 		pi = port->pi;
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		temp += scnprintf(buf + temp, 512 - temp,
 				"###PORT:%d###\n"
 				"nbytes_tolaptop: %lu\n"
@@ -933,7 +933,7 @@ static ssize_t debug_smd_read_stats(struct file *file, char __user *ubuf,
 				pi->ch ? smd_write_avail(pi->ch) : 0,
 				test_bit(CH_OPENED, &pi->flags),
 				test_bit(CH_READY, &pi->flags));
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	}
 
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, temp);
@@ -954,10 +954,10 @@ static ssize_t debug_smd_reset_stats(struct file *file, const char __user *buf,
 	for (i = 0; i < n_smd_ports; i++) {
 		port = smd_ports[i].port;
 
-		spin_lock_irqsave(&port->port_lock, flags);
+		raw_spin_lock_irqsave(&port->port_lock, flags);
 		port->nbytes_tolaptop = 0;
 		port->nbytes_tomodem = 0;
-		spin_unlock_irqrestore(&port->port_lock, flags);
+		raw_spin_unlock_irqrestore(&port->port_lock, flags);
 	}
 
 	return count;
@@ -1045,9 +1045,9 @@ void gsmd_suspend(struct gserial *gser, u8 portno)
 	pr_debug("%s: gserial:%pK portno:%u\n", __func__, gser, portno);
 
 	port = smd_ports[portno].port;
-	spin_lock(&port->port_lock);
+	raw_spin_lock(&port->port_lock);
 	port->is_suspended = true;
-	spin_unlock(&port->port_lock);
+	raw_spin_unlock(&port->port_lock);
 }
 
 void gsmd_resume(struct gserial *gser, u8 portno)
@@ -1057,9 +1057,9 @@ void gsmd_resume(struct gserial *gser, u8 portno)
 	pr_debug("%s: gserial:%pK portno:%u\n", __func__, gser, portno);
 
 	port = smd_ports[portno].port;
-	spin_lock(&port->port_lock);
+	raw_spin_lock(&port->port_lock);
 	port->is_suspended = false;
-	spin_unlock(&port->port_lock);
+	raw_spin_unlock(&port->port_lock);
 	queue_work(gsmd_wq, &port->pull);
 }
 

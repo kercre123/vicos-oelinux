@@ -234,7 +234,7 @@ struct test_iosched {
 	u32 sector_range;
 	int wr_rd_next_req_id;
 	int unique_next_req_id;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct test_info test_info;
 	bool fs_wr_reqs_during_test;
 	bool ignore_round;

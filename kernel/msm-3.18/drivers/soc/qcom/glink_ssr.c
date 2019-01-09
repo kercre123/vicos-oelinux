@@ -136,10 +136,10 @@ static void link_state_cb_worker(struct work_struct *work)
 			ch_open_work->transport);
 
 	if (ss_info && ch_open_work->link_state == GLINK_LINK_STATE_UP) {
-		spin_lock_irqsave(&ss_info->link_up_lock, flags);
+		raw_spin_lock_irqsave(&ss_info->link_up_lock, flags);
 		if (!ss_info->link_up) {
 			ss_info->link_up = true;
-			spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
+			raw_spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
 			if (!configure_and_open_channel(ss_info)) {
 				glink_unregister_link_state_cb(
 						ss_info->link_state_handle);
@@ -148,12 +148,12 @@ static void link_state_cb_worker(struct work_struct *work)
 			kfree(ch_open_work);
 			return;
 		}
-		spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
+		raw_spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
 	} else {
 		if (ss_info) {
-			spin_lock_irqsave(&ss_info->link_up_lock, flags);
+			raw_spin_lock_irqsave(&ss_info->link_up_lock, flags);
 			ss_info->link_up = false;
-			spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
+			raw_spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
 			ss_info->handle = NULL;
 		} else {
 			GLINK_SSR_ERR("<SSR> %s: ss_info is NULL\n", __func__);
@@ -322,9 +322,9 @@ void close_ch_worker(struct work_struct *work)
 	ss_info = get_info_for_edge(close_work->edge);
 	BUG_ON(!ss_info);
 
-	spin_lock_irqsave(&ss_info->link_up_lock, flags);
+	raw_spin_lock_irqsave(&ss_info->link_up_lock, flags);
 	ss_info->link_up = false;
-	spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
+	raw_spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
 
 	BUG_ON(ss_info->link_state_handle != NULL);
 	link_state_handle = glink_register_link_state_cb(ss_info->link_info,
@@ -508,7 +508,7 @@ int notify_for_subsystem(struct subsys_info *ss_info)
 		handle = ss_info_channel->handle;
 		ss_leaf_entry->cb_data = ss_info_channel->cb_data;
 
-		spin_lock_irqsave(&ss_info->link_up_lock, flags);
+		raw_spin_lock_irqsave(&ss_info->link_up_lock, flags);
 		if (IS_ERR_OR_NULL(ss_info_channel->handle) ||
 				!ss_info_channel->cb_data ||
 				!ss_info_channel->link_up ||
@@ -523,11 +523,11 @@ int notify_for_subsystem(struct subsys_info *ss_info)
 				ss_info_channel->handle, "link_up",
 				ss_info_channel->link_up);
 
-			spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
+			raw_spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
 			atomic_dec(&responses_remaining);
 			continue;
 		}
-		spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
+		raw_spin_unlock_irqrestore(&ss_info->link_up_lock, flags);
 
 		do_cleanup_data = kmalloc(sizeof(struct do_cleanup_msg),
 				GFP_KERNEL);
@@ -874,7 +874,7 @@ static int glink_ssr_probe(struct platform_device *pdev)
 	ss_info->handle = NULL;
 	ss_info->link_state_handle = NULL;
 	ss_info->cb_data = NULL;
-	spin_lock_init(&ss_info->link_up_lock);
+	raw_spin_lock_init(&ss_info->link_up_lock);
 
 	nb = kmalloc(sizeof(struct restart_notifier_block), GFP_KERNEL);
 	if (!nb) {

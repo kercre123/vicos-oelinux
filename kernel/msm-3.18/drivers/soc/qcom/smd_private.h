@@ -169,7 +169,7 @@ struct smd_channel {
 	struct smd_half_channel_access *half_ch;
 };
 
-extern spinlock_t smem_lock;
+extern raw_spinlock_t smem_lock;
 
 struct interrupt_stat {
 	uint32_t smd_in_count;

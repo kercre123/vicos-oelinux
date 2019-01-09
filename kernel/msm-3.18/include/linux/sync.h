@@ -110,10 +110,10 @@ struct sync_timeline {
 	bool			destroyed;
 
 	struct list_head	child_list_head;
-	spinlock_t		child_list_lock;
+	raw_spinlock_t		child_list_lock;
 
 	struct list_head	active_list_head;
-	spinlock_t		active_list_lock;
+	raw_spinlock_t		active_list_lock;
 
 	struct list_head	sync_timeline_list;
 };
@@ -169,7 +169,7 @@ struct sync_fence {
 	struct list_head	pt_list_head;
 
 	struct list_head	waiter_list_head;
-	spinlock_t		waiter_list_lock; /* also protects status */
+	raw_spinlock_t		waiter_list_lock; /* also protects status */
 	int			status;
 
 	wait_queue_head_t	wq;

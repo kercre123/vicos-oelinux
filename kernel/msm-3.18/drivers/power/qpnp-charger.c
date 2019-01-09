@@ -398,7 +398,7 @@ struct qpnp_chg_chip {
 	struct qpnp_adc_tm_chip		*adc_tm_dev;
 	struct mutex			jeita_configure_lock;
 	struct mutex			batfet_vreg_lock;
-	spinlock_t			usbin_health_monitor_lock;
+	raw_spinlock_t			usbin_health_monitor_lock;
 	struct alarm			reduce_power_stage_alarm;
 	struct work_struct		reduce_power_stage_work;
 	bool				power_stage_workaround_running;
@@ -1630,7 +1630,7 @@ qpnp_usbin_health_check_work(struct work_struct *work)
 				struct qpnp_chg_chip, usbin_health_check);
 
 	usbin_health = qpnp_chg_check_usbin_health(chip);
-	spin_lock(&chip->usbin_health_monitor_lock);
+	raw_spin_lock(&chip->usbin_health_monitor_lock);
 	if (chip->usbin_health != usbin_health) {
 		pr_debug("health_check_work: pr_usbin_health = %d, usbin_health = %d",
 			chip->usbin_health, usbin_health);
@@ -1644,7 +1644,7 @@ qpnp_usbin_health_check_work(struct work_struct *work)
 	}
 	/* enable OVP monitor in usb valid after coarse-det complete */
 	chip->usb_valid_check_ovp = true;
-	spin_unlock(&chip->usbin_health_monitor_lock);
+	raw_spin_unlock(&chip->usbin_health_monitor_lock);
 	return;
 }
 
@@ -5383,7 +5383,7 @@ qpnp_charger_probe(struct spmi_device *spmi)
 
 	mutex_init(&chip->jeita_configure_lock);
 	mutex_init(&chip->batfet_vreg_lock);
-	spin_lock_init(&chip->usbin_health_monitor_lock);
+	raw_spin_lock_init(&chip->usbin_health_monitor_lock);
 	alarm_init(&chip->reduce_power_stage_alarm, ALARM_REALTIME,
 			qpnp_chg_reduce_power_stage_callback);
 	INIT_WORK(&chip->reduce_power_stage_work,

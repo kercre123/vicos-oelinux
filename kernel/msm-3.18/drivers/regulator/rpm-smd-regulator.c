@@ -184,7 +184,7 @@ struct rpm_vreg {
 	int			regulator_type;
 	int			hpm_min_load;
 	int			enable_time;
-	spinlock_t		slock;
+	raw_spinlock_t		slock;
 	struct mutex		mlock;
 	unsigned long		flags;
 	bool			sleep_request_sent;
@@ -251,7 +251,7 @@ static u32 rpm_vreg_string_to_int(const u8 *str)
 static inline void rpm_vreg_lock(struct rpm_vreg *rpm_vreg)
 {
 	if (rpm_vreg->allow_atomic)
-		spin_lock_irqsave(&rpm_vreg->slock, rpm_vreg->flags);
+		raw_spin_lock_irqsave(&rpm_vreg->slock, rpm_vreg->flags);
 	else
 		mutex_lock(&rpm_vreg->mlock);
 }
@@ -259,7 +259,7 @@ static inline void rpm_vreg_lock(struct rpm_vreg *rpm_vreg)
 static inline void rpm_vreg_unlock(struct rpm_vreg *rpm_vreg)
 {
 	if (rpm_vreg->allow_atomic)
-		spin_unlock_irqrestore(&rpm_vreg->slock, rpm_vreg->flags);
+		raw_spin_unlock_irqrestore(&rpm_vreg->slock, rpm_vreg->flags);
 	else
 		mutex_unlock(&rpm_vreg->mlock);
 }
@@ -1842,7 +1842,7 @@ static int rpm_vreg_resource_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&rpm_vreg->reg_list);
 
 	if (rpm_vreg->allow_atomic)
-		spin_lock_init(&rpm_vreg->slock);
+		raw_spin_lock_init(&rpm_vreg->slock);
 	else
 		mutex_init(&rpm_vreg->mlock);
 

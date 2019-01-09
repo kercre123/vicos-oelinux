@@ -231,10 +231,10 @@ int test_iosched_add_unique_test_req(struct test_iosched *tios,
 		"%s: added request %d to the test requests list, type = %d",
 		__func__, test_rq->req_id, req_unique);
 
-	spin_lock_irqsave(tios->req_q->queue_lock, flags);
+	raw_spin_lock_irqsave(tios->req_q->queue_lock, flags);
 	list_add_tail(&test_rq->queuelist, &tios->test_queue);
 	tios->test_count++;
-	spin_unlock_irqrestore(tios->req_q->queue_lock, flags);
+	raw_spin_unlock_irqrestore(tios->req_q->queue_lock, flags);
 
 	return 0;
 }
@@ -414,10 +414,10 @@ int test_iosched_add_wr_rd_test_req(struct test_iosched *tios,
 	test_rq = test_iosched_create_test_req(tios, is_err_expcted, direction,
 		start_sec, num_bios, pattern, end_req_io);
 	if (test_rq) {
-		spin_lock_irqsave(tios->req_q->queue_lock, flags);
+		raw_spin_lock_irqsave(tios->req_q->queue_lock, flags);
 		list_add_tail(&test_rq->queuelist, &tios->test_queue);
 		tios->test_count++;
-		spin_unlock_irqrestore(tios->req_q->queue_lock, flags);
+		raw_spin_unlock_irqrestore(tios->req_q->queue_lock, flags);
 		return 0;
 	}
 	return -ENODEV;
@@ -692,20 +692,20 @@ int test_iosched_start_test(struct test_iosched *tios,
 			 */
 			msleep(2000);
 
-		spin_lock(&tios->lock);
+		raw_spin_lock(&tios->lock);
 
 		if (tios->test_state != TEST_IDLE) {
 			pr_info(
 				"%s: Another test is running, try again later",
 				__func__);
-			spin_unlock(&tios->lock);
+			raw_spin_unlock(&tios->lock);
 			return -EBUSY;
 		}
 
 		if (tios->start_sector == 0) {
 			pr_err("%s: Invalid start sector", __func__);
 			tios->test_result = TEST_FAILED;
-			spin_unlock(&tios->lock);
+			raw_spin_unlock(&tios->lock);
 			return -EINVAL;
 		}
 
@@ -722,7 +722,7 @@ int test_iosched_start_test(struct test_iosched *tios,
 
 		tios->test_state = TEST_RUNNING;
 
-		spin_unlock(&tios->lock);
+		raw_spin_unlock(&tios->lock);
 		/*
 		 * Give an already dispatch request from
 		 * FS a chanse to complete
@@ -981,21 +981,21 @@ static int test_dispatch_from(struct request_queue *q,
 	if (!tios)
 		goto err;
 
-	spin_lock_irqsave(&tios->lock, flags);
+	raw_spin_lock_irqsave(&tios->lock, flags);
 	if (!list_empty(queue)) {
 		test_rq = list_entry(queue->next, struct test_request,
 				queuelist);
 		rq = test_rq->rq;
 		if (!rq) {
 			pr_err("%s: null request,return", __func__);
-			spin_unlock_irqrestore(&tios->lock, flags);
+			raw_spin_unlock_irqrestore(&tios->lock, flags);
 			goto err;
 		}
 		list_move_tail(&test_rq->queuelist,
 			&tios->dispatched_queue);
 		tios->dispatched_count++;
 		(*count)--;
-		spin_unlock_irqrestore(&tios->lock, flags);
+		raw_spin_unlock_irqrestore(&tios->lock, flags);
 
 		print_req(rq);
 		elv_dispatch_sort(q, rq);
@@ -1003,7 +1003,7 @@ static int test_dispatch_from(struct request_queue *q,
 		ret = 1;
 		goto err;
 	}
-	spin_unlock_irqrestore(&tios->lock, flags);
+	raw_spin_unlock_irqrestore(&tios->lock, flags);
 
 err:
 	return ret;
@@ -1130,7 +1130,7 @@ static int test_init_queue(struct request_queue *q, struct elevator_type *e)
 	init_waitqueue_head(&tios->wait_q);
 	tios->req_q = q;
 
-	spin_lock_init(&tios->lock);
+	raw_spin_lock_init(&tios->lock);
 
 	ret = test_debugfs_init(tios);
 	if (ret) {
@@ -1171,9 +1171,9 @@ static int test_init_queue(struct request_queue *q, struct elevator_type *e)
 		}
 	}
 
-	spin_lock_irqsave(q->queue_lock, flags);
+	raw_spin_lock_irqsave(q->queue_lock, flags);
 	q->elevator = eq;
-	spin_unlock_irqrestore(q->queue_lock, flags);
+	raw_spin_unlock_irqrestore(q->queue_lock, flags);
 
 	return 0;
 
@@ -1217,11 +1217,11 @@ void test_iosched_add_urgent_req(struct test_iosched *tios,
 	if (!tios)
 		return;
 
-	spin_lock_irqsave(&tios->lock, flags);
+	raw_spin_lock_irqsave(&tios->lock, flags);
 	test_rq->rq->cmd_flags |= REQ_URGENT;
 	list_add_tail(&test_rq->queuelist, &tios->urgent_queue);
 	tios->urgent_count++;
-	spin_unlock_irqrestore(&tios->lock, flags);
+	raw_spin_unlock_irqrestore(&tios->lock, flags);
 }
 EXPORT_SYMBOL(test_iosched_add_urgent_req);
 

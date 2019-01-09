@@ -86,7 +86,7 @@ static int host2guc_action(struct intel_guc *guc, u32 *data, u32 len)
 		return -EINVAL;
 
 	intel_uncore_forcewake_get(dev_priv, FORCEWAKE_ALL);
-	spin_lock(&dev_priv->guc.host2guc_lock);
+	raw_spin_lock(&dev_priv->guc.host2guc_lock);
 
 	dev_priv->guc.action_count += 1;
 	dev_priv->guc.action_cmd = data[0];
@@ -119,7 +119,7 @@ static int host2guc_action(struct intel_guc *guc, u32 *data, u32 len)
 	}
 	dev_priv->guc.action_status = status;
 
-	spin_unlock(&dev_priv->guc.host2guc_lock);
+	raw_spin_unlock(&dev_priv->guc.host2guc_lock);
 	intel_uncore_forcewake_put(dev_priv, FORCEWAKE_ALL);
 
 	return ret;
@@ -292,7 +292,7 @@ static uint32_t select_doorbell_cacheline(struct intel_guc *guc)
 	const uint32_t cacheline_size = cache_line_size();
 	uint32_t offset;
 
-	spin_lock(&guc->host2guc_lock);
+	raw_spin_lock(&guc->host2guc_lock);
 
 	/* Doorbell uses a single cache line within a page */
 	offset = offset_in_page(guc->db_cacheline);
@@ -300,7 +300,7 @@ static uint32_t select_doorbell_cacheline(struct intel_guc *guc)
 	/* Moving to next cache line to reduce contention */
 	guc->db_cacheline += cacheline_size;
 
-	spin_unlock(&guc->host2guc_lock);
+	raw_spin_unlock(&guc->host2guc_lock);
 
 	DRM_DEBUG_DRIVER("selected doorbell cacheline 0x%x, next 0x%x, linesize %u\n",
 			offset, guc->db_cacheline, cacheline_size);
@@ -322,13 +322,13 @@ static uint16_t assign_doorbell(struct intel_guc *guc, uint32_t priority)
 	const uint16_t end = start + half;
 	uint16_t id;
 
-	spin_lock(&guc->host2guc_lock);
+	raw_spin_lock(&guc->host2guc_lock);
 	id = find_next_zero_bit(guc->doorbell_bitmap, end, start);
 	if (id == end)
 		id = GUC_INVALID_DOORBELL_ID;
 	else
 		bitmap_set(guc->doorbell_bitmap, id, 1);
-	spin_unlock(&guc->host2guc_lock);
+	raw_spin_unlock(&guc->host2guc_lock);
 
 	DRM_DEBUG_DRIVER("assigned %s priority doorbell id 0x%x\n",
 			hi_pri ? "high" : "normal", id);
@@ -338,9 +338,9 @@ static uint16_t assign_doorbell(struct intel_guc *guc, uint32_t priority)
 
 static void release_doorbell(struct intel_guc *guc, uint16_t id)
 {
-	spin_lock(&guc->host2guc_lock);
+	raw_spin_lock(&guc->host2guc_lock);
 	bitmap_clear(guc->doorbell_bitmap, id, 1);
-	spin_unlock(&guc->host2guc_lock);
+	raw_spin_unlock(&guc->host2guc_lock);
 }
 
 /*
@@ -605,7 +605,7 @@ int i915_guc_submit(struct i915_guc_client *client,
 	/* Shall we move this right after ring is pinned? */
 	lr_context_update(rq);
 
-	spin_lock_irqsave(&client->wq_lock, flags);
+	raw_spin_lock_irqsave(&client->wq_lock, flags);
 
 	q_ret = guc_add_workqueue_item(client, rq);
 	if (q_ret == 0)
@@ -621,12 +621,12 @@ int i915_guc_submit(struct i915_guc_client *client,
 	} else {
 		client->retcode = 0;
 	}
-	spin_unlock_irqrestore(&client->wq_lock, flags);
+	raw_spin_unlock_irqrestore(&client->wq_lock, flags);
 
-	spin_lock(&guc->host2guc_lock);
+	raw_spin_lock(&guc->host2guc_lock);
 	guc->submissions[ring_id] += 1;
 	guc->last_seqno[ring_id] = rq->seqno;
-	spin_unlock(&guc->host2guc_lock);
+	raw_spin_unlock(&guc->host2guc_lock);
 
 	return q_ret;
 }
@@ -768,7 +768,7 @@ static struct i915_guc_client *guc_client_alloc(struct drm_device *dev,
 	client->client_obj = obj;
 	client->wq_offset = GUC_DB_SIZE;
 	client->wq_size = GUC_WQ_SIZE;
-	spin_lock_init(&client->wq_lock);
+	raw_spin_lock_init(&client->wq_lock);
 
 	client->doorbell_offset = select_doorbell_cacheline(guc);
 
@@ -871,7 +871,7 @@ int i915_guc_submission_init(struct drm_device *dev)
 	if (!guc->ctx_pool_obj)
 		return -ENOMEM;
 
-	spin_lock_init(&dev_priv->guc.host2guc_lock);
+	raw_spin_lock_init(&dev_priv->guc.host2guc_lock);
 
 	ida_init(&guc->ctx_ids);
 

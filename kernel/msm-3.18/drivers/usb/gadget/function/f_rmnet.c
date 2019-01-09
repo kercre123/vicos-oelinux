@@ -46,7 +46,7 @@ struct f_rmnet {
 	atomic_t			ctrl_online;
 	struct usb_composite_dev	*cdev;
 
-	spinlock_t			lock;
+	raw_spinlock_t			lock;
 
 	/* usb eps*/
 	struct usb_ep			*notify;
@@ -577,7 +577,7 @@ static void frmnet_purge_responses(struct f_rmnet *dev)
 
 	pr_debug("%s: port#%d\n", __func__, dev->port_num);
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	while (!list_empty(&dev->cpkt_resp_q)) {
 		cpkt = list_first_entry(&dev->cpkt_resp_q,
 				struct rmnet_ctrl_pkt, list);
@@ -586,7 +586,7 @@ static void frmnet_purge_responses(struct f_rmnet *dev)
 		rmnet_free_ctrl_pkt(cpkt);
 	}
 	dev->notify_count = 0;
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static void frmnet_suspend(struct usb_function *f)
@@ -845,14 +845,14 @@ static void frmnet_ctrl_response_available(struct f_rmnet *dev)
 
 	pr_debug("%s:dev:%pK portno#%d\n", __func__, dev, dev->port_num);
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	if (!atomic_read(&dev->online) || !req || !req->buf) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		return;
 	}
 
 	if (++dev->notify_count != 1) {
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		return;
 	}
 
@@ -863,18 +863,18 @@ static void frmnet_ctrl_response_available(struct f_rmnet *dev)
 	event->wValue = cpu_to_le16(0);
 	event->wIndex = cpu_to_le16(dev->ifc_id);
 	event->wLength = cpu_to_le16(0);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	ret = usb_ep_queue(dev->notify, dev->notify_req, GFP_ATOMIC);
 	if (ret) {
-		spin_lock_irqsave(&dev->lock, flags);
+		raw_spin_lock_irqsave(&dev->lock, flags);
 		if (!list_empty(&dev->cpkt_resp_q)) {
 			if (dev->notify_count > 0)
 				dev->notify_count--;
 			else {
 				pr_debug("%s: Invalid notify_count=%lu to decrement\n",
 					 __func__, dev->notify_count);
-				spin_unlock_irqrestore(&dev->lock, flags);
+				raw_spin_unlock_irqrestore(&dev->lock, flags);
 				return;
 			}
 			cpkt = list_first_entry(&dev->cpkt_resp_q,
@@ -882,7 +882,7 @@ static void frmnet_ctrl_response_available(struct f_rmnet *dev)
 			list_del(&cpkt->list);
 			rmnet_free_ctrl_pkt(cpkt);
 		}
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		pr_debug("ep enqueue error %d\n", ret);
 	}
 }
@@ -971,9 +971,9 @@ frmnet_send_cpkt_response(void *gr, void *buf, size_t len)
 		return 0;
 	}
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	list_add_tail(&cpkt->list, &dev->cpkt_resp_q);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 	frmnet_ctrl_response_available(dev);
 
@@ -1015,9 +1015,9 @@ static void frmnet_notify_complete(struct usb_ep *ep, struct usb_request *req)
 	case -ECONNRESET:
 	case -ESHUTDOWN:
 		/* connection gone */
-		spin_lock_irqsave(&dev->lock, flags);
+		raw_spin_lock_irqsave(&dev->lock, flags);
 		dev->notify_count = 0;
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 		break;
 	default:
 		pr_err("rmnet notify ep error %d\n", status);
@@ -1026,31 +1026,31 @@ static void frmnet_notify_complete(struct usb_ep *ep, struct usb_request *req)
 		if (!atomic_read(&dev->ctrl_online))
 			break;
 
-		spin_lock_irqsave(&dev->lock, flags);
+		raw_spin_lock_irqsave(&dev->lock, flags);
 		if (dev->notify_count > 0) {
 			dev->notify_count--;
 			if (dev->notify_count == 0) {
-				spin_unlock_irqrestore(&dev->lock, flags);
+				raw_spin_unlock_irqrestore(&dev->lock, flags);
 				break;
 			}
 		} else {
 			pr_debug("%s: Invalid notify_count=%lu to decrement\n",
 					__func__, dev->notify_count);
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 			break;
 		}
-		spin_unlock_irqrestore(&dev->lock, flags);
+		raw_spin_unlock_irqrestore(&dev->lock, flags);
 
 		status = usb_ep_queue(dev->notify, req, GFP_ATOMIC);
 		if (status) {
-			spin_lock_irqsave(&dev->lock, flags);
+			raw_spin_lock_irqsave(&dev->lock, flags);
 			if (!list_empty(&dev->cpkt_resp_q)) {
 				if (dev->notify_count > 0)
 					dev->notify_count--;
 				else {
 					pr_err("%s: Invalid notify_count=%lu to decrement\n",
 						__func__, dev->notify_count);
-					spin_unlock_irqrestore(&dev->lock,
+					raw_spin_unlock_irqrestore(&dev->lock,
 								flags);
 					break;
 				}
@@ -1059,7 +1059,7 @@ static void frmnet_notify_complete(struct usb_ep *ep, struct usb_request *req)
 				list_del(&cpkt->list);
 				rmnet_free_ctrl_pkt(cpkt);
 			}
-			spin_unlock_irqrestore(&dev->lock, flags);
+			raw_spin_unlock_irqrestore(&dev->lock, flags);
 			pr_debug("ep enqueue error %d\n", status);
 		}
 		break;
@@ -1108,21 +1108,21 @@ frmnet_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 			unsigned len;
 			struct rmnet_ctrl_pkt *cpkt;
 
-			spin_lock(&dev->lock);
+			raw_spin_lock(&dev->lock);
 			if (list_empty(&dev->cpkt_resp_q)) {
 				pr_err("ctrl resp queue empty "
 					" req%02x.%02x v%04x i%04x l%d\n",
 					ctrl->bRequestType, ctrl->bRequest,
 					w_value, w_index, w_length);
 				ret = 0;
-				spin_unlock(&dev->lock);
+				raw_spin_unlock(&dev->lock);
 				goto invalid;
 			}
 
 			cpkt = list_first_entry(&dev->cpkt_resp_q,
 					struct rmnet_ctrl_pkt, list);
 			list_del(&cpkt->list);
-			spin_unlock(&dev->lock);
+			raw_spin_unlock(&dev->lock);
 
 			len = min_t(unsigned, w_length, cpkt->len);
 			memcpy(req->buf, cpkt->buf, len);
@@ -1340,12 +1340,12 @@ static int frmnet_bind_config(struct usb_configuration *c, unsigned portno)
 		rmnet_string_defs[0].id = status;
 	}
 
-	spin_lock_irqsave(&dev->lock, flags);
+	raw_spin_lock_irqsave(&dev->lock, flags);
 	dev->cdev = c->cdev;
 	f = &dev->gether_port.func;
 	dev->port.f = f;
 	f->name = kasprintf(GFP_ATOMIC, "rmnet%d", portno);
-	spin_unlock_irqrestore(&dev->lock, flags);
+	raw_spin_unlock_irqrestore(&dev->lock, flags);
 	if (!f->name) {
 		pr_err("%s: cannot allocate memory for name\n", __func__);
 		return -ENOMEM;
@@ -1443,7 +1443,7 @@ static int frmnet_init_port(const char *ctrl_name, const char *data_name,
 	}
 
 	dev->port_num = nr_rmnet_ports;
-	spin_lock_init(&dev->lock);
+	raw_spin_lock_init(&dev->lock);
 	INIT_LIST_HEAD(&dev->cpkt_resp_q);
 
 	rmnet_port = &rmnet_ports[nr_rmnet_ports];

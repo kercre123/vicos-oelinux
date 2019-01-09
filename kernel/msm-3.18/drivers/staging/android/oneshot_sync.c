@@ -34,7 +34,7 @@
  */
 struct oneshot_sync_timeline {
 	struct sync_timeline obj;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct list_head state_list;
 	unsigned int id;
 };
@@ -76,9 +76,9 @@ static void oneshot_state_destroy(struct kref *ref)
 	struct oneshot_sync_state *state =
 		container_of(ref, struct oneshot_sync_state, refcount);
 
-	spin_lock(&state->timeline->lock);
+	raw_spin_lock(&state->timeline->lock);
 	list_del(&state->node);
-	spin_unlock(&state->timeline->lock);
+	raw_spin_unlock(&state->timeline->lock);
 
 	kfree(state);
 }
@@ -106,12 +106,12 @@ oneshot_pt_create(struct oneshot_sync_timeline *timeline)
 	pt->state->signaled = false;
 	pt->state->timeline = timeline;
 
-	spin_lock(&timeline->lock);
+	raw_spin_lock(&timeline->lock);
 	/* assign an id to the state, which could be shared by several pts. */
 	pt->state->id = ++(timeline->id);
 	/* add this pt to the list of pts that can be signaled by userspace */
 	list_add_tail(&pt->state->node, &timeline->state_list);
-	spin_unlock(&timeline->lock);
+	raw_spin_unlock(&timeline->lock);
 
 	return pt;
 error:
@@ -168,7 +168,7 @@ static void oneshot_pt_free(struct sync_pt *sync_pt)
 		to_oneshot_timeline(sync_pt->parent) : NULL;
 
 	if (timeline != NULL) {
-		spin_lock(&timeline->lock);
+		raw_spin_lock(&timeline->lock);
 		/*
 		 * If this is the original pt (and fence), signal to avoid
 		 * deadlock. Unfornately, we can't signal the timeline here
@@ -187,7 +187,7 @@ static void oneshot_pt_free(struct sync_pt *sync_pt)
 				pt->state->signaled = true;
 			}
 		}
-		spin_unlock(&timeline->lock);
+		raw_spin_unlock(&timeline->lock);
 	}
 	oneshot_state_put(pt->state);
 }
@@ -225,7 +225,7 @@ struct oneshot_sync_timeline *oneshot_timeline_create(const char *name)
 		return NULL;
 
 	INIT_LIST_HEAD(&timeline->state_list);
-	spin_lock_init(&timeline->lock);
+	raw_spin_lock_init(&timeline->lock);
 
 	return timeline;
 }
@@ -270,7 +270,7 @@ int oneshot_fence_signal(struct oneshot_sync_timeline *timeline,
 	if (timeline == NULL || fence == NULL)
 		return -EINVAL;
 
-	spin_lock(&timeline->lock);
+	raw_spin_lock(&timeline->lock);
 	list_for_each_entry(state, &timeline->state_list, node) {
 		/*
 		 * If we have the point from this fence on our list,
@@ -286,7 +286,7 @@ int oneshot_fence_signal(struct oneshot_sync_timeline *timeline,
 			break;
 		}
 	}
-	spin_unlock(&timeline->lock);
+	raw_spin_unlock(&timeline->lock);
 	if (ret == -EINVAL)
 		pr_debug("fence: %pK not from this timeline\n", fence);
 

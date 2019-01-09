@@ -39,7 +39,7 @@
 #define TS_DIFF_BUF_NUM		33
 
 struct smd_ts_apps {
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct completion work;
 
 	/* for dev node */

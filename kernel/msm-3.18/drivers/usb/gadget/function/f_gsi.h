@@ -89,7 +89,7 @@ enum gsi_ctrl_notify_state {
 struct event_queue {
 	u8 event[MAXQUEUELEN];
 	u8 head, tail;
-	spinlock_t q_lock;
+	raw_spinlock_t q_lock;
 };
 
 struct gsi_ntb_info {
@@ -158,7 +158,7 @@ struct gsi_ctrl_port {
 	struct list_head cpkt_resp_q;
 	unsigned long cpkts_len;
 
-	spinlock_t lock;
+	raw_spinlock_t lock;
 
 	int ipa_cons_clnt_hdl;
 	int ipa_prod_clnt_hdl;
@@ -196,7 +196,7 @@ struct gsi_data_port {
 	bool net_ready_trigger;
 	struct gsi_ntb_info ntb_info;
 
-	spinlock_t lock;
+	raw_spinlock_t lock;
 
 	struct work_struct usb_ipa_w;
 	struct workqueue_struct *ipa_usb_wq;

@@ -67,7 +67,7 @@ struct nqx_dev {
 	bool			irq_enabled;
 	/* NFC_IRQ wake-up state */
 	bool			irq_wake_up;
-	spinlock_t		irq_enabled_lock;
+	raw_spinlock_t		irq_enabled_lock;
 	unsigned int		count_irq;
 	/* Initial CORE RESET notification */
 	unsigned int		core_reset_ntf;
@@ -103,12 +103,12 @@ static void nqx_disable_irq(struct nqx_dev *nqx_dev)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&nqx_dev->irq_enabled_lock, flags);
+	raw_spin_lock_irqsave(&nqx_dev->irq_enabled_lock, flags);
 	if (nqx_dev->irq_enabled) {
 		disable_irq_nosync(nqx_dev->client->irq);
 		nqx_dev->irq_enabled = false;
 	}
-	spin_unlock_irqrestore(&nqx_dev->irq_enabled_lock, flags);
+	raw_spin_unlock_irqrestore(&nqx_dev->irq_enabled_lock, flags);
 }
 
 /**
@@ -123,12 +123,12 @@ static void nqx_enable_irq(struct nqx_dev *nqx_dev)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&nqx_dev->irq_enabled_lock, flags);
+	raw_spin_lock_irqsave(&nqx_dev->irq_enabled_lock, flags);
 	if (!nqx_dev->irq_enabled) {
 		nqx_dev->irq_enabled = true;
 		enable_irq(nqx_dev->client->irq);
 	}
-	spin_unlock_irqrestore(&nqx_dev->irq_enabled_lock, flags);
+	raw_spin_unlock_irqrestore(&nqx_dev->irq_enabled_lock, flags);
 }
 
 static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
@@ -140,9 +140,9 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 		pm_wakeup_event(&nqx_dev->client->dev, WAKEUP_SRC_TIMEOUT);
 
 	nqx_disable_irq(nqx_dev);
-	spin_lock_irqsave(&nqx_dev->irq_enabled_lock, flags);
+	raw_spin_lock_irqsave(&nqx_dev->irq_enabled_lock, flags);
 	nqx_dev->count_irq++;
-	spin_unlock_irqrestore(&nqx_dev->irq_enabled_lock, flags);
+	raw_spin_unlock_irqrestore(&nqx_dev->irq_enabled_lock, flags);
 	wake_up(&nqx_dev->read_wq);
 
 	return IRQ_HANDLED;
@@ -1025,7 +1025,7 @@ static int nqx_probe(struct i2c_client *client,
 	/* init mutex and queues */
 	init_waitqueue_head(&nqx_dev->read_wq);
 	mutex_init(&nqx_dev->read_mutex);
-	spin_lock_init(&nqx_dev->irq_enabled_lock);
+	raw_spin_lock_init(&nqx_dev->irq_enabled_lock);
 
 	nqx_dev->nqx_device.minor = MISC_DYNAMIC_MINOR;
 	nqx_dev->nqx_device.name = "nq-nci";

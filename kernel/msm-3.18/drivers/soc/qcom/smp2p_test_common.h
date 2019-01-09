@@ -118,7 +118,7 @@
 /* Structure to track state changes for the notifier callback. */
 struct mock_cb_data {
 	bool initialized;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct notifier_block nb;
 
 	/* events */
@@ -159,7 +159,7 @@ static inline void mock_cb_data_init(struct mock_cb_data *cb)
 {
 	if (!cb->initialized) {
 		init_completion(&cb->cb_completion);
-		spin_lock_init(&cb->lock);
+		raw_spin_lock_init(&cb->lock);
 		cb->initialized = true;
 		cb->nb.notifier_call = smp2p_test_notify;
 		memset(&cb->entry_data, 0,
@@ -184,7 +184,7 @@ static inline int smp2p_test_notify(struct notifier_block *self,
 
 	cb_data_ptr = container_of(self, struct mock_cb_data, nb);
 
-	spin_lock_irqsave(&cb_data_ptr->lock, flags);
+	raw_spin_lock_irqsave(&cb_data_ptr->lock, flags);
 
 	switch (event) {
 	case SMP2P_OPEN:
@@ -208,7 +208,7 @@ static inline int smp2p_test_notify(struct notifier_block *self,
 
 	++cb_data_ptr->cb_count;
 	complete(&cb_data_ptr->cb_completion);
-	spin_unlock_irqrestore(&cb_data_ptr->lock, flags);
+	raw_spin_unlock_irqrestore(&cb_data_ptr->lock, flags);
 	return 0;
 }
 #endif /* _SMP2P_TEST_COMMON_H_ */

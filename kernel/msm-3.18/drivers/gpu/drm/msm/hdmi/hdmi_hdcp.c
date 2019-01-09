@@ -209,11 +209,11 @@ void hdmi_hdcp_ctrl_irq(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	u32 reg_val, hdcp_int_status;
 	unsigned long flags;
 
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_HDCP_INT_CTRL);
 	hdcp_int_status = reg_val & HDCP_INT_STATUS_MASK;
 	if (!hdcp_int_status) {
-		spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+		raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 		return;
 	}
 	/* Clear Interrupts */
@@ -222,7 +222,7 @@ void hdmi_hdcp_ctrl_irq(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	if (hdcp_int_status & HDMI_HDCP_INT_CTRL_AUTH_FAIL_INT)
 		reg_val |= HDMI_HDCP_INT_CTRL_AUTH_FAIL_INFO_ACK;
 	hdmi_write(hdmi, REG_HDMI_HDCP_INT_CTRL, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	DBG("hdcp irq %x", hdcp_int_status);
 
@@ -418,14 +418,14 @@ static void hdmi_hdcp_reauth_work(struct work_struct *work)
 	 * attempt a re-authentication, HW would clear the AN0_READY and
 	 * AN1_READY bits in HDMI_HDCP_LINK0_STATUS register
 	 */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_HPD_CTRL);
 	reg_val &= ~HDMI_HPD_CTRL_ENABLE;
 	hdmi_write(hdmi, REG_HDMI_HPD_CTRL, reg_val);
 
 	/* Disable HDCP interrupts */
 	hdmi_write(hdmi, REG_HDMI_HDCP_INT_CTRL, 0);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	hdmi_write(hdmi, REG_HDMI_HDCP_RESET,
 		HDMI_HDCP_RESET_LINK0_DEAUTHENTICATE);
@@ -440,11 +440,11 @@ static void hdmi_hdcp_reauth_work(struct work_struct *work)
 	hdmi_write(hdmi, REG_HDMI_HDCP_CTRL, 0);
 
 	/* Enable HPD circuitry */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_HPD_CTRL);
 	reg_val |= HDMI_HPD_CTRL_ENABLE;
 	hdmi_write(hdmi, REG_HDMI_HPD_CTRL, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	/*
 	 * Only retry defined times then abort current authenticating process
@@ -480,7 +480,7 @@ static int hdmi_hdcp_auth_prepare(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 		hdcp_ctrl->aksv_valid = true;
 	}
 
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	/* disable HDMI Encrypt */
 	reg_val = hdmi_read(hdmi, REG_HDMI_CTRL);
 	reg_val &= ~HDMI_CTRL_ENCRYPTED;
@@ -490,7 +490,7 @@ static int hdmi_hdcp_auth_prepare(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	reg_val = hdmi_read(hdmi, REG_HDMI_DDC_ARBITRATION);
 	reg_val &= ~HDMI_DDC_ARBITRATION_HW_ARBITRATION;
 	hdmi_write(hdmi, REG_HDMI_DDC_ARBITRATION, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	/*
 	 * Write AKSV read from QFPROM to the HDCP registers.
@@ -552,11 +552,11 @@ static void hdmi_hdcp_auth_fail(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 
 	DBG("hdcp auth failed, queue reauth work");
 	/* clear HDMI Encrypt */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_CTRL);
 	reg_val &= ~HDMI_CTRL_ENCRYPTED;
 	hdmi_write(hdmi, REG_HDMI_CTRL, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	hdcp_ctrl->hdcp_state = HDCP_STATE_AUTH_FAILED;
 	queue_work(hdmi->workq, &hdcp_ctrl->hdcp_reauth_work);
@@ -572,18 +572,18 @@ static void hdmi_hdcp_auth_done(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	 * Disable software DDC before going into part3 to make sure
 	 * there is no Arbitration between software and hardware for DDC
 	 */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_DDC_ARBITRATION);
 	reg_val |= HDMI_DDC_ARBITRATION_HW_ARBITRATION;
 	hdmi_write(hdmi, REG_HDMI_DDC_ARBITRATION, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	/* enable HDMI Encrypt */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_CTRL);
 	reg_val |= HDMI_CTRL_ENCRYPTED;
 	hdmi_write(hdmi, REG_HDMI_CTRL, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	hdcp_ctrl->hdcp_state = HDCP_STATE_AUTHENTICATED;
 	hdcp_ctrl->auth_retries = 0;
@@ -800,14 +800,14 @@ static int hdmi_hdcp_auth_part1_key_exchange(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	}
 
 	/* Enable HDCP interrupts and ack/clear any stale interrupts */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	hdmi_write(hdmi, REG_HDMI_HDCP_INT_CTRL,
 		HDMI_HDCP_INT_CTRL_AUTH_SUCCESS_ACK |
 		HDMI_HDCP_INT_CTRL_AUTH_SUCCESS_MASK |
 		HDMI_HDCP_INT_CTRL_AUTH_FAIL_ACK |
 		HDMI_HDCP_INT_CTRL_AUTH_FAIL_MASK |
 		HDMI_HDCP_INT_CTRL_AUTH_FAIL_INFO_ACK);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	return 0;
 }
@@ -1324,11 +1324,11 @@ void hdmi_hdcp_ctrl_on(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	}
 
 	/* clear HDMI Encrypt */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_CTRL);
 	reg_val &= ~HDMI_CTRL_ENCRYPTED;
 	hdmi_write(hdmi, REG_HDMI_CTRL, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	hdcp_ctrl->auth_event = 0;
 	hdcp_ctrl->hdcp_state = HDCP_STATE_AUTHENTICATING;
@@ -1354,7 +1354,7 @@ void hdmi_hdcp_ctrl_off(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	 * attempt a re-authentication, HW would clear the AN0_READY and
 	 * AN1_READY bits in HDMI_HDCP_LINK0_STATUS register
 	 */
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_HPD_CTRL);
 	reg_val &= ~HDMI_HPD_CTRL_ENABLE;
 	hdmi_write(hdmi, REG_HDMI_HPD_CTRL, reg_val);
@@ -1365,7 +1365,7 @@ void hdmi_hdcp_ctrl_off(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	 * reauth works will know that the HDCP session has been turned off.
 	 */
 	hdmi_write(hdmi, REG_HDMI_HDCP_INT_CTRL, 0);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	/*
 	 * Cancel any pending auth/reauth attempts.
@@ -1384,7 +1384,7 @@ void hdmi_hdcp_ctrl_off(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	/* Disable encryption and disable the HDCP block */
 	hdmi_write(hdmi, REG_HDMI_HDCP_CTRL, 0);
 
-	spin_lock_irqsave(&hdmi->reg_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->reg_lock, flags);
 	reg_val = hdmi_read(hdmi, REG_HDMI_CTRL);
 	reg_val &= ~HDMI_CTRL_ENCRYPTED;
 	hdmi_write(hdmi, REG_HDMI_CTRL, reg_val);
@@ -1393,7 +1393,7 @@ void hdmi_hdcp_ctrl_off(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	reg_val = hdmi_read(hdmi, REG_HDMI_HPD_CTRL);
 	reg_val |= HDMI_HPD_CTRL_ENABLE;
 	hdmi_write(hdmi, REG_HDMI_HPD_CTRL, reg_val);
-	spin_unlock_irqrestore(&hdmi->reg_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->reg_lock, flags);
 
 	hdcp_ctrl->hdcp_state = HDCP_STATE_INACTIVE;
 

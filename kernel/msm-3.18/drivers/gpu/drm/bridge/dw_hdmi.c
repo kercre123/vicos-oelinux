@@ -134,7 +134,7 @@ struct dw_hdmi {
 	bool rxsense;			/* rxsense state */
 	u8 phy_mask;			/* desired phy int mask settings */
 
-	spinlock_t audio_lock;
+	raw_spinlock_t audio_lock;
 	struct mutex audio_mutex;
 	unsigned int sample_rate;
 	unsigned int audio_cts;
@@ -296,11 +296,11 @@ static void hdmi_set_clk_regenerator(struct dw_hdmi *hdmi,
 		__func__, sample_rate, ftdms / 1000000, (ftdms / 1000) % 1000,
 		n, cts);
 
-	spin_lock_irq(&hdmi->audio_lock);
+	raw_spin_lock_irq(&hdmi->audio_lock);
 	hdmi->audio_n = n;
 	hdmi->audio_cts = cts;
 	hdmi_set_cts_n(hdmi, cts, hdmi->audio_enable ? n : 0);
-	spin_unlock_irq(&hdmi->audio_lock);
+	raw_spin_unlock_irq(&hdmi->audio_lock);
 }
 
 static void hdmi_init_clk_regenerator(struct dw_hdmi *hdmi)
@@ -332,10 +332,10 @@ void dw_hdmi_audio_enable(struct dw_hdmi *hdmi)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&hdmi->audio_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->audio_lock, flags);
 	hdmi->audio_enable = true;
 	hdmi_set_cts_n(hdmi, hdmi->audio_cts, hdmi->audio_n);
-	spin_unlock_irqrestore(&hdmi->audio_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->audio_lock, flags);
 }
 EXPORT_SYMBOL_GPL(dw_hdmi_audio_enable);
 
@@ -343,10 +343,10 @@ void dw_hdmi_audio_disable(struct dw_hdmi *hdmi)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&hdmi->audio_lock, flags);
+	raw_spin_lock_irqsave(&hdmi->audio_lock, flags);
 	hdmi->audio_enable = false;
 	hdmi_set_cts_n(hdmi, hdmi->audio_cts, 0);
-	spin_unlock_irqrestore(&hdmi->audio_lock, flags);
+	raw_spin_unlock_irqrestore(&hdmi->audio_lock, flags);
 }
 EXPORT_SYMBOL_GPL(dw_hdmi_audio_disable);
 
@@ -1686,7 +1686,7 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 
 	mutex_init(&hdmi->mutex);
 	mutex_init(&hdmi->audio_mutex);
-	spin_lock_init(&hdmi->audio_lock);
+	raw_spin_lock_init(&hdmi->audio_lock);
 
 	of_property_read_u32(np, "reg-io-width", &val);
 

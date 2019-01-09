@@ -9,7 +9,7 @@ struct cma {
 	struct mutex    lock;
 #ifdef CONFIG_CMA_DEBUGFS
 	struct hlist_head mem_head;
-	spinlock_t mem_head_lock;
+	raw_spinlock_t mem_head_lock;
 #endif
 };
 

@@ -88,7 +88,7 @@ struct iris_device {
 	struct v4l2_device v4l2_dev;
 
 	struct mutex lock;
-	spinlock_t buf_lock[IRIS_BUF_MAX];
+	raw_spinlock_t buf_lock[IRIS_BUF_MAX];
 	wait_queue_head_t event_queue;
 	wait_queue_head_t read_queue;
 
@@ -5538,7 +5538,7 @@ static int iris_probe(struct platform_device *pdev)
 	for (i = 0; i < IRIS_BUF_MAX; i++) {
 		int kfifo_alloc_rc = 0;
 
-		spin_lock_init(&radio->buf_lock[i]);
+		raw_spin_lock_init(&radio->buf_lock[i]);
 
 		if ((i == IRIS_BUF_RAW_RDS) || (i == IRIS_BUF_PEEK))
 			kfifo_alloc_rc = kfifo_alloc(&radio->data_buf[i],

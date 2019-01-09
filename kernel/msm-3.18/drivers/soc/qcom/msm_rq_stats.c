@@ -210,11 +210,11 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 	unsigned int val = 0;
 	unsigned long flags = 0;
 
-	spin_lock_irqsave(&rq_lock, flags);
+	raw_spin_lock_irqsave(&rq_lock, flags);
 	/* rq avg currently available only on one core */
 	val = rq_info.rq_avg;
 	rq_info.rq_avg = 0;
-	spin_unlock_irqrestore(&rq_lock, flags);
+	raw_spin_unlock_irqrestore(&rq_lock, flags);
 
 	return snprintf(buf, PAGE_SIZE, "%d.%d\n", val/10, val%10);
 }
@@ -227,10 +227,10 @@ static ssize_t show_run_queue_poll_ms(struct kobject *kobj,
 	int ret = 0;
 	unsigned long flags = 0;
 
-	spin_lock_irqsave(&rq_lock, flags);
+	raw_spin_lock_irqsave(&rq_lock, flags);
 	ret = snprintf(buf, MAX_LONG_SIZE, "%u\n",
 		       jiffies_to_msecs(rq_info.rq_poll_jiffies));
-	spin_unlock_irqrestore(&rq_lock, flags);
+	raw_spin_unlock_irqrestore(&rq_lock, flags);
 
 	return ret;
 }
@@ -245,12 +245,12 @@ static ssize_t store_run_queue_poll_ms(struct kobject *kobj,
 
 	mutex_lock(&lock_poll_ms);
 
-	spin_lock_irqsave(&rq_lock, flags);
+	raw_spin_lock_irqsave(&rq_lock, flags);
 	if (kstrtouint(buf, 0, &val))
 		count = -EINVAL;
 	else
 		rq_info.rq_poll_jiffies = msecs_to_jiffies(val);
-	spin_unlock_irqrestore(&rq_lock, flags);
+	raw_spin_unlock_irqrestore(&rq_lock, flags);
 
 	mutex_unlock(&lock_poll_ms);
 
@@ -352,7 +352,7 @@ static int __init msm_rq_stats_init(void)
 	rq_wq = create_singlethread_workqueue("rq_stats");
 	BUG_ON(!rq_wq);
 	INIT_WORK(&rq_info.def_timer_work, def_work_fn);
-	spin_lock_init(&rq_lock);
+	raw_spin_lock_init(&rq_lock);
 	rq_info.rq_poll_jiffies = DEFAULT_RQ_POLL_JIFFIES;
 	rq_info.def_timer_jiffies = DEFAULT_DEF_TIMER_JIFFIES;
 	rq_info.rq_poll_last_jiffy = 0;

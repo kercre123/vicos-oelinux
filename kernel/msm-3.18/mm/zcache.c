@@ -127,7 +127,7 @@ struct zcache_pool {
 struct _zcache {
 	struct zcache_pool *pools[MAX_ZCACHE_POOLS];
 	u32 num_pools;			/* Current no. of zcache pools */
-	spinlock_t pool_lock;		/* Protects pools[] and num_pools */
+	raw_spinlock_t pool_lock;		/* Protects pools[] and num_pools */
 };
 struct _zcache zcache;
 
@@ -139,7 +139,7 @@ struct zcache_rbnode {
 	struct rb_node rb_node;
 	int rb_index;
 	struct radix_tree_root ratree; /* Page radix tree per inode rbtree */
-	spinlock_t ra_lock;		/* Protects radix tree */
+	raw_spinlock_t ra_lock;		/* Protects radix tree */
 	struct kref refcount;
 };
 
@@ -528,7 +528,7 @@ static int zcache_store_zaddr(struct zcache_pool *zpool,
 			return -ENOMEM;
 
 		INIT_RADIX_TREE(&rbnode->ratree, GFP_ATOMIC|__GFP_NOWARN);
-		spin_lock_init(&rbnode->ra_lock);
+		raw_spin_lock_init(&rbnode->ra_lock);
 		rbnode->rb_index = rb_index;
 		kref_init(&rbnode->refcount);
 		RB_CLEAR_NODE(&rbnode->rb_node);
@@ -552,7 +552,7 @@ static int zcache_store_zaddr(struct zcache_pool *zpool,
 	}
 
 	/* Succfully got a zcache_rbnode when arriving here */
-	spin_lock_irqsave(&rbnode->ra_lock, flags);
+	raw_spin_lock_irqsave(&rbnode->ra_lock, flags);
 	dup_zaddr = radix_tree_delete(&rbnode->ratree, ra_index);
 	if (unlikely(dup_zaddr)) {
 		WARN_ON("duplicated, will be replaced!\n");
@@ -569,15 +569,15 @@ static int zcache_store_zaddr(struct zcache_pool *zpool,
 	/* Insert zcache_ra_handle to ratree */
 	ret = radix_tree_insert(&rbnode->ratree, ra_index,
 				(void *)zaddr);
-	spin_unlock_irqrestore(&rbnode->ra_lock, flags);
+	raw_spin_unlock_irqrestore(&rbnode->ra_lock, flags);
 	if (unlikely(ret)) {
 		write_lock_irqsave(&zpool->rb_lock, flags);
-		spin_lock(&rbnode->ra_lock);
+		raw_spin_lock(&rbnode->ra_lock);
 
 		if (zcache_rbnode_empty(rbnode))
 			zcache_rbnode_isolate(zpool, rbnode, 1);
 
-		spin_unlock(&rbnode->ra_lock);
+		raw_spin_unlock(&rbnode->ra_lock);
 		write_unlock_irqrestore(&zpool->rb_lock, flags);
 	}
 
@@ -603,16 +603,16 @@ static void *zcache_load_delete_zaddr(struct zcache_pool *zpool,
 
 	BUG_ON(rbnode->rb_index != rb_index);
 
-	spin_lock_irqsave(&rbnode->ra_lock, flags);
+	raw_spin_lock_irqsave(&rbnode->ra_lock, flags);
 	zaddr = radix_tree_delete(&rbnode->ratree, ra_index);
-	spin_unlock_irqrestore(&rbnode->ra_lock, flags);
+	raw_spin_unlock_irqrestore(&rbnode->ra_lock, flags);
 
 	/* rb_lock and ra_lock must be taken again in the given sequence */
 	write_lock_irqsave(&zpool->rb_lock, flags);
-	spin_lock(&rbnode->ra_lock);
+	raw_spin_lock(&rbnode->ra_lock);
 	if (zcache_rbnode_empty(rbnode))
 		zcache_rbnode_isolate(zpool, rbnode, 1);
-	spin_unlock(&rbnode->ra_lock);
+	raw_spin_unlock(&rbnode->ra_lock);
 	write_unlock_irqrestore(&zpool->rb_lock, flags);
 
 	kref_put(&rbnode->refcount, zcache_rbnode_release);
@@ -861,14 +861,14 @@ static void zcache_flush_inode(int pool_id, struct cleancache_filekey key)
 	}
 
 	kref_get(&rbnode->refcount);
-	spin_lock_irqsave(&rbnode->ra_lock, flags2);
+	raw_spin_lock_irqsave(&rbnode->ra_lock, flags2);
 
 	zcache_flush_ratree(zpool, rbnode);
 	if (zcache_rbnode_empty(rbnode))
 		/* When arrvied here, we already hold rb_lock */
 		zcache_rbnode_isolate(zpool, rbnode, 1);
 
-	spin_unlock_irqrestore(&rbnode->ra_lock, flags2);
+	raw_spin_unlock_irqrestore(&rbnode->ra_lock, flags2);
 	write_unlock_irqrestore(&zpool->rb_lock, flags1);
 	kref_put(&rbnode->refcount, zcache_rbnode_release);
 }
@@ -899,11 +899,11 @@ static void zcache_flush_fs(int pool_id)
 		rbnode = rb_next(rbnode);
 		if (z_rbnode) {
 			kref_get(&z_rbnode->refcount);
-			spin_lock_irqsave(&z_rbnode->ra_lock, flags2);
+			raw_spin_lock_irqsave(&z_rbnode->ra_lock, flags2);
 			zcache_flush_ratree(zpool, z_rbnode);
 			if (zcache_rbnode_empty(z_rbnode))
 				zcache_rbnode_isolate(zpool, z_rbnode, 1);
-			spin_unlock_irqrestore(&z_rbnode->ra_lock, flags2);
+			raw_spin_unlock_irqrestore(&z_rbnode->ra_lock, flags2);
 			kref_put(&z_rbnode->refcount, zcache_rbnode_release);
 		}
 	}
@@ -969,7 +969,7 @@ static int zcache_create_pool(void)
 		goto out;
 	}
 
-	spin_lock(&zcache.pool_lock);
+	raw_spin_lock(&zcache.pool_lock);
 	if (zcache.num_pools == MAX_ZCACHE_POOLS) {
 		pr_err("Cannot create new pool (limit:%u)\n", MAX_ZCACHE_POOLS);
 		zbud_destroy_pool(zpool->pool);
@@ -989,7 +989,7 @@ static int zcache_create_pool(void)
 	pr_info("New pool created id:%d\n", ret);
 
 out_unlock:
-	spin_unlock(&zcache.pool_lock);
+	raw_spin_unlock(&zcache.pool_lock);
 out:
 	return ret;
 }
@@ -1001,13 +1001,13 @@ static void zcache_destroy_pool(struct zcache_pool *zpool)
 	if (!zpool)
 		return;
 
-	spin_lock(&zcache.pool_lock);
+	raw_spin_lock(&zcache.pool_lock);
 	zcache.num_pools--;
 	for (i = 0; i < MAX_ZCACHE_POOLS; i++)
 		if (zcache.pools[i] == zpool)
 			break;
 	zcache.pools[i] = NULL;
-	spin_unlock(&zcache.pool_lock);
+	raw_spin_unlock(&zcache.pool_lock);
 
 	if (!RB_EMPTY_ROOT(&zpool->rbtree))
 		WARN_ON("Memory leak detected. Freeing non-empty pool!\n");
@@ -1145,7 +1145,7 @@ static int __init init_zcache(void)
 		goto pcpufail;
 	}
 
-	spin_lock_init(&zcache.pool_lock);
+	raw_spin_lock_init(&zcache.pool_lock);
 	cleancache_register_ops(&zcache_ops);
 
 	if (zcache_debugfs_init())

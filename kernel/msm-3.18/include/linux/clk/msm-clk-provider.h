@@ -189,7 +189,7 @@ struct clk {
 
 	unsigned count;
 	unsigned notifier_count;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	unsigned prepare_count;
 	struct mutex prepare_lock;
 
@@ -201,7 +201,7 @@ struct clk {
 };
 
 #define CLK_INIT(name) \
-	.lock = __SPIN_LOCK_UNLOCKED((name).lock), \
+	.lock = __RAW_SPIN_LOCK_UNLOCKED((name).lock), \
 	.prepare_lock = __MUTEX_INITIALIZER((name).prepare_lock), \
 	.children = LIST_HEAD_INIT((name).children), \
 	.siblings = LIST_HEAD_INIT((name).siblings), \

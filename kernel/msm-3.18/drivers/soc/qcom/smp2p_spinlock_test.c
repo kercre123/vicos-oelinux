@@ -532,7 +532,7 @@ static void smp2p_ut_remote_spinlock_ssr(struct seq_file *s)
 
 		remote_spin_lock_irqsave(smem_spinlock, flags);
 		/* Unlock local spin lock and hold HW spinlock */
-		spin_unlock_irqrestore(&((smem_spinlock)->local), flags);
+		raw_spin_unlock_irqrestore(&((smem_spinlock)->local), flags);
 
 		queue_work(ws, &work_item.work);
 		UT_ASSERT_INT(

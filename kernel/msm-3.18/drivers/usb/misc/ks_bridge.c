@@ -76,7 +76,7 @@ struct ksb_dev_info {
 
 struct ks_bridge {
 	char			*name;
-	spinlock_t		lock;
+	raw_spinlock_t		lock;
 	struct workqueue_struct	*wq;
 	struct work_struct	to_mdm_work;
 	struct work_struct	start_rx_work;
@@ -187,9 +187,9 @@ read_start:
 	if (!test_bit(USB_DEV_CONNECTED, &ksb->flags))
 		return -ENODEV;
 
-	spin_lock_irqsave(&ksb->lock, flags);
+	raw_spin_lock_irqsave(&ksb->lock, flags);
 	if (list_empty(&ksb->to_ks_list)) {
-		spin_unlock_irqrestore(&ksb->lock, flags);
+		raw_spin_unlock_irqrestore(&ksb->lock, flags);
 		ret = wait_event_interruptible(ksb->ks_wait_q,
 				!list_empty(&ksb->to_ks_list) ||
 				!test_bit(USB_DEV_CONNECTED, &ksb->flags));
@@ -208,7 +208,7 @@ read_start:
 		pkt = list_first_entry(&ksb->to_ks_list, struct data_pkt, list);
 		list_del_init(&pkt->list);
 		len = min_t(size_t, space, pkt->len - pkt->n_read);
-		spin_unlock_irqrestore(&ksb->lock, flags);
+		raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 		ret = copy_to_user(buf + copied, pkt->buf + pkt->n_read, len);
 		if (ret) {
@@ -232,7 +232,7 @@ read_start:
 			submit_one_urb(ksb, GFP_KERNEL, pkt);
 			pkt = NULL;
 		}
-		spin_lock_irqsave(&ksb->lock, flags);
+		raw_spin_lock_irqsave(&ksb->lock, flags);
 	}
 
 	/* put the partial packet back in the list */
@@ -242,7 +242,7 @@ read_start:
 		else
 			ksb_free_data_pkt(pkt);
 	}
-	spin_unlock_irqrestore(&ksb->lock, flags);
+	raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 	dbg_log_event(ksb, "KS_READ", copied, 0);
 
@@ -281,13 +281,13 @@ static void ksb_tomdm_work(struct work_struct *w)
 	struct urb *urb;
 	int ret;
 
-	spin_lock_irqsave(&ksb->lock, flags);
+	raw_spin_lock_irqsave(&ksb->lock, flags);
 	while (!list_empty(&ksb->to_mdm_list)
 			&& test_bit(USB_DEV_CONNECTED, &ksb->flags)) {
 		pkt = list_first_entry(&ksb->to_mdm_list,
 				struct data_pkt, list);
 		list_del_init(&pkt->list);
-		spin_unlock_irqrestore(&ksb->lock, flags);
+		raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 		urb = usb_alloc_urb(0, GFP_KERNEL);
 		if (!urb) {
@@ -328,9 +328,9 @@ static void ksb_tomdm_work(struct work_struct *w)
 
 		usb_free_urb(urb);
 
-		spin_lock_irqsave(&ksb->lock, flags);
+		raw_spin_lock_irqsave(&ksb->lock, flags);
 	}
-	spin_unlock_irqrestore(&ksb->lock, flags);
+	raw_spin_unlock_irqrestore(&ksb->lock, flags);
 }
 
 static ssize_t ksb_fs_write(struct file *fp, const char __user *buf,
@@ -362,9 +362,9 @@ static ssize_t ksb_fs_write(struct file *fp, const char __user *buf,
 		return ret;
 	}
 
-	spin_lock_irqsave(&ksb->lock, flags);
+	raw_spin_lock_irqsave(&ksb->lock, flags);
 	list_add_tail(&pkt->list, &ksb->to_mdm_list);
-	spin_unlock_irqrestore(&ksb->lock, flags);
+	raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 	queue_work(ksb->wq, &ksb->to_mdm_work);
 
@@ -408,10 +408,10 @@ static unsigned int ksb_fs_poll(struct file *file, poll_table *wait)
 	if (!test_bit(USB_DEV_CONNECTED, &ksb->flags))
 		return POLLERR;
 
-	spin_lock_irqsave(&ksb->lock, flags);
+	raw_spin_lock_irqsave(&ksb->lock, flags);
 	if (!list_empty(&ksb->to_ks_list))
 		ret = POLLIN | POLLRDNORM;
-	spin_unlock_irqrestore(&ksb->lock, flags);
+	raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 	return ret;
 }
@@ -581,10 +581,10 @@ static void ksb_rx_cb(struct urb *urb)
 	}
 
 add_to_list:
-	spin_lock(&ksb->lock);
+	raw_spin_lock(&ksb->lock);
 	pkt->len = urb->actual_length;
 	list_add_tail(&pkt->list, &ksb->to_ks_list);
-	spin_unlock(&ksb->lock);
+	raw_spin_unlock(&ksb->lock);
 	/* wake up read thread */
 	if (wakeup)
 		wake_up(&ksb->ks_wait_q);
@@ -794,7 +794,7 @@ ksb_usb_probe(struct usb_interface *ifc, const struct usb_device_id *id)
 	dbg_log_event(ksb, "PID-ATT", id->idProduct, 0);
 
 	/*free up stale buffers if any from previous disconnect*/
-	spin_lock_irqsave(&ksb->lock, flags);
+	raw_spin_lock_irqsave(&ksb->lock, flags);
 	while (!list_empty(&ksb->to_ks_list)) {
 		pkt = list_first_entry(&ksb->to_ks_list,
 				struct data_pkt, list);
@@ -807,7 +807,7 @@ ksb_usb_probe(struct usb_interface *ifc, const struct usb_device_id *id)
 		list_del_init(&pkt->list);
 		ksb_free_data_pkt(pkt);
 	}
-	spin_unlock_irqrestore(&ksb->lock, flags);
+	raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 	ret = alloc_chrdev_region(&ksb->cdev_start_no, 0, 1, mdev->name);
 	if (ret < 0) {
@@ -875,9 +875,9 @@ static int ksb_usb_suspend(struct usb_interface *ifc, pm_message_t message)
 
 	usb_kill_anchored_urbs(&ksb->submitted);
 
-	spin_lock_irqsave(&ksb->lock, flags);
+	raw_spin_lock_irqsave(&ksb->lock, flags);
 	if (!list_empty(&ksb->to_ks_list)) {
-		spin_unlock_irqrestore(&ksb->lock, flags);
+		raw_spin_unlock_irqrestore(&ksb->lock, flags);
 		dbg_log_event(ksb, "SUSPEND ABORT", 0, 0);
 		/*
 		 * Now wakeup the reader process and queue
@@ -887,7 +887,7 @@ static int ksb_usb_suspend(struct usb_interface *ifc, pm_message_t message)
 		queue_work(ksb->wq, &ksb->start_rx_work);
 		return -EBUSY;
 	}
-	spin_unlock_irqrestore(&ksb->lock, flags);
+	raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 	return 0;
 }
@@ -930,7 +930,7 @@ static void ksb_usb_disconnect(struct usb_interface *ifc)
 					!atomic_read(&ksb->rx_pending_cnt),
 					msecs_to_jiffies(PENDING_URB_TIMEOUT));
 
-	spin_lock_irqsave(&ksb->lock, flags);
+	raw_spin_lock_irqsave(&ksb->lock, flags);
 	while (!list_empty(&ksb->to_ks_list)) {
 		pkt = list_first_entry(&ksb->to_ks_list,
 				struct data_pkt, list);
@@ -943,7 +943,7 @@ static void ksb_usb_disconnect(struct usb_interface *ifc)
 		list_del_init(&pkt->list);
 		ksb_free_data_pkt(pkt);
 	}
-	spin_unlock_irqrestore(&ksb->lock, flags);
+	raw_spin_unlock_irqrestore(&ksb->lock, flags);
 
 	ifc->needs_remote_wakeup = 0;
 	usb_put_dev(ksb->udev);
@@ -1024,7 +1024,7 @@ static int __init ksb_init(void)
 			goto dev_free;
 		}
 
-		spin_lock_init(&ksb->lock);
+		raw_spin_lock_init(&ksb->lock);
 		INIT_LIST_HEAD(&ksb->to_mdm_list);
 		INIT_LIST_HEAD(&ksb->to_ks_list);
 		init_waitqueue_head(&ksb->ks_wait_q);

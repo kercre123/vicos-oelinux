@@ -236,10 +236,10 @@ static void __detach_extent_node(struct f2fs_sb_info *sbi,
 static void __release_extent_node(struct f2fs_sb_info *sbi,
 			struct extent_tree *et, struct extent_node *en)
 {
-	spin_lock(&sbi->extent_lock);
+	raw_spin_lock(&sbi->extent_lock);
 	f2fs_bug_on(sbi, list_empty(&en->list));
 	list_del_init(&en->list);
-	spin_unlock(&sbi->extent_lock);
+	raw_spin_unlock(&sbi->extent_lock);
 
 	__detach_extent_node(sbi, et, en);
 }
@@ -349,9 +349,9 @@ static bool __f2fs_init_extent_tree(struct inode *inode, struct f2fs_extent *i_e
 
 	en = __init_extent_tree(sbi, et, &ei);
 	if (en) {
-		spin_lock(&sbi->extent_lock);
+		raw_spin_lock(&sbi->extent_lock);
 		list_add_tail(&en->list, &sbi->extent_list);
-		spin_unlock(&sbi->extent_lock);
+		raw_spin_unlock(&sbi->extent_lock);
 	}
 out:
 	write_unlock(&et->lock);
@@ -401,12 +401,12 @@ static bool f2fs_lookup_extent_tree(struct inode *inode, pgoff_t pgofs,
 		stat_inc_rbtree_node_hit(sbi);
 
 	*ei = en->ei;
-	spin_lock(&sbi->extent_lock);
+	raw_spin_lock(&sbi->extent_lock);
 	if (!list_empty(&en->list)) {
 		list_move_tail(&en->list, &sbi->extent_list);
 		et->cached_en = en;
 	}
-	spin_unlock(&sbi->extent_lock);
+	raw_spin_unlock(&sbi->extent_lock);
 	ret = true;
 out:
 	stat_inc_total_hit(sbi);
@@ -445,12 +445,12 @@ static struct extent_node *__try_merge_extent_node(struct inode *inode,
 
 	__try_update_largest_extent(inode, et, en);
 
-	spin_lock(&sbi->extent_lock);
+	raw_spin_lock(&sbi->extent_lock);
 	if (!list_empty(&en->list)) {
 		list_move_tail(&en->list, &sbi->extent_list);
 		et->cached_en = en;
 	}
-	spin_unlock(&sbi->extent_lock);
+	raw_spin_unlock(&sbi->extent_lock);
 	return en;
 }
 
@@ -479,10 +479,10 @@ do_insert:
 	__try_update_largest_extent(inode, et, en);
 
 	/* update in global extent list */
-	spin_lock(&sbi->extent_lock);
+	raw_spin_lock(&sbi->extent_lock);
 	list_add_tail(&en->list, &sbi->extent_list);
 	et->cached_en = en;
-	spin_unlock(&sbi->extent_lock);
+	raw_spin_unlock(&sbi->extent_lock);
 	return en;
 }
 
@@ -653,7 +653,7 @@ free_node:
 
 	remained = nr_shrink - (node_cnt + tree_cnt);
 
-	spin_lock(&sbi->extent_lock);
+	raw_spin_lock(&sbi->extent_lock);
 	for (; remained > 0; remained--) {
 		if (list_empty(&sbi->extent_list))
 			break;
@@ -667,15 +667,15 @@ free_node:
 		}
 
 		list_del_init(&en->list);
-		spin_unlock(&sbi->extent_lock);
+		raw_spin_unlock(&sbi->extent_lock);
 
 		__detach_extent_node(sbi, et, en);
 
 		write_unlock(&et->lock);
 		node_cnt++;
-		spin_lock(&sbi->extent_lock);
+		raw_spin_lock(&sbi->extent_lock);
 	}
-	spin_unlock(&sbi->extent_lock);
+	raw_spin_unlock(&sbi->extent_lock);
 
 unlock_out:
 	mutex_unlock(&sbi->extent_tree_lock);
@@ -790,7 +790,7 @@ void init_extent_cache_info(struct f2fs_sb_info *sbi)
 	INIT_RADIX_TREE(&sbi->extent_tree_root, GFP_NOIO);
 	mutex_init(&sbi->extent_tree_lock);
 	INIT_LIST_HEAD(&sbi->extent_list);
-	spin_lock_init(&sbi->extent_lock);
+	raw_spin_lock_init(&sbi->extent_lock);
 	atomic_set(&sbi->total_ext_tree, 0);
 	INIT_LIST_HEAD(&sbi->zombie_list);
 	atomic_set(&sbi->total_zombie_tree, 0);

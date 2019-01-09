@@ -30,7 +30,7 @@ struct kcov {
 	 */
 	atomic_t		refcount;
 	/* The lock protects mode, size, area and t. */
-	spinlock_t		lock;
+	raw_spinlock_t		lock;
 	enum kcov_mode		mode;
 	/* Size of arena (in long's for KCOV_MODE_TRACE). */
 	unsigned		size;
@@ -108,15 +108,15 @@ void kcov_task_exit(struct task_struct *t)
 	kcov = t->kcov;
 	if (kcov == NULL)
 		return;
-	spin_lock(&kcov->lock);
+	raw_spin_lock(&kcov->lock);
 	if (WARN_ON(kcov->t != t)) {
-		spin_unlock(&kcov->lock);
+		raw_spin_unlock(&kcov->lock);
 		return;
 	}
 	/* Just to not leave dangling references behind. */
 	kcov_task_init(t);
 	kcov->t = NULL;
-	spin_unlock(&kcov->lock);
+	raw_spin_unlock(&kcov->lock);
 	kcov_put(kcov);
 }
 
@@ -132,7 +132,7 @@ static int kcov_mmap(struct file *filep, struct vm_area_struct *vma)
 	if (!area)
 		return -ENOMEM;
 
-	spin_lock(&kcov->lock);
+	raw_spin_lock(&kcov->lock);
 	size = kcov->size * sizeof(unsigned long);
 	if (kcov->mode == KCOV_MODE_DISABLED || vma->vm_pgoff != 0 ||
 	    vma->vm_end - vma->vm_start != size) {
@@ -142,7 +142,7 @@ static int kcov_mmap(struct file *filep, struct vm_area_struct *vma)
 	if (!kcov->area) {
 		kcov->area = area;
 		vma->vm_flags |= VM_DONTEXPAND;
-		spin_unlock(&kcov->lock);
+		raw_spin_unlock(&kcov->lock);
 		for (off = 0; off < size; off += PAGE_SIZE) {
 			page = vmalloc_to_page(kcov->area + off);
 			if (vm_insert_page(vma, vma->vm_start + off, page))
@@ -151,7 +151,7 @@ static int kcov_mmap(struct file *filep, struct vm_area_struct *vma)
 		return 0;
 	}
 exit:
-	spin_unlock(&kcov->lock);
+	raw_spin_unlock(&kcov->lock);
 	vfree(area);
 	return res;
 }
@@ -164,7 +164,7 @@ static int kcov_open(struct inode *inode, struct file *filep)
 	if (!kcov)
 		return -ENOMEM;
 	atomic_set(&kcov->refcount, 1);
-	spin_lock_init(&kcov->lock);
+	raw_spin_lock_init(&kcov->lock);
 	filep->private_data = kcov;
 	return nonseekable_open(inode, filep);
 }
@@ -249,9 +249,9 @@ static long kcov_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	int res;
 
 	kcov = filep->private_data;
-	spin_lock(&kcov->lock);
+	raw_spin_lock(&kcov->lock);
 	res = kcov_ioctl_locked(kcov, cmd, arg);
-	spin_unlock(&kcov->lock);
+	raw_spin_unlock(&kcov->lock);
 	return res;
 }
 

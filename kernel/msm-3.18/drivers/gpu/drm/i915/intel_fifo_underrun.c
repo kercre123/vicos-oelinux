@@ -96,7 +96,7 @@ void i9xx_check_fifo_underruns(struct drm_i915_private *dev_priv)
 {
 	struct intel_crtc *crtc;
 
-	spin_lock_irq(&dev_priv->irq_lock);
+	raw_spin_lock_irq(&dev_priv->irq_lock);
 
 	for_each_intel_crtc(dev_priv->dev, crtc) {
 		u32 reg = PIPESTAT(crtc->pipe);
@@ -115,7 +115,7 @@ void i9xx_check_fifo_underruns(struct drm_i915_private *dev_priv)
 		DRM_ERROR("pipe %c underrun\n", pipe_name(crtc->pipe));
 	}
 
-	spin_unlock_irq(&dev_priv->irq_lock);
+	raw_spin_unlock_irq(&dev_priv->irq_lock);
 }
 
 static void i9xx_set_fifo_underrun_reporting(struct drm_device *dev,
@@ -274,10 +274,10 @@ bool intel_set_cpu_fifo_underrun_reporting(struct drm_i915_private *dev_priv,
 	unsigned long flags;
 	bool ret;
 
-	spin_lock_irqsave(&dev_priv->irq_lock, flags);
+	raw_spin_lock_irqsave(&dev_priv->irq_lock, flags);
 	ret = __intel_set_cpu_fifo_underrun_reporting(dev_priv->dev, pipe,
 						      enable);
-	spin_unlock_irqrestore(&dev_priv->irq_lock, flags);
+	raw_spin_unlock_irqrestore(&dev_priv->irq_lock, flags);
 
 	return ret;
 }
@@ -314,7 +314,7 @@ bool intel_set_pch_fifo_underrun_reporting(struct drm_i915_private *dev_priv,
 	 * crtc on LPT won't cause issues.
 	 */
 
-	spin_lock_irqsave(&dev_priv->irq_lock, flags);
+	raw_spin_lock_irqsave(&dev_priv->irq_lock, flags);
 
 	old = !intel_crtc->pch_fifo_underrun_disabled;
 	intel_crtc->pch_fifo_underrun_disabled = !enable;
@@ -326,7 +326,7 @@ bool intel_set_pch_fifo_underrun_reporting(struct drm_i915_private *dev_priv,
 		cpt_set_fifo_underrun_reporting(dev_priv->dev, pch_transcoder,
 						enable, old);
 
-	spin_unlock_irqrestore(&dev_priv->irq_lock, flags);
+	raw_spin_unlock_irqrestore(&dev_priv->irq_lock, flags);
 	return old;
 }
 

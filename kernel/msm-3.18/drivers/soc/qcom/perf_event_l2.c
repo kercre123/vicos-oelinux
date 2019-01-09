@@ -34,7 +34,7 @@ struct hml2_pmu {
 	struct perf_event *events[MAX_L2_CTRS];
 	unsigned long used_mask[BITS_TO_LONGS(MAX_L2_CTRS)];
 	atomic64_t prev_count[MAX_L2_CTRS];
-	spinlock_t pmu_lock;
+	raw_spinlock_t pmu_lock;
 };
 
 /*
@@ -246,7 +246,7 @@ void hml2_pmu__set_evres(struct hml2_pmu *slice,
 		group_val |= L2PMRESRH_EN;
 	}
 
-	spin_lock_irqsave(&slice->pmu_lock, iflags);
+	raw_spin_lock_irqsave(&slice->pmu_lock, iflags);
 
 	resr_val = get_l2_indirect_reg(group_reg);
 	resr_val &= group_mask;
@@ -261,7 +261,7 @@ void hml2_pmu__set_evres(struct hml2_pmu *slice,
 			set_l2_indirect_reg(L2PMRESRH, resr_val);
 		}
 	}
-	spin_unlock_irqrestore(&slice->pmu_lock, iflags);
+	raw_spin_unlock_irqrestore(&slice->pmu_lock, iflags);
 }
 
 static void
@@ -914,7 +914,7 @@ static int l2_cache_pmu_probe(struct platform_device *pdev)
 		}
 
 		slice->cluster = affinity_cpu >> 1;
-		spin_lock_init(&slice->pmu_lock);
+		raw_spin_lock_init(&slice->pmu_lock);
 
 		hml2_pmu__init(slice);
 		list_add(&slice->entry, &l2cache_pmu.pmus);

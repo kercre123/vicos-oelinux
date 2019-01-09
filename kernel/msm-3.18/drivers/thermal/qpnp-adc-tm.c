@@ -217,8 +217,8 @@ struct qpnp_adc_thr_info {
 	u8		adc_tm_high_enable;
 	u8		adc_tm_low_thr_set;
 	u8		adc_tm_high_thr_set;
-	spinlock_t			adc_tm_low_lock;
-	spinlock_t			adc_tm_high_lock;
+	raw_spinlock_t			adc_tm_low_lock;
+	raw_spinlock_t			adc_tm_high_lock;
 };
 
 struct qpnp_adc_thr_client_info {
@@ -2311,10 +2311,10 @@ static int qpnp_adc_tm_read_status(struct qpnp_adc_tm_chip *chip)
 	}
 
 	if (chip->th_info.adc_tm_high_enable) {
-		spin_lock_irqsave(&chip->th_info.adc_tm_high_lock, flags);
+		raw_spin_lock_irqsave(&chip->th_info.adc_tm_high_lock, flags);
 		sensor_notify_num = chip->th_info.adc_tm_high_enable;
 		chip->th_info.adc_tm_high_enable = 0;
-		spin_unlock_irqrestore(&chip->th_info.adc_tm_high_lock, flags);
+		raw_spin_unlock_irqrestore(&chip->th_info.adc_tm_high_lock, flags);
 		while (i < chip->max_channels_available) {
 			if ((sensor_notify_num & 0x1) == 1) {
 				sensor_num = i;
@@ -2331,10 +2331,10 @@ static int qpnp_adc_tm_read_status(struct qpnp_adc_tm_chip *chip)
 	}
 
 	if (chip->th_info.adc_tm_low_enable) {
-		spin_lock_irqsave(&chip->th_info.adc_tm_low_lock, flags);
+		raw_spin_lock_irqsave(&chip->th_info.adc_tm_low_lock, flags);
 		sensor_notify_num = chip->th_info.adc_tm_low_enable;
 		chip->th_info.adc_tm_low_enable = 0;
-		spin_unlock_irqrestore(&chip->th_info.adc_tm_low_lock, flags);
+		raw_spin_unlock_irqrestore(&chip->th_info.adc_tm_low_lock, flags);
 		i = 0;
 		while (i < chip->max_channels_available) {
 			if ((sensor_notify_num & 0x1) == 1) {
@@ -3314,8 +3314,8 @@ static int qpnp_adc_tm_probe(struct spmi_device *spmi)
 	chip->adc_vote_enable = false;
 	dev_set_drvdata(&spmi->dev, chip);
 	list_add(&chip->list, &qpnp_adc_tm_device_list);
-	spin_lock_init(&chip->th_info.adc_tm_low_lock);
-	spin_lock_init(&chip->th_info.adc_tm_high_lock);
+	raw_spin_lock_init(&chip->th_info.adc_tm_low_lock);
+	raw_spin_lock_init(&chip->th_info.adc_tm_high_lock);
 
 	pr_debug("OK\n");
 	return 0;

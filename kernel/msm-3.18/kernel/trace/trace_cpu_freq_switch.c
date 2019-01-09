@@ -92,7 +92,7 @@ static int tr_insert(struct rb_root *root, struct trans *tr)
 }
 
 struct trans_state {
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	unsigned int start_freq;
 	unsigned int end_freq;
 	ktime_t start_t;
@@ -107,12 +107,12 @@ static void probe_start(void *ignore, unsigned int start_freq,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 	per_cpu(freq_trans_state, cpu).start_freq = start_freq;
 	per_cpu(freq_trans_state, cpu).end_freq = end_freq;
 	per_cpu(freq_trans_state, cpu).start_t = ktime_get();
 	per_cpu(freq_trans_state, cpu).started = true;
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 }
 
 static void probe_end(void *ignore, unsigned int cpu)
@@ -122,7 +122,7 @@ static void probe_end(void *ignore, unsigned int cpu)
 	s64 dur_us;
 	ktime_t dur_t, end_t = ktime_get();
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 
 	if (!per_cpu(freq_trans_state, cpu).started)
 		goto out;
@@ -156,7 +156,7 @@ static void probe_end(void *ignore, unsigned int cpu)
 
 	per_cpu(freq_trans_state, cpu).started = false;
 out:
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 }
 
 static void *freq_switch_stat_start(struct tracer_stat *trace)
@@ -164,9 +164,9 @@ static void *freq_switch_stat_start(struct tracer_stat *trace)
 	struct rb_node *n;
 	unsigned long flags;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 	n = rb_first(&freq_trans_tree);
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 
 	return n;
 }
@@ -176,9 +176,9 @@ static void *freq_switch_stat_next(void *prev, int idx)
 	struct rb_node *n;
 	unsigned long flags;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 	n = rb_next(prev);
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 
 	return n;
 }
@@ -188,12 +188,12 @@ static int freq_switch_stat_show(struct seq_file *s, void *p)
 	unsigned long flags;
 	struct trans *tr = p;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 	seq_printf(s, "%3d %9d %8d %5d %6lld %6d %6d\n", tr->cpu,
 		   tr->start_freq, tr->end_freq, tr->count,
 		   div_s64(ktime_to_us(tr->total_t), tr->count),
 		   tr->min_us, tr->max_us);
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 
 	return 0;
 }
@@ -203,9 +203,9 @@ static void freq_switch_stat_release(void *stat)
 	struct trans *tr = stat;
 	unsigned long flags;
 
-	spin_lock_irqsave(&state_lock, flags);
+	raw_spin_lock_irqsave(&state_lock, flags);
 	rb_erase(&tr->node, &freq_trans_tree);
-	spin_unlock_irqrestore(&state_lock, flags);
+	raw_spin_unlock_irqrestore(&state_lock, flags);
 	kfree(tr);
 }
 

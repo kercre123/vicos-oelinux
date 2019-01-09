@@ -230,7 +230,7 @@ struct etm_ctx {
 	void __iomem		*base;
 	struct device		*dev;
 	uint64_t		*state;
-	spinlock_t		spinlock;
+	raw_spinlock_t		spinlock;
 	struct mutex		mutex;
 };
 
@@ -1511,12 +1511,12 @@ static int jtag_mm_etm_callback(struct notifier_block *nfb,
 
 	switch (action & (~CPU_TASKS_FROZEN)) {
 	case CPU_STARTING:
-		spin_lock(&etm[cpu]->spinlock);
+		raw_spin_lock(&etm[cpu]->spinlock);
 		if (!etm[cpu]->init) {
 			etm_init_arch_data(etm[cpu]);
 			etm[cpu]->init = true;
 		}
-		spin_unlock(&etm[cpu]->spinlock);
+		raw_spin_unlock(&etm[cpu]->spinlock);
 		break;
 
 	case CPU_ONLINE:
@@ -1598,7 +1598,7 @@ static int jtag_mm_etm_probe(struct platform_device *pdev, uint32_t cpu)
 	if (!etmdata->state)
 		return -ENOMEM;
 
-	spin_lock_init(&etmdata->spinlock);
+	raw_spin_lock_init(&etmdata->spinlock);
 	mutex_init(&etmdata->mutex);
 
 	if (cnt++ == 0)

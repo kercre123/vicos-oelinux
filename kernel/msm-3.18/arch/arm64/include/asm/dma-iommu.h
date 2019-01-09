@@ -18,7 +18,7 @@ struct dma_iommu_mapping {
 	size_t			bits;
 	dma_addr_t		base;
 
-	spinlock_t		lock;
+	raw_spinlock_t		lock;
 	struct kref		kref;
 #ifdef CONFIG_IOMMU_IO_PGTABLE_FAST
 	struct dma_fast_smmu_mapping *fast;
