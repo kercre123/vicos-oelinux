@@ -1027,7 +1027,7 @@ static int msm_hsl_startup(struct uart_port *port)
 	msm_hsl_write(port, data, regmap[vid][UARTDM_MR1]);
 	raw_spin_unlock_irqrestore(&port->lock, flags);
 
-	ret = request_irq(port->irq, msm_hsl_irq, IRQF_TRIGGER_HIGH,
+	ret = request_threaded_irq(port->irq, NULL, msm_hsl_irq, IRQF_TRIGGER_HIGH,
 			  msm_hsl_port->name, port);
 	if (unlikely(ret)) {
 		pr_err("failed to request_irq\n");
