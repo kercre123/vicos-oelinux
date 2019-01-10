@@ -1,31 +1,22 @@
-#include <fcntl.h>
 #include <stdio.h>
-#include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdbool.h>
+#include <time.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/spi/spidev.h>
 
-
 #include "gpio.h"
 #include "rampost.h"
-#include "lcd.h"
 #include "das.h"
-
-void microwait(long microsec);
+#include "lcd.h"
 
 /************** LCD INTERFACE *****************/
 
 #define GPIO_LCD_WRX   110
-#define GPIO_LCD_RESET1 96
-#define GPIO_LCD_RESET2 55
-
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#define MIN(a,b) (((a)<(b))?(a):(b))
-
+#define GPIO_LCD_RESET1 55
 
 #define LCD_FRAME_WIDTH     184
 #define LCD_FRAME_HEIGHT    96
@@ -62,12 +53,12 @@ static const INIT_SCRIPT init_scr[] = {
   { 0xE0, 14, { 0xD0, 0x10, 0x16, 0x0A, 0x0A, 0x26, 0x3C, 0x53, 0x53, 0x18, 0x15, 0x12, 0x36, 0x3C }, 0 }, // Positive voltage gamma control
   { 0xE1, 14, { 0xD0, 0x11, 0x19, 0x0A, 0x09, 0x25, 0x3D, 0x35, 0x54, 0x17, 0x15, 0x12, 0x36, 0x3C }, 0 }, // Negative voltage gamma control
   { 0xE9, 3, { 0x05, 0x05, 0x01 }, 0 }, // Equalize time control
-  { 0x21, 1, { 0x00 }, 0 }, // Display inversion on
   { 0 }
 };
 
 
 static const INIT_SCRIPT display_on_scr[] = {
+  { 0x21, 1, { 0x00 }, 0 }, // Display inversion on
   { 0x11, 1, { 0x00 }, 120 }, // Sleep out
   { 0x29, 1, { 0x00 }, 120 }, // Display on
   { 0 }
@@ -75,19 +66,17 @@ static const INIT_SCRIPT display_on_scr[] = {
 
 
 static GPIO RESET_PIN1;
-static GPIO RESET_PIN2;
 static GPIO DnC_PIN;
 
-static const int DAT_CLOCK = 17500000;
 static const int MAX_TRANSFER = 0x1000;
 
 static int spi_fd;
 
 static const char* BACKLIGHT_DEVICES[] = {
-  "/sys/class/leds/face-backlight/brightness",
   "/sys/class/leds/face-backlight-left/brightness",
   "/sys/class/leds/face-backlight-right/brightness"
 };
+
 
 int lcd_spi_init()
 {
@@ -119,48 +108,6 @@ static void lcd_spi_transfer(int cmd, int bytes, const void* data)
   }
 }
 
-int lcd_spi_readback(int bytes,  const uint8_t* outbuf, uint8_t result[])
-{
-
-  struct spi_ioc_transfer mesg = {
-    .tx_buf = (unsigned long)outbuf,
-    .rx_buf = (unsigned long)result,
-    .len = 1,
-    .delay_usecs = 0,
-    .speed_hz = DAT_CLOCK,
-    .bits_per_word = 8,
-  };
-
-  gpio_set_value(DnC_PIN, gpio_LOW);
-  int err = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &mesg);
-  if (err < 1) {
-    DAS_LOG(DAS_ERROR, "lcd.spi.cmd_error", "%d %s", errno, strerror(errno));
-    return -1;
-  }
-  mesg.tx_buf = (unsigned long)(&outbuf[1]);
-  mesg.len = bytes - 1;
-  gpio_set_value(DnC_PIN, gpio_HIGH);
-  err = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &mesg);
-  if (err < 1) {
-    DAS_LOG(DAS_ERROR, "lcd.spi.dat_error", "%d %s", errno, strerror(errno));
-    return -1;
-  }
-  return 0;
-}
-
-
-int lcd_device_read_status(void)
-{
-  uint8_t message[] = {0x0F, 0x00, 0x00};
-  uint8_t result[sizeof(message)] = {1, 2, 3};
-  memset(result, 0, sizeof(result));
-  if (lcd_spi_readback(sizeof(message), message, result)) {
-    DAS_LOG(DAS_ERROR, "lcd.read_status", "readback error");
-  }
-  DAS_LOG(DAS_DEBUG, "lcd.read_status", "Result = %x %x %x", result[0], result[1], result[2]);
-  return result[2] == 0;
-}
-
 static void _led_set_brightness(const int brightness, const char* led)
 {
   int fd = open(led, O_WRONLY);
@@ -174,10 +121,10 @@ static void _led_set_brightness(const int brightness, const char* led)
 
 void lcd_set_brightness(int brightness)
 {
-  int l;
-  brightness = MIN(brightness, 10);
-  brightness = MAX(brightness, 0);
-  for (l = 0; l < 3; ++l) {
+  if (brightness > 10) { brightness = 10; }
+  if (brightness <  0) { brightness =  0; }
+
+  for (int l = 0; l < sizeof(BACKLIGHT_DEVICES); ++l) {
     _led_set_brightness(brightness, BACKLIGHT_DEVICES[l]);
   }
 }
@@ -204,9 +151,6 @@ void lcd_gpio_teardown(void)
   if (RESET_PIN1) {
     gpio_close(RESET_PIN1);
   }
-  if (RESET_PIN2) {
-    gpio_close(RESET_PIN2);
-  }
 }
 
 
@@ -216,7 +160,6 @@ void lcd_gpio_setup(void)
   DnC_PIN = gpio_create(GPIO_LCD_WRX, gpio_DIR_OUTPUT, gpio_HIGH);
 
   RESET_PIN1 = gpio_create_open_drain_output(GPIO_LCD_RESET1, gpio_HIGH);
-  RESET_PIN2 = gpio_create_open_drain_output(GPIO_LCD_RESET2, gpio_HIGH);
 }
 
 
@@ -226,14 +169,8 @@ int lcd_device_reset(void)
   // Send reset signal
   microwait(50);
   gpio_set_value(RESET_PIN1, 0);
-  gpio_set_value(RESET_PIN2, 0);
   microwait(50);
   gpio_set_value(RESET_PIN1, 1);
-  gpio_set_value(RESET_PIN2, 1);
-  microwait(50);
-
-  static const uint8_t SLEEPOUT = 0x11;
-  lcd_spi_transfer(true, 1, &SLEEPOUT);  //sleep off
   microwait(50);
 
   return 0;
