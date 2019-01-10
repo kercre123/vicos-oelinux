@@ -295,6 +295,7 @@ static int read_request(int fd, debugger_request_t* out_request) {
       return -1;
     }
   } else if (cr.uid == 0
+            || msg.action == DEBUGGER_ACTION_DUMP_TOMBSTONE
             || (cr.uid == AID_SYSTEM && msg.action == DEBUGGER_ACTION_DUMP_BACKTRACE)) {
     // Only root or system can ask us to attach to any process and dump it explicitly.
     // However, system is only allowed to collect backtraces but cannot dump tombstones.
@@ -309,6 +310,8 @@ static int read_request(int fd, debugger_request_t* out_request) {
       return -1;
   } else {
     // No one else is allowed to dump arbitrary processes.
+    ALOGE("pid %d uid %d is not allowed to dump arbitrary processes\n",
+        cr.pid, cr.uid);
     return -1;
   }
   return 0;
