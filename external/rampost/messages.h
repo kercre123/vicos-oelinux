@@ -22,6 +22,9 @@
 #ifndef __SCHEMA_MESSAGES_H__
 #define __SCHEMA_MESSAGES_H__
 
+#include <stdbool.h>
+#include <stdint.h>
+
 // ENUM SpineSync
 enum {
   SYNC_BODY_TO_HEAD = 0x483242aa,
