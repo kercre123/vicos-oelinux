@@ -124,8 +124,9 @@ void lcd_set_brightness(int brightness)
   int l;
   if (brightness > 10) { brightness = 10; }
   if (brightness <  0) { brightness =  0; }
-  
-  for (l = 0; l < sizeof(BACKLIGHT_DEVICES); ++l) {
+
+  const int numLights = sizeof(BACKLIGHT_DEVICES)/sizeof(BACKLIGHT_DEVICES[0]);
+  for (l = 0; l < numLights; ++l) {
     _led_set_brightness(brightness, BACKLIGHT_DEVICES[l]);
   }
 }
