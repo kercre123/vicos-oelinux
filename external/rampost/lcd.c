@@ -121,10 +121,11 @@ static void _led_set_brightness(const int brightness, const char* led)
 
 void lcd_set_brightness(int brightness)
 {
+  int l;
   if (brightness > 10) { brightness = 10; }
   if (brightness <  0) { brightness =  0; }
-
-  for (int l = 0; l < sizeof(BACKLIGHT_DEVICES); ++l) {
+  
+  for (l = 0; l < sizeof(BACKLIGHT_DEVICES); ++l) {
     _led_set_brightness(brightness, BACKLIGHT_DEVICES[l]);
   }
 }

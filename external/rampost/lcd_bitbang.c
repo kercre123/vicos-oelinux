@@ -54,7 +54,8 @@ static void lcd_bitbang_setup(void)
 
 static inline void lcd_bitbang_clockout(uint8_t byte)
 {
-  for (int bitcount = 0; bitcount < 8; bitcount++) {
+  int bitcount;
+  for (bitcount = 0; bitcount < 8; bitcount++) {
     gpio_set_value(MOSI_PIN, (byte & 0x80) ? gpio_HIGH : gpio_LOW);
     gpio_set_value(CLOCK_PIN, gpio_LOW);
     byte <<= 1;
@@ -64,8 +65,9 @@ static inline void lcd_bitbang_clockout(uint8_t byte)
 
 static inline uint8_t lcd_bitbang_clockin(void)
 {
+  int bitcount;
   uint8_t byte = 0;
-  for (int bitcount = 0; bitcount < 8; bitcount++) {
+  for (bitcount = 0; bitcount < 8; bitcount++) {
     gpio_set_value(CLOCK_PIN, gpio_LOW);
     byte <<= 1;
     byte |= gpio_get_value(MISO_PIN);

@@ -24,7 +24,7 @@ BINARIES = rampost animfail
 all: $(BINARIES)
 
 clean:
-	rm $(BINARIES)
+	rm -f $(BINARIES)
 
 rampost: rampost.c gpio.c lcd.c spine_hal.c dfu.c lcd_bitbang.c
 	$(CC) $(CFLAGS) rampost.c gpio.c lcd.c spine_hal.c dfu.c lcd_bitbang.c -o $@
