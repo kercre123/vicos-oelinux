@@ -1,0 +1,14 @@
+[Unit]
+Description=Victor Boot Animator
+SourcePath=/anki/bin/vic-bootAnim
+DefaultDependencies=no
+ConditionPathExists=!/dev/rampost_error
+
+[Service]
+Type=simple
+Restart=no
+RemainAfterExit=no
+ExecStart=/anki/bin/vic-bootAnim
+
+[Install]
+WantedBy=sysinit.target
