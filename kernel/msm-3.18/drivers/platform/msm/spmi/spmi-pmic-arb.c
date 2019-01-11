@@ -210,7 +210,7 @@ struct spmi_pmic_arb_dev {
 	struct spmi_pmic_arb_dbg dbg;
 	int			pic_irq;
 	bool			allow_wakeup;
-	spinlock_t		lock;
+	raw_spinlock_t		lock;
 	u8			ee;
 	u8			channel;
 	u16			max_peripherals;
@@ -499,12 +499,12 @@ pmic_arb_non_data_cmd_v1(struct spmi_pmic_arb_dev *pmic_arb, u8 opc, u8 sid)
 
 	cmd = (opc << 27) | ((sid & 0xf) << 20);
 
-	spin_lock_irqsave(&pmic_arb->lock, flags);
+	raw_spin_lock_irqsave(&pmic_arb->lock, flags);
 	pmic_arb_save_stat_before_txn(pmic_arb);
 	pmic_arb_write(pmic_arb, chnl_ofst + PMIC_ARB_CMD, cmd);
 	/* sid and addr are don't-care for pmic_arb_wait_for_done() HW-v1 */
 	rc = pmic_arb_wait_for_done(pmic_arb, pmic_arb->wrbase, 0, 0);
-	spin_unlock_irqrestore(&pmic_arb->lock, flags);
+	raw_spin_unlock_irqrestore(&pmic_arb->lock, flags);
 
 	if (rc)
 		pmic_arb_dbg_err_dump(pmic_arb, rc, "cmd", opc, sid, 0, 0, 0);
@@ -588,7 +588,7 @@ static int pmic_arb_read_cmd(struct spmi_controller *ctrl,
 
 	cmd = pmic_arb->ver->fmt_cmd(opc, sid, addr, bc);
 
-	spin_lock_irqsave(&pmic_arb->lock, flags);
+	raw_spin_lock_irqsave(&pmic_arb->lock, flags);
 	pmic_arb_save_stat_before_txn(pmic_arb);
 
 	pmic_arb_set_rd_cmd(pmic_arb, chnl_ofst + PMIC_ARB_CMD, cmd);
@@ -605,7 +605,7 @@ static int pmic_arb_read_cmd(struct spmi_controller *ctrl,
 				chnl_ofst + PMIC_ARB_RDATA1, bc - 4);
 
 done:
-	spin_unlock_irqrestore(&pmic_arb->lock, flags);
+	raw_spin_unlock_irqrestore(&pmic_arb->lock, flags);
 	if (rc)
 		pmic_arb_dbg_err_dump(pmic_arb, rc, "read", opc, sid, addr, bc,
 									buf);
@@ -648,7 +648,7 @@ static int pmic_arb_write_cmd(struct spmi_controller *ctrl,
 	cmd = pmic_arb->ver->fmt_cmd(opc, sid, addr, bc);
 
 	/* Write data to FIFOs */
-	spin_lock_irqsave(&pmic_arb->lock, flags);
+	raw_spin_lock_irqsave(&pmic_arb->lock, flags);
 	pmic_arb_save_stat_before_txn(pmic_arb);
 	pa_write_data(pmic_arb, buf, chnl_ofst + PMIC_ARB_WDATA0,
 							min_t(u8, bc, 3));
@@ -661,7 +661,7 @@ static int pmic_arb_write_cmd(struct spmi_controller *ctrl,
 	pmic_arb_write(pmic_arb, chnl_ofst + PMIC_ARB_CMD, cmd);
 
 	rc = pmic_arb_wait_for_done(pmic_arb, pmic_arb->wrbase, sid, addr);
-	spin_unlock_irqrestore(&pmic_arb->lock, flags);
+	raw_spin_unlock_irqrestore(&pmic_arb->lock, flags);
 
 	if (rc)
 		pmic_arb_dbg_err_dump(pmic_arb, rc, "write", opc, sid, addr, bc,
@@ -803,7 +803,7 @@ static int pmic_arb_pic_enable(struct spmi_controller *ctrl,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&pmic_arb->lock, flags);
+	raw_spin_lock_irqsave(&pmic_arb->lock, flags);
 	status = spmi_pic_acc_en_rd(pmic_arb, spec->slave, spec->per, apid,
 								"pic-en");
 	if (!(status & SPMI_PIC_ACC_ENABLE_BIT)) {
@@ -813,7 +813,7 @@ static int pmic_arb_pic_enable(struct spmi_controller *ctrl,
 		/* Interrupt needs to be enabled before returning to caller */
 		wmb();
 	}
-	spin_unlock_irqrestore(&pmic_arb->lock, flags);
+	raw_spin_unlock_irqrestore(&pmic_arb->lock, flags);
 	return 0;
 }
 
@@ -842,7 +842,7 @@ static int pmic_arb_pic_disable(struct spmi_controller *ctrl,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&pmic_arb->lock, flags);
+	raw_spin_lock_irqsave(&pmic_arb->lock, flags);
 	status = spmi_pic_acc_en_rd(pmic_arb, spec->slave, spec->per, apid,
 								"pic-en");
 	if (status & SPMI_PIC_ACC_ENABLE_BIT) {
@@ -853,7 +853,7 @@ static int pmic_arb_pic_disable(struct spmi_controller *ctrl,
 		/* Interrupt needs to be disabled before returning to caller */
 		wmb();
 	}
-	spin_unlock_irqrestore(&pmic_arb->lock, flags);
+	raw_spin_unlock_irqrestore(&pmic_arb->lock, flags);
 	return 0;
 }
 
@@ -1285,7 +1285,7 @@ static int spmi_pmic_arb_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pmic_arb);
 	spmi_set_ctrldata(&pmic_arb->controller, pmic_arb);
 
-	spin_lock_init(&pmic_arb->lock);
+	raw_spin_lock_init(&pmic_arb->lock);
 
 	pmic_arb->controller.nr = cell_index;
 	pmic_arb->controller.dev.parent = pdev->dev.parent;

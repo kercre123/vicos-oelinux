@@ -53,7 +53,7 @@ struct q_perip_data {
 	uint8_t pol_low;    /* bitmap */
 	uint8_t int_en;     /* bitmap */
 	uint8_t use_count;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 };
 
 struct q_irq_data {
@@ -217,7 +217,7 @@ static void qpnpint_irq_mask(struct irq_data *d)
 		return;
 	}
 
-	spin_lock(&per_d->lock);
+	raw_spin_lock(&per_d->lock);
 	prev_int_en = per_d->int_en;
 	per_d->int_en &= ~irq_d->mask_shift;
 
@@ -228,7 +228,7 @@ static void qpnpint_irq_mask(struct irq_data *d)
 		 */
 		qpnpint_arbiter_op(d, irq_d, chip_d->cb->mask);
 	}
-	spin_unlock(&per_d->lock);
+	raw_spin_unlock(&per_d->lock);
 
 	rc = qpnpint_spmi_write(irq_d, QPNPINT_REG_EN_CLR,
 					(u8 *)&irq_d->mask_shift, 1);
@@ -266,7 +266,7 @@ static void qpnpint_irq_unmask(struct irq_data *d)
 		return;
 	}
 
-	spin_lock(&per_d->lock);
+	raw_spin_lock(&per_d->lock);
 	prev_int_en = per_d->int_en;
 	per_d->int_en |= irq_d->mask_shift;
 	if (!prev_int_en && per_d->int_en) {
@@ -277,7 +277,7 @@ static void qpnpint_irq_unmask(struct irq_data *d)
 		 */
 		qpnpint_arbiter_op(d, irq_d, chip_d->cb->unmask);
 	}
-	spin_unlock(&per_d->lock);
+	raw_spin_unlock(&per_d->lock);
 
 	/* Check the current state of the interrupt enable bit. */
 	rc = qpnpint_spmi_read(irq_d, QPNPINT_REG_EN_SET, buf, 1);
@@ -436,7 +436,7 @@ static struct q_irq_data *qpnpint_alloc_irq_data(
 			rc = -ENOMEM;
 			goto alloc_fail;
 		}
-		spin_lock_init(&per_d->lock);
+		raw_spin_lock_init(&per_d->lock);
 		rc = radix_tree_preload(GFP_KERNEL);
 		if (rc)
 			goto alloc_fail;

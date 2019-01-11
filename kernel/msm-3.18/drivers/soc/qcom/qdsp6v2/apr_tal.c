@@ -98,31 +98,31 @@ static void apr_tal_notify(void *priv, unsigned event)
 	switch (event) {
 	case SMD_EVENT_DATA:
 		pkt_cnt = 0;
-		spin_lock_irqsave(&apr_ch->lock, flags);
+		raw_spin_lock_irqsave(&apr_ch->lock, flags);
 check_pending:
 		len = smd_read_avail(apr_ch->ch);
 		if (len < 0) {
 			pr_err("apr_tal: Invalid Read Event :%d\n", len);
-			spin_unlock_irqrestore(&apr_ch->lock, flags);
+			raw_spin_unlock_irqrestore(&apr_ch->lock, flags);
 			return;
 		}
 		sz = smd_cur_packet_size(apr_ch->ch);
 		if (sz < 0) {
 			pr_debug("pkt size is zero\n");
-			spin_unlock_irqrestore(&apr_ch->lock, flags);
+			raw_spin_unlock_irqrestore(&apr_ch->lock, flags);
 			return;
 		}
 		if (!len && !sz && !pkt_cnt)
 			goto check_write_avail;
 		if (!len) {
 			pr_debug("len = %d pkt_cnt = %d\n", len, pkt_cnt);
-			spin_unlock_irqrestore(&apr_ch->lock, flags);
+			raw_spin_unlock_irqrestore(&apr_ch->lock, flags);
 			return;
 		}
 		r_len = smd_read_from_cb(apr_ch->ch, apr_ch->data, len);
 		if (len != r_len) {
 			pr_err("apr_tal: Invalid Read\n");
-			spin_unlock_irqrestore(&apr_ch->lock, flags);
+			raw_spin_unlock_irqrestore(&apr_ch->lock, flags);
 			return;
 		}
 		pkt_cnt++;
@@ -133,7 +133,7 @@ check_pending:
 check_write_avail:
 		if (smd_write_avail(apr_ch->ch))
 			wake_up(&apr_ch->wait);
-		spin_unlock_irqrestore(&apr_ch->lock, flags);
+		raw_spin_unlock_irqrestore(&apr_ch->lock, flags);
 		break;
 	case SMD_EVENT_OPEN:
 		pr_debug("apr_tal: SMD_EVENT_OPEN\n");
@@ -287,7 +287,7 @@ static int __init apr_tal_init(void)
 			for (k = 0; k < APR_CLIENT_MAX; k++) {
 				init_waitqueue_head(&apr_svc_ch[i][j][k].wait);
 				init_waitqueue_head(&apr_svc_ch[i][j][k].dest);
-				spin_lock_init(&apr_svc_ch[i][j][k].lock);
+				raw_spin_lock_init(&apr_svc_ch[i][j][k].lock);
 				spin_lock_init(&apr_svc_ch[i][j][k].w_lock);
 				mutex_init(&apr_svc_ch[i][j][k].m_lock);
 			}
