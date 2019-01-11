@@ -1,8 +1,6 @@
 #ifndef __DAS_H
 #define __DAS_H
 
-#include <time.h>
-
 #define DAS_DEBUG 0
 #define DAS_INFO 1
 #define DAS_EVENT 2

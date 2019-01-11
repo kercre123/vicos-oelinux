@@ -26,6 +26,8 @@ void gpio_set_direction(GPIO gp, enum Gpio_Dir isOutput);
 
 void gpio_set_value(GPIO gp, enum Gpio_Level value);
 
+enum Gpio_Level gpio_get_value(GPIO gp);
+
 void gpio_close(GPIO gp);
 
 

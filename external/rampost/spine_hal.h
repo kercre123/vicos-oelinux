@@ -1,7 +1,6 @@
 #ifndef SPINE_HAL_H
 #define SPINE_HAL_H
 
-#include <stdint.h>
 typedef int SpineErr;
 
 #ifdef __cplusplus
