@@ -1,14 +1,16 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
-#include <errno.h>
-#include <ctype.h>
+#include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
+#include <time.h>
 
 #include "messages.h"
 #include "spine_hal.h"
 #include "rampost.h"
 #include "das.h"
+#include "dfu.h"
 
 #define VERSTRING_LEN 16
 

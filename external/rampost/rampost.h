@@ -1,8 +1,6 @@
 #ifndef __RAMPOST_H
 #define __RAMPOST_H
 
-#include <stdint.h>
-
 uint64_t steady_clock_now(void);
 
 typedef enum rampost_err_t {
@@ -26,9 +24,11 @@ typedef enum rampost_err_t {
   err_DFU_NO_VERSION,
   err_DFU_ERASE_ERROR,
   err_DFU_INSTALL_ERROR,
-  err_DFU_VALIDATE_ERROR
+  err_DFU_VALIDATE_ERROR,
+  err_GPIO_DESTROY
 } RampostErr;
 
 int error_exit(RampostErr err);
+void microwait(long microsec);
 
 #endif
