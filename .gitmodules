@@ -1,3 +1,6 @@
 [submodule "anki/victor"]
 	path = anki/victor
 	url = git@github.com:anki/victor.git
+[submodule "poky/meta-docker"]
+	path = poky/meta-docker
+	url = https://github.com/anki/rnd-meta-docker
