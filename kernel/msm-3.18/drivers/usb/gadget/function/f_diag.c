@@ -151,7 +151,7 @@ struct diag_context {
 	struct usb_ep *in;
 	struct list_head read_pool;
 	struct list_head write_pool;
-	raw_spinlock_t lock;
+	spinlock_t lock;
 	unsigned configured;
 	struct usb_composite_dev *cdev;
 	int (*update_pid_and_serial_num)(uint32_t, const char *);
@@ -180,7 +180,7 @@ static void diag_context_release(struct kref *kref)
 	struct diag_context *ctxt =
 		container_of(kref, struct diag_context, kref);
 
-	raw_spin_unlock(&ctxt->lock);
+	spin_unlock(&ctxt->lock);
 	kfree(ctxt);
 }
 
@@ -246,13 +246,13 @@ static void diag_write_complete(struct usb_ep *ep,
 		}
 	}
 
-	raw_spin_lock_irqsave(&ctxt->lock, flags);
+	spin_lock_irqsave(&ctxt->lock, flags);
 	list_add_tail(&req->list, &ctxt->write_pool);
 	if (req->length != 0) {
 		d_req->actual = req->actual;
 		d_req->status = req->status;
 	}
-	raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+	spin_unlock_irqrestore(&ctxt->lock, flags);
 
 	if (ctxt->ch && ctxt->ch->notify)
 		ctxt->ch->notify(ctxt->ch->priv, USB_DIAG_WRITE_DONE, d_req);
@@ -271,9 +271,9 @@ static void diag_read_complete(struct usb_ep *ep,
 	d_req->actual = req->actual;
 	d_req->status = req->status;
 
-	raw_spin_lock_irqsave(&ctxt->lock, flags);
+	spin_lock_irqsave(&ctxt->lock, flags);
 	list_add_tail(&req->list, &ctxt->read_pool);
-	raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+	spin_unlock_irqrestore(&ctxt->lock, flags);
 
 	ctxt->dpkts_tomodem++;
 
@@ -302,7 +302,7 @@ struct usb_diag_ch *usb_diag_open(const char *name, void *priv,
 	unsigned long flags;
 	int found = 0;
 
-	raw_spin_lock_irqsave(&ch_lock, flags);
+	spin_lock_irqsave(&ch_lock, flags);
 	/* Check if we already have a channel with this name */
 	list_for_each_entry(ch, &usb_diag_ch_list, list) {
 		if (!strcmp(name, ch->name)) {
@@ -310,7 +310,7 @@ struct usb_diag_ch *usb_diag_open(const char *name, void *priv,
 			break;
 		}
 	}
-	raw_spin_unlock_irqrestore(&ch_lock, flags);
+	spin_unlock_irqrestore(&ch_lock, flags);
 
 	if (!found) {
 		ch = kzalloc(sizeof(*ch), GFP_KERNEL);
@@ -323,9 +323,9 @@ struct usb_diag_ch *usb_diag_open(const char *name, void *priv,
 	ch->notify = notify;
 
 	if (!found) {
-		raw_spin_lock_irqsave(&ch_lock, flags);
+		spin_lock_irqsave(&ch_lock, flags);
 		list_add_tail(&ch->list, &usb_diag_ch_list);
-		raw_spin_unlock_irqrestore(&ch_lock, flags);
+		spin_unlock_irqrestore(&ch_lock, flags);
 	}
 
 	return ch;
@@ -344,7 +344,7 @@ void usb_diag_close(struct usb_diag_ch *ch)
 	struct diag_context *dev = NULL;
 	unsigned long flags;
 
-	raw_spin_lock_irqsave(&ch_lock, flags);
+	spin_lock_irqsave(&ch_lock, flags);
 	ch->priv = NULL;
 	ch->notify = NULL;
 	/* Free-up the resources if channel is no more active */
@@ -354,7 +354,7 @@ void usb_diag_close(struct usb_diag_ch *ch)
 			dev->ch = NULL;
 	kfree(ch);
 
-	raw_spin_unlock_irqrestore(&ch_lock, flags);
+	spin_unlock_irqrestore(&ch_lock, flags);
 }
 EXPORT_SYMBOL(usb_diag_close);
 
@@ -397,7 +397,7 @@ int usb_diag_alloc_req(struct usb_diag_ch *ch, int n_write, int n_read)
 	if (!ctxt)
 		return -ENODEV;
 
-	raw_spin_lock_irqsave(&ctxt->lock, flags);
+	spin_lock_irqsave(&ctxt->lock, flags);
 	/* Free previous session's stale requests */
 	free_reqs(ctxt);
 	for (i = 0; i < n_write; i++) {
@@ -417,11 +417,11 @@ int usb_diag_alloc_req(struct usb_diag_ch *ch, int n_write, int n_read)
 		req->complete = diag_read_complete;
 		list_add_tail(&req->list, &ctxt->read_pool);
 	}
-	raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+	spin_unlock_irqrestore(&ctxt->lock, flags);
 	return 0;
 fail:
 	free_reqs(ctxt);
-	raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+	spin_unlock_irqrestore(&ctxt->lock, flags);
 	return -ENOMEM;
 
 }
@@ -472,17 +472,17 @@ int usb_diag_read(struct usb_diag_ch *ch, struct diag_request *d_req)
 	if (!ctxt)
 		return -ENODEV;
 
-	raw_spin_lock_irqsave(&ctxt->lock, flags);
+	spin_lock_irqsave(&ctxt->lock, flags);
 
 	if (!ctxt->configured || !ctxt->out) {
-		raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+		spin_unlock_irqrestore(&ctxt->lock, flags);
 		return -EIO;
 	}
 
 	out = ctxt->out;
 
 	if (list_empty(&ctxt->read_pool)) {
-		raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+		spin_unlock_irqrestore(&ctxt->lock, flags);
 		ERROR(ctxt->cdev, "%s: no requests available\n", __func__);
 		return -EAGAIN;
 	}
@@ -490,7 +490,7 @@ int usb_diag_read(struct usb_diag_ch *ch, struct diag_request *d_req)
 	req = list_first_entry(&ctxt->read_pool, struct usb_request, list);
 	list_del(&req->list);
 	kref_get(&ctxt->kref); /* put called in complete callback */
-	raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+	spin_unlock_irqrestore(&ctxt->lock, flags);
 
 	req->buf = d_req->buf;
 	req->length = d_req->length;
@@ -506,7 +506,7 @@ int usb_diag_read(struct usb_diag_ch *ch, struct diag_request *d_req)
 
 	if (usb_ep_queue(out, req, GFP_ATOMIC)) {
 		/* If error add the link to linked list again*/
-		raw_spin_lock_irqsave(&ctxt->lock, flags);
+		spin_lock_irqsave(&ctxt->lock, flags);
 		list_add_tail(&req->list, &ctxt->read_pool);
 		/* 1 error message for every 10 sec */
 		if (__ratelimit(&rl))
@@ -514,10 +514,10 @@ int usb_diag_read(struct usb_diag_ch *ch, struct diag_request *d_req)
 				" read request\n", __func__);
 
 		if (kref_put(&ctxt->kref, diag_context_release))
-			/* diag_context_release called raw_spin_unlock already */
+			/* diag_context_release called spin_unlock already */
 			local_irq_restore(flags);
 		else
-			raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+			spin_unlock_irqrestore(&ctxt->lock, flags);
 		return -EIO;
 	}
 
@@ -549,17 +549,17 @@ int usb_diag_write(struct usb_diag_ch *ch, struct diag_request *d_req)
 	if (!ctxt)
 		return -ENODEV;
 
-	raw_spin_lock_irqsave(&ctxt->lock, flags);
+	spin_lock_irqsave(&ctxt->lock, flags);
 
 	if (!ctxt->configured || !ctxt->in) {
-		raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+		spin_unlock_irqrestore(&ctxt->lock, flags);
 		return -EIO;
 	}
 
 	in = ctxt->in;
 
 	if (list_empty(&ctxt->write_pool)) {
-		raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+		spin_unlock_irqrestore(&ctxt->lock, flags);
 		ERROR(ctxt->cdev, "%s: no requests available\n", __func__);
 		return -EAGAIN;
 	}
@@ -567,7 +567,7 @@ int usb_diag_write(struct usb_diag_ch *ch, struct diag_request *d_req)
 	req = list_first_entry(&ctxt->write_pool, struct usb_request, list);
 	list_del(&req->list);
 	kref_get(&ctxt->kref); /* put called in complete callback */
-	raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+	spin_unlock_irqrestore(&ctxt->lock, flags);
 
 	req->buf = d_req->buf;
 	req->length = d_req->length;
@@ -584,7 +584,7 @@ int usb_diag_write(struct usb_diag_ch *ch, struct diag_request *d_req)
 	ctxt->dpkts_tolaptop_pending++;
 	if (usb_ep_queue(in, req, GFP_ATOMIC)) {
 		/* If error add the link to linked list again*/
-		raw_spin_lock_irqsave(&ctxt->lock, flags);
+		spin_lock_irqsave(&ctxt->lock, flags);
 		list_add_tail(&req->list, &ctxt->write_pool);
 		ctxt->dpkts_tolaptop_pending--;
 		/* 1 error message for every 10 sec */
@@ -593,10 +593,10 @@ int usb_diag_write(struct usb_diag_ch *ch, struct diag_request *d_req)
 				" read request\n", __func__);
 
 		if (kref_put(&ctxt->kref, diag_context_release))
-			/* diag_context_release called raw_spin_unlock already */
+			/* diag_context_release called spin_unlock already */
 			local_irq_restore(flags);
 		else
-			raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+			spin_unlock_irqrestore(&ctxt->lock, flags);
 		return -EIO;
 	}
 
@@ -617,9 +617,9 @@ static void diag_function_disable(struct usb_function *f)
 
 	DBG(dev->cdev, "diag_function_disable\n");
 
-	raw_spin_lock_irqsave(&dev->lock, flags);
+	spin_lock_irqsave(&dev->lock, flags);
 	dev->configured = 0;
-	raw_spin_unlock_irqrestore(&dev->lock, flags);
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	if (dev->ch && dev->ch->notify)
 		dev->ch->notify(dev->ch->priv, USB_DIAG_DISCONNECT, NULL);
@@ -677,9 +677,9 @@ static int diag_function_set_alt(struct usb_function *f,
 	dev->dpkts_tomodem = 0;
 	dev->dpkts_tolaptop_pending = 0;
 
-	raw_spin_lock_irqsave(&dev->lock, flags);
+	spin_lock_irqsave(&dev->lock, flags);
 	dev->configured = 1;
-	raw_spin_unlock_irqrestore(&dev->lock, flags);
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	if (dev->ch->notify)
 		dev->ch->notify(dev->ch->priv, USB_DIAG_CONNECT, NULL);
@@ -709,14 +709,14 @@ static void diag_function_unbind(struct usb_configuration *c,
 		ctxt->ch->priv_usb = NULL;
 	list_del(&ctxt->list_item);
 	/* Free any pending USB requests from last session */
-	raw_spin_lock_irqsave(&ctxt->lock, flags);
+	spin_lock_irqsave(&ctxt->lock, flags);
 	free_reqs(ctxt);
 
 	if (kref_put(&ctxt->kref, diag_context_release))
-		/* diag_context_release called raw_spin_unlock already */
+		/* diag_context_release called spin_unlock already */
 		local_irq_restore(flags);
 	else
-		raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+		spin_unlock_irqrestore(&ctxt->lock, flags);
 }
 
 static int diag_function_bind(struct usb_configuration *c,
@@ -813,9 +813,9 @@ int diag_function_add(struct usb_configuration *c, const char *name,
 
 		_ch->name = name;
 
-		raw_spin_lock_irqsave(&ch_lock, flags);
+		spin_lock_irqsave(&ch_lock, flags);
 		list_add_tail(&_ch->list, &usb_diag_ch_list);
-		raw_spin_unlock_irqrestore(&ch_lock, flags);
+		spin_unlock_irqrestore(&ch_lock, flags);
 	}
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
@@ -842,7 +842,7 @@ int diag_function_add(struct usb_configuration *c, const char *name,
 	dev->function.set_alt = diag_function_set_alt;
 	dev->function.disable = diag_function_disable;
 	kref_init(&dev->kref);
-	raw_spin_lock_init(&dev->lock);
+	spin_lock_init(&dev->lock);
 	INIT_LIST_HEAD(&dev->read_pool);
 	INIT_LIST_HEAD(&dev->write_pool);
 
@@ -871,7 +871,7 @@ static ssize_t debug_read_stats(struct file *file, char __user *ubuf,
 		unsigned long flags;
 
 		if (ctxt) {
-			raw_spin_lock_irqsave(&ctxt->lock, flags);
+			spin_lock_irqsave(&ctxt->lock, flags);
 			temp += scnprintf(buf + temp, PAGE_SIZE - temp,
 					"---Name: %s---\n"
 					"endpoints: %s, %s\n"
@@ -883,7 +883,7 @@ static ssize_t debug_read_stats(struct file *file, char __user *ubuf,
 					ctxt->dpkts_tolaptop,
 					ctxt->dpkts_tomodem,
 					ctxt->dpkts_tolaptop_pending);
-			raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+			spin_unlock_irqrestore(&ctxt->lock, flags);
 		}
 	}
 
@@ -900,11 +900,11 @@ static ssize_t debug_reset_stats(struct file *file, const char __user *buf,
 		unsigned long flags;
 
 		if (ctxt) {
-			raw_spin_lock_irqsave(&ctxt->lock, flags);
+			spin_lock_irqsave(&ctxt->lock, flags);
 			ctxt->dpkts_tolaptop = 0;
 			ctxt->dpkts_tomodem = 0;
 			ctxt->dpkts_tolaptop_pending = 0;
-			raw_spin_unlock_irqrestore(&ctxt->lock, flags);
+			spin_unlock_irqrestore(&ctxt->lock, flags);
 		}
 	}
 
@@ -960,13 +960,13 @@ static void diag_cleanup(void)
 	list_for_each_safe(act, tmp, &usb_diag_ch_list) {
 		_ch = list_entry(act, struct usb_diag_ch, list);
 
-		raw_spin_lock_irqsave(&ch_lock, flags);
+		spin_lock_irqsave(&ch_lock, flags);
 		/* Free if diagchar is not using the channel anymore */
 		if (!_ch->priv) {
 			list_del(&_ch->list);
 			kfree(_ch);
 		}
-		raw_spin_unlock_irqrestore(&ch_lock, flags);
+		spin_unlock_irqrestore(&ch_lock, flags);
 	}
 }
 

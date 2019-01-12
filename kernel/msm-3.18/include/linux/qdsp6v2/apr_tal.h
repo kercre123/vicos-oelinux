@@ -92,7 +92,7 @@ struct apr_svc_ch_dev {
 #else
 struct apr_svc_ch_dev {
 	struct smd_channel *ch;
-	spinlock_t         lock;
+	raw_spinlock_t     lock;
 	spinlock_t         w_lock;
 	struct mutex       m_lock;
 	apr_svc_cb_fn      func;
