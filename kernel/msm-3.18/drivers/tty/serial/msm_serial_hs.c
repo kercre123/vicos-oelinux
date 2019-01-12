@@ -2389,6 +2389,14 @@ exit_request_clock_on:
 }
 EXPORT_SYMBOL(msm_hs_request_clock_on);
 
+static irqreturn_t msm_hsl_handler(int irq, void *dev) {
+	struct msm_hs_port *msm_uport = (struct msm_hs_port *)dev;
+	struct uart_port *uport = &msm_uport->uport;
+  disable_irq(msm_uport->wakeup.irq);
+  disable_irq(uport->irq);
+  return IRQ_WAKE_THREAD;
+}
+
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
 	unsigned int wakeup = 0;
@@ -2614,7 +2622,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	msm_hs_resource_vote(msm_uport);
 
 	if (is_use_low_power_wakeup(msm_uport)) {
-		ret = request_irq(msm_uport->wakeup.irq, msm_hs_wakeup_isr,
+		ret = request_threaded_irq(msm_uport->wakeup.irq, NULL , msm_hs_wakeup_isr,
 					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 					"msm_hs_wakeup", msm_uport);
 		if (unlikely(ret)) {
