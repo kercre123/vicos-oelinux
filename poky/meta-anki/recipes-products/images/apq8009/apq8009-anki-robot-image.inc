@@ -53,6 +53,11 @@ IMAGE_INSTALL += "audiohal"
 IMAGE_INSTALL += "fluoride"
 IMAGE_INSTALL += "rb-camera"
 
+PREFERRED_PROVIDER_virtual/runc = "runc-opencontainers"
+PREFERRED_PROVIDER_virtual/containerd = "containerd-opencontainers"
+
+IMAGE_INSTALL += "docker"
+
 # Developer stuff
 IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'reboot-stresser', d)}"
 IMAGE_INSTALL += "${@base_conditional('USER_BUILD', '1', '', 'ankitrace', d)}"

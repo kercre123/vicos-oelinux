@@ -77,7 +77,7 @@ FILES_util-linux-losetup = "${base_sbindir}/losetup.${BPN}"
 FILES_util-linux-mount = "${base_bindir}/mount.${BPN}"
 FILES_util-linux-mcookie = "${bindir}/mcookie"
 FILES_util-linux-umount = "${base_bindir}/umount.${BPN}"
-FILES_util-linux-readprofile = "${sbindir}/readprofile.${BPN}"
+FILES_util-linux-readprofile = "${base_sbindir}/readprofile.${BPN}"
 FILES_util-linux-uuidgen = "${bindir}/uuidgen"
 FILES_util-linux-uuidd = "${sbindir}/uuidd"
 FILES_util-linux-reset = "${base_bindir}/reset"
@@ -138,14 +138,16 @@ do_install () {
 	mkdir -p ${D}${base_bindir}
 
         sbinprogs="agetty ctrlaltdel cfdisk vipw vigr"
-        sbinprogs_a="pivot_root hwclock mkswap mkfs.minix fsck.minix losetup swapon swapoff fdisk fsck blkid blockdev fstrim sulogin switch_root"
-        binprogs_a="dmesg getopt kill more umount mount login reset su"
+        sbinprogs_a="pivot_root hwclock mkswap mkfs.minix fsck.minix losetup swapon swapoff fdisk fsck blkid blockdev fstrim sulogin switch_root readprofile"
+        binprogs_a="dmesg getopt kill more umount mount login reset su hexdump logger mesg renice setsid chrt flock eject"
 
         if [ "${base_sbindir}" != "${sbindir}" ]; then
         	mkdir -p ${D}${base_sbindir}
                 for p in $sbinprogs $sbinprogs_a; do
                         if [ -f "${D}${sbindir}/$p" ]; then
                                 mv "${D}${sbindir}/$p" "${D}${base_sbindir}/$p"
+                        else
+                            bbwarn "${D}${sbindir}/$p does not exist"
                         fi
                 done
         fi
@@ -155,6 +157,8 @@ do_install () {
                 for p in $binprogs_a; do
                         if [ -f "${D}${bindir}/$p" ]; then
                                 mv "${D}${bindir}/$p" "${D}${base_bindir}/$p"
+                        else
+                            bbwarn "${D}${bindir}/$p does not exist"
                         fi
                 done
         fi
@@ -191,7 +195,14 @@ ALTERNATIVE_LINK_NAME[blockdev] = "${base_sbindir}/blockdev"
 ALTERNATIVE_LINK_NAME[pivot_root] = "${base_sbindir}/pivot_root"
 ALTERNATIVE_LINK_NAME[switch_root] = "${base_sbindir}/switch_root"
 ALTERNATIVE_LINK_NAME[mkfs.minix] = "${base_sbindir}/mkfs.minix"
-ALTERNATIVE_LINK_NAME[eject] = "${bindir}/eject"
+ALTERNATIVE_LINK_NAME[eject] = "${base_bindir}/eject"
+ALTERNATIVE_LINK_NAME[hexdump] = "${base_bindir}/hexdump"
+ALTERNATIVE_LINK_NAME[logger] = "${base_bindir}/logger"
+ALTERNATIVE_LINK_NAME[mesg] = "${base_bindir}/mesg"
+ALTERNATIVE_LINK_NAME[renice] = "${base_bindir}/renice"
+ALTERNATIVE_LINK_NAME[setsid] = "${base_bindir}/setsid"
+ALTERNATIVE_LINK_NAME[chrt] = "${base_bindir}/chrt"
+ALTERNATIVE_LINK_NAME[flock] = "${base_bindir}/flock"
 
 ALTERNATIVE_${PN}-doc = "mountpoint.1 last.1 lastb.1 mesg.1 wall.1 nologin.8 sulogin.8 utmpdump.1 reset.1 kill.1 libblkid.3 blkid.8 findfs.8 fsck.8 uuid.3"
 
@@ -231,7 +242,7 @@ ALTERNATIVE_util-linux-umount = "umount"
 ALTERNATIVE_LINK_NAME[umount] = "${base_bindir}/umount"
 
 ALTERNATIVE_util-linux-readprofile = "readprofile"
-ALTERNATIVE_LINK_NAME[readprofile] = "${sbindir}/readprofile"
+ALTERNATIVE_LINK_NAME[readprofile] = "${base_sbindir}/readprofile"
 
 ALTERNATIVE_util-linux-losetup = "losetup"
 ALTERNATIVE_LINK_NAME[losetup] = "${base_sbindir}/losetup"
