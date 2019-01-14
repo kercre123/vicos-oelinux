@@ -93,6 +93,7 @@ do_makesystem() {
     done
 
     echo "making the sparse ext4 file system"
+    echo make_ext4fs ${IMAGE_EXT4_EXTRA_OPTIONS} -a / -C ./final_user_config ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${RAW_FILE} ${IMAGE_ROOTFS}
     make_ext4fs ${IMAGE_EXT4_EXTRA_OPTIONS} -a / -C ./final_user_config ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${RAW_FILE} ${IMAGE_ROOTFS}
     make_ext4fs -l ${SYSTEMRW_SIZE_EXT4} ${DEPLOY_DIR_IMAGE}/${MACHINE}-systemrw.ext4
 

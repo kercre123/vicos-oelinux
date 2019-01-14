@@ -113,6 +113,10 @@ make_userdata() {
 
   #make sure /data/run/connman exists - NOTE: we need /data/lib/connman and /data/run/connamn
   mkdir -p /var/run/connman
+
+  #docker
+  mkdir -p /data/etc/docker
+  mkdir -p /data/lib/docker
 }
 
 mount_tmp_userdata() {
