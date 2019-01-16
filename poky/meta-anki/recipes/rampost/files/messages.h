@@ -22,9 +22,6 @@
 #ifndef __SCHEMA_MESSAGES_H__
 #define __SCHEMA_MESSAGES_H__
 
-#include <stdbool.h>
-#include <stdint.h>
-
 // ENUM SpineSync
 enum {
   SYNC_BODY_TO_HEAD = 0x483242aa,
@@ -58,6 +55,7 @@ typedef uint32_t DropSensor;
 
 // ENUM PayloadId
 enum {
+  PAYLOAD_LIGHT_STATE = 0x736c,
   PAYLOAD_DATA_FRAME  = 0x6466,
   PAYLOAD_CONT_DATA   = 0x6364,
   PAYLOAD_MODE_CHANGE = 0x6d64,
@@ -86,6 +84,7 @@ enum {
   NACK_SIZE_ALIGN   = -6,
   NACK_BAD_COMMAND  = -7,
   NACK_NOT_VALID    = -8,
+  NACK_OVERFLOW     = -9
 };
 typedef int32_t Ack;
 
@@ -93,21 +92,24 @@ typedef int32_t Ack;
 enum {
   POWER_ON_CHARGER    = 0x1,
   POWER_IS_CHARGING   = 0x2,
+  POWER_BATTERY_DISCONNECTED = 0x4,
+  POWER_CHARGER_SHORTED = 0x8000
 };
 typedef uint16_t BatteryFlags;
 
 // ENUM PowerState
 enum {
-  POWER_STATE_OFF               = 0,
-  POWER_STATE_OFF_WAKE_ON_RADIO = 1,
-  POWER_STATE_ON                = 2,
-  POWER_STATE_IDLE              = 3,
-  POWER_STATE_FORCE_RECOVERY    = 4,
-  POWER_STATE_OTA_MODE          = 5,
-  POWER_STATE_CHARGER_TEST_MODE = 6,
-  POWER_STATE_DTM_MODE          = 7,
+  POWER_MODE_ACTIVE = 0,
+  POWER_MODE_CALM   = 1,
 };
 typedef uint32_t PowerState;
+
+// ENUM PowerFlags
+enum {
+  POWER_DISCONNECT_CHARGER = 0x8000,
+  POWER_CONNECT_CHARGER    = 0x4000,
+};
+typedef uint32_t PowerFlags;
 
 // ENUM LedIndexes
 enum {
@@ -141,29 +143,26 @@ enum {
 };
 typedef uint16_t FailureCode;
 
-struct MotorPower
-{
+struct MotorPower {
   int16_t leftWheel;
   int16_t rightWheel;
   int16_t liftMotor;
   int16_t headMotor;
 };
 
-struct BatteryState
-{
-  int16_t battery;
+struct BatteryState {
+  int16_t main_voltage; // This is battery voltage when the charger is unpowered / disconnected from VEXT
   int16_t charger;
   int16_t temperature;
   BatteryFlags flags;
+  int16_t _unused[2];
 };
 
-struct ButtonState
-{
+struct ButtonState {
   uint16_t level;
 };
 
-struct RangeData
-{
+struct RangeData {
   uint8_t rangeStatus;
   uint8_t spare1;
   uint16_t rangeMM;
@@ -174,28 +173,24 @@ struct RangeData
   uint32_t calibrationResult;
 };
 
-struct ProcessorStatus
-{
+struct ProcessorStatus {
   uint16_t watchdogCount;
   uint16_t statusBits;
 };
 
-struct MotorState
-{
+struct MotorState {
   int32_t position;
   int32_t delta;
   uint32_t time;
 };
 
-struct SpineMessageHeader
-{
+struct SpineMessageHeader {
   SpineSync sync_bytes;
   PayloadId payload_type;
   uint16_t bytes_to_follow;
 };
 
-struct SpineMessageFooter
-{
+struct SpineMessageFooter {
   uint32_t checksum;
 };
 
@@ -204,8 +199,7 @@ struct SpineMessageFooter
 #define AUDIO_SAMPLES_PER_FRAME 80
 #define MICDATA_SAMPLES_COUNT (AUDIO_SAMPLES_PER_FRAME*4)
 /// Start Packets
-struct BodyToHead
-{
+struct BodyToHead {
   uint32_t framecounter;
   uint8_t flags;
   uint8_t _unused0;
@@ -213,7 +207,6 @@ struct BodyToHead
   struct MotorState motor[4];
   uint16_t cliffSense[4];
   struct BatteryState battery;
-  uint32_t _unused1;
   struct RangeData proximity;
   uint16_t touchLevel[2];
   uint16_t micError[2]; // Raw bits from a segment of mic data (stuck bit detect)
@@ -223,41 +216,40 @@ struct BodyToHead
 #endif
 };
 
-struct ContactData
-{
+struct ContactData {
   uint8_t data[32];
 };
 
-struct HeadToBody
-{
-  uint32_t framecounter;
-  PowerState powerState;
-  int16_t motorPower[4];
+struct LightState {
+  // Note: Only the first 12 elements are used, and 4 are spares
   uint8_t ledColors[16];
+};
+
+struct HeadToBody {
+  uint32_t framecounter;
+  PowerFlags powerFlags;
+  int16_t motorPower[4];
+  struct LightState lightState;
   uint8_t _unused[32];  // Future expansion
 };
 
 // Must be same size as ack message
-struct MicroBodyToHead
-{
+struct MicroBodyToHead {
   uint8_t buttonPressed;
   uint8_t _unused[3];
 };
 
-struct AckMessage
-{
+struct AckMessage {
   Ack status;
 };
 
-struct WriteDFU
-{
+struct WriteDFU {
   uint16_t address;
   uint16_t wordCount;
   uint32_t data[256];
 };
 
-struct VersionInfo
-{
+struct VersionInfo {
   uint32_t hw_revision;
   uint32_t hw_model;
   uint8_t ein[16];

@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include "rampost.h"
+#include "lcd.h"
 #include "error_565.h"
 
 /******** TIMING UTILITIES ********/
@@ -33,15 +34,15 @@ void exit_cleanup(void)
   lcd_gpio_teardown();
 }
 
-int error_exit(RampostErr err) {
+int error_exit(RampostErr err)
+{
   exit_cleanup();
   exit(err);
 }
 
 
-int main(int argc, const char* argv[]) {
-  bool success = false;
-
+int main(int argc, const char* argv[])
+{
   lcd_set_brightness(5);
 
   lcd_gpio_setup();
@@ -50,7 +51,7 @@ int main(int argc, const char* argv[]) {
   lcd_device_reset();
   lcd_device_init();
 
-  lcd_draw_frame2(error_565, error_565_len);
+  lcd_draw_frame2((uint16_t*)error_565, error_565_len);
 
   exit_cleanup();
 

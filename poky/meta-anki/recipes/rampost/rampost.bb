@@ -16,10 +16,20 @@ SRC_URI = "file://rampost.service \
            file://animfail.c \
            file://error_565.h \
            file://animfail.service \
+           file://anki_dev_unit.h \
+           file://das.h \
+           file://dfu.c \
+           file://dfu.h \
+           file://error_801.h \
+           file://error_802.h \
+           file://lcd_bitbang.c \
+           file://lcd.h \
+           file://low_battery.h \
+           file://too_hot.h \
            "
 
 do_compile () {
-  ${CC} ${WORKDIR}/rampost.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c ${WORKDIR}/spine_hal.c -o ${WORKDIR}/rampost
+  ${CC} ${WORKDIR}/rampost.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c ${WORKDIR}/spine_hal.c ${WORKDIR}/lcd_bitbang.c ${WORKDIR}/dfu.c -o ${WORKDIR}/rampost
   ${CC} ${WORKDIR}/animfail.c ${WORKDIR}/gpio.c ${WORKDIR}/lcd.c -o ${WORKDIR}/animfail
 }
 
