@@ -40,7 +40,7 @@ do_install_append(){
             install -m 0644 ${WORKDIR}/${BASEMACHINE}/ro-fstab ${D}${sysconfdir}/fstab
         elif [  ${BASEMACHINE} == "apq8009" ]; then
             if [ "${PRODUCT}" == "robot" ] || [ "${PRODUCT}" == "robot-rome" ]; then
-                if [ "${FACTORY}" == "1" ]; then
+                if [ "${FACTORY}" == "1" ] && [ "${USER}" == "1" ]; then
                     install -m 0644 ${WORKDIR}/${BASEMACHINE}/robot-factory-fstab ${D}${sysconfdir}/fstab
                 else
                     install -m 0644 ${WORKDIR}/${BASEMACHINE}/robot-fstab ${D}${sysconfdir}/fstab
