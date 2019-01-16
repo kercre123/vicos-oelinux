@@ -4722,7 +4722,7 @@ static int msm_otg_probe(struct platform_device *pdev)
 		goto destroy_wlock;
 	}
 
-	ret = request_irq(motg->irq, msm_otg_irq, IRQF_SHARED,
+	ret = request_threaded_irq(motg->irq,NULL, msm_otg_irq, IRQF_SHARED,
 					"msm_otg", motg);
 	if (ret) {
 		dev_err(&pdev->dev, "request irq failed\n");
@@ -4755,8 +4755,9 @@ static int msm_otg_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = request_irq(motg->async_irq, msm_otg_irq,
+	ret = request_threaded_irq(motg->async_irq, NULL, msm_otg_irq,
 				IRQF_TRIGGER_RISING, "msm_otg", motg);
+
 	if (ret) {
 		dev_err(&pdev->dev, "request irq failed (ASYNC INT)\n");
 		goto free_phy_irq;
