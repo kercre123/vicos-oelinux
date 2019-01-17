@@ -16,7 +16,7 @@ echo 1 > /sys/kernel/debug/msm-bus-dbg/shell-client/update_request
 
 # Pin serial and spi kthreads to core 0
 pgrep msm_serial_hs_0 | xargs -I PID taskset -p 8 PID
-pgrep spi[01] | xargs -I PID taskset -p 8 PID
+pgrep spi0 | xargs -I PID taskset -p 8 PID
 
 # TODO Move this power rail controll into the camera driver
 CAM_REG_GPIO=83
