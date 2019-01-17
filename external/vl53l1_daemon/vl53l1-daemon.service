@@ -1,0 +1,12 @@
+[Unit]
+Description=VL53L1 ToF sensor daemon
+SourcePath=/usr/bin/vl53l1_daemon
+After=mm-qcamera-daemon.service
+Before=vic-robot.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStartPre=/sbin/insmod /lib/modules/3.18.66-perf/extra/stmvl53l1.ko force_device=1 adapter_nb=6 xsdn_gpio_nb=0
+ExecStart=/usr/bin/vl53l1_daemon
+ExecStartPost=/bin/ln -s /dev/stmvl53l1_ranging /dev/stmvl53l1_ranging1
