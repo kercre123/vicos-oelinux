@@ -1,5 +1,12 @@
+#
 # Service to generate a CA cert for vic-gateway
-
+#
+# If vic-gateway-cert exits with a non-zero status, invoke /anki/bin/vic-on-exit 
+# with SERVICE_RESULT/EXIT_CODE/EXIT_STATUS set to display fault code on screen.
+#
+# Note we can't use ExecStopPost here because systemd won't run it. This appears
+# to be some unexpected consequence of using Type=oneshot with RemainAfterExit=true.
+# 
 [Unit]
 Description=Generate x509 cert for vic-gateway
 After=vic-switchboard.service
@@ -7,8 +14,9 @@ Requires=vic-switchboard.service
 PartOf=anki-robot.target
 
 [Service]
+EnvironmentFile=/anki/etc/vic-gateway-cert.env
+ExecStart=/bin/sh -c "/sbin/vic-gateway-cert || SERVICE_RESULT=exit-code EXIT_CODE=exited EXIT_STATUS=1 /anki/bin/vic-on-exit"
 Type=oneshot
-ExecStart=/sbin/vic-gateway-cert
 RemainAfterExit=true
 User=net
 Group=anki
