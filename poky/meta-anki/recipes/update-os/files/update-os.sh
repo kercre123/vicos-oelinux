@@ -7,9 +7,10 @@ function usage()
 {
     echo "usage: update-os [-h|lkg|latest|version|url]"
     echo "-h                   This message"
-    echo "lkg                  Update to Last Known Good OS (default)"
-    echo "latest               Update to latest OS"
-    echo "version              Like 1.2.1.2210 - Update to a specific version"
+    echo "lkg                  Update to Last Known Good OS (default) via full OTA"
+    echo "latest               Update to latest OS via full OTA"
+    echo "version              Like 1.2.1.2210 - Update to a specific version via full OTA"
+    echo "delta-latest         Update to latest OS via delta OTA (may not work)"
     echo "url                  Give a full url like http://mylaptop:5555/os.ota"
     echo ""
     echo "It will take 10 seconds or so for the download to get going and"
@@ -28,6 +29,10 @@ function ctrl_c() {
 }
 
 BASE_URL=`egrep UPDATE_ENGINE_BASE_URL /anki/etc/update-engine.env | awk -F= '{print $NF;}'`
+BASE_URL_LATEST=`egrep UPDATE_ENGINE_BASE_URL_LATEST /anki/etc/update-engine.env | awk -F= '{print $NF;}'`
+if [ -z "${BASE_URL_LATEST}" ]; then
+    BASE_URL_LATEST="${BASE_URL}"
+fi
 URL="${BASE_URL}full/lkg.ota"
 if [ $# -gt 0 ]; then
     case "$1" in
@@ -37,6 +42,9 @@ if [ $# -gt 0 ]; then
 	latest)
 	    URL="${BASE_URL}full/latest.ota"
 	    ;;
+        delta-latest)
+            URL="${BASE_URL_LATEST}diff/`getprop ro.anki.version | tr -d '[a-z]'`.ota"
+            ;;
 	lkg)
 	    ;;
 	[0-9].[0-9].[0-9].[0-9]*)
@@ -78,8 +86,10 @@ while [[ ! -f /run/update-engine/done ]] ; do
     if [ -f /run/update-engine/progress -a -f /run/update-engine/expected-size ] ; then
 	PROGRESS=`cat /run/update-engine/progress`
 	EXPECTED=`cat /run/update-engine/expected-size`
-	PCT=$(( 100 * $PROGRESS / $EXPECTED ))
-	echo -e -n "\rUpdating to ${UPDATE_VERSION} ( ${PCT}% )"
+        if [ -n "$PROGRESS" -a -n "$EXPECTED" ]; then
+	    PCT=$(( 100 * $PROGRESS / $EXPECTED ))
+	    echo -e -n "\rUpdating to ${UPDATE_VERSION} ( ${PCT}% )"
+        fi
     else
 	for ((i=0;i<$DOTS;i++)); do
 	    echo -n "."
