@@ -78,8 +78,10 @@ while [[ ! -f /run/update-engine/done ]] ; do
     if [ -f /run/update-engine/progress -a -f /run/update-engine/expected-size ] ; then
 	PROGRESS=`cat /run/update-engine/progress`
 	EXPECTED=`cat /run/update-engine/expected-size`
-	PCT=$(( 100 * $PROGRESS / $EXPECTED ))
-	echo -e -n "\rUpdating to ${UPDATE_VERSION} ( ${PCT}% )"
+        if [ -n "$PROGRESS" -a -n "$EXPECTED" ]; then
+	    PCT=$(( 100 * $PROGRESS / $EXPECTED ))
+	    echo -e -n "\rUpdating to ${UPDATE_VERSION} ( ${PCT}% )"
+        fi
     else
 	for ((i=0;i<$DOTS;i++)); do
 	    echo -n "."
