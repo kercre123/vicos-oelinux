@@ -22,7 +22,7 @@ LimitMEMLOCK=infinity
 Nice=-20
 
 # Set CPUAffinity (required isolcpus kernel arg)
-CPUAffinity=3
+#CPUAffinity=3
 
 # VIC-1884: Hard kill at 5 seconds if process doesn't respond to SIGTERM
 TimeoutStopSec=5
