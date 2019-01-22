@@ -513,10 +513,10 @@ static DEFINE_KTHREAD_WORKER(tty_buffer_worker);
 void tty_buffer_queue_work(struct tty_port *port)
 {
 	struct tty_bufhead *buf = &port->buf;
-	if (port->low_latency)
+//	if (port->low_latency)
 		queue_kthread_work(&tty_buffer_worker, &buf->kwork);
-	else
-		schedule_work(&buf->work);
+//	else
+//		schedule_work(&buf->work);
 }
 
 void tty_buffer_flush_work(struct tty_port *port)
