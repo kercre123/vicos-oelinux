@@ -2721,7 +2721,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	 */
 	mb();
 
-	ret = request_threaded_irq(uport->irq, msm_hsl_handler,  msm_hs_isr, IRQF_TRIGGER_HIGH,
+	ret = request_irq(uport->irq, msm_hs_isr, IRQF_TRIGGER_HIGH,
 			  "msm_hs_uart", msm_uport);
 	if (unlikely(ret)) {
 		MSM_HS_ERR("%s():Error %d getting uart irq\n", __func__, ret);

@@ -124,7 +124,7 @@ static int msm_smsm_probe(struct platform_device *pdev)
 	remote_pid = smd_edge_to_remote_pid(edge);
 	interrupt_stats[remote_pid].smsm_interrupt_id = irq_line;
 
-	ret = request_irq(irq_line,
+	ret = request_threaded_irq(irq_line, NULL,
 				private_irq->irq_handler,
 				IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
 				node->name,
