@@ -104,7 +104,7 @@ do_install_append() {
     # For read-only filesystem, do not create links during bootup
     if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
         mkdir -p ${D}${sysconfdir}
-        ln -sf ../run/connman/resolv.conf ${D}${sysconfdir}/resolv-conf.connman
+        ln -sf /data/run/connman/resolv.conf ${D}${sysconfdir}/resolv-conf.connman
     fi
 
     # install dbus conf
