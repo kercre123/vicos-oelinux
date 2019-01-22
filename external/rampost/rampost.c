@@ -1,19 +1,23 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
 #include <time.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <termios.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
+#include <assert.h>
 
 #include "messages.h"
 #include "spine_hal.h"
-#include "lcd.h"
-#include "das.h"
 #include "rampost.h"
+#include "lcd.h"
 #include "dfu.h"
+#include "das.h"
 
 #define FRAME_WAIT_MS 500
 
@@ -222,7 +226,6 @@ int main(int argc, const char* argv[])
 {
   static const char* const LOW_BAT = "low bat";
   static const char* const TOO_HOT = "too hot";
-  static const char* const BAD_LCD = "bad lcd";
   int error_code = 0;
   SpineErr spine_error = 0;
   bool success = false;
@@ -254,13 +257,11 @@ int main(int argc, const char* argv[])
   }
 
   lcd_gpio_setup();
-  lcd_device_reset();
+  lcd_spi_init();
 
-  success = lcd_status_check();
+  lcd_device_reset();
+  success = lcd_device_read_status();
   DAS_LOG(DAS_INFO, "lcd_check", "%d", success);
-  if (!success) {
-    write_semaphore(BAD_LCD, strlen(BAD_LCD));
-  }
 
   in_recovery_mode = recovery_mode_check();
 
@@ -321,11 +322,8 @@ int main(int argc, const char* argv[])
   }
 
   if (error_code || is_dev_unit || is_low_battery || is_too_hot) {
-    // We'll be displaying something, initialize the display
-    lcd_spi_init();
-    lcd_device_init();
+    lcd_device_init(); // We'll be displaying something
     lcd_set_brightness(5);
-
     //Skip everything else on syscon error!
     if (error_code) {
       show_error(error_code);
