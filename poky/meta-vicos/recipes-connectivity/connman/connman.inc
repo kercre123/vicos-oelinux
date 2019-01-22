@@ -42,7 +42,7 @@ PACKAGECONFIG ??= "wispr \
 # local.conf or distro config
 # PACKAGECONFIG_append_pn-connman = " openvpn vpnc l2tp pptp"
 
-PACKAGECONFIG[systemd] = "--with-systemdunitdir=${systemd_unitdir}/system/ --with-tmpfilesdir=${sysconfdir}/tmpfiles.d/,--with-systemdunitdir='' --with-tmpfilesdir=''"
+PACKAGECONFIG[systemd] = "--with-systemdunitdir=${systemd_unitdir}/system/ --with-tmpfilesdir='',--with-systemdunitdir='' --with-tmpfilesdir=''"
 PACKAGECONFIG[wifi] = "--enable-wifi, --disable-wifi, wpa-supplicant, wpa-supplicant"
 PACKAGECONFIG[bluez] = "--enable-bluetooth, --disable-bluetooth, ${BLUEZ}, ${BLUEZ}"
 PACKAGECONFIG[3g] = "--enable-ofono, --disable-ofono, ofono, ofono"
@@ -103,6 +103,7 @@ do_install_append() {
 
     # For read-only filesystem, do not create links during bootup
     if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
+        mkdir -p ${D}${sysconfdir}
         ln -sf ../run/connman/resolv.conf ${D}${sysconfdir}/resolv-conf.connman
     fi
 
@@ -176,8 +177,7 @@ FILES_${PN} = "${bindir}/* ${sbindir}/* ${libexecdir}/* ${libdir}/lib*.so.* \
             ${libdir}/connman/plugins \
             ${sysconfdir} ${localstatedir} \
             ${base_bindir}/* ${base_sbindir}/* ${base_libdir}/*.so* ${datadir}/${PN} \
-            ${datadir}/dbus-1/system-services/* \
-            ${sysconfdir}/tmpfiles.d/connman_resolvconf.conf"
+            ${datadir}/dbus-1/system-services/*"
 
 FILES_${PN}-dev += "${libdir}/connman/*/*.la"
 
