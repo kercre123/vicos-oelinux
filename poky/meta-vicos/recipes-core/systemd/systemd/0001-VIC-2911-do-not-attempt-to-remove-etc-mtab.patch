@@ -1,0 +1,26 @@
+From db74729978e108e75dcfa6e5337bb20e496a3800 Mon Sep 17 00:00:00 2001
+From: Alexander Kaplan <alexander@anki.com>
+Date: Mon, 7 Jan 2019 14:39:52 -0800
+Subject: [PATCH] VIC-2911: do not attempt to remove /etc/mtab
+
+We have a readonly filesystem, so /etc/mtab cannot be removed.
+---
+ tmpfiles.d/etc.conf.m4 | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tmpfiles.d/etc.conf.m4 b/tmpfiles.d/etc.conf.m4
+index e74b026..17d1f15 100644
+--- a/tmpfiles.d/etc.conf.m4
++++ b/tmpfiles.d/etc.conf.m4
+@@ -9,7 +9,7 @@
+ 
+ L /etc/os-release - - - - ../usr/lib/os-release
+ L /etc/localtime - - - - ../usr/share/zoneinfo/UTC
+-L+ /etc/mtab - - - - ../proc/self/mounts
++L /etc/mtab - - - - ../proc/self/mounts
+ m4_ifdef(`ENABLE_RESOLVED',
+ L! /etc/resolv.conf - - - - ../run/systemd/resolve/resolv.conf
+ )m4_dnl
+-- 
+2.1.2
+
