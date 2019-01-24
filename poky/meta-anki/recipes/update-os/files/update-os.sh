@@ -28,7 +28,7 @@ function ctrl_c() {
     exit 1
 }
 
-BASE_URL=`egrep UPDATE_ENGINE_BASE_URL /anki/etc/update-engine.env | awk -F= '{print $NF;}'`
+BASE_URL=`egrep UPDATE_ENGINE_BASE_URL= /anki/etc/update-engine.env | awk -F= '{print $NF;}'`
 BASE_URL_LATEST=`egrep UPDATE_ENGINE_BASE_URL_LATEST /anki/etc/update-engine.env | awk -F= '{print $NF;}'`
 if [ -z "${BASE_URL_LATEST}" ]; then
     BASE_URL_LATEST="${BASE_URL}"
