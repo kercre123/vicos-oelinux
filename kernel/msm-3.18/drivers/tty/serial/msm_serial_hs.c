@@ -409,7 +409,7 @@ static void msm_hs_resource_vote(struct msm_hs_port *msm_uport)
 {
 	int ret;
 	struct uart_port *uport = &(msm_uport->uport);
-	ret = pm_runtime_get_sync(uport->dev);
+	ret = pm_runtime_get(uport->dev);
 	if (ret < 0 || msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
 		MSM_HS_WARN("%s:%s runtime callback not invoked ret:%d st:%d",
 			__func__, dev_name(uport->dev), ret,
@@ -1847,33 +1847,6 @@ static void msm_hs_start_tx_locked(struct uart_port *uport)
 	}
 }
 
-/**
- * Callback notification from SPS driver
- *
- * This callback function gets triggered called from
- * SPS driver when requested SPS data transfer is
- * completed.
- *
- */
-
-static void msm_hs_sps_tx_callback(struct sps_event_notify *notify)
-{
-	struct msm_hs_port *msm_uport =
-		(struct msm_hs_port *)
-		((struct sps_event_notify *)notify)->user;
-	phys_addr_t addr = DESC_FULL_ADDR(notify->data.transfer.iovec.flags,
-		notify->data.transfer.iovec.addr);
-
-	msm_uport->notify = *notify;
-	MSM_HS_INFO("tx_cb: addr=0x%pa, size=0x%x, flags=0x%x\n",
-		&addr, notify->data.transfer.iovec.size,
-		notify->data.transfer.iovec.flags);
-
-	del_timer(&msm_uport->tx.tx_timeout_timer);
-	MSM_HS_DBG("%s(): Queue kthread work", __func__);
-	queue_kthread_work(&msm_uport->tx.kworker, &msm_uport->tx.kwork);
-}
-
 static void msm_serial_hs_tx_work(struct kthread_work *work)
 {
 	unsigned long flags;
@@ -1924,6 +1897,33 @@ static void msm_serial_hs_tx_work(struct kthread_work *work)
 
 	spin_unlock_irqrestore(&(msm_uport->uport.lock), flags);
 	msm_hs_resource_unvote(msm_uport);
+}
+
+
+/**
+ * Callback notification from SPS driver
+ *
+ * This callback function gets triggered called from
+ * SPS driver when requested SPS data transfer is
+ * completed.
+ *
+ */
+
+static void msm_hs_sps_tx_callback(struct sps_event_notify *notify)
+{
+	struct msm_hs_port *msm_uport =
+		(struct msm_hs_port *)
+		((struct sps_event_notify *)notify)->user;
+	phys_addr_t addr = DESC_FULL_ADDR(notify->data.transfer.iovec.flags,
+		notify->data.transfer.iovec.addr);
+
+	msm_uport->notify = *notify;
+	MSM_HS_INFO("tx_cb: addr=0x%pa, size=0x%x, flags=0x%x\n",
+		&addr, notify->data.transfer.iovec.size,
+		notify->data.transfer.iovec.flags);
+
+	del_timer(&msm_uport->tx.tx_timeout_timer);
+	msm_serial_hs_tx_work(&msm_uport->tx.kwork);
 }
 
 static void
@@ -1983,9 +1983,8 @@ static void msm_hs_sps_rx_callback(struct sps_event_notify *notify)
 			__func__, inx,
 			msm_uport->rx.pending_flag & ~(1<<inx));
 		}
-		queue_kthread_work(&msm_uport->rx.kworker,
-				&msm_uport->rx.kwork);
-		MSM_HS_DBG("%s(): Scheduled rx_tlet", __func__);
+
+		msm_serial_hs_rx_work(&msm_uport->rx.kwork);
 	}
 }
 
