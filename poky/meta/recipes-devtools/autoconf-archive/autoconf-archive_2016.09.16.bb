@@ -16,3 +16,4 @@ PACKAGES = "${PN} ${PN}-doc"
 FILES_${PN} += "${datadir}/aclocal"
 
 BBCLASSEXTEND = "native nativesdk"
+
