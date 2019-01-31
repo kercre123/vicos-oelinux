@@ -1,29 +1,26 @@
 #
 # poky/meta-anki/classes/anki-symbol-files.bbclass
 #
-# This class adds a bitbake task "do_anki_symbol_files" to publish 
-# full (unstripped) symbol files for export to backtrace.
+# This class defines macros to manage full (unstripped) symbol files 
+# produced by other recipes.
 #
-# Enable by adding "inherit anki-symbol-files" to your bitbake recipe.
+# Enable macros by adding "inherit anki-symbol-files" to your bitbake recipe.
 #
-# Identify library files to be published by appending object file names to 
-# ANKI_LIB_SYMBOL_FILES.
-#
-# This task runs after "do_install", so object files have been staged
-# but not yet stripped.
+# To export symbol files, add names to global ANKI_LIB_SYMBOL_FILES
+# and add "do_anki_symbol_export" to your recipe install step.
 #
 
 # Which files do we publish?
 ANKI_LIB_SYMBOL_FILES ?= ""
 
 # Where do we put them?
-ANKI_LIB_SYMBOL_DIR ?= "${WORKSPACE}/anki/victor/_build/vicos/Release/lib"
+ANKI_LIB_SYMBOL_DIR ?= "${WORKSPACE}/poky/build/tmp-glibc/anki-symbol-files/lib"
 
 #
 # For each named symbol file, find it in the build tree
 # and install a copy to target directory.
 #
-do_anki_symbol_files () {
+do_anki_symbol_export () {
 
     for f in ${ANKI_LIB_SYMBOL_FILES}
     do
@@ -40,13 +37,8 @@ do_anki_symbol_files () {
 
         # Publish to target directory
         mkdir -p ${ANKI_LIB_SYMBOL_DIR}
-        install ${src} ${ANKI_LIB_SYMBOL_DIR}/${f}.full
+        install ${src} ${ANKI_LIB_SYMBOL_DIR}
         
     done
 }
-
-#
-# Add new task to invoke new build step
-#
-addtask anki_symbol_files after do_install before do_package
 

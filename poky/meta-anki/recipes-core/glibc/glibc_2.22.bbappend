@@ -12,3 +12,5 @@ ANKI_LIB_SYMBOL_FILES += "libnss_nis-2.22.so"
 ANKI_LIB_SYMBOL_FILES += "libnss_compat-2.22.so"
 ANKI_LIB_SYMBOL_FILES += "libnss_files-2.22.so"
 
+addtask anki_symbol_export after do_install before do_package
+

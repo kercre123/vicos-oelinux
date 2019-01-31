@@ -99,7 +99,39 @@ do_compile () {
 }
 
 do_install () {
-    ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
+  ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
 }
+
+#
+# Add custom task to copy OS symbol files into victor build tree.
+#
+inherit anki-symbol-files
+
+do_anki_symbol_import() {
+  # Copy OS symbol files into victor build tree
+  pushd ${ANKI_LIB_SYMBOL_DIR}
+  for f in * ; do
+    install ${f} ${BUILDSRC}/lib/${f}.full
+  done
+  popd
+}
+
+addtask anki_symbol_import after do_install before do_package
+  
+#
+# Declare task dependency to insure that export steps run before import step
+#
+DEPENDS += "glibc"
+DEPENDS += "liblog"
+DEPENDS += "libunwind"
+DEPENDS += "liburcu"
+DEPENDS += "lttng-ust"
+DEPENDS += "curl"
+
+do_anki_symbol_import[deptask] = "do_anki_symbol_export"
+
+#
+# Declare files produced by this package
+#
 
 FILES_${PN} += "anki/"
