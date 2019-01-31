@@ -12284,8 +12284,7 @@ static void csrRoamGetBssStartParms( tpAniSirGlobal pMac, tCsrRoamProfile *pProf
             //Because LIM only verifies it against 11a, 11b or 11g, set only 11g or 11a here
             if(eCSR_BAND_24 == eBand)
             {
-                // VIC-4147 Always set 11A mode here, to omit legacy 802.11b rates   
-                nwType = eSIR_11A_NW_TYPE;
+                nwType = eSIR_11G_NW_TYPE;
             }
             else
             {
