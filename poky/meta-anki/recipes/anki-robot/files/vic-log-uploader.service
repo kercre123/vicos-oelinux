@@ -1,0 +1,16 @@
+[Unit]
+Description=Victor Log Uploader
+SourcePath=/anki/bin/vic-log-uploader
+PartOf=anki-robot.target
+
+Wants=vic-cloud.service
+After=vic-cloud.service
+
+EnvironmentFile=/anki/etc/vic-log-uploader.env
+ExecStart=/usr/bin/logwrapper /anki/bin/vic-log-uploader $VIC_LOG_UPLOADER_OPTS
+Restart=no
+Group=anki
+UMask=0002
+
+[Install]
+WantedBy=anki-robot.target
