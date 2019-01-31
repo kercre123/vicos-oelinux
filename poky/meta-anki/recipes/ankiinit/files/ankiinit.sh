@@ -14,9 +14,8 @@ echo active clk2 0 1 max 400000 > /sys/kernel/debug/rpm_send_msg/message # Max R
 echo 1 > /sys/kernel/debug/msm-bus-dbg/shell-client/update_request
 #End clock speed limits
 
-# Pin serial and spi kthreads to core 0
-pgrep msm_serial_hs_0 | xargs -I PID taskset -p 8 PID
-pgrep spi[01] | xargs -I PID taskset -p 8 PID
+# Move RT FIFO tasks off core 0 to reduce timer interrupt induced jitter.
+pgrep tty | xargs -I PID taskset -p 0xe PID
 
 # TODO Move this power rail controll into the camera driver
 CAM_REG_GPIO=83

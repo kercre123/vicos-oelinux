@@ -20,6 +20,9 @@ UMask=0002
 # Robot process runs at top priority
 Nice=-20
 
+# Set CPUAffinity to exclude 0 to minimize tick schedule interruption
+CPUAffinity=1 2 3
+
 # VIC-1884: Hard kill at 5 seconds if process doesn't respond to SIGTERM
 TimeoutStopSec=5
 
