@@ -83,19 +83,6 @@ do_compile () {
      ./project/victor/scripts/victor_build_release.sh
    fi
 
-  #
-  # VIC-6026: Publish OS debug symbols into victor lib
-  #
-  # These files will be picked up as artifacts of the build and
-  # sent to backtrace for crash reporting.
-  #
-  SRCDIR="${WORKSPACE}/poky/build/tmp-glibc/work/armv7a-vfp-neon-oe-linux-gnueabi/glibc/2.22-r0/package/lib/.debug"
-  DSTDIR="${BUILDSRC}/lib"
-  LIBS="ld-2.22.so libc-2.22.so libdl-2.22.so libm-2.22.so libpthread-2.22.so libresolv-2.22.so librt-2.22.so"
-  for lib in ${LIBS} ; do
-    install ${SRCDIR}/${lib} ${DSTDIR}/${lib}.full
-  done
-
 }
 
 do_install () {
@@ -107,7 +94,7 @@ do_install () {
 #
 inherit anki-symbol-files
 
-do_anki_symbol_import() {
+do_anki_symbol_import () {
   # Copy OS symbol files into victor build tree
   pushd ${ANKI_LIB_SYMBOL_DIR}
   for f in * ; do
@@ -121,12 +108,12 @@ addtask anki_symbol_import after do_install before do_package
 #
 # Declare task dependency to insure that export steps run before import step
 #
+DEPENDS += "curl"
 DEPENDS += "glibc"
 DEPENDS += "liblog"
 DEPENDS += "libunwind"
 DEPENDS += "liburcu"
 DEPENDS += "lttng-ust"
-DEPENDS += "curl"
 
 do_anki_symbol_import[deptask] = "do_anki_symbol_export"
 
