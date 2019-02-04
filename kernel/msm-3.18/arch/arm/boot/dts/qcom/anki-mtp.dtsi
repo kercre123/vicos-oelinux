@@ -14,7 +14,7 @@
 #include "anki-pinctrl.dtsi"
 #include "msm8909-regulator.dtsi"
 #include "anki-camera-sensor-mtp.dtsi"
-#include "anki-vl53l1.dtsi"
+
 
 &soc {
 	audio_codec_mtp: sound {
