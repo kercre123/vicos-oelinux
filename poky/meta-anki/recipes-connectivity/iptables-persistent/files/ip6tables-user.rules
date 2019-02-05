@@ -22,7 +22,7 @@
 -A OUTPUT -p ALL -o tether -j ACCEPT
 
 # Accept DHCP traffic (Access Point mode)
--A INPUT -p udp -m udp --dport 67 -j ACCEPT
+-A INPUT -p udp -m udp --dport 67 -i tether -j ACCEPT
 
 # Accept https traffic (vic-gateway)
 -A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
