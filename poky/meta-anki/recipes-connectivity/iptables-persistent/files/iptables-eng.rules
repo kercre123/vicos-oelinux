@@ -17,6 +17,10 @@
 
 # Accept all OUTPUT
 -A OUTPUT -p ALL -o wlan0 -j ACCEPT
+-A OUTPUT -p ALL -o tether -j ACCEPT
+
+# Accept DHCP traffic (Access Point mode)
+-A INPUT -p udp -m udp --dport 67 -i tether -j ACCEPT
 
 # Accept 443 traffic (vic-gateway)
 -A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
