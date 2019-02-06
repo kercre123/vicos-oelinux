@@ -25,6 +25,9 @@
 # Accept 443 traffic (vic-gateway)
 -A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
 
+# mDNS                                                                                              
+-A INPUT -p udp --dport 5353 -j ACCEPT
+
 # Allow ping
 -A INPUT -p icmp -m icmp --icmp-type 8 -m conntrack --ctstate NEW -j ACCEPT
 

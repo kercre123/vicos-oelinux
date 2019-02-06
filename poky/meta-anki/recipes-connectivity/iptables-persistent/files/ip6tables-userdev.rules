@@ -27,6 +27,9 @@
 # Accept https traffic (vic-gateway)
 -A INPUT -p tcp -m tcp --dport 443 -j ACCEPT
 
+# mDNS                                                                                              
+-A INPUT -p udp --dport 5353 -j ACCEPT
+
 # Allow ping
 -A INPUT -p ipv6-icmp -j ACCEPT
 -A OUTPUT -p ipv6-icmp -j ACCEPT
