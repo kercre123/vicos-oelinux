@@ -178,8 +178,8 @@ function wait_until_services_stopped() {
     # force a crash for diagnostics.
     #
     if [ ${#RUNNING_PROCS[*]} -gt 0 ]; then
-        log "systemctl kill -s SIGILL ${RUNNING_PROCS[@]}"
-        systemctl kill -s SIGILL ${RUNNING_PROCS[@]}
+        log "systemctl kill -s SIGQUIT ${RUNNING_PROCS[@]}"
+        systemctl kill -s SIGQUIT ${RUNNING_PROCS[@]}
         sleep 1
     fi
 }
