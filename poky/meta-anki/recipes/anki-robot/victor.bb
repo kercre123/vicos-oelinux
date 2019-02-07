@@ -112,9 +112,11 @@ DEPENDS += "curl"
 DEPENDS += "glib-2.0"
 DEPENDS += "glibc"
 DEPENDS += "liblog"
+DEPENDS += "libpcre"
 DEPENDS += "libunwind"
 DEPENDS += "liburcu"
 DEPENDS += "lttng-ust"
+DEPENDS += "zlib"
 
 do_anki_symbol_import[deptask] = "do_anki_symbol_export"
 
