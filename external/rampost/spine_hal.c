@@ -1,12 +1,10 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <time.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
+#include <unistd.h>
 #include <termios.h>
 
 #include "spine_hal.h"
@@ -15,7 +13,6 @@
 #include "rampost.h"
 
 #include "das.h"
-#include "spine_hal.h"
 
 #define SPINE_TTY "/dev/ttyHS0"
 
@@ -538,7 +535,7 @@ const void* hal_get_a_frame(uint8_t* frame_buffer, int buffer_len)
     if (r < 0) { //no sync found, some data discarded
       continue; //there may be more to parse
     }
-    else if (r > 0) { //good data
+    else if (r > 0) {   //good data
       return frame_buffer;
     }
     else {   //r==0: out of data
