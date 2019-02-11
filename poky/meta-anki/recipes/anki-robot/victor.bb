@@ -111,6 +111,7 @@ addtask anki_symbol_import after do_install before do_package
 DEPENDS += "curl"
 DEPENDS += "glib-2.0"
 DEPENDS += "glibc"
+DEPENDS += "libgcc"
 DEPENDS += "liblog"
 DEPENDS += "libpcre"
 DEPENDS += "libunwind"
