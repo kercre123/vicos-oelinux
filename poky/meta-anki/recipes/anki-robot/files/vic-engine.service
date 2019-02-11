@@ -3,8 +3,8 @@ Description=Victor engine daemon
 SourcePath=/anki/bin/vic-engine
 PartOf=anki-robot.target
 
-Wants=vic-anim.service
-After=vic-anim.service
+Wants=vic-anim.service dev-i2c\x2d6.device
+After=vic-anim.service dev-i2c\x2d6.device
 
 [Service]
 PermissionsStartOnly=true

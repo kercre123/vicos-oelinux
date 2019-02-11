@@ -5,6 +5,7 @@ SRC_URI += "file://mount-data.service"
 SRC_URI += "file://qseecom.rules"
 SRC_URI += "file://ion.rules"
 SRC_URI += "file://gpio.rules"
+SRC_URI += "file://i2c-6.rules"
 
 DEPENDS += "emr-cat blkdiscard user-data-locker"
 
@@ -46,6 +47,7 @@ do_install_append () {
   install -m 0644 ${WORKDIR}/qseecom.rules ${D}${sysconfdir}/udev/rules.d/qseecom.rules
   install -m 0644 ${WORKDIR}/ion.rules ${D}${sysconfdir}/udev/rules.d/ion.rules
   install -m 0644 ${WORKDIR}/gpio.rules ${D}${sysconfdir}/udev/rules.d/gpio.rules
+  install -m 0644 ${WORKDIR}/i2c-6.rules ${D}${sysconfdir}/udev/rules.d/i2c-6.rules
 
 }
 
