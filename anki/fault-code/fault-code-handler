@@ -17,6 +17,8 @@ set -u
 # Configurable variables may be set in fault-code-handler.env
 #
 : ${ON_FAULT_RESTART:=0}
+: ${ON_FAULT_UPLOAD_LOG:=0}
+: ${ON_FAULT_UPLOAD_TRACE:=0}
 : ${TIMEOUT_SIGTERM_SEC:=3}
 : ${TIMEOUT_RESTART_SEC:=5}
 : ${FAULT_RESTART_COUNT:=0}
@@ -24,13 +26,17 @@ set -u
 : ${FAULT_RESTART_LIMIT_SEC:=60}
 : ${VERBOSE:=0}
 
+#
+# Magic paths that can't be configured
 PROGRESS_FILE="/run/fault_code.pending"
 SHOWING_FILE="/run/fault_code.showing"
 FAULT_RESTART_COUNT_FILE="/run/fault_restart_count"
 FAULT_RESTART_UPTIME_FILE="/run/fault_restart_uptime"
+DAS_ALLOW_UPLOAD_FILE="/run/das_allow_upload"
 
-TRACE_PATH="/data/ankitrace/faults"
+FAULT_REPORTS_PATH="/data/fault-reports"
 LOGGER="/bin/logger -t fault-code-handler"
+OUTGOING="/data/data/com.anki.victor/cache/outgoing"
 
 #
 # Log helpers
@@ -253,10 +259,69 @@ else
         fi
     fi
 
-    if [ -x /usr/bin/ankitrace ]; then
-        log "Archive trace data to ${TRACE_PATH}/${FAULT_CODE}"
-        /usr/bin/ankitrace -z ${TRACE_PATH}/${FAULT_CODE}
+    # If report directory does not exist, make it now
+    if [ ! -d ${FAULT_REPORTS_PATH} ]; then
+      log "/bin/mkdir -p ${FAULT_REPORTS_PATH}"
+      /bin/mkdir -p ${FAULT_REPORTS_PATH}
     fi
+
+    # If outgoing directory does not exist, make it now
+    if [ ! -d ${OUTGOING} ]; then
+      log "/bin/mkdir -p ${OUTGOING}"
+      /bin/mkdir -p ${OUTGOING}
+    fi
+
+    # Do we want to capture fault reports?
+    capture_log=${ON_FAULT_UPLOAD_LOG}
+    capture_trace=${ON_FAULT_UPLOAD_TRACE}
+
+    if [ ! -f ${DAS_ALLOW_UPLOAD_FILE} ]; then
+      capture_log=0
+      capture_trace=0
+    fi
+
+    # Construct a unique identifer for this fault report
+    timestamp=$(/bin/date +"%Y%m%d-%H%M%S")
+    fault_report_id="fault-${FAULT_CODE}-${timestamp}"
+    fault_report_path="${FAULT_REPORTS_PATH}/${fault_report_id}"
+
+    # Create a directory for this fault report?
+    if [ ${capture_log} -gt 0 ] || [ ${capture_trace} -gt 0 ]; then
+      log "/bin/mkdir -p ${fault_report_path}"
+      /bin/mkdir -p ${fault_report_path}
+    fi
+
+    # Capture trace data?
+    if [ ${capture_trace} -gt 0 ]; then
+      log "/usr/bin/ankitrace -z ${fault_report_path}"
+      /usr/bin/ankitrace -z ${fault_report_path}
+    fi
+
+    # Capture log data?
+    if [ ${capture_log} -gt 0 ]; then
+      log "/anki/bin/vic-log-cat > ${fault_report_path}/messages.log"
+      /anki/bin/vic-log-cat > ${fault_report_path}/messages.log
+    fi
+
+    # Do we want to upload the data we just captured?
+    upload_log=${capture_log}
+    upload_trace=${capture_trace}
+
+    # Is this a developer build, just leave it on the disk.
+    anki_version=$(/bin/cat /anki/etc/version)
+    if [[ ${anki_version} =~ .0$ ]]; then
+      upload_log=0
+      upload_trace=0
+    fi
+
+    if [ ${upload_log} -gt 0 ] || [ ${upload_trace} -gt 0 ]; then
+      outgoing_tgz=${OUTGOING}/${fault_report_id}.tar.gz
+      log "/bin/tar cfzp ${outgoing_tgz} -C ${FAULT_REPORTS_PATH} ${fault_report_id}"
+      /bin/tar cfzp ${outgoing_tgz} -C ${FAULT_REPORTS_PATH} ${fault_report_id}
+      log "/bin/rm -rf ${fault_report_path}"
+      /bin/rm -rf ${fault_report_path}
+    fi
+
 fi
 
 if [ $KILL_CAMERA_AFTER_STOPPING_ROBOT -eq 1 ]; then

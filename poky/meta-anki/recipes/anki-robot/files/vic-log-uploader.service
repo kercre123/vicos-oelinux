@@ -6,6 +6,7 @@ PartOf=anki-robot.target
 Wants=vic-cloud.service
 After=vic-cloud.service
 
+[Service]
 EnvironmentFile=/anki/etc/vic-log-uploader.env
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-log-uploader $VIC_LOG_UPLOADER_OPTS
 Restart=no
