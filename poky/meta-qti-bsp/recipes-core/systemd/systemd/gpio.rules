@@ -1,2 +1,1 @@
-KERNEL=="gpio94", PROGRAM="/bin/sh -c 'find -L /sys/class/gpio/gpio94 -maxdepth 3 -exec chown root:camera {} \; -exec chmod 770 {} \; || true'"
-SUBSYSTEM=="gpio", PROGRAM="/bin/sh -c 'chown root:camera /sys/class/gpio/*export; chmod 220 /sys/class/gpio/*export"
+KERNEL=="gpio0|gpio94", PROGRAM="/bin/chown engine %S%p/value %S%p/direction"
