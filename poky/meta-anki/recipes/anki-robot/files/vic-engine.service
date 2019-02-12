@@ -13,6 +13,10 @@ ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/scaling
 ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed
 ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq
 ExecStartPre=/bin/chgrp anki /dev/block/bootdevice/by-name/emr
+ExecStartPre=/bin/sh -c "[[ -e /sys/class/gpio/gpio94 ]] || /bin/echo 94 > /sys/class/gpio/export"
+ExecStartPre=/bin/sh -c "[[ -e /sys/class/gpio/gpio0 ]] || /bin/echo 0 > /sys/class/gpio/export"
+# Sleep for 100 milliseconds to give /etc/udev/rules.d/gpio.rules time to chown engine gpio0|gpio94
+ExecStartPre=/bin/sleep 0.1
 ExecStart=/usr/bin/logwrapper /anki/bin/vic-engine $VIC_ENGINE_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
