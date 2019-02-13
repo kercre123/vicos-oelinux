@@ -117,6 +117,7 @@ DEPENDS += "libpcre"
 DEPENDS += "libunwind"
 DEPENDS += "liburcu"
 DEPENDS += "lttng-ust"
+DEPENDS += "sqlite3"
 DEPENDS += "zlib"
 
 do_anki_symbol_import[deptask] = "do_anki_symbol_export"
