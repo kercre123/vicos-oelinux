@@ -58,6 +58,8 @@ IMAGE_EXT4_SELINUX_OPTIONS = "${@base_contains('DISTRO_FEATURES','selinux',' -S 
 DEPENDS += "cryptsetup-native"
 
 CONFIG_FILE = "${COREBASE}/meta-qti-bsp/files/config_files/anki_user_config"
+VICTOR_CONFIG_FILE = "${DEPLOY_DIR_IMAGE}/victor_canned_fs_config"
+
 do_makesystem() {
     echo "================ Creating system ================="
     echo "IMAGE_ROOTFS=" ${IMAGE_ROOTFS}
@@ -69,6 +71,7 @@ do_makesystem() {
     echo "MACHINE=" ${MACHINE}
     echo "SYSTEMRW_SIZE_EXT4=" ${SYSTEMRW_SIZE_EXT4}
     echo "CONFIG_FILE=" ${CONFIG_FILE}
+    echo "VICTOR_CONFIG_FILE=" ${VICTOR_CONFIG_FILE}
     which make_ext4fs
 
     RAW_FILE=${DEPLOY_DIR_IMAGE}/${MACHINE}-raw-sysfs.ext4
@@ -78,19 +81,11 @@ do_makesystem() {
     BLOCK_SIZE=4096
     DATA_BLOCKS=$( expr ${SYSTEM_SIZE_EXT4} / $BLOCK_SIZE )
 
-    echo "tighten permissions and ownership of anki directory for filesystem image"
     cp ${CONFIG_FILE} ./final_user_config
-    ANKI_UID=2901
-    ANKI_GID=2901
-
-    # Directories should be readable and searchable by the anki group
-    find ${IMAGE_ROOTFS}/anki -type d -printf "anki/%P  ${ANKI_UID} ${ANKI_GID} 0550\n" >> ./final_user_config
-
-    # Files under data, etc, and lib should be readable by the anki group
-    for i in data etc lib
-    do
-      find ${IMAGE_ROOTFS}/anki/$i -type f -printf "anki/$i/%P  ${ANKI_UID} ${ANKI_GID} 0440\n" >> ./final_user_config
-    done
+    if [[ -e ${VICTOR_CONFIG_FILE} ]]; then
+       echo "Appending contents of ${VICTOR_CONFIG_FILE} to our final canned fs config"
+       cat ${VICTOR_CONFIG_FILE} >> ./final_user_config
+    fi
 
     echo "making the sparse ext4 file system"
     make_ext4fs ${IMAGE_EXT4_EXTRA_OPTIONS} -a / -C ./final_user_config ${IMAGE_EXT4_SELINUX_OPTIONS} -l ${SYSTEM_SIZE_EXT4} ${RAW_FILE} ${IMAGE_ROOTFS}

@@ -33,28 +33,45 @@ USERADD_PACKAGES = "${PN} "
 # system/core/include/private/android_filesystem_config.h
 # We currently use the reserved OEM range (2900-2999)
 
+GID_ANKI      = '2901'
+GID_ROBOT     = '2902'
+GID_ENGINE    = '2903'
+GID_BLUETOOTH = '2904'
+GID_ANKINET   = '2905'
+GID_CLOUD     = '888'
+GID_CAMERA    = '2907'
+GID_SYSTEM    = '1000'
+
 # Add groups
-GROUPADD_PARAM_${PN} =  "  -g 2901 anki"
-GROUPADD_PARAM_${PN} += "; -g 2902 robot"
-GROUPADD_PARAM_${PN} += "; -g 2903 engine"
-GROUPADD_PARAM_${PN} += "; -g 2904 bluetooth"
-GROUPADD_PARAM_${PN} += "; -g 2905 ankinet"
-GROUPADD_PARAM_${PN} += "; -g 888 cloud"
-GROUPADD_PARAM_${PN} += "; -g 2907 camera"
-GROUPADD_PARAM_${PN} += "; -g 1000 system"
+GROUPADD_PARAM_${PN} =  "  -g ${GID_ANKI} anki"
+GROUPADD_PARAM_${PN} += "; -g ${GID_ROBOT} robot"
+GROUPADD_PARAM_${PN} += "; -g ${GID_ENGINE} engine"
+GROUPADD_PARAM_${PN} += "; -g ${GID_BLUETOOTH} bluetooth"
+GROUPADD_PARAM_${PN} += "; -g ${GID_ANKINET} ankinet"
+GROUPADD_PARAM_${PN} += "; -g ${GID_CLOUD} cloud"
+GROUPADD_PARAM_${PN} += "; -g ${GID_CAMERA} camera"
+GROUPADD_PARAM_${PN} += "; -g ${GID_SYSTEM} system"
 
 # VIC-1951: group 3003 already exists as the inet group (AID_NET 3003)
 # Since we have ANDROID_PARANOID_NETWORKING enabled in the kernel, non-admin users
 # must be in this group in order to create TCP/UDP sockets
 
+AID_NET       = '3003'
+UID_ANKI      = "${GID_ANKI}"
+UID_ROBOT     = "${GID_ROBOT}"
+UID_ENGINE    = "${GID_ENGINE}"
+UID_BLUETOOTH = "${GID_BLUETOOTH}"
+UID_NET       = "${GID_ANKINET}"
+UID_CLOUD     = "${GID_CLOUD}"
+UID_SYSTEM    = "${GID_SYSTEM}"
 # Add users
-USERADD_PARAM_${PN} =  "  -u 2901 -g 2901 -s /bin/false anki"
-USERADD_PARAM_${PN} += "; -u 2902 -g 2902 -G 2901,1000 -s /bin/false robot"
-USERADD_PARAM_${PN} += "; -u 2903 -g 2903 -G 2901,1000,3003,2904,2907 -s /bin/false engine"
-USERADD_PARAM_${PN} += "; -u 2904 -g 2904 -G 2901,1000 -s /bin/false bluetooth"
-USERADD_PARAM_${PN} += "; -u 2905 -g 2905 -G 2901,2904,1000,3003 -s /bin/false net"
-USERADD_PARAM_${PN} += "; -u 888  -g 888  -G 2901,1000,3003 -s /bin/false cloud"
-USERADD_PARAM_${PN} += "; -u 1000 -g 1000 -s /bin/false system"
+USERADD_PARAM_${PN} =  "  -u ${UID_ANKI} -g ${GID_ANKI} -s /bin/false anki"
+USERADD_PARAM_${PN} += "; -u ${UID_ROBOT} -g ${GID_ROBOT} -G ${GID_ANKI},${GID_SYSTEM} -s /bin/false robot"
+USERADD_PARAM_${PN} += "; -u ${UID_ENGINE} -g ${GID_ENGINE} -G ${GID_ANKI},${GID_SYSTEM},${AID_NET},${GID_BLUETOOTH},${GID_CAMERA} -s /bin/false engine"
+USERADD_PARAM_${PN} += "; -u ${UID_BLUETOOTH} -g ${GID_BLUETOOTH} -G ${GID_ANKI},${GID_SYSTEM} -s /bin/false bluetooth"
+USERADD_PARAM_${PN} += "; -u ${UID_NET} -g ${GID_ANKINET} -G ${GID_ANKI},${GID_BLUETOOTH},${GID_SYSTEM},${AID_NET} -s /bin/false net"
+USERADD_PARAM_${PN} += "; -u ${UID_CLOUD} -g ${GID_CLOUD} -G ${GID_ANKI},${GID_SYSTEM},${AID_NET} -s /bin/false cloud"
+USERADD_PARAM_${PN} += "; -u ${UID_SYSTEM} -g ${GID_SYSTEM} -s /bin/false system"
 
 do_package_qa[noexec] = "1"
 
@@ -88,6 +105,51 @@ do_compile () {
 do_install () {
   ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
 }
+
+do_generate_victor_canned_fs_config () {
+  CANNED_FS_CONFIG_PATH="${DEPLOY_DIR_IMAGE}/victor_canned_fs_config"
+  cat > ${CANNED_FS_CONFIG_PATH} <<EOF
+anki                              ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/diagnostics-logger       ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/displayFaultCode         ${UID_ENGINE} ${GID_ANKI} 0550
+anki/bin/update-engine            ${UID_NET}    ${GID_ANKI} 0550
+anki/bin/vic-anim                 ${UID_ENGINE} ${GID_ANKI} 0500
+anki/bin/vic-bootAnim             ${UID_ENGINE} ${GID_ANKI} 0550
+anki/bin/vic-cloud                ${UID_CLOUD}  ${GID_ANKI} 0550
+anki/bin/vic-crashuploader        ${UID_NET}    ${GID_ANKI} 0550
+anki/bin/vic-dasmgr               ${UID_NET}    ${GID_ANKI} 0500
+anki/bin/vic-engine               ${UID_ENGINE} ${GID_ANKI} 0500
+anki/bin/vic-faultCodeDisplay     ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-gateway              ${UID_NET}    ${GID_ANKI} 0500
+anki/bin/vic-getprocessstatus.sh  ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-init.sh              ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-log-cat              ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-log-event            ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-log-forward          ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-log-upload           ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-log-uploader         ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-logmgr-upload        ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-on-exit              ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-powerstatus.sh       ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-robot                ${UID_ROBOT}  ${GID_ANKI} 0550
+anki/bin/vic-runcrashtests.sh     ${UID_ANKI}   ${GID_ANKI} 0550
+anki/bin/vic-switchboard          ${UID_NET}    ${GID_ANKI} 0500
+anki/bin/vic-webserver            ${UID_ANKI}   ${GID_ANKI} 0500
+
+EOF
+  # Directories should be readable and searchable by the anki group
+  find ${D}/anki -type d \
+    -printf "anki/%P  ${UID_ANKI} ${GID_ANKI} 0550\n" >> ${CANNED_FS_CONFIG_PATH}
+
+  # Files under data, etc, and lib should be readable by the anki group
+  for i in data etc lib
+  do
+    find ${D}/anki/$i -type f \
+      -printf "anki/$i/%P  ${UID_ANKI} ${GID_ANKI} 0440\n" >> ${CANNED_FS_CONFIG_PATH}
+  done
+}
+
+addtask generate_victor_canned_fs_config after do_install before do_package
 
 #
 # Add custom task to copy OS symbol files into victor build tree.
