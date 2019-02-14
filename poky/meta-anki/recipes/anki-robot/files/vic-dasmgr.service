@@ -3,8 +3,8 @@ Description=Victor DAS Manager
 SourcePath=/anki/bin/vic-dasmgr
 PartOf=anki-robot.target
 
-Wants=vic-init.service
-After=vic-init.service
+Wants=vic-crashuploader.service
+After=vic-crashuploader.service
 
 ConditionFileIsExecutable=/usr/bin/logwrapper
 ConditionFileIsExecutable=/anki/bin/vic-dasmgr
