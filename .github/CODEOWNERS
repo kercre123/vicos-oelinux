@@ -8,3 +8,7 @@ ANKI_VERSION @CodeForCoffee @udo-anki
 android_compat/device/qcom/msm8909/ @DanielCasner
 poky/meta-qti-bsp-prop/recipes-products/images/apq-persist-image.inc @DanielCasner
 poky/meta-qti-wlan/recipes/wlan/wcnss_git.bb @DanielCasner
+
+# Changes to syscon firmware require HW process checking
+./poky/meta-anki/recipes-core/initscript-anki/files/syscon.dfu @nathan-anki @AShelly
+./poky/meta-anki/recipes-core/initscript-anki/files/init-boot.sh @DanielCasner @AShelly
