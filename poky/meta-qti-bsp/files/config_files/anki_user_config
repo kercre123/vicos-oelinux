@@ -20,11 +20,8 @@ bin/emr-cat                 0   6   2755
 # Bluetooth stuff
 # ================================
 #
-# ankibluetoothd needs CAP_WAKE_ALARM
-# CAP_WAKE_ALARM = 35
-# CAP_TO_MASK(35) = 8 = (1 << ((35) & 31))
 
-usr/bin/ankibluetoothd      2904 2904 0750 capabilities=0x0000000800000000
+usr/bin/ankibluetoothd      2904 2904 0750
 usr/bin/viccubetool         2904 2904 0750
 misc/bluetooth              2904 2904 0750
 misc/bluetooth/bt_did.conf  2904 2904 0640
