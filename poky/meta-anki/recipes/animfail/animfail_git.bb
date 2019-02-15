@@ -6,12 +6,12 @@ Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 
 FILESPATH =+ "${WORKSPACE}:"
 
-SRC_URI = "file://external/rampost/ file://animfail.service"
+SRC_URI = "file://anki/rampost/ file://animfail.service"
 
 TARGET_CFLAGS += "-Os -Wall -Werror -Wno-unused-result -Wno-strict-aliasing -fPIC"
 
 
-S = "${WORKDIR}/external/rampost"
+S = "${WORKDIR}/anki/rampost"
 
 do_install() {
   install -d ${D}/bin
