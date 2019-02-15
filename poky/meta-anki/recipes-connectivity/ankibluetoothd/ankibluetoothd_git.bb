@@ -10,12 +10,12 @@ CFLAGS_append = " -DUSE_ANDROID_LOGGING "
 LDFLAGS_append = " -llog "
 
 FILESPATH =+ "${WORKSPACE}:"
-SRC_URI = "file://external/anki-ble/"
+SRC_URI = "file://anki/anki-ble/"
 SRC_URI += "file://ankibluetoothd.service"
 SRC_URI += "file://vicdevsetup.service"
 SRC_URI += "file://smd23.rules"
 
-S = "${WORKDIR}/external/anki-ble/"
+S = "${WORKDIR}/anki/anki-ble/"
 
 DEPENDS += "btvendorhal libhardware bt-property"
 
