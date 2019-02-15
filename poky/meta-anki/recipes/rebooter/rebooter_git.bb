@@ -7,9 +7,9 @@ DEPENDS = "systemd"
 RDEPENDS_${PN} = "python"
 
 FILESPATH =+ "${WORKSPACE}:"
-SRC_URI = "file://external/rebooter/"
+SRC_URI = "file://anki/rebooter/"
 
-S = "${WORKDIR}/external/rebooter/"
+S = "${WORKDIR}/anki/rebooter/"
 SYSTEM_DIR = "${D}${sysconfdir}/systemd/system"
 
 do_compile() {
