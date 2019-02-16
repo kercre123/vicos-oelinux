@@ -37,3 +37,6 @@ misc/bluetooth/iot_devlist.conf 2904 2904 0640
 # ===========
 usr/bin/mm-anki-camera      2907 2907 0750
 
+# Systemd notify
+bin/systemd-notify          2901 2901 0750
+
