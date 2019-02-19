@@ -43,7 +43,7 @@ Perf builds are optimized more for performance than non-perf builds, particularl
 User build are as intended for software released to actual users. Debugging features such as SSH, ADB and fastboot
 are disabled for security. **All user builds are also perf builds.**
 
-Because user builds are basically not debugable, there are non-user versions of the user builds.
+Because user builds are basically not debuggable, there are non-user versions of the user builds.
 
 | User                | Debuggable         |
 |---------------------|--------------------|

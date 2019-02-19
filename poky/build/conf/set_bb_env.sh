@@ -147,6 +147,26 @@ function build-victor-robot-image() {
   build-8009-robot-image
 }
 
+function build-victor-alexa-robot-image() {
+  export AMAZON_ENDPOINTS_ENABLED="1"
+  build-8009-robot-image
+}
+
+function build-victor-alexa-robot-user-image() {
+  export AMAZON_ENDPOINTS_ENABLED="1"
+  build-8009-robot-user-image
+}
+
+function build-victor-alexa-robot-userdev-image() {
+  export AMAZON_ENDPOINTS_ENABLED="1"
+  build-8009-robot-userdev-image
+}
+
+function build-victor-alexa-robot-beta-image() {
+  export AMAZON_ENDPOINTS_ENABLED="1"
+  build-8009-robot-beta-image
+}
+
 function build-victor-robot-image-incremental() {
   setenv-8009-robot-image
   rebakeList=(anki-version machine-robot-image victor)

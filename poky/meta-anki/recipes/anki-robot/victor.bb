@@ -86,20 +86,35 @@ do_compile () {
    source ./project/victor/envsetup.sh
    export TOPLEVEL=`gettop`
 
-   if [[ "${USER_BUILD}" == "1" ]]; then
-     if [[ "${DEV}" == "1" ]]; then
-       if [[ "${BETA}" == "1" ]]; then
-         ./project/victor/scripts/victor_build_beta.sh
+   if [[ "${AMAZON_ENDPOINTS_ENABLED}" == "1" ]]; then
+     if [[ "${USER_BUILD}" == "1" ]]; then
+       if [[ "${DEV}" == "1" ]]; then
+         if [[ "${BETA}" == "1" ]]; then
+	   ./project/victor/scripts/victor_build_alexa_beta.sh
+         else
+	   ./project/victor/scripts/victor_build_alexa_userdev.sh
+         fi
        else
-         ./project/victor/scripts/victor_build_userdev.sh
+         ./project/victor/scripts/victor_build_alexa_shipping.sh
        fi
      else
-       ./project/victor/scripts/victor_build_shipping.sh
+       ./project/victor/scripts/victor_build_alexa_release.sh
      fi
    else
-     ./project/victor/scripts/victor_build_release.sh
+     if [[ "${USER_BUILD}" == "1" ]]; then
+       if [[ "${DEV}" == "1" ]]; then
+         if [[ "${BETA}" == "1" ]]; then
+	   ./project/victor/scripts/victor_build_beta.sh
+         else
+	   ./project/victor/scripts/victor_build_userdev.sh
+         fi
+       else
+         ./project/victor/scripts/victor_build_shipping.sh
+       fi
+     else
+       ./project/victor/scripts/victor_build_release.sh
+     fi
    fi
-
 }
 
 do_install () {
