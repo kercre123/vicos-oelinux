@@ -133,8 +133,8 @@ function setenv-8009-robot-amazon-image() {
   export MACHINE=apq8009-robot
   export PRODUCT=robot
   export ANKI_AMAZON_ENDPOINTS_ENABLED="1"
-
 }
+
 function build-8009-robot-amazon-image() {
   setenv-8009-robot-amazon-image
   cdbitbake machine-robot-image
