@@ -7,6 +7,7 @@ SERVICE_FILE = "vic-engine.service"
 
 SRC_URI = "file://${SERVICE_FILE}"
 SRC_URI += "file://engine.sudoers"
+SRC_URI += "file://export-gpio.sh"
 
 inherit systemd
 
@@ -17,6 +18,8 @@ do_install_append () {
    fi
    install -m 0750 -d ${D}${sysconfdir}/sudoers.d
    install -m 0644 ${WORKDIR}/engine.sudoers -D ${D}${sysconfdir}/sudoers.d/engine
+   install -d ${D}/sbin
+   install -m 0700 ${WORKDIR}/export-gpio.sh ${D}/sbin/export-gpio
 }
 
 FILES_${PN} += "${sysconfdir}/sudoers.d/engine"
