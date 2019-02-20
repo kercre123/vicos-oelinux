@@ -300,7 +300,7 @@ rebake() {
 }
 
 unset_bb_env() {
-  unset DISTRO MACHINE PRODUCT VARIANT FACTORY DEV BETA
+  unset DISTRO MACHINE PRODUCT VARIANT FACTORY DEV BETA ANKI_AMAZON_ENDPOINTS_ENABLED
 }
 
 # Find build templates from qti meta layer.
@@ -316,6 +316,6 @@ export TEMPLATECONF="meta-qti-bsp/conf"
 # (BBLAYERS is explicitly blocked from this within OE-Core itself, though...)
 # oe-init-build-env calls oe-buildenv-internal which sets
 # BB_ENV_EXTRAWHITE, append our vars to the list
-export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN BETA"
+export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN BETA ANKI_AMAZON_ENDPOINTS_ENABLED"
 
 list-build-commands
