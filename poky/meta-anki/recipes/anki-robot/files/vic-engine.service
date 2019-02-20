@@ -12,6 +12,7 @@ EnvironmentFile=/anki/etc/vic-engine.env
 ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed
 ExecStartPre=/bin/chgrp anki /dev/block/bootdevice/by-name/emr
+ExecStartPre=/bin/chown engine /dev/i2c-6
 ExecStartPre=/bin/chmod 775 /factory
 ExecStartPre=/bin/chgrp engine /factory
 ExecStartPre=/bin/sh -c "[[ -e /sys/class/gpio/gpio94 ]] || /bin/echo 94 > /sys/class/gpio/export"
