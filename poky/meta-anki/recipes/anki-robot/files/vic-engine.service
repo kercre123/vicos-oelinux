@@ -13,6 +13,7 @@ ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/scaling
 ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed
 ExecStartPre=/bin/chown engine:root /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq
 ExecStartPre=/bin/chgrp anki /dev/block/bootdevice/by-name/emr
+ExecStartPre=/bin/chown engine /dev/i2c-6
 ExecStartPre=/sbin/export-gpio 94
 ExecStartPre=/sbin/export-gpio 0
 # Sleep for 100 milliseconds to give /etc/udev/rules.d/gpio.rules time to chown engine gpio0|gpio94
