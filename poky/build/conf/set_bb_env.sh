@@ -128,6 +128,61 @@ function build-8009-robot-beta-image() {
   cdbitbake machine-robot-image
 }
 
+function setenv-8009-robot-amazon-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export PRODUCT=robot
+  export ANKI_AMAZON_ENDPOINTS_ENABLED="1"
+
+}
+function build-8009-robot-amazon-image() {
+  setenv-8009-robot-amazon-image
+  cdbitbake machine-robot-image
+}
+
+function build-8009-robot-amazon-perf-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-perf
+  export VARIANT=perf
+  export PRODUCT=robot
+  export ANKI_AMAZON_ENDPOINTS_ENABLED="1"
+  cdbitbake machine-robot-image
+}
+
+function build-8009-robot-amazon-user-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-user
+  export VARIANT=perf
+  export PRODUCT=robot
+  export ANKI_AMAZON_ENDPOINTS_ENABLED="1"
+  cdbitbake machine-robot-image
+}
+
+function build-8009-robot-amazon-userdev-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-user
+  export VARIANT=perf
+  export PRODUCT=robot
+  export DEV="1"
+  export ANKI_AMAZON_ENDPOINTS_ENABLED="1"
+  cdbitbake machine-robot-image
+}
+
+function build-8009-robot-amazon-beta-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-user
+  export VARIANT=perf
+  export PRODUCT=robot
+  export DEV="1"
+  export BETA="1"
+  export ANKI_AMAZON_ENDPOINTS_ENABLED="1"
+  cdbitbake machine-robot-image
+}
+
 function build-8009-robot-factory-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
@@ -148,23 +203,19 @@ function build-victor-robot-image() {
 }
 
 function build-victor-alexa-robot-image() {
-  export AMAZON_ENDPOINTS_ENABLED="1"
-  build-8009-robot-image
+  build-8009-robot-amazon-image
 }
 
 function build-victor-alexa-robot-user-image() {
-  export AMAZON_ENDPOINTS_ENABLED="1"
-  build-8009-robot-user-image
+  build-8009-robot-amazon-user-image
 }
 
 function build-victor-alexa-robot-userdev-image() {
-  export AMAZON_ENDPOINTS_ENABLED="1"
-  build-8009-robot-userdev-image
+  build-8009-robot-amazon-userdev-image
 }
 
 function build-victor-alexa-robot-beta-image() {
-  export AMAZON_ENDPOINTS_ENABLED="1"
-  build-8009-robot-beta-image
+  build-8009-robot-amazon-beta-image
 }
 
 function build-victor-robot-image-incremental() {
