@@ -4,6 +4,7 @@ set -e
 set -u
 
 VERBOSE=0
+PRE=""
 
 function usage() {
     echo "$SCRIPT_NAME [OPTIONS] tags build with ota version and/or prepend value"
@@ -22,7 +23,7 @@ while getopts "hvp:" opt; do
             VERBOSE=1
             ;;
         p)
-            PRE="${OPTARG}"
+            PRE="${OPTARG}-"
             ;;
    esac
 done
@@ -32,13 +33,11 @@ if [ $VERBOSE -eq 1 ]; then
 fi
 
 SCRIPT_PATH=$(dirname $([ -L $0 ] && echo "$(dirname $0)/$(readlink -n $0)" || echo $0))
-TAGNAME=`${SCRIPT_PATH}/get-ota-version-from-build.sh`
+TAGNAME=${PRE}`${SCRIPT_PATH}/get-ota-version-from-build.sh`
 
 # Check to see if the victor submodule pointer has been modified
 VICTOR_DIR=anki/victor
 ANKI_VICTOR_STATUS=`git status --porcelain $VICTOR_DIR | awk '{print $1;}'`
-
-if [ -z ${PRE+x} ]; then TAGNAME=${PRE}-${TAGNAME}; fi
 
 if [ "$ANKI_VICTOR_STATUS" = "M" ]; then
     pushd $VICTOR_DIR
