@@ -5,10 +5,10 @@ set -u
 
 
 function usage() {
-    echo "$SCRIPT_NAME [OPTIONS] tags build with ota version and/or preappend value"
+    echo "$SCRIPT_NAME [OPTIONS] tags build with ota version and/or prepend value"
     echo "  -h          print this message"
     echo "  -v          print verbose output"
-    echo "  -p [STRING] preappend STRING to tag"
+    echo "  -p [STRING] prepend STRING to tag"
 }
 
 while getopts "hvp:" opt; do
