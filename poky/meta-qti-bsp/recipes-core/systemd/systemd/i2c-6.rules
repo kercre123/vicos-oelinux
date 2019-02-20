@@ -1,1 +1,0 @@
-KERNEL=="i2c-6", SUBSYSTEM=="i2c-dev", OWNER="engine", TAG+="systemd"
