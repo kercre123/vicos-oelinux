@@ -3,6 +3,7 @@
 set -e
 set -u
 
+VERBOSE=0
 
 function usage() {
     echo "$SCRIPT_NAME [OPTIONS] tags build with ota version and/or prepend value"
