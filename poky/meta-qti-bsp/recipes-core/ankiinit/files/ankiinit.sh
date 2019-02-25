@@ -42,7 +42,11 @@ do
     sleep 1;
 done
 
-if $HAVE_EMR; then
+# Put the model into a property
+setprop ro.hw.ver `/bin/emr-cat v`
+setprop ro.model `/bin/emr-cat m`
+
+if [ $HAVE_EMR -eq 0 ]; then
   echo $SERIALNO > /sys/class/android_usb/android0/iSerial
 fi
 
