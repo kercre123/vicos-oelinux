@@ -34,9 +34,10 @@ static const char* USAGE_FMT = \
 "r: PLAYPEN_READY_FLAG\n" \
 "p: PLAYPEN_PASSED_FLAG\n" \
 "o: PACKED_OUT_FLAG\n" \
-"d: PACKED_OUT_DATE\n";
+"d: PACKED_OUT_DATE\n" \
+"a: Entire EMR structure\n";
 
-static const char* RSLT_FORMAT = "%08x";
+#define RSLT_FORMAT "%08x"
 
 typedef struct {
   uint32_t ESN;
@@ -56,7 +57,7 @@ int main(int argc, char *argv[]) {
   EMR record;
   int fd = -1;
   ssize_t rdrslt = 0;
-  unsigned long result = 0;
+  uint32_t result = 0;
 
   if (argc != 2) {
     fprintf(stderr, USAGE_FMT, argv[0]);
@@ -105,6 +106,15 @@ int main(int argc, char *argv[]) {
     case 'd':
       result = record.PACKED_OUT_DATE;
       break;
+    case 'a':
+      {
+        int i;
+        uint32_t* record_as_u32arr = &(record.ESN);
+        for (i=0; i<(sizeof(EMR)/sizeof(uint32_t)); ++i) {
+          fprintf(stdout, RSLT_FORMAT "\n", record_as_u32arr[i]);
+        }
+        return 0;
+      }
     default:
       fprintf(stderr, "Unknown EMR key '%c'\n", argv[1][0]);
       return -1;
