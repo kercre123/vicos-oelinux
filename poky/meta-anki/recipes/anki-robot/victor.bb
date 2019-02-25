@@ -116,6 +116,7 @@ anki/bin/update-engine            ${UID_NET}    ${GID_ANKI} 0550
 anki/bin/vic-anim                 ${UID_ENGINE} ${GID_ANKI} 0500
 anki/bin/vic-bootAnim             ${UID_ENGINE} ${GID_ANKI} 0550
 anki/bin/vic-cloud                ${UID_CLOUD}  ${GID_ANKI} 0550
+anki/bin/vic-crashuploader-init   ${UID_NET}    ${GID_ANKI} 0550
 anki/bin/vic-crashuploader        ${UID_NET}    ${GID_ANKI} 0550
 anki/bin/vic-dasmgr               ${UID_NET}    ${GID_ANKI} 0500
 anki/bin/vic-engine               ${UID_ENGINE} ${GID_ANKI} 0500
