@@ -84,8 +84,8 @@ do_clean_append() {
 do_compile () {
    cd ${S}
    source ./project/victor/envsetup.sh
-   
    export TOPLEVEL=`gettop`
+
    if [[ "${ANKI_AMAZON_ENDPOINTS_ENABLED}" == "1" ]]; then
      if [[ "${USER_BUILD}" == "1" ]]; then
        if [[ "${DEV}" == "1" ]]; then
