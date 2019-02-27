@@ -6,6 +6,7 @@ inherit qperf
 
 FILESPATH =+ "${WORKSPACE}:"
 SRC_URI = "file://ANKI_VERSION"
+SRC_URI += "file://VICTOR_COMPAT_VERSION"
 
 do_install_append () {
     install -d ${D}/etc
@@ -42,9 +43,15 @@ do_install_append () {
     BASE_VERSION=$(cat ${WORKDIR}/ANKI_VERSION)
     echo "${BASE_VERSION}.${ANKI_BUILD_VERSION}${ANKI_BUILD_TYPE}" > ${D}/etc/os-version
     chmod 0444 ${D}/etc/os-version
+
+    # This victor compatibility version can be used to prevent victor.git developers from
+    # deploying code onto a newer OS that they are no longer compatible with.  As well, it
+    # will prevent them from deploying new code onto an older incompatible robot.
+    install -m 0444 ${WORKDIR}/VICTOR_COMPAT_VERSION ${D}/etc/victor-compat-version
 }
 
 FILES_${PN} += "etc/os-version-base"
 FILES_${PN} += "etc/os-version-code"
 FILES_${PN} += "etc/os-version-rev"
 FILES_${PN} += "etc/os-version"
+FILES_${PN} += "etc/victor-compat-version"
