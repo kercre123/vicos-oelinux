@@ -3,6 +3,7 @@
 .github/CODEOWNERS @CodeForCoffee
 poky/build/build.sh @CodeForCoffee
 ANKI_VERSION @CodeForCoffee @udo-anki
+VICTOR_COMPAT_VERSION @CodeForCoffee @chapados
 
 # Don't touch anything that could invalidate our FCC certification without telling Daniel
 android_compat/device/qcom/msm8909/ @DanielCasner
