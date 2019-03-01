@@ -10,6 +10,7 @@ After=vic-crashuploader.service
 PermissionsStartOnly=true
 EnvironmentFile=/anki/etc/vic-robot.env
 ExecStartPre=/bin/chown robot /dev/ttyHS0 /dev/spidev0.0
+ExecStartPre=/bin/chgrp anki /dev/block/bootdevice/by-name/emr
 ExecStart=/anki/bin/vic-robot $VIC_ROBOT_OPTS
 ExecStopPost=/anki/bin/vic-on-exit
 Restart=no
