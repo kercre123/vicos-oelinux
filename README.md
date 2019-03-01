@@ -100,3 +100,8 @@ Refer to Qualcomm CreatePoint support `Case Number 03482936` for details. The cu
 APQ8009 repository under `modem_proc`. Since the GPS firmware isn't actually used, we shouldn't ever need to update it.
 If we do need to for some reason, we need to make certain that any new firmware also includes the patches for the PMIC
 issue.
+
+## Updating `VICTOR_COMPAT_VERSION` for breaking changes
+
+If you make a change that will break the `vic-*` apps under `anki/victor`, then you must increment the `VICTOR_COMPAT_VERSION`.  This will make it so that developers working on `victor.git`, do not try to
+accidentally deploy to a robot running an old version.  Similarly, if they try to deploy code from an out of date branch onto a newer robot, they will get an error to rebase their branch and try again.
