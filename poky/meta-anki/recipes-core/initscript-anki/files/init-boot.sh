@@ -31,7 +31,7 @@ echo 1 > /sys/kernel/debug/regulator/8916_l17/enable
 echo 1 > /sys/kernel/debug/regulator/8916_l4/enable
 
 # Power on hardware test and led states
-if true; then # All whiskeys are DEV devices even if they don't identify themselves for now
+if [ -z "${CMDLINE##*anki.dev*}" ]; then
 	is_dev_device=true
 	rampost syscon.dfu -d | tee /dev/rampost.log
 else
