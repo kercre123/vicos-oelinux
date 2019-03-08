@@ -9,7 +9,7 @@ TIMESTAMP="/etc/timestamp"
 if [ -f "${TIMESTAMP}" ]; then
     ETIME=$(date -u -D '%Y%m%d%H%M%S' -d `cat ${TIMESTAMP}` +'%Y-%m-%d %H:%M:%S')
 
-    if expr "${ETIME}" \> "${SAVEDTIME}"; then
+    if expr "${ETIME}" \> "${SAVEDTIME}" > /dev/null ; then
 	SAVEDTIME=${ETIME}
     fi
 fi
@@ -26,7 +26,7 @@ if [ -f "${CLOCKFILE}" ]; then
     FTIME=$(grep TIME "${CLOCKFILE}" | awk -F= '{print $2;}')
     FHWCLOCK=$(grep HWCLOCK "${CLOCKFILE}" | awk -F= '{print $2;}')
 
-    if expr "${FTIME}" \> "${SAVEDTIME}"; then
+    if expr "${FTIME}" \> "${SAVEDTIME}" > /dev/null ; then
 	SAVEDTIME=${FTIME}
     fi
 fi
@@ -42,7 +42,7 @@ setclock() {
 	# set the clock forward of the true wall clock time if the robot hasn't
 	# been power cycled in a long time.
 	CLOCK_OFFSET=${HWCLOCK}
-	if expr "${HWCLOCK}" \> "${FHWCLOCK}" ; then
+	if expr "${HWCLOCK}" \> "${FHWCLOCK}" > /dev/null ; then
 	    # If the RTC clock has continued to advance since our last boot
 	    # then only use the difference here
 	    CLOCK_OFFSET=$(expr "${HWCLOCK}" - "${FHWCLOCK}")
@@ -52,7 +52,7 @@ setclock() {
 	SAVEDTIME=$(date -u -D '%s' -d "${SAVEDTIME_SECS}" +'%Y-%m-%d %H:%M:%S')
     fi
 
-    if expr "${SAVEDTIME}" \> "${CTIME}" ; then
+    if expr "${SAVEDTIME}" \> "${CTIME}" > /dev/null ; then
 	echo -e "loading saved time ${SAVEDTIME} over ${CTIME}\nClock Offset = ${CLOCK_OFFSET} seconds"
 	date -u --set="${SAVEDTIME}"
     else
@@ -63,7 +63,7 @@ setclock() {
 
 # if current time is greater than what is in the file, save it
 saveclock() {
-	if expr "${CTIME}" \> "${SAVEDTIME}" ; then
+	if expr "${CTIME}" \> "${SAVEDTIME}" > /dev/null ; then
 		mkdir -p `dirname "${CLOCKFILE}"`
 		echo "saving time ${CTIME} over ${SAVEDTIME}"
 		echo "TIME=${CTIME}" > "${CLOCKFILE}.tmp"
