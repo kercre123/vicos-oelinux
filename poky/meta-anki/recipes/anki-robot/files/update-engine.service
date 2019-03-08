@@ -18,6 +18,7 @@ Environment=UPDATE_ENGINE_ENABLED=False
 Environment=UPDATE_ENGINE_ALLOW_DOWNGRADE=False
 Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 EnvironmentFile=-/anki/etc/update-engine.env
+EnvironmentFile=-/run/update-engine-oneshot.env
 EnvironmentFile=-/run/vic-switchboard/update-engine.env
 ExecStartPre=/bin/rm -rf /run/update-engine
 ExecStartPre=/bin/mkdir -p /run/update-engine /run/vic-switchboard
@@ -25,6 +26,7 @@ ExecStartPre=/bin/test $UPDATE_ENGINE_ENABLED = "True"
 ExecStartPre=/bin/bash -c 'sleep $(( RANDOM % $UPDATE_ENGINE_MAX_SLEEP ))'
 ExecStartPre=/bin/bash -c 'echo Unclean exit > /run/update-engine/error'
 ExecStart=/bin/bash -c '/usr/bin/logwrapper /anki/bin/update-engine; echo $? > /run/update-engine/exit_code'
+ExecStopPost=/bin/rm -rf /run/update-engine-oneshot.env
 ExecStopPost=/bin/rm -rf /run/vic-switchboard/update-engine.env
 ExecStopPost=/bin/rm -rf /run/update-engine/boot.img
 ExecStopPost=/bin/rm -rf /run/update-engine/delta.bin
