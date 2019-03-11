@@ -39,8 +39,12 @@ if [ ! -r ${MESSAGES} ]; then
   exit -1
 fi
 
+/bin/sync
+
 log "${TAIL} ${MESSAGES} > ${DUMP}.log"
 ${TAIL} ${MESSAGES} > ${DUMP}.log
+
+/bin/sync
 
 log "done"
 
