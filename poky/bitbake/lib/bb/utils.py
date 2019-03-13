@@ -1385,3 +1385,26 @@ def ioprio_set(who, cls, value):
             raise ValueError("Unable to set ioprio, syscall returned %s" % rc)
     else:
         bb.warn("Unable to set IO Prio for arch %s" % _unamearch)
+
+# export common proxies variables from datastore to environment
+# The `export_proxies` Python function is copied from the latest Yocto release: 
+# https://git.yoctoproject.org/cgit/cgit.cgi/poky/tree/bitbake/lib/bb/utils.py?h=thud#n1523 
+def export_proxies(d):
+    import os
+
+    variables = ['http_proxy', 'HTTP_PROXY', 'https_proxy', 'HTTPS_PROXY',
+                    'ftp_proxy', 'FTP_PROXY', 'no_proxy', 'NO_PROXY',
+                    'GIT_PROXY_COMMAND']
+    exported = False
+
+    for v in variables:
+        if v in os.environ.keys():
+            exported = True
+        else:
+            v_proxy = d.getVar(v)
+            if v_proxy is not None:
+                os.environ[v] = v_proxy
+                exported = True
+
+    return exported
+

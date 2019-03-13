@@ -20,7 +20,6 @@ IMAGE_INSTALL += "${@base_contains('DISTRO_FEATURES','selinux','start-scripts-mi
 
 IMAGE_INSTALL += "base-files"
 IMAGE_INSTALL += "base-passwd"
-IMAGE_INSTALL += "bluez5"
 
 IMAGE_INSTALL += "native-frameworks"
 
