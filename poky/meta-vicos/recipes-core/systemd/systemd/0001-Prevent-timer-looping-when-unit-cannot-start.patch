@@ -1,0 +1,20 @@
+Index: git/src/core/timer.c
+===================================================================
+--- git.orig/src/core/timer.c
++++ git/src/core/timer.c
+@@ -370,6 +370,7 @@ static void timer_enter_waiting(Timer *t
+ 
+                                 if (base <= 0)
+                                         continue;
++                                base = MAX(base, t->last_trigger.monotonic);
+ 
+                                 break;
+ 
+@@ -382,6 +383,7 @@ static void timer_enter_waiting(Timer *t
+ 
+                                 if (base <= 0)
+                                         continue;
++                                base = MAX(base, t->last_trigger.monotonic);
+ 
+                                 break;
+ 

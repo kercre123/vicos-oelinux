@@ -6,6 +6,7 @@ SRC_URI += "file://journald.conf \
             file://0001-Set-journal-FILE_SIZE_INCREASE-to-100KB-from-8MB.patch \
             file://0001-VIC-2911-fixing-problems-with-systemd-tmpfiles-setup.patch \
             file://0001-VIC-2911-take-out-references-to-systemd-tmpfiles.patch \
+            file://0001-Prevent-timer-looping-when-unit-cannot-start.patch \
            "
 
 # Place journald.conf in /etc/systemd/
