@@ -65,4 +65,7 @@ fi
 #Enable Ramoops
 modprobe ramoops
 
+# Report OS Version to boot log
+echo "VicOS Version: `getprop ro.anki.version`" > /dev/kmsg
+
 exit 0
