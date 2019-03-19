@@ -24,6 +24,9 @@ static struct ev_loop* sDefaultLoop = ev_default_loop(EVBACKEND_SELECT);
 static VicCubeTool* sVicCubeTool = nullptr;
 
 static void ExitHandler(int status = 0) {
+  if (sVicCubeTool) {
+    sVicCubeTool->OnExit();
+  }
   delete sVicCubeTool; sVicCubeTool = nullptr;
   _exit(status);
 }
@@ -48,7 +51,8 @@ void usage() {
             << "scan                       - Search for advertising cubes" << std::endl
             << "connect [address]          - Connect to a cube over BLE" << std::endl
             << "flash path/to/firmware     - Flash the cube with new firmware" << std::endl
-            << "flashdvt1 path/to/firmware - Flash the DVT1/2 cube with new firmware" << std::endl;
+            << "flashdvt1 path/to/firmware - Flash the DVT1/2 cube with new firmware" << std::endl
+            << "conntest iterations        - Scan, Connect, Disconnect in a loop for iterations" << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -57,7 +61,6 @@ int main(int argc, char *argv[]) {
 
   int c;
   opterr = 0;
-
   while ((c = getopt(argc, argv, "a:h")) != -1) {
     switch(c) {
       case 'a':

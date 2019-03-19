@@ -20,13 +20,19 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
               const std::vector<std::string>& args)
       : IPCClient(loop)
       , address_(address)
+      , conntest_requested_iterations_(0)
+      , conntest_iterations_(0)
+      , conntest_successful_connection_count_(0)
       , args_(args)
+      , stop_scan_timeout_(2.0)
       , connection_id_(-1)
-      , retries_(3)
       , task_executor_(new Anki::TaskExecutor(loop))
   {}
   ~VicCubeTool();
+  void DoNextConnTestIteration();
   void Execute();
+  void OnExit() const;
+  void Exit(int status);
 
  protected:
   virtual void OnScanResults(int error,
@@ -56,14 +62,18 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   void FlashCubeDVT1(const std::string& pathToFirmware);
   void ConnectRetryTimerCallback(ev::timer& w, int revents);
   void ScanTimerCallback(ev::timer& w, int revents);
-  void CubeConnectRetryTimerCallback(ev::timer& w, int revents);
+  void CubeConnectTimerCallback(ev::timer& w, int revents);
   void IdleCubeConnectionTimerCallback(ev::timer& w, int revents);
 
   std::string address_;
+  int conntest_requested_iterations_;
+  int conntest_iterations_;
+  int conntest_successful_connection_count_;
   std::vector<std::string> args_;
   ev::timer* connect_retry_timer_ = nullptr;
+  ev::tstamp stop_scan_timeout_;
   ev::timer* stop_scan_timer_ = nullptr;
-  ev::timer* cube_connect_retry_timer_ = nullptr;
+  ev::timer* cube_connect_timer_ = nullptr;
   ev::timer* idle_cube_connection_timer_ = nullptr;
   std::map<std::string, Anki::BluetoothDaemon::ScanResultRecord> scan_records_;
   bool scanning_;
@@ -71,7 +81,6 @@ class VicCubeTool : public Anki::BluetoothDaemon::IPCClient {
   bool flash_cube_after_connect_;
   bool use_dvt1_flasher_;
   int connection_id_;
-  int retries_;
   Anki::Util::CodeTimer::TimePoint connection_start_time_;
   std::string path_to_firmware_;
   std::string cube_model_number_;
