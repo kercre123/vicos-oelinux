@@ -245,4 +245,18 @@ void hdd_indicateEseBcnReportNoResults(const hdd_adapter_t *pAdapter,
 
 void iw_full_power_cbfn (void *pContext, eHalStatus status);
 
+void hdd_copy_ht_caps(struct ieee80211_ht_cap *hdd_ht_cap,
+                      tDot11fIEHTCaps *roam_ht_cap);
+void hdd_copy_vht_caps(struct ieee80211_vht_cap *hdd_vht_cap,
+                       tDot11fIEVHTCaps *roam_vht_cap);
+
+/**
+ * hdd_get_sta_connection_in_progress() - get STA for which connection
+ *                                        is in progress
+ * @hdd_ctx: hdd context
+ *
+ * Return: hdd adpater for which connection is in progress
+ */
+hdd_adapter_t *hdd_get_sta_connection_in_progress(hdd_context_t *hdd_ctx);
+
 #endif

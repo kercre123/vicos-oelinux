@@ -210,8 +210,13 @@ typedef struct sLimMlmScanCnf
 {
     tSirResultCodes         resultCode;
     tANI_U16                scanResultLength;
-    tSirBssDescription      bssDescription[1];
     tANI_U8                 sessionId;
+    tSirBssDescription      bssDescription[1];
+    /*
+     * WARNING: Pls make bssDescription as last variable in struct
+     * tLimMlmScanCnf as it has ieFields followed after this bss
+     * description. Adding a variable after this corrupts the ieFields
+     */
 } tLimMlmScanCnf, *tpLimMlmScanCnf;
 
 typedef struct sLimScanResult
@@ -269,6 +274,10 @@ typedef struct sLimMlmAssocInd
     tANI_U32             assocReqLength;
     tANI_U8*             assocReqPtr;
     uint32_t             rate_flags;
+    tSirSmeChanInfo      chan_info;
+    tSirMacHTChannelWidth ch_width;
+    tDot11fIEHTCaps HTCaps;
+    tDot11fIEVHTCaps VHTCaps;
 } tLimMlmAssocInd, *tpLimMlmAssocInd;
 
 typedef struct sLimMlmReassocReq
@@ -702,10 +711,7 @@ void limSendAssocRspMgmtFrame(tpAniSirGlobal, tANI_U16, tANI_U16, tSirMacAddr,
 void limSendNullDataFrame(tpAniSirGlobal, tpDphHashNode);
 void limSendDisassocMgmtFrame(tpAniSirGlobal, tANI_U16, tSirMacAddr, tpPESession, tANI_BOOLEAN waitForAck);
 void limSendDeauthMgmtFrame(tpAniSirGlobal, tANI_U16, tSirMacAddr, tpPESession, tANI_BOOLEAN waitForAck);
-void limSendSmeDisassocDeauthNtf( tpAniSirGlobal pMac,
-                                eHalStatus status, tANI_U32 *pCtx );
 void limDoSendAuthMgmtFrame(tpAniSirGlobal, tpPESession);
-
 void limContinueChannelScan(tpAniSirGlobal);
 tSirResultCodes limMlmAddBss(tpAniSirGlobal, tLimMlmStartReq *,tpPESession psessionEntry);
 

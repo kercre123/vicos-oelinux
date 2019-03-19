@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -300,6 +300,21 @@
 #define CFG_ENABLE_DYNAMIC_RA_START_RATE_MIN     (0)
 #define CFG_ENABLE_DYNAMIC_RA_START_RATE_MAX     (65535)
 #define CFG_ENABLE_DYNAMIC_RA_START_RATE_DEFAULT (0)
+
+/*
+ * gEnableRTTsupport
+ *
+ * @Min: 0 - Disabled
+ * @Max: 1 - Enabled
+ * @Default: 1 - Enabled
+ *
+ * The param is used to enable/disable support for RTT
+ */
+
+#define CFG_ENABLE_RTT_SUPPORT            "gEnableRTTSupport"
+#define CFG_ENABLE_RTT_SUPPORT_DEFAULT    (1)
+#define CFG_ENABLE_RTT_SUPPORT_MIN        (0)
+#define CFG_ENABLE_RTT_SUPPORT_MAX        (1)
 
 /* Bit mask value to enable RTS/CTS for different modes
  * for 2.4 GHz, HT20 - 0x0001, for 2.4 GHz, HT40 - 0x0002
@@ -1175,6 +1190,11 @@ typedef enum
 #define CFG_REORDER_TIME_VO_MAX                            1000
 #define CFG_REORDER_TIME_VO_DEFAULT                        40
 
+#define CFG_ENABLE_PN_REPLAY_NAME                          "PNreplayCheck"
+#define CFG_ENABLE_PN_REPLAY_MIN                           0
+#define CFG_ENABLE_PN_REPLAY_MAX                           1
+#define CFG_ENABLE_PN_REPLAY_DEFAULT                       0
+
 #if defined WLAN_FEATURE_VOWIFI
 #define CFG_RRM_ENABLE_NAME                              "gRrmEnable"
 #define CFG_RRM_ENABLE_MIN                               (0)
@@ -1590,6 +1610,54 @@ typedef enum
 #define CFG_STA_AUTH_RETRIES_FOR_CODE17_MAX       ( 5 )
 #define CFG_STA_AUTH_RETRIES_FOR_CODE17_DEFAULT   ( 0 )
 
+/*
+ * <ini>
+ * gindoor_channel_support - Mark indoor channels as enabled or passive
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to control the state of indoor channels. If the
+ * value is 1 then the indoor channels will be marked as enabled and
+ * if the value is 0 then the indoor channels will be marked as
+ * DFS
+ *
+ * The default value is 0
+ * </ini>
+ */
+#define CFG_INDOOR_CHANNEL_SUPPORT_NAME     "gindoor_channel_support"
+#define CFG_INDOOR_CHANNEL_SUPPORT_MIN      (0)
+#define CFG_INDOOR_CHANNEL_SUPPORT_MAX      (1)
+#define CFG_INDOOR_CHANNEL_SUPPORT_DEFAULT  (0)
+
+
+/*
+ * <ini>
+ * g_mark_indoor_as_disable - Enable/Disable Indoor channel
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to mark the Indoor channel as
+ * disable when SAP start and revert it on SAP stop,
+ * so SAP will not turn on indoor channel and
+ * sta will not scan/associate and roam on indoor
+ * channels.
+ *
+ * Related: If g_mark_indoor_as_disable set, turn the
+ * indoor channels to disable and update Wiphy & fw.
+ *
+ * Supported Feature: SAP/STA
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_MARK_INDOOR_AS_DISABLE_NAME     "g_mark_indoor_as_disable"
+#define CFG_MARK_INDOOR_AS_DISABLE_MIN      (0)
+#define CFG_MARK_INDOOR_AS_DISABLE_MAX      (1)
+#define CFG_MARK_INDOOR_AS_DISABLE_DEFAULT  (0)
+
 typedef enum
 {
     eHDD_LINK_SPEED_REPORT_ACTUAL = 0,
@@ -1700,6 +1768,26 @@ typedef enum
 #define CFG_ENABLE_TCP_DELACK_MIN            (0)
 #define CFG_ENABLE_TCP_DELACK_MAX            (1)
 #define CFG_ENABLE_TCP_DELACK_DEFAULT        (1)
+
+#define CFG_BTC_2M_DYN_LONG_WLAN_LEN_NAME      "gBTC2MDynLongWLAN"
+#define CFG_BTC_2M_DYN_LONG_WLAN_LEN_MIN       (15000)
+#define CFG_BTC_2M_DYN_LONG_WLAN_LEN_MAX       (55000)
+#define CFG_BTC_2M_DYN_LONG_WLAN_LEN_DEFAULT   (35000)
+
+#define CFG_BTC_2M_DYN_LONG_BT_LEN_NAME        "gBTC2MDynLongBT"
+#define CFG_BTC_2M_DYN_LONG_BT_LEN_MIN         (15000)
+#define CFG_BTC_2M_DYN_LONG_BT_LEN_MAX         (25000)
+#define CFG_BTC_2M_DYN_LONG_BT_LEN_DEFAULT     (25000)
+
+#define CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_NAME        "gBTC2MDynLongBTExt"
+#define CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_MIN         (5000)
+#define CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_MAX         (15000)
+#define CFG_BTC_2M_DYN_LONG_BT_EXT_LEN_DEFAULT     (15000)
+
+#define CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_NAME        "gBTC2MDynLongNumBTExt"
+#define CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_MIN          (5)
+#define CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_MAX          (15)
+#define CFG_BTC_2M_DYN_LONG_NUM_BT_EXT_DEFAULT      (15)
 
 #ifdef SAP_AUTH_OFFLOAD
 /* Enable/Disable SAP Authentication offload
@@ -2139,7 +2227,7 @@ static __inline tANI_U32 defHddRateToDefCfgRate( tANI_U32 defRateIndex )
 #define CFG_TDLS_SCAN_ENABLE            "gEnableTDLSScan"
 #define CFG_TDLS_SCAN_ENABLE_MIN        (0)
 #define CFG_TDLS_SCAN_ENABLE_MAX        (2)
-#define CFG_TDLS_SCAN_ENABLE_DEFAULT    (0)
+#define CFG_TDLS_SCAN_ENABLE_DEFAULT    (1)
 
 #define CFG_TDLS_ENABLE_DEFER_TIMER           "gTDLSEnableDeferTime"
 #define CFG_TDLS_ENABLE_DEFER_TIMER_MIN       (2000)
@@ -2152,7 +2240,7 @@ static __inline tANI_U32 defHddRateToDefCfgRate( tANI_U32 defRateIndex )
 #define CFG_LINK_LAYER_STATS_ENABLE                  "gEnableLLStats"
 #define CFG_LINK_LAYER_STATS_ENABLE_MIN              (0)
 #define CFG_LINK_LAYER_STATS_ENABLE_MAX              (1)
-#define CFG_LINK_LAYER_STATS_ENABLE_DEFAULT          (0)
+#define CFG_LINK_LAYER_STATS_ENABLE_DEFAULT          (1)
 #endif
 
 #ifdef WLAN_FEATURE_EXTSCAN
@@ -3100,8 +3188,65 @@ This feature requires the dependent cfg.ini "gRoamPrefer5GHz" set to 1 */
 #define CFG_FORCE_SCC_WITH_ECSA_NAME       "force_scc_with_ecsa"
 #define CFG_FORCE_SCC_WITH_ECSA_MIN        (0)
 #define CFG_FORCE_SCC_WITH_ECSA_MAX        (1)
-#define CFG_FORCE_SCC_WITH_ECSA_DEFAULT    (0)
+#define CFG_FORCE_SCC_WITH_ECSA_DEFAULT    (1)
 
+#define CFG_STA_SAP_SCC_ON_DFS_CHAN             "sta_sap_scc_on_dfs_chan"
+#define CFG_STA_SAP_SCC_ON_DFS_CHAN_MIN         (0)
+#define CFG_STA_SAP_SCC_ON_DFS_CHAN_MAX         (1)
+#define CFG_STA_SAP_SCC_ON_DFS_CHAN_DEFAULT     (0)
+
+/*
+ * gEnableAggBTCScoOUI is used to enable aggregation during SCO
+ * with specific AP based on OUI. If set to nothing, feature is
+ * enabled for all APs. Ini supports only single OUI.
+ * ex: gEnableAggBTCScoOUI=74-EA-CB - enable with specific AP
+ */
+#define CFG_ENABLE_AGG_BTC_SCO_OUI_NAME       "gEnableAggBTCScoOUI"
+#define CFG_ENABLE_AGG_BTC_SCO_OUI_DEFAULT    ""
+
+/*
+ * gNumBuffBTCSco is used to set block ack buffer size for
+ * aggregation during SCO. If this is set to 0 or 1, aggregation
+ * during SCO feature is disabled. To enable aggregation
+ * during SCO, gNumBuffBTCSco should be set to be greater than 1.
+ */
+#define CFG_NUM_BUFF_BTC_SCO_INVALID     1
+
+#define CFG_NUM_BUFF_BTC_SCO_NAME       "gNumBuffBTCSco"
+#define CFG_NUM_BUFF_BTC_SCO_MIN        (0)
+#define CFG_NUM_BUFF_BTC_SCO_MAX        (10)
+#define CFG_NUM_BUFF_BTC_SCO_DEFAULT    (0)
+
+
+/* Value for ENABLE_POWERSAVE_OFFLOAD*/
+#define CFG_ENABLE_POWERSAVE_OFFLOAD_NAME       "gEnablePowerSaveOffload"
+#define CFG_ENABLE_POWERSAVE_OFFLOAD_MIN        (1)
+#define CFG_ENABLE_POWERSAVE_OFFLOAD_MAX        (2)
+#define CFG_ENABLE_POWERSAVE_OFFLOAD_DEFAULT    (1)
+
+/*
+ * <ini>
+ * force_rsne_override - force rsnie override from user
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable/disable test mode to force rsne override used in
+ * security enhancement test cases to pass the RSNIE sent by user in
+ * assoc request.
+ *
+ * Related: None
+ *
+ * Supported Feature: STA
+ *
+ * Usage: internal
+ *
+ * </ini>
+ */
+#define CFG_FORCE_RSNE_OVERRIDE_NAME    "force_rsne_override"
+#define CFG_FORCE_RSNE_OVERRIDE_MIN     (0)
+#define CFG_FORCE_RSNE_OVERRIDE_MAX     (1)
+#define CFG_FORCE_RSNE_OVERRIDE_DEFAULT (0)
 
 /*--------------------------------------------------------------------------- 
   Type declarations
@@ -3381,6 +3526,7 @@ typedef struct
    v_U16_t                      BeReorderAgingTime;
    v_U16_t                      ViReorderAgingTime;
    v_U16_t                      VoReorderAgingTime;
+   v_BOOL_t                     enablePNReplay;
 
    /* Wowl pattern */
    char                        wowlPattern[1024];         
@@ -3705,6 +3851,20 @@ typedef struct
    uint32_t                    sta_auth_retries_for_code17;
    uint32_t                    trigger_nullframe_before_hb;
    bool                        force_scc_with_ecsa;
+   uint8_t                     enable_rtt_support;
+   uint32_t                    sta_sap_scc_on_dfs_chan;
+   uint8_t                     enable_aggr_btc_sco_oui[9];
+   uint8_t                     num_buff_aggr_btc_sco;
+   /* control marking indoor channel passive to disable */
+   bool                        disable_indoor_channel;
+   uint32_t                    enable_power_save_offload;
+   uint32_t                    btc_dyn_wlan_len;
+   uint32_t                    btc_dyn_bt_len;
+   uint32_t                    btc_dyn_bt_ext_len;
+   uint32_t                    btc_dyn_num_bt_ext;
+   bool                        indoor_channel_support;
+   bool                        force_rsne_override;
+
 } hdd_config_t;
 
 /*--------------------------------------------------------------------------- 
@@ -3719,7 +3879,8 @@ VOS_STATUS hdd_execute_config_command(hdd_context_t *pHddCtx, char *command);
 tANI_BOOLEAN hdd_is_okc_mode_enabled(hdd_context_t *pHddCtx);
 
 VOS_STATUS hdd_string_to_u8_array(char *str, tANI_U8 *intArray, tANI_U8 *len,
-				  tANI_U8 intArrayMaxLen, char *seperator);
+                                  tANI_U8 intArrayMaxLen, char *seperator,
+                                  bool to_hex);
 
 #ifdef MDNS_OFFLOAD
 int hdd_string_to_string_array(char *data, uint8_t *datalist,
