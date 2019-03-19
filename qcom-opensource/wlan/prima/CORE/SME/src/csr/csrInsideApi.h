@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -70,6 +70,8 @@
 #define CSR_MAX_NUM_SUPPORTED_CHANNELS 55
 
 #define CSR_MAX_2_4_GHZ_SUPPORTED_CHANNELS 14
+
+#define DEFAULT_NUM_BUFF_BTC_SCO 3
 
 #define CSR_MAX_BSS_SUPPORT            512
 #define SYSTEM_TIME_MSEC_TO_USEC      1000
@@ -208,8 +210,6 @@ typedef struct tagCsrScanResult
     tANI_S32 AgingCount;    //This BSS is removed when it reaches 0 or less
     tANI_U32 preferValue;   //The bigger the number, the better the BSS. This value override capValue
     tANI_U32 capValue;  //The biggger the better. This value is in use only if we have equal preferValue
-    //This member must be the last in the structure because the end of tSirBssDescription (inside) is an
-    //    array with nonknown size at this time
     
     eCsrEncryptionType ucEncryptionType; //Preferred Encryption type that matched with profile.
     eCsrEncryptionType mcEncryptionType; 
@@ -218,6 +218,12 @@ typedef struct tagCsrScanResult
     int congestionScore;
 #endif
     tCsrScanResultInfo Result;
+    /*
+     * WARNING - Do not add any element here
+     * This member Result must be the last in the structure because the end
+     * of tSirBssDescription (inside) is an array with nonknown size at
+     * this time.
+     */
 }tCsrScanResult;
 
 typedef struct
@@ -450,6 +456,7 @@ eCsrCfgDot11Mode csrGetCfgDot11ModeFromCsrPhyMode(tCsrRoamProfile *pProfile, eCs
 tANI_U32 csrTranslateToWNICfgDot11Mode(tpAniSirGlobal pMac, eCsrCfgDot11Mode csrDot11Mode);
 void csrSaveChannelPowerForBand( tpAniSirGlobal pMac, tANI_BOOLEAN fPopulate5GBand );
 void csrApplyChannelPowerCountryInfo( tpAniSirGlobal pMac, tCsrChannel *pChannelList, tANI_U8 *countryCode, tANI_BOOLEAN updateRiva);
+void csrUpdateFCCChannelList(tpAniSirGlobal pMac);
 void csrApplyPower2Current( tpAniSirGlobal pMac );
 void csrAssignRssiForCategory(tpAniSirGlobal pMac, tANI_S8 bestApRssi, tANI_U8 catOffset);
 tANI_BOOLEAN csrIsMacAddressZero( tpAniSirGlobal pMac, tCsrBssid *pMacAddr );
@@ -575,6 +582,9 @@ eHalStatus csrScanFilterDFSResults(tpAniSirGlobal pMac);
 eHalStatus csrScanFlushSelectiveResult(tpAniSirGlobal, v_BOOL_t flushP2P);
 
 eHalStatus csrScanFlushSelectiveResultForBand(tpAniSirGlobal, v_BOOL_t flushP2P, tSirRFBand band);
+
+eHalStatus csrScanFlushSelectiveSsid(tpAniSirGlobal pMac, tANI_U8 *ssId,
+                                     tANI_U8 ssIdLen);
 
 /* ---------------------------------------------------------------------------
     \fn csrScanBGScanGetParam
