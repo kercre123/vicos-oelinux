@@ -1,0 +1,40 @@
+KBRANCH ?= "anki/msm/linux-4.9"
+
+require recipes-kernel/linux/linux-yocto.inc
+
+inherit externalsrc qperf
+
+#PN = "linux-msm_4.9"
+
+SRCREV ?= "${AUTOREV}"
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+EXTERNALSRC = "${WORKSPACE}/kernel/msm-4.9"
+
+LINUX_VERSION_EXTENSION_msm-perf = "-perf"
+LINUX_VERSION_EXTENSION_msm-user = "-perf"
+LINUX_VERSION_EXTENSION_msm= ""
+
+FILESEXTRAPATHS_prepend := "${THISDIR}/meta/cfg/${LINUX_KERNEL_TYPE}/${KMACHINE}:"
+SRC_URI += "file://defconfig"
+
+LINUX_VERSION ?= "4.9"
+
+DEPENDS += "openssl-native util-linux-native"
+DEPENDS += "dtbtool-native mkbootimg-native"
+DEPENDS_apq8096 += "mkbootimg-native dtc-native"
+PACKAGES = "kernel kernel-base kernel-vmlinux kernel-dev kernel-modules"
+RDEPENDS_kernel-base = ""
+
+PV = "${LINUX_VERSION}+git${SRCPV}"
+
+KMETA = "kernel-meta"
+KCONF_BSP_AUDIT_LEVEL = "2"
+
+KERNEL_DEVICETREE = "qcom/msm8909-anki.dtb"
+COMPATIBLE_MACHINE = "apq8009-robot"
+
+KERNEL_MODULE_AUTOLOAD += "apr_dlkm q6_dlkm wcd_cpe_dlkm wsa881x_dlkm wsa881x_analog_dlkm adsp_loader_dlkm swr_ctrl_dlkm analog_cdc_dlkm cpe_lsm_dlkm digital_cdc_dlkm machine_dlkm machine_ext_dlkm platform_dlkm native_dlk machine_int_dlkm"
+
+do_install_prepend() {
+    oe_runmake headers_install INSTALL_HDR_PATH=${STAGING_KERNEL_BUILDDIR}/usr
+}
