@@ -82,6 +82,21 @@ void set_body_leds(int success, int inRecovery)
 #define SEMAPHORE_FILE "/dev/rampost_error"
 #define MAX_COMMANDLINE_CHARS 512
 #define RECOVERY_MODE_INDICATOR "anki.unbrick"
+#define IOVCC_REGULATOR "/sys/kernel/debug/regulator/8916_l4/enable"
+
+void enable_iovcc(void)
+{
+  int fd;
+  DAS_LOG(DAS_DEBUG, "enable_iovcc.enter", "Enabling LCD IOVCC regulator");
+  fd = open(IOVCC_REGULATOR, O_WRONLY);
+  if (fd < 0) {
+    DAS_LOG(DAS_ERROR, "enable_iovcc.error", "Could not open node fo enable IOVCC regulator");
+  }
+  else {
+    write(fd, "1", 1);
+    close(fd);
+  }
+}
 
 int recovery_mode_check(void)
 {
@@ -253,6 +268,8 @@ int main(int argc, const char* argv[])
       dfu_file = argv[argn];
     }
   }
+
+  enable_iovcc();
 
   lcd_gpio_setup();
   lcd_device_reset();
