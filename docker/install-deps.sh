@@ -1,0 +1,53 @@
+#!/bin/bash -xe
+
+pkg_list=(
+    android-tools-fsutils
+    autoconf
+    bison
+    build-essential
+    ccache
+    chrpath
+    cpio
+    curl
+    debianutils
+    diffstat
+    flex
+    g++-multilib
+    gawk
+    gcc-multilib
+    genisoimage
+    gettext
+    git
+    git-core
+    gnupg
+    gnutls-bin
+    gperf
+    iputils-ping
+    lib32ncurses5-dev
+    lib32z-dev
+    libc6-dev
+    libc6-dev-i386
+    libcurl4-openssl-dev
+    libexpat1-dev
+    libgl1-mesa-dev
+    libsdl1.2-dev
+    libx11-dev
+    libxml2-utils
+    mdm
+    python
+    python3
+    python3-pexpect
+    python3-pip
+    socat
+    sudo
+    texinfo
+    unzip
+    wget
+    x11proto-core-dev
+    xsltproc
+    xz-utils
+    zip
+    zlib1g-dev
+)
+
+apt-get install -y ${pkg_list[@]}
