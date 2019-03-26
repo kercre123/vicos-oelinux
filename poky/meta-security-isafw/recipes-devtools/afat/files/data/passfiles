@@ -1,0 +1,4 @@
+passwd
+shadow
+*.psk
+*.key
