@@ -70,8 +70,6 @@ ${BUILD_COMMAND[*]}
 
 popd
 
-make -C ${TOPLEVEL}/ota
-
 # Re-enable check for unset variables
 set -u
 
