@@ -68,4 +68,20 @@ modprobe ramoops
 # Report OS Version to boot log
 echo "VicOS Version: `getprop ro.anki.version`" > /dev/kmsg
 
+# Make Slot A and Slot B unbootable to force a reboot into slot F (recovery)
+for slot in a b;
+do
+    # bootctl set_unbootable doesn't use the <CURRENT BOOT SLOT> argument, so
+    # we can safely set it to f
+    bootctl f set_unbootable $slot
+    blkdiscard -s /dev/block/bootdevice/by-name/boot_$slot
+done
+
+# Wipe out switchboard partition
+blkdiscard -s /dev/block/bootdevice/by-name/switchboard
+
+# Make sure the switchboard and userdata partitions are wiped on shutdown
+# See the mount-data script for details
+touch /run/wipe-data
+
 exit 0
