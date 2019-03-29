@@ -198,6 +198,7 @@ BatteryState confirm_battery_level(void)
 
       DAS_LOG(DAS_EVENT, "battery_level", "%0.3f", volts);
       DAS_LOG(DAS_EVENT, "battery_temperature", "%d", b2h->battery.temperature);
+      DAS_LOG(DAS_EVENT, "battery_flags", "%08x", b2h->battery.flags);
 
       if (b2h->battery.flags & (POWER_IS_OVERHEATED)) { return battery_TOO_HOT; }
       if (b2h->battery.flags & POWER_ON_CHARGER) { return battery_LEVEL_GOOD; }
