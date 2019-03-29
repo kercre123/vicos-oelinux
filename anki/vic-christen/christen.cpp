@@ -14,6 +14,9 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <fstream>
+#include <regex>
+#include <sys/stat.h>
 
 #include <fcntl.h>
 #include <string.h>
@@ -24,13 +27,16 @@
 const std::string kRobotNamePropertyKey = "anki.robot.name";
 const std::string kProductNamePropertyKey = "ro.anki.product.name";
 const std::string kDefaultProductName = "Vector";
+const std::string kVectorNamePattern = "Vector ([A-Z][0-9][A-Z][0-9])";
+const std::string kTestNameFile = "/factory/name";
+const std::string kProcCmdlineFile = "/proc/cmdline";
+const uint32_t kVectorNameSize = 11;
 const uint32_t kRtsHeaderVersion = 2;
 
 const std::string kSwitchboardBlockDevice = "/dev/block/bootdevice/by-name/switchboard";
 const size_t kSwitchboardDataBlockLen = 262144; // 256 * 1024 bytes -- (256kb)
 
 static uint8_t sBlockBuffer[kSwitchboardDataBlockLen] = {0};
-
 
 // The robot shall be named "<ProductName> XYXY" where
 // X is a random letter and Y is a random digit.
@@ -133,9 +139,50 @@ writen(int fd, const void *vptr, size_t n)
   return (n);
 }
 
+bool AnkiUtil_FileExists(const std::string fileName)
+{
+  struct stat info;
+  bool exists = false;
+  if( stat(fileName.c_str(), &info)==0 ) {
+    if( info.st_mode & S_IFREG ) {
+      exists = true;
+    }
+  }
+  return exists;
+}
+
+bool OSState_IsAnkiDevRobot()
+{
+  static bool _isDevRobot = false;
+  if(_isDevRobot) {
+    return true;
+  }
+
+  static bool read = false;
+  if(!read)
+  {
+    read = true;
+    std::ifstream infile(kProcCmdlineFile);
+    std::string line;
+    while(std::getline(infile, line))
+    {
+      static const char* kKey = "anki.dev";
+      size_t index = line.find(kKey);
+      if(index != std::string::npos)
+      {
+        _isDevRobot = true;
+        break;
+      }
+    }
+    infile.close();
+  }
+
+  return _isDevRobot;
+}
+
 static bool IsRobotNameValid(const std::string& robotName, const std::string& productName)
 {
-  if (robotName.length() < 11) {
+  if (robotName.length() < kVectorNameSize) {
     return false;
   }
 
@@ -281,6 +328,41 @@ static std::string GenerateRobotName(const std::string& product_name)
   return robot_name;
 }
 
+static std::string GetNameFromAutoTestFile() {
+  char nameBuffer[kVectorNameSize] = {0};
+
+  int fd = open(kTestNameFile.c_str(), O_RDONLY);
+  if (fd == -1) {
+    return "";
+  }
+
+  ssize_t bytesRead = readn(fd, nameBuffer, sizeof(nameBuffer));
+
+  close(fd);
+
+  if (bytesRead < sizeof(nameBuffer)) {
+    return "";
+  }
+
+  std::string nameStr = std::string(nameBuffer, sizeof(nameBuffer));
+
+  if(!std::regex_match(nameStr, std::regex(kVectorNamePattern))) {
+    return "";
+  }
+
+  return nameStr;
+}
+
+static bool DoesTestNameFileExist()
+{
+  return AnkiUtil_FileExists(kTestNameFile);
+}
+
+static bool IsAutoTestBot()
+{
+  return DoesTestNameFileExist() && OSState_IsAnkiDevRobot();
+}
+
 int main(int argc, char *argv[])
 {
   std::string productName;
@@ -296,11 +378,21 @@ int main(int argc, char *argv[])
   }
 
   std::string robotName;
-  int rc = ReadSwitchboardData(productName);
-  if (rc == 0) {
-    std::string existingRobotName = GetRobotName();
-    if (!existingRobotName.empty()) {
-      robotName = std::move(existingRobotName);
+  if(IsAutoTestBot()) {
+    std::string autoTestName = GetNameFromAutoTestFile();
+    if (!autoTestName.empty()) {
+      robotName = std::move(autoTestName);
+    }
+  }
+
+  int rc;
+  if(robotName.empty()) {
+    rc = ReadSwitchboardData(productName);
+    if (rc == 0) {
+      std::string existingRobotName = GetRobotName();
+      if (!existingRobotName.empty()) {
+        robotName = std::move(existingRobotName);
+      }
     }
   }
 
