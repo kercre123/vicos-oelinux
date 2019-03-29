@@ -44,6 +44,7 @@ pkg_list=(
     unzip
     wget
     x11proto-core-dev
+    xinetd
     xsltproc
     xz-utils
     zip
