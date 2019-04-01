@@ -51,4 +51,17 @@ pkg_list=(
     zlib1g-dev
 )
 
-apt-get install -y ${pkg_list[@]}
+engine_pkg_list=(
+    dos2unix
+    libsndfile-dev
+    libssl-dev
+    libxml-simple-perl
+    p7zip-full
+    python-markdown
+    ruby
+    subversion
+    tofrodos
+    uuid-dev
+)
+
+apt-get install -y ${pkg_list[@]} ${engine_pkg_list[@]}
