@@ -1,5 +1,14 @@
 #!/bin/bash -xe 
 
+function cleanup {
+    if [ -n "$container" ]; then
+        docker container kill $container
+    else
+        echo "Exiting..."
+    fi
+}
+trap cleanup EXIT
+
 function docker_exec {
     docker exec -it $container bash -c "$1"
 }
