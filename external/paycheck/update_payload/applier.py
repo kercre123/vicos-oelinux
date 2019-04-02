@@ -19,7 +19,6 @@ import bz2
 import hashlib
 import itertools
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -31,7 +30,33 @@ from error import PayloadError
 #
 # Helper functions.
 #
-def _VerifySha256(file_obj, expected_hash, name, length=-1):
+
+def _CopyFile(src, dst, callback=None):
+  """Copies a file and reports progress via a callback. Substitute for shutil.copyfile
+
+  Args:
+    src: file to read
+    dst: file to write
+    callback: generator to call for each 1 megabyte block read
+  """
+
+  READ_LENGTH = 16 * 1024
+  BLOCK_LENGTH = 1024 * 1024
+  callback_length = 0
+  with open(src, 'rb') as fsrc:
+    with open(dst, 'wb') as fdst:
+      while True:
+        buf = fsrc.read(READ_LENGTH)
+        if not buf:
+          break
+        fdst.write(buf)
+        callback_length += len(buf)
+        if callback_length >= BLOCK_LENGTH:
+          callback_length -= BLOCK_LENGTH
+          if callback:
+            next(callback)
+
+def _VerifySha256(file_obj, expected_hash, name, length=-1, callback=None):
   """Verifies the SHA256 hash of a file.
 
   Args:
@@ -39,6 +64,7 @@ def _VerifySha256(file_obj, expected_hash, name, length=-1):
     expected_hash: the hash digest we expect to be getting
     name: name string of this hash, for error reporting
     length: precise length of data to verify (optional)
+    callback: generator to call for each 1 megabyte block read
 
   Raises:
     PayloadError if computed hash doesn't match expected one, or if fails to
@@ -48,12 +74,18 @@ def _VerifySha256(file_obj, expected_hash, name, length=-1):
   hasher = hashlib.sha256()
   block_length = 1024 * 1024
   max_length = length if length >= 0 else sys.maxint
+  callback_length = 0;
 
   while max_length > 0:
     read_length = min(max_length, block_length)
     data = file_obj.read(read_length)
     if not data:
       break
+    callback_length += len(data)
+    if callback_length >= block_length:
+      callback_length -= block_length
+      if callback:
+        next(callback)
     max_length -= len(data)
     hasher.update(data)
 
@@ -498,12 +530,18 @@ class PayloadApplier(object):
     if old_part_file_name:
       # Verify the source partition.
       with open(old_part_file_name, 'rb') as old_part_file:
+        if self.payload.phase_callback:
+          self.payload.phase_callback('verify-old-' + part_name)
         _VerifySha256(old_part_file, old_part_info.hash,
-                      'old ' + part_name, length=old_part_info.size)
+                      'old ' + part_name, length=old_part_info.size,
+                      callback=self.payload.progress_tick_callback)
       new_part_file_mode = 'r+b'
       if self.minor_version == common.INPLACE_MINOR_PAYLOAD_VERSION:
+        if self.payload.phase_callback:
+          self.payload.phase_callback('copy-' + part_name)
         # Copy the src partition to the dst one; make sure we don't truncate it.
-        shutil.copyfile(old_part_file_name, new_part_file_name)
+        _CopyFile(old_part_file_name, new_part_file_name,
+                  callback=self.payload.progress_tick_callback)
       elif (self.minor_version == common.SOURCE_MINOR_PAYLOAD_VERSION or
             self.minor_version == common.OPSRCHASH_MINOR_PAYLOAD_VERSION or
             self.minor_version == common.IMGDIFF_MINOR_PAYLOAD_VERSION):
@@ -521,6 +559,8 @@ class PayloadApplier(object):
       old_part_file = (open(old_part_file_name, 'r+b')
                        if old_part_file_name else None)
       try:
+        if self.payload.phase_callback:
+          self.payload.phase_callback('apply-delta-' + part_name)
         self._ApplyOperations(operations, base_name, old_part_file,
                               new_part_file, new_part_info.size)
       finally:
@@ -536,8 +576,11 @@ class PayloadApplier(object):
 
     # Verify the resulting partition.
     with open(new_part_file_name, 'rb') as new_part_file:
+      if self.payload.phase_callback:
+        self.payload.phase_callback('verify-new-' + part_name)
       _VerifySha256(new_part_file, new_part_info.hash,
-                    'new ' + part_name, length=new_part_info.size)
+                    'new ' + part_name, length=new_part_info.size,
+                    callback=self.payload.progress_tick_callback)
 
   def Run(self, new_kernel_part, new_rootfs_part, old_kernel_part=None,
           old_rootfs_part=None):
