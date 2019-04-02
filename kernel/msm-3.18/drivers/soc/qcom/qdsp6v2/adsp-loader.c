@@ -92,7 +92,7 @@ static void adsp_load_fw(struct work_struct *adsp_ldr_work)
 		/* adsp_state always returns "0". So load modem image based on
 		apr_modem_state to prevent loading of image twice */
 		adsp_state = apr_get_modem_state();
-		if (adsp_state != APR_SUBSYS_LOADED) {
+		if (adsp_state == APR_SUBSYS_DOWN) {
 			priv = platform_get_drvdata(pdev);
 			if (!priv) {
 				dev_err(&pdev->dev,

@@ -186,6 +186,7 @@ static const char *androidboot_slot_suffix = " androidboot.slot_suffix=";
 static const char *sys_path_cmdline = " rootwait ro";
 
 static const char *unbrick_cmdline = " anki.unbrick";
+static const char *anki_dev_cmdline = " anki.dev";
 
 #if VERIFIED_BOOT
 static const char *verity_mode = " androidboot.veritymode=";
@@ -228,6 +229,8 @@ static uint32_t dt_size = 0;
 static int auth_kernel_img = 0;
 static device_info device = {DEVICE_MAGIC, 0, 0, 0, 0, {0}, {0},{0}, 1};
 static bool is_allow_unlock = 0;
+
+static bool is_anki_dev = 1;
 
 static char frp_ptns[2][8] = {"config","frp"};
 
@@ -479,6 +482,9 @@ unsigned char *update_cmdline(const char * cmdline)
 	if (boot_unbrick) {
 		cmdline_len += strlen(unbrick_cmdline);
 	}
+	if (is_anki_dev) {
+		cmdline_len += strlen(anki_dev_cmdline);
+	}
 
 #if ENABLE_DISPLAY
 	if (cmdline) {
@@ -575,6 +581,12 @@ unsigned char *update_cmdline(const char * cmdline)
 		if (boot_unbrick) {
 			if(have_cmdline) --dst;
 			src = unbrick_cmdline;
+			while ((*dst++ = *src++));
+		}
+
+		if (is_anki_dev) {
+			if(have_cmdline) --dst;
+			src = anki_dev_cmdline;
 			while ((*dst++ = *src++));
 		}
 
@@ -3958,7 +3970,7 @@ void aboot_init(const struct app_descriptor *app)
 #endif
 
 	target_serialno((unsigned char *) sn_buf);
-	dprintf(SPEW,"serial number: %s\n",sn_buf);
+	dprintf(INFO,"serial number: %s\n",sn_buf);
 
 	memset(display_panel_buf, '\0', MAX_PANEL_BUF_SIZE);
 
