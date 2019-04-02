@@ -230,7 +230,7 @@ static int auth_kernel_img = 0;
 static device_info device = {DEVICE_MAGIC, 0, 0, 0, 0, {0}, {0},{0}, 1};
 static bool is_allow_unlock = 0;
 
-static bool is_anki_dev = 0;
+static bool is_anki_dev = 1;
 
 static char frp_ptns[2][8] = {"config","frp"};
 
