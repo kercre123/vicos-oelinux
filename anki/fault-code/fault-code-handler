@@ -117,15 +117,26 @@ fi
 
 STOP_DASMGR_ONLY=0
 KILL_CAMERA_AFTER_STOPPING_ROBOT=0
+DONT_DISPLAY_FAULT_CODE=0
 
 # handle error-code specific actions
 case ${FAULT_CODE} in
-70[0-2])
+70[0-1])
     # These codes indicate shutdown modes that require vic-robot to stay alive
     # in order to tell syscon to shutdown. In theory you can try to kill all of
     # the other processes, but there may not be enough time since power could
     # be cut by syscon at any moment so instead we just kill vic-dasmgr to make
     # sure the power_off DAS message is recorded and backed up.
+    #
+    # NOTE: No fault reports, trace data, or logs are captured here since the
+    #       priority is fast shutdown.
+    log "Shutting down. Stopping vic-dasmgr only."
+    STOP_DASMGR_ONLY=1
+    ON_FAULT_RESTART=0
+    DONT_DISPLAY_FAULT_CODE=1
+    ;;
+70[2-5])
+    # Same as above but we DO want to display fault code (images)
     log "Shutting down. Stopping vic-dasmgr only."
     STOP_DASMGR_ONLY=1
     ON_FAULT_RESTART=0
@@ -190,6 +201,30 @@ function wait_until_services_stopped() {
     fi
 }
 
+function display_fault_code() {
+    if [ $DONT_DISPLAY_FAULT_CODE -eq 0 ]; then
+        # Display "Vector will restart"?
+        DISPLAY_RESTART=""
+        if [ ${ON_FAULT_RESTART} -eq 1 ]; then
+            case ${FAULT_CODE} in
+            800|913|914|915|916|917|921|923)
+                DISPLAY_RESTART="-r"
+                ;;
+            esac
+        fi
+
+        # If we are already showing a fault code, don't show another one.
+        # Fault code will persist until cleared by /anki/bin/vic-init.sh.
+        if [ ! -f ${SHOWING_FILE} ]; then
+            if [ -x /anki/bin/vic-faultCodeDisplay ]; then
+              log "Display fault code ${FAULT_CODE}"
+              /anki/bin/vic-faultCodeDisplay ${DISPLAY_RESTART} ${FAULT_CODE}
+              echo ${FAULT_CODE} > ${SHOWING_FILE}
+            fi
+        fi
+    fi
+}
+
 #
 # Terminate services with SIGTERM instead of "systemctl stop"
 # to avoid waiting for individual services to stop.
@@ -200,6 +235,7 @@ if [ $STOP_DASMGR_ONLY -eq 1 ]; then
     log "systemctl kill -s SIGTERM vic-dasmgr"
     systemctl kill -s SIGTERM vic-dasmgr
     wait_until_services_stopped
+    display_fault_code
 else
     log "systemctl kill -s SIGTERM ${ANKI_SERVICES[@]}"
     systemctl kill -s SIGTERM ${ANKI_SERVICES[@]}
@@ -239,25 +275,7 @@ else
 
     fi
 
-    # Display "Vector will restart"?
-    DISPLAY_RESTART=""
-    if [ ${ON_FAULT_RESTART} -eq 1 ]; then
-        case ${FAULT_CODE} in
-        800|913|914|915|916|917|921|923)
-            DISPLAY_RESTART="-r"
-            ;;
-        esac
-    fi
-
-    # If we are already showing a fault code, don't show another one.
-    # Fault code will persist until cleared by /anki/bin/vic-init.sh.
-    if [ ! -f ${SHOWING_FILE} ]; then
-        if [ -x /anki/bin/vic-faultCodeDisplay ]; then
-          log "Display fault code ${FAULT_CODE}"
-          /anki/bin/vic-faultCodeDisplay ${DISPLAY_RESTART} ${FAULT_CODE}
-          echo ${FAULT_CODE} > ${SHOWING_FILE}
-        fi
-    fi
+    display_fault_code
 
     # If report directory does not exist, make it now
     if [ ! -d ${FAULT_REPORTS_PATH} ]; then
