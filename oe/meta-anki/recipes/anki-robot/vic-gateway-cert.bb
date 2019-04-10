@@ -1,8 +1,7 @@
 inherit systemd
 DESCRIPTION = "Generate x509 cert for vic-gateway"
 LICENSE = "Anki-Inc.-Proprietary"
-LIC_FILES_CHKSUM = "file://${COREBASE}/meta-qti-bsp/files/anki-licenses/\
-Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
+LIC_FILES_CHKSUM = "file://${ANKI_LICENSES}/Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 
 SRC_URI += "file://vic-gateway-cert.service"
 SRC_URI += "file://vic-gateway-cert"

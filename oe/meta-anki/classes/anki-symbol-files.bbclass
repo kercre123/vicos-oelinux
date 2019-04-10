@@ -14,7 +14,7 @@
 ANKI_LIB_SYMBOL_FILES ?= ""
 
 # Where do we put them?
-ANKI_LIB_SYMBOL_DIR ?= "${WORKSPACE}/poky/build/tmp-glibc/anki-symbol-files/lib"
+ANKI_LIB_SYMBOL_DIR ?= "${WORKSPACE}/oe/build/tmp-glibc/anki-symbol-files/lib"
 
 #
 # For each named symbol file, find it in the build tree

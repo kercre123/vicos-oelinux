@@ -1,7 +1,6 @@
 SUMMARY = "Small init script directly boots into dm-verity rootfs on emmc."
 LICENSE = "Anki-Inc.-Proprietary"
-LIC_FILES_CHKSUM = "file://${COREBASE}/meta-qti-bsp/files/anki-licenses/\
-Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
+LIC_FILES_CHKSUM = "file://${ANKI_LICENSES}/Anki-Inc.-Proprietary;md5=4b03b8ffef1b70b13d869dbce43e8f09"
 DEPENDS = "virtual/kernel"
 RDEPENDS_${PN} = "udev udev-extraconf"
 SRC_URI = "file://init-boot.sh file://syscon.dfu"
