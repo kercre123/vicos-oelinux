@@ -41,6 +41,7 @@ GID_ANKINET   = '2905'
 GID_CLOUD     = '888'
 GID_CAMERA    = '2907'
 GID_SYSTEM    = '1000'
+GID_ION       = '2908'
 
 # Add groups
 GROUPADD_PARAM_${PN} =  "  -g ${GID_ANKI} anki"
@@ -51,6 +52,7 @@ GROUPADD_PARAM_${PN} += "; -g ${GID_ANKINET} ankinet"
 GROUPADD_PARAM_${PN} += "; -g ${GID_CLOUD} cloud"
 GROUPADD_PARAM_${PN} += "; -g ${GID_CAMERA} camera"
 GROUPADD_PARAM_${PN} += "; -g ${GID_SYSTEM} system"
+GROUPADD_PARAM_${PN} += "; -g ${GID_ION} ion"
 
 # VIC-1951: group 3003 already exists as the inet group (AID_NET 3003)
 # Since we have ANDROID_PARANOID_NETWORKING enabled in the kernel, non-admin users
@@ -64,14 +66,17 @@ UID_BLUETOOTH = "${GID_BLUETOOTH}"
 UID_NET       = "${GID_ANKINET}"
 UID_CLOUD     = "${GID_CLOUD}"
 UID_SYSTEM    = "${GID_SYSTEM}"
+UID_ION       = "${GID_ION}"
+
 # Add users
 USERADD_PARAM_${PN} =  "  -u ${UID_ANKI} -g ${GID_ANKI} -s /bin/false anki"
-USERADD_PARAM_${PN} += "; -u ${UID_ROBOT} -g ${GID_ROBOT} -G ${GID_ANKI},${GID_SYSTEM} -s /bin/false robot"
-USERADD_PARAM_${PN} += "; -u ${UID_ENGINE} -g ${GID_ENGINE} -G ${GID_ANKI},${GID_SYSTEM},${AID_NET},${GID_BLUETOOTH},${GID_CAMERA} -s /bin/false engine"
+USERADD_PARAM_${PN} += "; -u ${UID_ROBOT} -g ${GID_ROBOT} -G ${GID_ANKI},${GID_SYSTEM},${GID_ION} -s /bin/false robot"
+USERADD_PARAM_${PN} += "; -u ${UID_ENGINE} -g ${GID_ENGINE} -G ${GID_ANKI},${GID_SYSTEM},${AID_NET},${GID_BLUETOOTH},${GID_CAMERA},${GID_ION} -s /bin/false engine"
 USERADD_PARAM_${PN} += "; -u ${UID_BLUETOOTH} -g ${GID_BLUETOOTH} -G ${GID_ANKI},${GID_SYSTEM} -s /bin/false bluetooth"
 USERADD_PARAM_${PN} += "; -u ${UID_NET} -g ${GID_ANKINET} -G ${GID_ANKI},${GID_BLUETOOTH},${GID_SYSTEM},${AID_NET} -s /bin/false net"
 USERADD_PARAM_${PN} += "; -u ${UID_CLOUD} -g ${GID_CLOUD} -G ${GID_ANKI},${GID_SYSTEM},${AID_NET} -s /bin/false cloud"
 USERADD_PARAM_${PN} += "; -u ${UID_SYSTEM} -g ${GID_SYSTEM} -s /bin/false system"
+USERADD_PARAM_${PN} += "; -u ${UID_ION} -g ${GID_ION} -s /bin/false ion"
 
 do_package_qa[noexec] = "1"
 
