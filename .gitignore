@@ -1,5 +1,6 @@
 *~
 
 _build/
+poky/build/conf
 bb-files.txt
 **.DS_Store

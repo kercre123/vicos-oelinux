@@ -81,7 +81,7 @@ pushd $TOPLEVEL/poky
 
 # Disable check for unset variables (it will make the bitbake scripts exit)
 set +u
-source build/conf/set_bb_env.sh
+source $TOPLEVEL/oe/set_bb_env.sh
 
 : ${ANKI_BUILD_VERSION:=0}
 export ANKI_BUILD_VERSION

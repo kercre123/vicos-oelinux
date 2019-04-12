@@ -7,9 +7,9 @@ VICTOR_COMPAT_VERSION @CodeForCoffee @chapados
 
 # Don't touch anything that could invalidate our FCC certification without telling Daniel
 android_compat/device/qcom/msm8909/ @DanielCasner
-poky/meta-qti-bsp-prop/recipes-products/images/apq-persist-image.inc @DanielCasner
-poky/meta-qti-wlan/recipes/wlan/wcnss_git.bb @DanielCasner
+oe/meta-victor-bsp/meta-qti-bsp-prop/recipes-products/images/apq-persist-image.inc @DanielCasner
+oe/meta-victor-bsp/meta-qti-wlan/recipes/wlan/wcnss_git.bb @DanielCasner
 
 # Changes to syscon firmware require HW process checking
-./poky/meta-anki/recipes-core/initscript-anki/files/syscon.dfu @nathan-anki @AShelly
-./poky/meta-anki/recipes-core/initscript-anki/files/init-boot.sh @DanielCasner @AShelly
+./oe/meta-anki/recipes-core/initscript-anki/files/syscon.dfu @nathan-anki @AShelly
+./oe/meta-anki/recipes-core/initscript-anki/files/init-boot.sh @DanielCasner @AShelly

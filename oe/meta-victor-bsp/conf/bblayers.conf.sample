@@ -1,0 +1,51 @@
+# LAYER_CONF_VERSION is increased each time build/conf/bblayers.conf
+# changes incompatibly
+LCONF_VERSION = "6"
+
+export WORKSPACE := "##OEROOT##/../.."
+
+BBPATH = "${TOPDIR}"
+BBFILES ?= ""
+
+
+BBLAYERS = " \
+##OEROOT##/../meta-victor-bsp/meta-qti-qsap-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-security-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-wlan-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-camera-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-bt-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-wfd-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-video-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-cv-prop/scve \
+##OEROOT##/../meta-victor-bsp/meta-qti-cv-prop/fastcv \
+##OEROOT##/../meta-victor-bsp/meta-qti-data-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-core-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-drones-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-auto-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-ss-mgr-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-gfx-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-qmmf-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-audio-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-display-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-bsp-prop \
+##OEROOT##/../meta-victor-bsp/meta-qti-camera \
+##OEROOT##/../meta-victor-bsp/meta-qti-display \
+##OEROOT##/../meta-victor-bsp/meta-qti-bt \
+##OEROOT##/../meta-victor-bsp/meta-qti-wlan \
+##OEROOT##/../meta-victor-bsp/meta-qti-data \
+##OEROOT##/../meta-victor-bsp/meta-qti-drones \
+##OEROOT##/../meta-victor-bsp/meta-qti-auto \
+##OEROOT##/../meta-victor-bsp/meta-qti-qmmf \
+##OEROOT##/../meta-victor-bsp/meta-qti-video \
+##OEROOT##/../meta-victor-bsp/meta-qti-ss-mgr \
+##OEROOT##/../meta-victor-bsp/meta-qti-audio \
+##OEROOT##/../meta-victor-bsp/meta-qti-core \
+##OEROOT##/../meta-victor-bsp/meta-qti-bsp \
+##OEROOT##/../meta-victor-bsp/meta-selinux \
+##OEROOT##/../meta-anki \
+##OEROOT##/../meta-user-managemement \
+##OEROOT##/../meta-victor-bsp/meta-qti-qsap \
+##OEROOT##/../meta-vicos-mods \
+##OEROOT##/../meta-vicos \
+##OEROOT##/meta"
+
