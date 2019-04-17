@@ -84,6 +84,7 @@ ExecStartPre=/bin/test $UPDATE_ENGINE_ENABLED = "True"
 # We sleep (aka delay) a random amount of time between 1 second and 1 hour here
 # so that we don't have our entire population of robots hitting the OTA server
 # at exactly the same time.
+ExecStartPre=/bin/bash -c 'echo sleeping > /run/update-engine/phase'
 ExecStartPre=/bin/bash -c 'sleep $(( RANDOM % $UPDATE_ENGINE_MAX_SLEEP ))'
 
 # Here we establish an initial error message in case we fail to start up
@@ -100,6 +101,11 @@ ExecStartPre=/bin/bash -c 'echo starting > /run/update-engine/phase'
 # correct place.  In addition, after the process finishes, its exit code is
 # captured so that other processes can inspect it
 ExecStart=/bin/bash -c '/usr/bin/logwrapper /anki/bin/update-engine; echo $? > /run/update-engine/exit_code'
+
+# If no exit code, update-engine was stopped for some reason, so we fill in
+# error code 10 (OS: Unknown system error).  See platform/update-engine/error-codes.md
+# in the victor.git repo for a list of all error codes
+ExecStopPost=/bin/bash -c '[[ -f /run/update-engine/exit_code ]] || echo 10 > /run/update-engine/exit_code'
 
 # Remove the EnvironmentFiles from the /run tmpfs.  This will ensure that they
 # are not used in a subsequent invocation of the update-engine service for
