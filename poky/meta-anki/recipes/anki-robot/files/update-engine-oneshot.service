@@ -6,8 +6,21 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+
+# This service should be considered started even after the ExecStart line below
+# has finished.  If you want to run this service again, do:
+# systemctl stop update-engine.service
+# systemctl restart update-engine-oneshot
 RemainAfterExit=yes
+
+# Normally, the update-engine.service will sleep for a random amount of time
+# between 1 second and 3600 seconds (1 hour).  This change will make sure that
+# we only sleep for 1 second and then immediately try to download and install
+# an OTA.
 ExecStartPre=/bin/bash -c 'echo UPDATE_ENGINE_MAX_SLEEP=1 > /run/update-engine-oneshot.env'
+
+# I wish I could find a cleaner way to do this, but this will literally use systemd to
+# start the update-engine.service
 ExecStart=/bin/systemctl start update-engine
 
 [Install]

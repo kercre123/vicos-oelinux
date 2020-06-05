@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, 2017-2018 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -902,6 +902,8 @@ tLimMlmOemDataRsp       *gpLimMlmOemDataRsp;
     tANI_U8 gLimIbssStaLimit;
     tANI_U8 probeCounter;
     tANI_U8 maxProbe;
+    VOS_STATUS(*sme_msg_callback)
+            (tHalHandle hal, vos_msg_t *msg);
     tANI_U8 retryPacketCnt;
 
     // Flag to debug remain on channel
@@ -1100,6 +1102,8 @@ typedef struct sAniSirGlobal
 #endif /* SAP_AUTH_OFFLOAD */
    bool max_power_cmd_pending;
    uint32_t sta_auth_retries_for_code17;
+   uint32_t sta_sap_scc_on_dfs_chan;
+   bool force_scc_with_ecsa;
 } tAniSirGlobal;
 
 #ifdef FEATURE_WLAN_TDLS

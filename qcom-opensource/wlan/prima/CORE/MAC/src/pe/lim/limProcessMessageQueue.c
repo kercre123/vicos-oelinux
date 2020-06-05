@@ -341,7 +341,10 @@ limHandleFramesInScanState(tpAniSirGlobal pMac, tpSirMsgQ limMsg, tANI_U8 *pRxPa
     }
     else if ((fc.type == SIR_MAC_MGMT_FRAME) && (fc.subType == SIR_MAC_MGMT_ACTION))
     {
-       limProcessActionFrameNoSession( pMac, pRxPacketInfo);
+        if (psessionEntry != NULL)
+            limProcessActionFrame(pMac, pRxPacketInfo, psessionEntry);
+        else
+            limProcessActionFrameNoSession(pMac, pRxPacketInfo);
     }
     else
     {
@@ -2546,6 +2549,9 @@ send_chan_switch_resp:
         lim_process_sme_del_ba_ses_req(pMac, limMsg->bodyptr);
         vos_mem_free((v_VOID_t*)limMsg->bodyptr);
         limMsg->bodyptr = NULL;
+        break;
+    case eWNI_SME_STA_DEL_BA_REQ:
+        limStaDelBASession(pMac);
         break;
     default:
         vos_mem_free((v_VOID_t*)limMsg->bodyptr);

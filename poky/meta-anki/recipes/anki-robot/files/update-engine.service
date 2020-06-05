@@ -3,33 +3,126 @@
 #
 [Unit]
 Description=Victor OS Update Engine
+
+# We need a reasonably accurate clock to perform TLS with the server
+# Otherwise, if our clock is way in the past, we will reject the server's
+# certificate for not being valid yet
 After=fake-hwclock.service
 Requires=fake-hwclock.service
+
+# /anki/bin/update-engine is the Over-the-Air (OTA) update client
 ConditionFileIsExecutable=/anki/bin/update-engine
+
+# If the 'done' file exists, it means we have completed the OTA process and
+# are now waiting to reboot into the new OS version.  We do NOT want to
+# wastefully do another OTA download and install in this case.
 ConditionFileNotEmpty=!/run/update-engine/done
+
+# vic-switchboard will disable the periodic OTA update while it is preparing to
+# start one of its own.
 ConditionFileNotEmpty=!/run/vic-switchboard/disable-update-engine
 
 [Service]
 Type=simple
+
+# This service needs just over 1 hour to get started or systemd will
+# time it out.  Look below and you will see that we can sleep for a random
+# amount of time up to 1 hour before starting /anki/bin/update-engine.
 TimeoutStartSec=3630
+
+# Set TERM to dumb to prevent /anki/bin/update-engine (written in python) from
+# emitting ANSI control characters to stdout when printing DAS events
 Environment=TERM=dumb
+
+# By default, we will sleep for a maximum of 3600 seconds (aka 1 hour).  This
+# value can be overridden by the EnvironmentFiles below
 Environment=UPDATE_ENGINE_MAX_SLEEP=3600
+
+# By default, the update-engine is NOT enabled and must be enabled by an
+# EnvironmentFile below
 Environment=UPDATE_ENGINE_ENABLED=False
+
+# By default, for security, we will NOT allow the update-engine to downgrade
+# the robot to an older OS version.  This can be overridden in an
+# EnvironmentFile and typically is for development builds
 Environment=UPDATE_ENGINE_ALLOW_DOWNGRADE=False
+
+# We need to set the SSL_CERT_FILE environment variable so that update-engine
+# knows where to find the root certificates when verifying the SSL certificate
+# from the OTA server
 Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
+# The following EnvironmentFiles override the above Environment variables that
+# will be queried by /anki/bin/update-engine.  The order is intentional.  By
+# default, we want to use the values in the read-only rootfs under
+# /anki/etc/update-engine.env.  These will be used when the robot does its
+# periodic check for updates.  We then look in the /run tmpfs. First,
+# we look in /run/update-engine-oneshot.env, in case this is the very first
+# update we are doing after gaining network access.  In that case, we expect
+# /run/update-engine-oneshot.env will override UPDATE_ENGINE_MAX_SLEEP to be
+# just 1 second.  Finally, we look in /run/vic-switchboard/update-engine.env in
+# case vic-switchboard is initiating an OTA and needs to override the prior
+# values
 EnvironmentFile=-/anki/etc/update-engine.env
 EnvironmentFile=-/run/update-engine-oneshot.env
 EnvironmentFile=-/run/vic-switchboard/update-engine.env
+
+# We keep the running state of the OTA client in /run/update-engine.  Each
+# time we start an OTA, we want to clear out that directory and start fresh
 ExecStartPre=/bin/rm -rf /run/update-engine
+
+# We create the /run/update-engine state directory here so that other processes
+# can read from it before we even start up /anki/bin/update-engine.  We also
+# make sure that /run/vic-switchboard is created since we try to remove a file
+# from it during an ExecStopPost step below
 ExecStartPre=/bin/mkdir -p /run/update-engine /run/vic-switchboard
+
+# If the update engine is NOT enabled, we want this service to fail and exit
+# right away
 ExecStartPre=/bin/test $UPDATE_ENGINE_ENABLED = "True"
+
+# We sleep (aka delay) a random amount of time between 1 second and 1 hour here
+# so that we don't have our entire population of robots hitting the OTA server
+# at exactly the same time.
+ExecStartPre=/bin/bash -c 'echo sleeping > /run/update-engine/phase'
 ExecStartPre=/bin/bash -c 'sleep $(( RANDOM % $UPDATE_ENGINE_MAX_SLEEP ))'
+
+# Here we establish an initial error message in case we fail to start up
+# /anki/bin/update-engine and cannot write a proper error message
 ExecStartPre=/bin/bash -c 'echo Unclean exit > /run/update-engine/error'
+
+# 'starting' is the first phase of downloading and installing an OTA file. The
+# /run/update-engine/phase file can be used by other processes to inspect what
+# phase we are currently in
+ExecStartPre=/bin/bash -c 'echo starting > /run/update-engine/phase'
+
+# This is where systemd will actually start up /anki/bin/update-engine.  It is
+# wrapped with logwrapper so that any emitted DAS events will end up in the
+# correct place.  In addition, after the process finishes, its exit code is
+# captured so that other processes can inspect it
 ExecStart=/bin/bash -c '/usr/bin/logwrapper /anki/bin/update-engine; echo $? > /run/update-engine/exit_code'
+
+# If no exit code, update-engine was stopped for some reason, so we fill in
+# error code 10 (OS: Unknown system error).  See platform/update-engine/error-codes.md
+# in the victor.git repo for a list of all error codes
+ExecStopPost=/bin/bash -c '[[ -f /run/update-engine/exit_code ]] || echo 10 > /run/update-engine/exit_code'
+
+# Remove the EnvironmentFiles from the /run tmpfs.  This will ensure that they
+# are not used in a subsequent invocation of the update-engine service for
+# a periodic update check
 ExecStopPost=/bin/rm -rf /run/update-engine-oneshot.env
 ExecStopPost=/bin/rm -rf /run/vic-switchboard/update-engine.env
+
+# /run is a tmpfs taking up valuable RAM.  We need to delete the following
+# large files to free up RAM
 ExecStopPost=/bin/rm -rf /run/update-engine/boot.img
 ExecStopPost=/bin/rm -rf /run/update-engine/delta.bin
 ExecStopPost=/bin/rm -rf /run/update-engine/aboot.img
+
+# We want files that /anki/bin/update-engine writes to have a group owner of
+# 'anki' so that processes with the same group can read them
 Group=anki
+
+# We change the default UMask from 0022 to 0002 to allow group write of
+# the files created by the process
 UMask=0002

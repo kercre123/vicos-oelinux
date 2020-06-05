@@ -57,6 +57,22 @@ erased every power cycles meaning the robot does not remember wifi configuration
 
 
 -------------------------------------------------------------------------------
+## Making OTA files
+
+To make an OTA file, you will need to set the `OTA_KEY_PASS` environment
+variable.  Ask another team member for the correct value.
+
+```
+$ export OTA_KEY_PASS=<password for ota key>
+$ make -C $WS/ota
+```
+
+This will create `$WS/_build/vicos-1.x.x.x.ota`. You can run `python -m SimpleHTTPServer 5555`
+from the `$WS/_build` directory to serve the `.ota` file to robots.  You can build and serve 
+the `.ota` file all in one step with `make -C $WS/ota serve`.
+
+
+-------------------------------------------------------------------------------
 
 ## Making Unlock OTA files
 

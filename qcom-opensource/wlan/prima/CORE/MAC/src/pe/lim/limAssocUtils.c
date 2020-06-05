@@ -2698,6 +2698,8 @@ limDelSta(
     tpDeleteStaParams pDelStaParams = NULL;
     tSirMsgQ msgQ;
     tSirRetStatus     retCode = eSIR_SUCCESS;
+    tANI_U8 channelNum = 0;
+    tANI_U32 cfgValue = 0;
 
     pDelStaParams = vos_mem_malloc(sizeof( tDeleteStaParams ));
     if (NULL == pDelStaParams)
@@ -2707,6 +2709,18 @@ limDelSta(
     }
 
     vos_mem_set((tANI_U8 *) pDelStaParams, sizeof(tDeleteStaParams), 0);
+
+    wlan_cfgGetInt(pMac, WNI_CFG_ACTIVE_PASSIVE_CON, &cfgValue);
+
+    channelNum = limGetCurrentOperatingChannel(pMac);
+    limLog(pMac, LOG1, FL("Current Operating channel is %d"), channelNum);
+    if (!cfgValue && (eLIM_STA_ROLE == GET_LIM_SYSTEM_ROLE(psessionEntry)) &&
+         limIsconnectedOnDFSChannel(channelNum))
+    {
+        limCovertChannelScanType(pMac, channelNum, false);
+        pMac->lim.dfschannelList.timeStamp[channelNum] = 0;
+    }
+
 
   //
   // DPH contains the STA index only for "peer" STA entries.
@@ -2744,23 +2758,39 @@ limDelSta(
         pDelStaParams->respReqd = 0;
     else
     {
-        //when limDelSta is called from processSmeAssocCnf then mlmState is already set properly.
-        if(eLIM_MLM_WT_ASSOC_DEL_STA_RSP_STATE != GET_LIM_STA_CONTEXT_MLM_STATE(pStaDs))
-        {
-            MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, eLIM_MLM_WT_DEL_STA_RSP_STATE));
-            SET_LIM_STA_CONTEXT_MLM_STATE(pStaDs, eLIM_MLM_WT_DEL_STA_RSP_STATE);
-        }
-        if ( (eLIM_STA_ROLE == GET_LIM_SYSTEM_ROLE(psessionEntry)) || 
-             (eLIM_BT_AMP_STA_ROLE == GET_LIM_SYSTEM_ROLE(psessionEntry)) )
-        {
-            MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, eLIM_MLM_WT_DEL_STA_RSP_STATE));
+        if (pStaDs->staType != STA_ENTRY_TDLS_PEER) {
+              /**
+               * when limDelSta is called from processSmeAssocCnf
+               * then mlmState is already set properly.
+               */
+              if(eLIM_MLM_WT_ASSOC_DEL_STA_RSP_STATE !=
+                 GET_LIM_STA_CONTEXT_MLM_STATE(pStaDs)) {
+                    MTRACE(macTrace
+                           (pMac, TRACE_CODE_MLM_STATE,
+                           psessionEntry->peSessionId,
+                           eLIM_MLM_WT_DEL_STA_RSP_STATE));
+                    SET_LIM_STA_CONTEXT_MLM_STATE(pStaDs,
+                           eLIM_MLM_WT_DEL_STA_RSP_STATE);
+              }
+             if ((eLIM_STA_ROLE ==
+                  GET_LIM_SYSTEM_ROLE(psessionEntry)) ||
+                 (eLIM_BT_AMP_STA_ROLE ==
+                  GET_LIM_SYSTEM_ROLE(psessionEntry))) {
+                       MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE,
+                                       psessionEntry->peSessionId,
+                                       eLIM_MLM_WT_DEL_STA_RSP_STATE));
 
-            psessionEntry->limMlmState = eLIM_MLM_WT_DEL_STA_RSP_STATE; 
-    
+                       psessionEntry->limMlmState =
+                               eLIM_MLM_WT_DEL_STA_RSP_STATE;
+             }
+
         }
-        pDelStaParams->respReqd = 1;
-        //we need to defer the message until we get the response back from HAL.
+        /**
+         * we need to defer the message until we get the
+         * response back from HAL.
+         */
         SET_LIM_PROCESS_DEFD_MESGS(pMac, false);
+        pDelStaParams->respReqd = 1;
     }
 
     /* Update PE session ID*/
