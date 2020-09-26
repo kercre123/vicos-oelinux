@@ -10,7 +10,7 @@ do_install() {
   install -m 0755 ${WORKDIR}/localsshuser.sh ${D}${sysconfdir}/init.d/localsshuser.sh
   install -d ${D}${sysconfdir}/rc3.d
   cd ${D}${sysconfdir}/rc3.d
-  ln -s ../S90localsshuser.sh localsshuser.sh
+  ln -s ../init.d/localsshuser.sh S90localsshuser.sh
 }
 
 FILES_${PN} += "${sysconfdir}/init.d"
