@@ -8,6 +8,7 @@ FILESPATH =+ "${WORKSPACE}:"
 SRC_URI = "file://anki/rampost/"
 
 TARGET_CFLAGS += "-Os -Wall -Werror -Wno-unused-result -Wno-strict-aliasing -fPIC"
+TARGET_CFLAGS += "${@base_conditional('OSKR', '1', ' -DOSKR ', '',d)}"
 
 S = "${WORKDIR}/anki/rampost"
 
