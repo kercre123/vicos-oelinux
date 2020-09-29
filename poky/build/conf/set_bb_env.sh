@@ -26,7 +26,7 @@ then
 fi
 
 umask 022
-unset DISTRO MACHINE PRODUCT VARIANT FACTORY
+unset DISTRO MACHINE PRODUCT VARIANT FACTORY OSKR
 
 # OE doesn't want a set-gid directory for its tmpdir
 BT="./build/tmp-glibc"
@@ -98,6 +98,17 @@ function build-8009-robot-perf-image() {
   cdbitbake machine-robot-image
 }
 
+function build-8009-robot-oskr-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-perf
+  export VARIANT=perf
+  export PRODUCT=robot
+  export OSKR=1
+  export ANKI_AMAZON_ENDPOINTS_ENABLED=0
+  cdbitbake machine-robot-image
+}
+
 function build-8009-robot-user-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
@@ -156,6 +167,10 @@ function build-victor-robot-image-incremental() {
 
 function build-victor-robot-perf-image() {
   build-8009-robot-perf-image
+}
+
+function build-victor-robot-oskr-image() {
+  build-8009-robot-oskr-image
 }
 
 function build-victor-robot-user-image() {
@@ -229,7 +244,7 @@ rebake() {
 }
 
 unset_bb_env() {
-  unset DISTRO MACHINE PRODUCT VARIANT FACTORY DEV BETA ANKI_AMAZON_ENDPOINTS_ENABLED
+  unset DISTRO MACHINE PRODUCT VARIANT FACTORY DEV BETA ANKI_AMAZON_ENDPOINTS_ENABLED OSKR
 }
 
 # Find build templates from qti meta layer.
@@ -245,6 +260,6 @@ export TEMPLATECONF="meta-qti-bsp/conf"
 # (BBLAYERS is explicitly blocked from this within OE-Core itself, though...)
 # oe-init-build-env calls oe-buildenv-internal which sets
 # BB_ENV_EXTRAWHITE, append our vars to the list
-export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN BETA ANKI_AMAZON_ENDPOINTS_ENABLED"
+export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN BETA ANKI_AMAZON_ENDPOINTS_ENABLED OSKR"
 
 list-build-commands
