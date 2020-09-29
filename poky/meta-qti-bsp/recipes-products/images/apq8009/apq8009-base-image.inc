@@ -116,8 +116,14 @@ do_makesystem() {
     ## -> All MMC block devices get the major device number 179
     ## -> The minor number corresponds to the partition number (counting from 1)
     ## -> We assume the boot partition is always on the first MMC block device
- 
-    if [ "${FACTORY}" == "1" ] || [ "${USER_BUILD}" == "1" ]; then
+
+    # Decide if we lock user filesystem with dm-verity
+    # We use it for factory images and user builds that are not OSKR builds.    
+    if [ "${FACTORY}" == "1" ]; then
+        KERNEL_CMD_PARAMS="${@ d.getVar("KERNEL_CMD_PARAMS") } dm-verity.dev_wait=1 dm=\"system none ro,0 $FS_SIZE_IN_512_BLOCKS verity $HASH_TYPE 179:##SYSTEM_BOOT_PART## 179:##SYSTEM_BOOT_PART## $DATA_BLOCK_SIZE $HASH_BLOCK_SIZE $DATA_BLOCKS $HASH_OFFSET $HASH_ALGORITHM $ROOT_HASH $SALT\" root=/dev/dm-0"
+    elif [ "${USER_BUILD}" == "1" ] && [ "${OSKR}" == "1" ]; then
+        KERNEL_CMD_PARAMS="${@ d.getVar("KERNEL_CMD_PARAMS") }"
+    elif [ "${USER_BUILD}" == "1" ]; then
         # Enable dm-verity for any FACTORY build or if we are making a USER build
         KERNEL_CMD_PARAMS="${@ d.getVar("KERNEL_CMD_PARAMS") } dm-verity.dev_wait=1 dm=\"system none ro,0 $FS_SIZE_IN_512_BLOCKS verity $HASH_TYPE 179:##SYSTEM_BOOT_PART## 179:##SYSTEM_BOOT_PART## $DATA_BLOCK_SIZE $HASH_BLOCK_SIZE $DATA_BLOCKS $HASH_OFFSET $HASH_ALGORITHM $ROOT_HASH $SALT\" root=/dev/dm-0"
     else
