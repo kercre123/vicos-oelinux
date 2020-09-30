@@ -117,6 +117,7 @@ NON_SECURE_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf
 PROD_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img
 BOOT_KEY ?= qtipri.encrypted.key
 DEV_BOOT_KEY = ../poky/meta-qti-bsp-prop/recipes-products/images/kernel/vble-qti.key
+OSKR_BOOT_KEY ?= qtioskrpri.encrypted.key
 
 prodsign:
 	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
@@ -125,6 +126,14 @@ prodsign:
 	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
 	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
 	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
+
+oskrsign:
+	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
+	openssl pkeyutl -sign -in $(NON_SECURE_KERNEL).sha256 -inkey $(OSKR_BOOT_KEY) -out $(NON_SECURE_KERNEL).sig -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1
+	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
+	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
+	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
+#	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
 
 devsign:
 	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
