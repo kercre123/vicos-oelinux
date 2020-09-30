@@ -65,6 +65,11 @@ ifeq ($(TARGET_BUILD_VARIANT),user)
   CFLAGS += -DPROD_BOOT_KEY=1
 endif
 
+ifeq ($(OSKR),1)
+  CFLAGS += -DDISABLE_FASTBOOT_CMDS=1
+  CFLAGS += -DOSKR_BOOT_KEY=1
+endif
+
 ifeq ($(APPEND_CMDLINE),1)
   CFLAGS += -D_APPEND_CMDLINE=1
 endif

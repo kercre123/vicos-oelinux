@@ -36,6 +36,8 @@
 
 #ifdef PROD_BOOT_KEY
 #include <LEOEMCertificate_prod.h>
+#elseif OSKR_BOOT_KEY
+#include <LEOEMCertificate_oskr.h>
 #else
 #include <LEOEMCertificate.h>
 #endif
