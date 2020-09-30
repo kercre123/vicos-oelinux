@@ -35,12 +35,18 @@
 #include "scm.h"
 
 #ifdef PROD_BOOT_KEY
+
 #include <LEOEMCertificate_prod.h>
-#elseif OSKR_BOOT_KEY
+
+#else
+
+#ifdef OSKR_BOOT_KEY
 #include <LEOEMCertificate_oskr.h>
 #else
 #include <LEOEMCertificate.h>
 #endif
+
+#endif // PROD_BOOT_KEY
 
 const char hash_identifier[] = {
 	0x30, 0x31, 0x30, 0x0D, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,

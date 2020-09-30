@@ -50,6 +50,8 @@ EXTRA_OEMAKE_append = " ${@base_contains('DISTRO_FEATURES', 'vble', 'VERIFIED_BO
 
 EXTRA_OEMAKE_append = " ${@base_conditional('USER_BUILD', '1', 'TARGET_BUILD_VARIANT=user', '', d)}"
 
+EXTRA_OEMAKE_append = " ${@base_conditional('OSKR', '1', 'OSKR=1', '', d)}"
+
 python () {
     qsn = os.environ.get('QSN', False)
     bb.note("LK QSN_LOCK={}".format(qsn))
