@@ -62,7 +62,7 @@ def get_ota_file_name(qsn, esn=None):
     "Returns the OTA file name of a given QSN"
     if esn is not None:
         return "{}.ota".format(esn)
-    return "vicos-unlock-{}.ota".format(qsn)
+    return "vicos-5.0.0-{}.ota".format(qsn)
 
 
 def make_ota(qsn, esn, aboot_path, ota_dir, ota_key_pass, out_dir):

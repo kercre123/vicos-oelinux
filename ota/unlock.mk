@@ -32,7 +32,7 @@ OTAPASS ?= file:ota_test.pass
 OTAENC ?= 1
 ANKIDEV ?= 0
 
-UPDATE_VERSION ?= unlock
+UPDATE_VERSION ?= 5.0.0
 
 OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION)-$(QSN).ota
 
