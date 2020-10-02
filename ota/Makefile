@@ -126,11 +126,20 @@ serve: $(OTA_FILE)
 NON_SECURE_KERNEL=$(IMG_DIR)/apq8009-robot-boot.img.nonsecure
 PROD_KERNEL=$(IMG_DIR)/apq8009-robot-boot.img
 BOOT_KEY ?= qtipri.encrypted.key
+OSKR_BOOT_KEY ?= qtioskrpri.encrypted.key
 DEV_BOOT_KEY = ../poky/meta-qti-bsp-prop/recipes-products/images/kernel/vble-qti.key
 
 prodsign: $(NON_SECURE_KERNEL)
 	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
 	openssl pkeyutl -sign -in $(NON_SECURE_KERNEL).sha256 -inkey $(BOOT_KEY) -out $(NON_SECURE_KERNEL).sig -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1
+	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
+	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
+	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
+	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
+
+oskrsign: $(NON_SECURE_KERNEL)
+	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
+	openssl pkeyutl -sign -in $(NON_SECURE_KERNEL).sha256 -inkey $(OSKR_BOOT_KEY) -out $(NON_SECURE_KERNEL).sig -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1
 	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
 	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
 	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
@@ -157,3 +166,14 @@ resign-dev: $(BUILD)/$(BOOT_STEM).img
 	cat $< $<.sig.padded > $<.signed
 	mv $<.signed $<
 	rm -rf $<.sha256 $<.sig $<.sig.padded
+
+# Tasks to check BOOT parititon has expected signature
+
+verify-boot-oskr:
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(OSKR_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+
+verify-boot-prod:
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+
+verify-boot-dev:
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(DEV_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
