@@ -1,4 +1,4 @@
-IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf
+>IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf
 OS_VERSION_FILE=../poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/machine-robot-image/1.0-r0/rootfs/etc/os-version
 BUILD=../_build
 BOOT_STEM=apq8009-robot-boot
@@ -162,24 +162,27 @@ resign-dev: $(BUILD)/$(BOOT_STEM).img
 EMMC_FILE=../poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/lk/git-r1signed_robot_perf_perf/package/boot/integrity/emmc_appsboot.mbn
 
 verify-aboot-oskr:
-	grep "Digital Dream Labs" $(EMMC_FILE)
+	grep "Digital Dream Labs" $(EMMC_FILE) || (echo "ABOOT CHECK FAILED. BAD x509"; exit 1)
 	echo "ABOOT CHECK PASSED. CORRECT x509."
 
 verify-aboot-prod:
-	grep "Anki" $(EMMC_FILE)
-	grep "San Francisco" $(EMMC_FILE)
+	grep "Anki" $(EMMC_FILE) || (echo "ABOOT CHECK FAILED. BAD x509"; exit 1)
+	grep "San Francisco" $(EMMC_FILE) ||  (echo "ABOOT CHECK FAILED. BAD x509"; exit 1)
 	echo "ABOOT CHECK PASSED. CORRECT x509."
 
 verify-aboot-dev:
-	grep "Widgit" $(EMMC_FILE)
+	grep "Widgit" $(EMMC_FILE) ||  (echo "ABOOT CHECK FAILED. BAD x509"; exit 1)
 	echo "ABOOT CHECK PASSED. CORRECT x509."
 
 verify-boot-oskr: verify-aboot-oskr
-	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(OSKR_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(OSKR_BOOT_KEY).pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
+	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
 verify-boot-prod: verify-aboot-prod
-	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(BOOT_KEY).pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
+	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
 verify-boot-dev: verify-aboot-dev
-	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(DEV_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey vble-qti.key -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
+	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
