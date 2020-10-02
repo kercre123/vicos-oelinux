@@ -176,13 +176,10 @@ verify-aboot-dev:
 
 verify-boot-oskr: verify-aboot-oskr
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(OSKR_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
-	echo "BOOT PASSED. SIGNED WITH CORRECT KEY"
 
 verify-boot-prod: verify-aboot-prod
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
-	echo "BOOT PASSED. SIGNED WITH CORRECT KEY"
 
 verify-boot-dev: verify-aboot-dev
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(DEV_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
-	echo "BOOT PASSED. SIGNED WITH CORRECT KEY"
 
