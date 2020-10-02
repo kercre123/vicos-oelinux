@@ -161,28 +161,28 @@ resign-dev: $(BUILD)/$(BOOT_STEM).img
 
 EMMC_FILE=../poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/lk/git-r1signed_robot_perf_perf/package/boot/integrity/emmc_appsboot.mbn
 
-verify-boot-oskr:
+verify-aboot-oskr:
 	grep "Digital Dream Labs" $(EMMC_FILE)
-	echo "BOOT PASSED"
+	echo "ABOOT CHECK PASSED. CORRECT x509."
 
-verify-boot-prod:
+verify-aboot-prod:
 	grep "Anki" $(EMMC_FILE)
 	grep "San Francisco" $(EMMC_FILE)
-	echo "BOOT PASSED"
+	echo "ABOOT CHECK PASSED. CORRECT x509."
 
-verify-boot-dev:
+verify-aboot-dev:
 	grep "Widgit" $(EMMC_FILE)
-	echo "BOOT PASSED"
+	echo "ABOOT CHECK PASSED. CORRECT x509."
 
-verify-aboot-oskr: verify-boot-oskr
+verify-boot-oskr: verify-aboot-oskr
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(OSKR_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
-	echo "PASSED"
+	echo "BOOT PASSED. SIGNED WITH CORRECT KEY"
 
-verify-aboot-prod: verify-boot-prod
+verify-boot-prod: verify-aboot-prod
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
-	echo "PASSED"
+	echo "BOOT PASSED. SIGNED WITH CORRECT KEY"
 
-verify-aboot-dev: verify-boot-dev
+verify-boot-dev: verify-aboot-dev
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(DEV_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
-	echo "PASSED"
+	echo "BOOT PASSED. SIGNED WITH CORRECT KEY"
 
