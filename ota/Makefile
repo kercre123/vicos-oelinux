@@ -183,6 +183,6 @@ verify-boot-prod: verify-aboot-prod
 	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
 verify-boot-dev: verify-aboot-dev
-	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey vble-qti.key -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey vble-qti.key.pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
 	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
