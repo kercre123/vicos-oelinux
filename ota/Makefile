@@ -153,3 +153,36 @@ resign-dev: $(BUILD)/$(BOOT_STEM).img
 	cat $< $<.sig.padded > $<.signed
 	mv $<.signed $<
 	rm -rf $<.sha256 $<.sig $<.sig.padded
+
+#
+# Because making new boot images is delicate, these can be used to test.
+# Both the ABOOT and BOOT must match, for example passing both prod tests
+# 
+
+EMMC_FILE=../poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/lk/git-r1signed_robot_perf_perf/package/boot/integrity/emmc_appsboot.mbn
+
+verify-boot-oskr:
+	grep "Digital Dream Labs" $(EMMC_FILE)
+	echo "BOOT PASSED"
+
+verify-boot-prod:
+	grep "Anki" $(EMMC_FILE)
+	grep "San Francisco" $(EMMC_FILE)
+	echo "BOOT PASSED"
+
+verify-boot-dev:
+	grep "Widgit" $(EMMC_FILE)
+	echo "BOOT PASSED"
+
+verify-aboot-oskr: verify-boot-oskr
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(OSKR_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+	echo "PASSED"
+
+verify-aboot-prod: verify-boot-prod
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+	echo "PASSED"
+
+verify-aboot-dev: verify-boot-dev
+	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(DEV_BOOT_KEY) -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | cat
+	echo "PASSED"
+
