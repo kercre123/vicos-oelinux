@@ -32,9 +32,6 @@ do_install_append () {
     if [[ ${USER_BUILD} != "1" ]]; then
         # set to "d" for dev builds
         ANKI_BUILD_TYPE="d"
-    elif [[ ${OSKR} = "1" ]]; then
-	# set to "oskr" for oskr builds
-	ANKI_BUILD_TYPE="oskr"
     elif [[ ${DEV} = "1" ]]; then
 	# set to "ud" for userdev builds
 	ANKI_BUILD_TYPE="ud"

@@ -101,10 +101,9 @@ function build-8009-robot-perf-image() {
 function build-8009-robot-oskr-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
-  export DISTRO=msm-user
+  export DISTRO=msm-perf
   export VARIANT=perf
   export PRODUCT=robot
-  export DEV="1"
   export OSKR=1
   export ANKI_AMAZON_ENDPOINTS_ENABLED=0
   cdbitbake machine-robot-image
