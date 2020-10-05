@@ -1,69 +1,21 @@
 # vicos-oelinux
 
-This repository contains the embedded OS that runs on victor hardware.
-If you are lookingg for victor embedded firmware, robotics, animation and engine layers checkout [vicos](https://github.com/anki/victor).
+THIS BRANCH OF THE CODE IS FOR MAKING UNLOCK IMAGES. YOU ONLY WANT THIS
+TO UNLOCK PROD ROBOTS FOR EITHER DEV OR OSKR ROBOTS.
 
-## Build Instructions
+THIS ASSUMES YOU HAVE BUILT A **NORMAL** OTA UPDATE BEFORE. IF YOU HAVEN'T
+CHECK OUT THE MASTER BRANCH AND FOLLOW THE INSTRUCTIONS SO YOU UNDERSTAND
+HOW THE SYSTEM WORKS.
 
-The following steps require a Linux host setup to build vicos-oelinux, e.g. `vmosGamma.ankicore.com`.
+## Practical matters.
 
-Clone git repository:
-```
-git clone --recursive git@github.com:anki/vicos-oelinux.git
-```
+This is a delicate build with potential to brick robots if done incorrectly.
+The best thing to do is get the code build, tested, and locked down, then
+just run the part listed as **Actual Build** on a day to day basis to generate
+the new images.
 
-Start Build:
-```
-cd vicos-oelinux/poky
-source build/conf/set_bb_env.sh
-build-victor-robot-image
-```
-
--------------------------------------------------------------------------------
-
-## Build Flavors
-
-We currently have 5 different build flavors for the Victor OS.
-
-*build-victor-*
-
-* robot-image
-* robot-perf-image
-* robot-user-image
-* robot-factory-image
-* robot-facdev-image
-
-These permute three switches
-
-### Perf
-Perf builds are optimized more for performance than non-perf builds, particularly in the Linux Kernel. At the moment
-*robot-image* is the only non-perf build flavor.
-
-### User
-User build are as intended for software released to actual users. Debugging features such as SSH, ADB and fastboot
-are disabled for security. *All user builds are also perf builds.*
-
-**User builds expect to use production signing keys**
-* User build LK requires the production kernel signing key to be used to sign the kernel
-* User build root file system requires OTA files to be signed with the production OTA signing key
-
-Because user builds are basically not debuggable and require production keys, there are non-user versions of the user
-builds.
-
-| User                | Debuggable         |
-|---------------------|--------------------|
-| robot-user-image    | robot-perf-image   |
-| robot-factory-image | robot-facdev-image |
-
-Note that the robot-facdev-image build target as a non-user builds expects development keys, not production keys.
-
-### Factory
-Factory builds are intended as the out of box / recovery firmware programmed into the F slots of robots.
-The primary difference for factory builds is that `/data` is always mounted as a tmpfs in factory builds so it is
-erased every power cycles meaning the robot does not remember wifi configuration etc.
-
-
--------------------------------------------------------------------------------
+If you do need to bring up a new machine, make sure to test
+extensively before rolling out an image.
 
 ## Making Unlock OTA files
 
@@ -107,7 +59,7 @@ until after we've switched branches:
     git submodule update --init --recursive
     git submodule update --recursive
 
-### Initial Build - OTA only
+### Initial Build And Prep
 
 Make sure we have a good image with the lasted production release that
 works. If our buiild system isn't working correctly, we can still do a
@@ -119,56 +71,16 @@ factory reset.
         source build/conf/set_bb_env.sh
         build-victor-robot-factory-image # wait 40-50 minutes
 
-1. Create OTA:
-        cd $WORKSPACE/
-         export OTA_KEY_PASS=<password> # Use a leading space to keep the password from being stored in HISTORY
-        OTAKEY="ota_prod.key" ANKIDEV=0 UPDATE_VERSION=2.0.0 IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf make -C ./ota/ all
-        ls _build # look at what you just made
+### Set OSKR Unlock flavor if wanted
 
-### OTA verification
+By default this will be a Dev bot build pointing to our dev stack and
+with a warning screen. If we want an OSKR build we need to change the
+signature on the system image:
 
-If you want to make sure you built files suitable for deployment you
-can do a test deployment before creating a file that can possibly
-brick your device. You will not be able to run the code after
-deployment because it is still signed with development keys, but you
-can safely reset the robot when finished.
-
-1. Copy the resulting file `vicos-2.0.0.ota` to your host machine
-    where it's easier to connect to the robot.
-1. Use a factory reset robot that has 0.9.0 Firmware. To check firmware version:
-    * Put Vector a on powered docking station.
-    * Wait for it to tell you to go to anki.com/v
-    * Hit the backpack button twice to go in to BlueTooth pairing
-    mode.
-    * Raise the arm up and then down.
-    * You should now see a screen with the version number 0.9.0.
-    * If you don't see this hold down the backpack button for 20
-      seconds and try again.
-1. Deploy via mac-client or web client once that is restored. For
-    mac-client:
-    * Start a web server in the directory where you have the OTA:
-      `python -m http.server` or for python2 `python -m
-      SimpleHTTPServer`
-    * Place robot in a powered dock and let it boot. Press the
-      backpack button twice to go to pairing mode.
-    * Connect with mac-client.
-    * In mac-client, go to ap mode which seems to be more reliable
-      `wifi-ap true`
-    * Change your host machine wifi with SSID and PW listed in
-      mac-client.
-    * Get your IP from a terminal with `ifconfig | grep 192`
-    * Go to http://<IP_ADDRESS>:8000 in your web browser, copy the
-      link for the file.
-    * In mac-client `ota-start <url>`
-    * In mac-client `ota-progress` will hopefully show a status
-      update.
-    If you get an error consult the [Victor Error Codes](https://ankiinc.atlassian.net/wiki/spaces/ATT/pages/425492587/Victor+Error+Codes) document in
-    confluence to debug.
-
-If all goes well the device will reboot however it will hang at boot
-with one white light on the back. This is fine. We're testing that the
-code can be deployed to the client, but it can't run yet because the
-unit isn't unlocked. Factory reset the robot before the next step.
+```
+cd ota
+make oskrsign
+```
 
 ### Full unlock build
 
@@ -198,8 +110,12 @@ To get the QSN:
 1. Initialize environment:
         cd poky # FROM MP-UNLOCK
         source build/conf/set_bb_env.sh
-1. Start a robot-perf-image build but cancel when it starts the task queue. This is just to change the build flavor
-    parameters for the next step.
+1. To set the proper environment variables, you need to run a build task and then quit it after it fires up.
+
+    For a DEV image: `build-robot-perf-image`
+
+    For an OSKR image: `build-robot-perfoskr-image`
+
 1. Make the unlock file: `cd ota` and `python3 mk_unlock.py -q<qsn>
    -sm --sectools ~/src/apq8009-le-1-0-2_ap_standard_oem/common/tools/sectools/` or
    `python3 mk_unlock.py -l <file with one QSN per line> -sm --sectools ~/src/apq8009-le-1-0-2_ap_standard_oem/common/tools/sectools/`
@@ -211,3 +127,65 @@ When the build is complete you'll have a file in
 `MP-UNLOCK/_build/unlock` with the robot's QSN in the filename. This
 can be deployed as listed above with mac-client and after completion
 you should have a unloced robot.
+
+### Verification - After first full build.
+
+1. Verify the signatures match. A make task will check both boot and ABOOT match.
+    ```
+    cd ota
+    make verify-boot-dev # for DEV builds
+    make verify-boot-oskr # for OSKR builds
+    ```
+
+2. Verify you properly checked out the correct submodules.
+
+    ```
+    cd anki/victor
+    git log # check logs to make sure we're not on mainline, maybe a tag
+    ```
+
+### Testing new image on existing DEV/OSKR bot.
+
+The security checks in the update script normally prevent you from
+re-updating a DEV or OSKR unlocked bot. However these are just softare
+checks and can be disabled manually in the robots
+`/anki/dev/update-engine`
+
+```diff
+diff --git a/platform/update-engine/update-engine.py b/platform/update-engine/update-engine.py
+index 9c8fdcd357..c37833bb3a 100755
+--- a/platform/update-engine/update-engine.py
++++ b/platform/update-engine/update-engine.py
+@@ -567,8 +567,8 @@ def validate_new_os_version(current_os_version, new_os_version, cmdline):
+     new_os_version_suffix = m.groups()[0]
+     m = os_version_regex.match(current_os_version)
+     current_os_version_suffix = m.groups()[0]
+-    if new_os_version_suffix != current_os_version_suffix:
+-        die(216, "Update from " + current_os_version + " to " + new_os_version + " not allowed")
++#    if new_os_version_suffix != current_os_version_suffix:
++#        die(216, "Update from " + current_os_version + " to " + new_os_version + " not allowed")
+     if LooseVersion(new_os_version) < LooseVersion(current_os_version):
+         die(216, "Downgrade from " + current_os_version + " to " + new_os_version + " not allowed")
+     return
+@@ -620,11 +620,11 @@ def update_from_url(url):
+         validate_new_os_version(current_os_version, next_boot_os_version, cmdline)
+         if DEBUG:
+             print("Updating to version {}".format(next_boot_os_version))
+-        if is_dev_robot(cmdline):
+-            if not manifest.getint("META", "ankidev"):
+-                die(214, "Ankidev OS can't install non-ankidev OTA file")
+-        elif manifest.getint("META", "ankidev"):
+-            die(214, "Non-ankidev OS can't install ankidev OTA file")
++#        if is_dev_robot(cmdline):
++#            if not manifest.getint("META", "ankidev"):
++#                die(214, "Ankidev OS can't install non-ankidev OTA file")
++#        elif manifest.getint("META", "ankidev"):
++#            die(214, "Non-ankidev OS can't install ankidev OTA file")
+         # Mark target unbootable
+         if not call(['/bin/bootctl', current_slot, 'set_unbootable', target_slot]):
+             die(202, "Could not mark target slot unbootable")
+```
+
+And then kick off the update manually with this command. You will also need to reboot manually when its complete.
+
+`UPDATE_IMAGE_DEBUG=True UPDATE_IMAGE_URL=http://localhost:8000/mpunlock/vicos-5.0.0-312675720.ota ./update-engine`
