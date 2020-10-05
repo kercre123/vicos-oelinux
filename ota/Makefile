@@ -114,6 +114,7 @@ serve: $(OTA_FILE)
 ###############################################################################
 
 NON_SECURE_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img.nonsecure
+SECURE_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img
 PROD_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img
 BOOT_KEY ?= qtipri.encrypted.key
 DEV_BOOT_KEY = ../poky/meta-qti-bsp-prop/recipes-products/images/kernel/vble-qti.key
@@ -125,7 +126,6 @@ prodsign:
 	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
 	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
 	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
-	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
 
 oskrsign:
 	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
@@ -133,7 +133,6 @@ oskrsign:
 	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
 	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
 	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
-#	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
 
 devsign:
 	openssl dgst -sha256 -binary $(NON_SECURE_KERNEL) > $(NON_SECURE_KERNEL).sha256
@@ -141,8 +140,6 @@ devsign:
 	dd if=/dev/zero of=$(NON_SECURE_KERNEL).sig.padded bs=2048 count=1
 	dd if=$(NON_SECURE_KERNEL).sig of=$(NON_SECURE_KERNEL).sig.padded conv=notrunc
 	cat $(NON_SECURE_KERNEL) $(NON_SECURE_KERNEL).sig.padded > $(PROD_KERNEL)
-	rm -rf $(NON_SECURE_KERNEL).sha256 $(NON_SECURE_KERNEL).sig $(NON_SECURE_KERNEL).sig.padded
-
 
 resign-dev: $(BUILD)/$(BOOT_STEM).img
 	truncate --size=-2048 $<
@@ -152,7 +149,6 @@ resign-dev: $(BUILD)/$(BOOT_STEM).img
 	dd if=$<.sig of=$<.sig.padded conv=notrunc
 	cat $< $<.sig.padded > $<.signed
 	mv $<.signed $<
-	rm -rf $<.sha256 $<.sig $<.sig.padded
 
 #
 # Because making new boot images is delicate, these can be used to test.
@@ -183,6 +179,6 @@ verify-boot-prod: verify-aboot-prod
 	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
 verify-boot-dev: verify-aboot-dev
-	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey vble-qti.key.pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
+	openssl pkeyutl -verify -in  $(SECURE_KERNEL).sha256  -sigfile $(SECURE_KERNEL).sig -inkey vble-qti.key.pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
 	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
