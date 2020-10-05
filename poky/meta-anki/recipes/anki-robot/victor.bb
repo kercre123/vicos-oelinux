@@ -112,7 +112,11 @@ do_compile () {
          ./project/victor/scripts/victor_build_shipping.sh
        fi
      else
-       ./project/victor/scripts/victor_build_release.sh
+       if [[ "${OSKR}" == "1" ]]; then
+         ./project/victor/scripts/victor_build_oskr.sh
+       else
+         ./project/victor/scripts/victor_build_release.sh
+       fi
      fi
    fi
 }
