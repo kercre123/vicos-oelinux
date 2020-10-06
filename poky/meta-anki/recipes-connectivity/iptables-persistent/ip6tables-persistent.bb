@@ -9,11 +9,13 @@ FILESPATH =+ "${WORKSPACE}:"
 
 RULES_TAG = "${@base_conditional('USER_BUILD', '1', 'user', 'eng', d)}"
 RULES_TAG .= "${@base_conditional('DEV', '1', 'dev', '', d)}"
+RULES_TAG .= "${@base_conditional('OSKR', '1', 'oskr', '', d)}"
 
 SRC_URI += "file://ip6tables.service"
 SRC_URI += "file://ip6tables-user.rules"
 SRC_URI += "file://ip6tables-userdev.rules"
 SRC_URI += "file://ip6tables-eng.rules"
+SRC_URI += "file://ip6tables-engoskr.rules"
 SRC_URI += "file://ip6tables-flush.sh"
 
 SYSTEM_DIR = "${D}${sysconfdir}/systemd/system"
