@@ -7,7 +7,7 @@ SCRIPT_NAME=$(basename $0)
 # defaults
 INCREMENTAL=0
 VERBOSE=0
-BUILD_COMMAND=("build-victor-oskr-image")
+BUILD_COMMAND=("build-victor-robot-oskr-image")
 
 function usage() {
     echo "$SCRIPT_NAME [OPTIONS] <bitbake build command/function> (default: ${BUILD_COMMAND[*]})"
@@ -85,7 +85,7 @@ pushd $TOPLEVEL/poky
 # Disable check for unset variables (it will make the bitbake scripts exit)
 set +u
 source build/conf/set_bb_env.sh
-source $TOPLEVEL/poky/build/conf/set_anki_build_version
+source $TOPLEVEL/poky/build/conf/set_anki_build_version.sh
 
 # Grant is paranoid about clean builds we sometimes get the wrong
 # boot screen or signing key or full version if we don't do this.
