@@ -1,1 +1,2 @@
-KERNEL=="gpio0|gpio94", PROGRAM="/bin/chown engine %S%p/value %S%p/direction"
+KERNEL=="gpio*", PROGRAM="/bin/chgrp anki %S%p/value %S%p/direction"
+KERNEL=="gpio*", PROGRAM="/bin/chmod g+w %S%p/value %S%p/direction"
