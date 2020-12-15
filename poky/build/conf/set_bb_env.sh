@@ -101,11 +101,34 @@ function build-8009-robot-perf-image() {
 function build-8009-robot-oskr-image() {
   unset_bb_env
   export MACHINE=apq8009-robot
+  export DISTRO=msm-user
   export DISTRO=msm-perf
   export VARIANT=perf
   export PRODUCT=robot
   export OSKR=1
   export ANKI_AMAZON_ENDPOINTS_ENABLED=0
+  cdbitbake machine-robot-image
+}
+
+function build-8009-robot-escapepod-dev() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-perf
+  export DEV="1"
+  export VARIANT=perf
+  export PRODUCT=robot
+  export ANKI_AMAZON_ENDPOINTS_ENABLED=1
+  export ANKI_RESOURCE_ESCAPEPOD=1
+  cdbitbake machine-robot-image
+}
+
+function build-8009-robot-escapepod-image() {
+  unset_bb_env
+  export MACHINE=apq8009-robot
+  export DISTRO=msm-user
+  export VARIANT=perf
+  export PRODUCT=robot
+  export ANKI_RESOURCE_ESCAPEPOD=1
   cdbitbake machine-robot-image
 }
 
@@ -260,6 +283,6 @@ export TEMPLATECONF="meta-qti-bsp/conf"
 # (BBLAYERS is explicitly blocked from this within OE-Core itself, though...)
 # oe-init-build-env calls oe-buildenv-internal which sets
 # BB_ENV_EXTRAWHITE, append our vars to the list
-export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN BETA ANKI_AMAZON_ENDPOINTS_ENABLED OSKR"
+export BB_ENV_EXTRAWHITE="${BB_ENV_EXTRAWHITE} DL_DIR PRODUCT VARIANT FACTORY DEV QSN BETA ANKI_AMAZON_ENDPOINTS_ENABLED OSKR ANKI_RESOURCE_ESCAPEPOD"
 
 list-build-commands

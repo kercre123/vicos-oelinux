@@ -81,45 +81,56 @@ do_clean_append() {
     os.system('git clean -Xfd')
 }
 
-do_compile () {
-   cd ${S}
-   source ./project/victor/envsetup.sh
-   export TOPLEVEL=`gettop`
 
-   if [[ "${ANKI_AMAZON_ENDPOINTS_ENABLED}" == "1" ]]; then
-     if [[ "${USER_BUILD}" == "1" ]]; then
-       if [[ "${DEV}" == "1" ]]; then
-         if [[ "${BETA}" == "1" ]]; then
-	   ./project/victor/scripts/victor_build_alexa_beta.sh
-         else
-	   ./project/victor/scripts/victor_build_alexa_userdev.sh
-         fi
-       else
-         ./project/victor/scripts/victor_build_alexa_shipping.sh
-       fi
-     else
-       ./project/victor/scripts/victor_build_alexa_release.sh
-     fi
-   else
-     if [[ "${USER_BUILD}" == "1" ]]; then
-       if [[ "${DEV}" == "1" ]]; then
-         if [[ "${BETA}" == "1" ]]; then
-	   ./project/victor/scripts/victor_build_beta.sh
-         else
-	   ./project/victor/scripts/victor_build_userdev.sh
-         fi
-       else
-         ./project/victor/scripts/victor_build_shipping.sh
-       fi
-     else
-       if [[ "${OSKR}" == "1" ]]; then
-         ./project/victor/scripts/victor_build_oskr.sh
-       else
-         ./project/victor/scripts/victor_build_release.sh
-       fi
-     fi
-   fi
+do_compile () {
+  cd ${S}
+  source ./project/victor/envsetup.sh
+  export TOPLEVEL=`gettop`
+
+  if [[ "${ANKI_AMAZON_ENDPOINTS_ENABLED}" == "1" ]]; then
+    if [[ "${USER_BUILD}" == "1" ]]; then
+      if [[ "${DEV}" == "1" ]]; then
+        if [[ "${BETA}" == "1" ]]; then
+	        ./project/victor/scripts/victor_build_alexa_beta.sh
+        elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+          ./project/victor/scripts/victor_build_escape_pod_userdev.sh
+        else
+	        ./project/victor/scripts/victor_build_alexa_userdev.sh
+        fi
+      else
+        ./project/victor/scripts/victor_build_alexa_shipping.sh
+      fi
+    elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+      ./project/victor/scripts/victor_build_escape_pod_release.sh
+    else
+      ./project/victor/scripts/victor_build_alexa_release.sh
+    fi
+  else
+    if [[ "${USER_BUILD}" == "1" ]]; then
+      if [[ "${DEV}" == "1" ]]; then
+        if [[ "${BETA}" == "1" ]]; then
+	        ./project/victor/scripts/victor_build_beta.sh
+        elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+          ./project/victor/scripts/victor_build_escape_pod_userdev.sh
+        else
+	        ./project/victor/scripts/victor_build_userdev.sh
+        fi
+      else
+        ./project/victor/scripts/victor_build_shipping.sh
+      fi
+    else
+      if [[ "${OSKR}" == "1" ]]; then
+        ./project/victor/scripts/victor_build_oskr.sh
+      elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+        ./project/victor/scripts/victor_build_escape_pod_release.sh
+      else
+        ./project/victor/scripts/victor_build_release.sh
+      fi
+    fi
+  fi
 }
+
+
 
 do_install () {
   ${S}/project/victor/scripts/install.sh ${BUILDSRC} ${D}
@@ -134,13 +145,11 @@ anki/bin/displayFaultCode         ${UID_ENGINE} ${GID_ANKI} 0550
 anki/bin/update-engine            ${UID_NET}    ${GID_ANKI} 0550
 anki/bin/vic-anim                 ${UID_ENGINE} ${GID_ANKI} 0500
 anki/bin/vic-bootAnim             ${UID_ENGINE} ${GID_ANKI} 0550
-anki/bin/vic-cloud                ${UID_CLOUD}  ${GID_ANKI} 0550
 anki/bin/vic-crashuploader-init   ${UID_NET}    ${GID_ANKI} 0550
 anki/bin/vic-crashuploader        ${UID_NET}    ${GID_ANKI} 0550
 anki/bin/vic-dasmgr               ${UID_NET}    ${GID_ANKI} 0500
 anki/bin/vic-engine               ${UID_ENGINE} ${GID_ANKI} 0500
 anki/bin/vic-faultCodeDisplay     ${UID_ANKI}   ${GID_ANKI} 0550
-anki/bin/vic-gateway              ${UID_NET}    ${GID_ANKI} 0500
 anki/bin/vic-getprocessstatus.sh  ${UID_ANKI}   ${GID_ANKI} 0550
 anki/bin/vic-init.sh              ${UID_ANKI}   ${GID_ANKI} 0550
 anki/bin/vic-log-cat              ${UID_ANKI}   ${GID_ANKI} 0550

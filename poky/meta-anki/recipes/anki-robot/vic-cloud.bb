@@ -18,3 +18,34 @@ do_install_append () {
 
 FILES_${PN} += "${systemd_unitdir}/system/"
 SYSTEMD_SERVICE_${PN} = "${SERVICE_FILE}"
+
+do_compile() {
+    docker build -t armbuilder ${S}/vector-cloud/docker-builder/.
+}
+
+GOPATH = "~/.local/go"
+
+inherit externalsrc
+
+EXTERNALSRC = "${WORKSPACE}/anki/vector-cloud"
+
+GID_ANKI      = '2901'
+GID_CLOUD     = '888'
+GID_ANKINET   = '2905'
+
+UID_NET       = "${GID_ANKINET}"
+UID_CLOUD     = "${GID_CLOUD}"
+
+do_compile() {
+    cd "${EXTERNALSRC}"
+    export GOPATH="${GOPATH}"
+    make all
+}
+
+do_install () {
+    mkdir -p ${D}/anki/bin
+    cp ${WORKSPACE}/anki/vector-cloud/build/* ${D}/anki/bin
+}
+
+FILES_${PN} += "anki/bin/vic-cloud"
+FILES_${PN} += "anki/bin/vic-gateway"
