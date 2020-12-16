@@ -114,7 +114,6 @@ function build-8009-robot-escapepod-dev() {
   unset_bb_env
   export MACHINE=apq8009-robot
   export DISTRO=msm-perf
-  export DEV="1"
   export VARIANT=perf
   export PRODUCT=robot
   export ANKI_AMAZON_ENDPOINTS_ENABLED=1
