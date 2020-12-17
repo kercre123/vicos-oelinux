@@ -116,7 +116,6 @@ function build-8009-robot-escapepod-dev() {
   export DISTRO=msm-perf
   export VARIANT=perf
   export PRODUCT=robot
-  export ANKI_AMAZON_ENDPOINTS_ENABLED=1
   export ANKI_RESOURCE_ESCAPEPOD=1
   cdbitbake machine-robot-image
 }
@@ -127,7 +126,6 @@ function build-8009-robot-escapepod-image() {
   export DISTRO=msm-user
   export VARIANT=perf
   export PRODUCT=robot
-  export ANKI_RESOURCE_ESCAPEPOD=1
   cdbitbake machine-robot-image
 }
 
@@ -193,6 +191,14 @@ function build-victor-robot-perf-image() {
 
 function build-victor-robot-oskr-image() {
   build-8009-robot-oskr-image
+}
+
+function build-victor-robot-epdev-image() {
+  build-8009-robot-escapepod-dev
+}
+
+function build-victor-robot-escapepod-image() {
+  build-8009-robot-escapepod-image
 }
 
 function build-victor-robot-user-image() {
