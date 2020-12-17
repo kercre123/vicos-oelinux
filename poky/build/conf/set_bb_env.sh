@@ -126,6 +126,7 @@ function build-8009-robot-escapepod-image() {
   export DISTRO=msm-user
   export VARIANT=perf
   export PRODUCT=robot
+  export ANKI_RESOURCE_ESCAPEPOD=1
   cdbitbake machine-robot-image
 }
 

@@ -82,43 +82,51 @@ do_clean_append() {
 }
 
 do_compile () {
-   cd ${S}
-   source ./project/victor/envsetup.sh
-   export TOPLEVEL=`gettop`
+  cd ${S}
+  source ./project/victor/envsetup.sh
+  export TOPLEVEL=`gettop`
 
-   if [[ "${ANKI_AMAZON_ENDPOINTS_ENABLED}" == "1" ]]; then
-     if [[ "${USER_BUILD}" == "1" ]]; then
-       if [[ "${DEV}" == "1" ]]; then
-         if [[ "${BETA}" == "1" ]]; then
-	   ./project/victor/scripts/victor_build_alexa_beta.sh
-         else
-	   ./project/victor/scripts/victor_build_alexa_userdev.sh
-         fi
-       else
-         ./project/victor/scripts/victor_build_alexa_shipping.sh
-       fi
-     else
-       ./project/victor/scripts/victor_build_alexa_release.sh
-     fi
-   else
-     if [[ "${USER_BUILD}" == "1" ]]; then
-       if [[ "${DEV}" == "1" ]]; then
-         if [[ "${BETA}" == "1" ]]; then
-	   ./project/victor/scripts/victor_build_beta.sh
-         else
-	   ./project/victor/scripts/victor_build_userdev.sh
-         fi
-       else
-         ./project/victor/scripts/victor_build_shipping.sh
-       fi
-     else
-       if [[ "${OSKR}" == "1" ]]; then
-         ./project/victor/scripts/victor_build_oskr.sh
-       else
-         ./project/victor/scripts/victor_build_release.sh
-       fi
-     fi
-   fi
+  if [[ "${ANKI_AMAZON_ENDPOINTS_ENABLED}" == "1" ]]; then
+    if [[ "${USER_BUILD}" == "1" ]]; then
+      if [[ "${DEV}" == "1" ]]; then
+        if [[ "${BETA}" == "1" ]]; then
+	        ./project/victor/scripts/victor_build_alexa_beta.sh
+        elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+          ./project/victor/scripts/victor_build_escape_pod_userdev.sh
+        else
+	        ./project/victor/scripts/victor_build_alexa_userdev.sh
+        fi
+      else
+        ./project/victor/scripts/victor_build_alexa_shipping.sh
+      fi
+    elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+      ./project/victor/scripts/victor_build_escape_pod_release.sh
+    else
+      ./project/victor/scripts/victor_build_alexa_release.sh
+    fi
+  else
+    if [[ "${USER_BUILD}" == "1" ]]; then
+      if [[ "${DEV}" == "1" ]]; then
+        if [[ "${BETA}" == "1" ]]; then
+	        ./project/victor/scripts/victor_build_beta.sh
+        elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+          ./project/victor/scripts/victor_build_escape_pod_userdev.sh
+        else
+	        ./project/victor/scripts/victor_build_userdev.sh
+        fi
+      else
+        ./project/victor/scripts/victor_build_shipping.sh
+      fi
+    else
+      if [[ "${OSKR}" == "1" ]]; then
+        ./project/victor/scripts/victor_build_oskr.sh
+      elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
+        ./project/victor/scripts/victor_build_escape_pod_release.sh
+      else
+        ./project/victor/scripts/victor_build_release.sh
+      fi
+    fi
+  fi
 }
 
 do_install () {
