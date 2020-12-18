@@ -117,6 +117,7 @@ function build-8009-robot-escapepod-dev() {
   export VARIANT=perf
   export PRODUCT=robot
   export ANKI_RESOURCE_ESCAPEPOD=1
+  export ANKI_AMAZON_ENDPOINTS_ENABLED=1
   cdbitbake machine-robot-image
 }
 
@@ -127,6 +128,7 @@ function build-8009-robot-escapepod-image() {
   export VARIANT=perf
   export PRODUCT=robot
   export ANKI_RESOURCE_ESCAPEPOD=1
+  export ANKI_AMAZON_ENDPOINTS_ENABLED=1
   cdbitbake machine-robot-image
 }
 
@@ -228,7 +230,7 @@ buildclean() {
   set -x
   cd ${WS}/poky/build
 
-  rm -rf bitbake.lock pseudodone sstate-cache tmp-glibc/* cache && cd - || cd -
+  rm -rf bitbake.lock pseudodone sstate-cache tmp-glibc/* cache ../../anki/victor/_build && cd - || cd -
 
   pushd ${WS}/anki/victor
   git clean -xdff .
