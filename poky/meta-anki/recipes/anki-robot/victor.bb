@@ -115,7 +115,7 @@ do_compile () {
 	        ./project/victor/scripts/victor_build_userdev.sh
         fi
       elif [[ "${ANKI_RESOURCE_ESCAPEPOD}" == "1" ]]; then
-        ./project/victor/scripts/victor_build_escape_pod_release.sh
+        ./project/victor/scripts/victor_build_escape_pod_shipping.sh
       else
         ./project/victor/scripts/victor_build_shipping.sh
       fi
