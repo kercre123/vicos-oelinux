@@ -5,8 +5,8 @@
 # Find where the global conf directory is...
 scriptdir="$(dirname "${BASH_SOURCE}")"
 # Find where the workspace is...
-WS=$(readlink -f $scriptdir/../../..)
-CONF_DIR=$WS/poky/build/conf
+CONF_DIR=~/vicos-builds
+mkdir -p ${CONF_DIR}
 BUILD_VERSION_FILE=$CONF_DIR/anki_build_version.txt
 
 if [[ -f "$BUILD_VERSION_FILE" ]];then
