@@ -26,7 +26,7 @@ then
 fi
 
 umask 022
-unset DISTRO MACHINE PRODUCT VARIANT FACTORY OSKR
+unset DISTRO MACHINE PRODUCT VARIANT FACTORY OSKR ANKI_RESOURCE_ESCAPEPOD
 
 # OE doesn't want a set-gid directory for its tmpdir
 BT="./build/tmp-glibc"
