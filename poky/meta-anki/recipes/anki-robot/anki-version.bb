@@ -33,6 +33,9 @@ do_install_append () {
         if [[ ${OSKR} = "1" ]]; then
             # set to "oskr" for oskr builds
 	    ANKI_BUILD_TYPE="oskr"
+	elif [[ ${ANKI_RESOURCE_ESCAPEPOD} == "1" ]]; then
+            # set to "oskr" for oskr builds
+	    ANKI_BUILD_TYPE="epd"
 	else
             # set to "d" for dev builds
             ANKI_BUILD_TYPE="d"
@@ -40,6 +43,8 @@ do_install_append () {
     elif [[ ${DEV} = "1" ]]; then
 	# set to "ud" for userdev builds
 	ANKI_BUILD_TYPE="ud"
+    elif [[ ${ANKI_RESOURCE_ESCAPEPOD} == "1" ]]; then
+        ANKI_BUILD_TYPE="ep"
     else
         # empty for user (release) builds
         ANKI_BUILD_TYPE=""
