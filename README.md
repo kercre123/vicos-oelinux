@@ -61,7 +61,7 @@ are already in place.
 
 ```
 cd anki/victor
-./install_old_externals.sh
+./install_legacy_externals.sh
 ```
 
 See the victor README for more details.
