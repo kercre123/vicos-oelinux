@@ -10,7 +10,7 @@ SRCNAME = "protobuf"
 
 PACKAGE_BEFORE_PN = "${PN}-compiler"
 
-DEPENDS = "zlib python-setuptools-native python-native protobuf-native"
+DEPENDS = "zlib python-setuptools-native python-native protobuf-native python-six"
 
 LIC_FILES_CHKSUM = "file://setup.py;begineline=237;endline=237;md5=280e00a114b06867a5b7ec32779b6c61"
 
