@@ -1,7 +1,8 @@
 # vicos-oelinux
 
-THIS BRANCH OF THE CODE IS FOR MAKING UNLOCK IMAGES. YOU ONLY WANT THIS
-TO UNLOCK PROD ROBOTS FOR EITHER DEV OR OSKR ROBOTS.
+THIS BRANCH OF THE CODE IS FOR MAKING NORMAL FACTORY AND DEV/OSKR
+UNLOCK IMAGES. YOU ONLY WANT THIS TO BUILD A NEW BASE MANUFACTUING
+IMAGE OR UNLOCK PROD ROBOTS FOR EITHER DEV/OSKR MODE.
 
 THIS ASSUMES YOU HAVE BUILT A **NORMAL** OTA UPDATE BEFORE. IF YOU HAVEN'T
 CHECK OUT THE MASTER BRANCH AND FOLLOW THE INSTRUCTIONS SO YOU UNDERSTAND
@@ -17,15 +18,7 @@ the new images.
 If you do need to bring up a new machine, make sure to test
 extensively before rolling out an image.
 
-## Making Unlock OTA files
-
-To unlock production robots for development builds, a special OTA file
-including an ABOOT unlocked to that QSN must be generated. Doing so
-requires a few steps but can be largely automated. If this is done
-wrong it has potential to BRICK a vector unit since we're messing with
-code normally set by the factory and never modified again. Take
-care to follow all instructions precisely
-
+## Building the Factory image
 ### LInux Configuration
 
 You will need a linux box to do the build. This can be done in a VM
@@ -59,6 +52,20 @@ until after we've switched branches:
     git submodule update --init --recursive
     git submodule update --recursive
 
+### Fixing the victor project dependencies
+
+Becuase this branch is out-of-date compared to the current branch the
+project dependencies installation is broken and complicated to fix. It
+is easier to preconfigure the `victor` repository so that the dependencies
+are already in place.
+
+```
+cd anki/victor
+./install_old_externals.sh
+```
+
+See the victor README for more details.
+
 ### Initial Build And Prep
 
 Make sure we have a good image with the lasted production release that
@@ -70,6 +77,39 @@ factory reset.
        cd poky # FROM MP-UNLOCK
         source build/conf/set_bb_env.sh
         build-victor-robot-factory-image # wait 40-50 minutes
+
+## OPTION 1: Making a factory image
+
+This is relatively easy as we are simply trying to build the three
+partitions needed for factory recovery that will be installed via
+QDL. We do not need to go through all the hack steps to build an OTA
+to edit the recovery partition.
+
+Sign the boot image with the production key:
+
+```
+cd ota
+make prodsign
+# provide appropriate credentials
+```
+
+Build the ABOOT image. Writeup currently incomplete.
+
+```
+cd poky
+source build/conf/set_bb_env.bb
+# set flavor
+# run bitbake command for lk.
+```
+
+## OPTION 2: Making Unlock OTA files
+
+To unlock production robots for development builds, a special OTA file
+including an ABOOT unlocked to that QSN must be generated. Doing so
+requires a few steps but can be largely automated. If this is done
+wrong it has potential to BRICK a vector unit since we're messing with
+code normally set by the factory and never modified again. Take
+care to follow all instructions precisely
 
 ### Set OSKR Unlock flavor if wanted
 
