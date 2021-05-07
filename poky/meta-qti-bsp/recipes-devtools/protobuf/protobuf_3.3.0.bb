@@ -8,7 +8,7 @@ LICENSE = "BSD-3-Clause"
 
 PACKAGE_BEFORE_PN = "${PN}-compiler"
 
-DEPENDS = "zlib"
+DEPENDS = "zlib python-six"
 RDEPENDS_${PN}-compiler = "${PN}"
 RDEPENDS_${PN}-dev += "${PN}-compiler"
 
