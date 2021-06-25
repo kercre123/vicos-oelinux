@@ -15,7 +15,7 @@
 
 /************** LCD INTERFACE *****************/
 
-#define GPIO_LCD_WRX   110
+#define GPIO_LCD_WRX   13
 #define GPIO_LCD_RESET1 96
 #define GPIO_LCD_RESET2 55
 
@@ -23,10 +23,16 @@
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 
-#define LCD_FRAME_WIDTH     184
-#define LCD_FRAME_HEIGHT    96
+#define LCD_FRAME_WIDTH     160
+#define LCD_FRAME_HEIGHT    80
+#define OLD_FRAME_WIDTH     184
+#define OLD_FRAME_HEIGHT    96
+#define PXL_CNT  (LCD_FRAME_WIDTH * LCD_FRAME_HEIGHT)
+#define OLP_CNT  (OLD_FRAME_WIDTH * OLD_FRAME_HEIGHT)
 
 #define RSHIFT 0x1C
+#define XSHIFT 0x01
+#define YSHIFT 0x1A
 
 typedef struct LcdFrame_t {
   uint16_t data[LCD_FRAME_WIDTH*LCD_FRAME_HEIGHT];
@@ -35,11 +41,11 @@ typedef struct LcdFrame_t {
 typedef struct {
   uint8_t cmd;
   uint8_t data_bytes;
-  uint8_t data[14];
+  uint8_t data[32];
   uint32_t delay_ms;
 } INIT_SCRIPT;
 
-static const INIT_SCRIPT init_scr[] = {
+static const INIT_SCRIPT old_init_scr[] = {
   { 0x10, 1, { 0x00 }, 120}, // Sleep in
   { 0x2A, 4, { 0x00, RSHIFT, (LCD_FRAME_WIDTH + RSHIFT - 1) >> 8, (LCD_FRAME_WIDTH + RSHIFT - 1) & 0xFF } }, // Column address set
   { 0x2B, 4, { 0x00, 0x00, (LCD_FRAME_HEIGHT -1) >> 8, (LCD_FRAME_HEIGHT -1) & 0xFF } }, // Row address set
@@ -61,11 +67,28 @@ static const INIT_SCRIPT init_scr[] = {
   { 0x21, 1, { 0x00 }, 0 }, // Display inversion on
   { 0 }
 };
+static const INIT_SCRIPT init_scr[] = 
+{
+        { 0x01, 0, { 0x00}, 150},
+        { 0x11, 0, { 0x00}, 500},
+        { 0x20, 0, { 0x00}, 0},
+        { 0x36, 1, { 0xE0}, 0}, //exchange rotate and reverse order in each of 2 dim
+        { 0x3A, 1, { 0x65}, 0}, // Interface pixel format (16 bit/pixel 65k RGB data)
+
+        { 0x13, 0, { 0x00}, 100},
+        { 0x21, 1, { 0x00 }, 0 }, // Display inversion on
+        { 0x29, 0, { 0x00}, 10},
+
+	{ 0x2A, 4, { XSHIFT >> 8, XSHIFT & 0xFF, (LCD_FRAME_WIDTH + XSHIFT -1) >> 8, (LCD_FRAME_WIDTH + XSHIFT -1) & 0xFF } }, // Column address set
+	{ 0x2B, 4, { YSHIFT >> 8, YSHIFT & 0xFF, (LCD_FRAME_HEIGHT + YSHIFT -1) >> 8, (LCD_FRAME_HEIGHT + YSHIFT -1) & 0xFF } }, // Row address set
+
+{ 0 } 
+};
 
 
 static const INIT_SCRIPT display_on_scr[] = {
-  { 0x11, 1, { 0x00 }, 120 }, // Sleep out
-  { 0x29, 1, { 0x00 }, 120 }, // Display on
+  { 0x11, 0, { 0x00 }, 120 }, // Sleep out
+  { 0x29, 0, { 0x00 }, 120 }, // Display on
   { 0 }
 };
 
@@ -190,8 +213,55 @@ void lcd_set_brightness(int brightness)
 
 void lcd_draw_frame2(const uint16_t* frame, size_t size) {
    static const uint8_t WRITE_RAM = 0x2C;
-   lcd_spi_transfer(true, 1, &WRITE_RAM);
-   lcd_spi_transfer(false, size, frame);
+	int totfr = 0;
+	uint8_t *frame2, *ifr_p, *ofr_p;
+	int i, j, k, size2 = 0;
+
+	if (!size)
+		return;
+	ifr_p = (uint8_t *) frame;
+	totfr = size / (OLP_CNT*2);
+	if (size % (OLP_CNT*2) )
+		totfr++;
+	size2 = totfr*PXL_CNT*2;
+	frame2 = (uint8_t *) malloc(size2);
+	ofr_p = frame2;
+	for (i = 0; i < totfr; i++)
+	{
+		ifr_p += 2*3*OLD_FRAME_WIDTH;
+		for ( j = 0; j < OLD_FRAME_HEIGHT-6; j++)
+		{
+			if ( j % 9 )
+			{
+				ifr_p += 2*2;
+				for (k = 0; k < (OLD_FRAME_WIDTH-4)*2; k++)
+				{
+					if ( k % 18 )
+					{
+						if (ifr_p < (uint8_t *) frame + size)
+							*ofr_p = *ifr_p;
+						ofr_p++;
+						ifr_p++;
+					}
+					else
+					{
+						ifr_p+=2;
+						k++;
+					}
+				}
+				ifr_p += 2*2;
+			}
+			else 
+			{
+				ifr_p += 2*OLD_FRAME_WIDTH;
+			}
+		}
+		ifr_p += 2*3*OLD_FRAME_WIDTH;
+	}
+
+   	lcd_spi_transfer(true, 1, &WRITE_RAM);
+   	lcd_spi_transfer(false, size2, frame2);
+	free(frame2);
 }
 
  void lcd_clear_screen(void) {
