@@ -1,5 +1,5 @@
 /*============================================================================
-  NSM hacked to support GC1066
+  NSM hacked to support previously GC1066 and now alas hardcode BF2253L
 
   Copyright (c) 2016 Qualcomm Technologies, Inc.
   All Rights Reserved.
@@ -93,7 +93,7 @@ static struct msm_camera_sensor_slave_info sensor_slave_info = {
   /* Camera slot where this camera is mounted */
   .camera_id = CAMERA_0,
   /* sensor slave address */
-  .slave_addr = 0x78,
+  .slave_addr = 0xdc,		// or 6e (spec_doc is vague, wtf)
   /* sensor i2c frequency*/
   .i2c_freq_mode = I2C_FAST_MODE,
   /* sensor address type */
@@ -101,9 +101,9 @@ static struct msm_camera_sensor_slave_info sensor_slave_info = {
   /* sensor id info*/
   .sensor_id_info = {
     /* sensor id register address */
-    .sensor_id_reg_addr = 0xf0,
+    .sensor_id_reg_addr = 0xfc,
     /* sensor id */
-    .sensor_id = 0x1066, // GC1066/1606 are same part
+    .sensor_id = 0x2253, // BF2253L. endian...
   },
   /* power up / down setting */
   .power_setting_array = {
@@ -172,10 +172,10 @@ static struct csi_lane_params_t csi_lane_params = {
 #endif
 
 static struct msm_camera_i2c_reg_array init_reg_array0[] = {
-        {0xfe, 0x00, 0x00},
+        {0xf2, 0x00, 0x00},
 };
 
-static struct msm_camera_i2c_reg_array init_reg_array1[] = {
+static struct msm_camera_i2c_reg_array old_init_reg_array1[] = {
 
 //Actual_window_size=1280*720
 //MCLK=24MHz,MIPI_clock=456Mhz,row_time=43.28us
@@ -340,6 +340,43 @@ static struct msm_camera_i2c_reg_array init_reg_array1[] = {
   {0xfe, 0x00, 0x00},
 
 };
+static struct msm_camera_i2c_reg_array init_reg_array1[] = {
+
+        //{0xf2, 0x00, 0x00},
+        {0xe1, 0x06, 0x00},
+        {0xe2, 0x06, 0x00},
+        {0xe3, 0x0e, 0x00},
+        {0xe4, 0x40, 0x00},
+        {0xe5, 0x67, 0x00},
+        {0xe6, 0x02, 0x00},
+        {0xe8, 0x84, 0x00},
+        {0x01, 0x14, 0x00},
+        {0x03, 0x98, 0x00},
+        {0x27, 0x21, 0x00},
+        {0x29, 0x20, 0x00},
+        {0x59, 0x10, 0x00},
+        {0x5a, 0x10, 0x00},
+        {0x5c, 0x11, 0x00},
+        {0x5d, 0x73, 0x00},
+        {0x6a, 0x2f, 0x00},//global gain
+        {0x6b, 0x0e, 0x00},
+        {0x6c, 0x7e, 0x00},//{0x6b,0x6c}int time
+        {0x6f, 0x10, 0x00},
+        {0x70, 0x08, 0x00},
+        {0x71, 0x05, 0x00},
+        {0x72, 0x10, 0x00},
+        {0x73, 0x08, 0x00},
+        {0x74, 0x05, 0x00},
+        {0x75, 0x06, 0x00},
+        {0x76, 0x20, 0x00},
+        {0x77, 0x03, 0x00},
+        {0x78, 0x0e, 0x00},
+        {0x79, 0x08, 0x00},
+        //(0x00, 0x2E);
+
+};
+
+
 
 static struct msm_camera_i2c_reg_setting init_reg_setting[] = {
   {
@@ -366,7 +403,7 @@ static struct sensor_lib_reg_settings_array init_settings_array = {
 static struct msm_camera_i2c_reg_array start_reg_array[] = {
 	{0xfe, 0x03, 0x00},
 	{0x10, 0x90, 0x00},
-	{0xfe, 0x00, 0x00},
+	{0xf2, 0x00, 0x00},
 };
 
 static  struct msm_camera_i2c_reg_setting start_settings = {
@@ -380,7 +417,7 @@ static  struct msm_camera_i2c_reg_setting start_settings = {
 static struct msm_camera_i2c_reg_array stop_reg_array[] = {
         {0xfe, 0x03, 0x00},
         {0x10, 0x80, 0x00},
-        {0xfe, 0x00, 0x00},
+        {0xf2, 0x00, 0x00},
 };
 
 static struct msm_camera_i2c_reg_setting stop_settings = {
@@ -492,12 +529,12 @@ static struct sensor_lib_crop_params_array crop_params_array = {
 
 static struct sensor_lib_out_info_t sensor_out_info[] = {
   {
-    .x_output = 1280, // 3264,
-    .y_output = 720, // 2448,
-    .line_length_pclk = 1296, // 880, // 1932,
-    .frame_length_lines = 768, // 2482,
-    .vt_pixel_clk = 45600000,  // Fake pseudo-clock
-    .op_pixel_clk = 45600000,
+    .x_output = 1600, // 3264,
+    .y_output = 1200, // 2448,
+    .line_length_pclk = 1780, // 880, // 1932,
+    .frame_length_lines = 1236, // 2482,
+    .vt_pixel_clk = 66000000,  // Fake pseudo-clock
+    .op_pixel_clk = 66000000,
     .binning_factor = 1,
     .max_fps = 30.0,
     .min_fps = 7.5, 
@@ -602,7 +639,7 @@ static int32_t ov8856_f8v05a_fill_exposure_array(uint16_t gain,
     return -1;
   }
 
-  reg_setting->reg_setting[reg_count].reg_addr = 0xfe;
+  reg_setting->reg_setting[reg_count].reg_addr = 0xf2;
   reg_setting->reg_setting[reg_count].reg_data = 0x00;
   reg_count++;
 
@@ -636,7 +673,7 @@ static int sensor_fill_awb_array(unsigned short awb_gain_r,
     return -1;
   }
 
-  reg_setting->reg_setting[reg_count].reg_addr = 0xfe;
+  reg_setting->reg_setting[reg_count].reg_addr = 0xf2;
   reg_setting->reg_setting[reg_count].reg_data[0] = 0x00;
   reg_setting->reg_setting[reg_count].reg_data_size = 1;
   reg_count++;
