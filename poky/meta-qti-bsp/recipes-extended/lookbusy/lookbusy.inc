@@ -10,7 +10,7 @@ more files, and copying blocks of it between two moving positions."
 HOMEPAGE = "http://devin.com/lookbusy"
 SECTION = "utils"
 
-SRC_URI = "http://devin.com/lookbusy/download/lookbusy-${PV}.tar.gz"
+SRC_URI = "https://devin.com/lookbusy/download/lookbusy-${PV}.tar.gz"
 
 inherit autotools gettext pkgconfig texinfo
 
