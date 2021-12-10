@@ -26,7 +26,7 @@
   "ov8825",
 #elif defined(MSM8909_SENSORS)
 #define BOARD_SENSORS \
-  "ov8856_f8v05a"
+  "ov5648_q5v22e"
 #else
 #define BOARD_SENSORS \
   "imx134", \
@@ -40,7 +40,7 @@
 #if defined(ROBOT_SENSORS)
 #undef BOARD_SENSORS
 #define BOARD_SENSORS \
-  "ov8856_f8v05a"
+  "ov5648_q5v22e"
 #endif
 
 static const char *sensor_libs[] = {

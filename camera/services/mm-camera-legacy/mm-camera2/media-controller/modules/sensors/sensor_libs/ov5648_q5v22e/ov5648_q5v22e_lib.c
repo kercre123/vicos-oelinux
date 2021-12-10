@@ -157,13 +157,14 @@ static sensor_lens_info_t default_lens_info = {
 
 #ifndef VFE_40
 static struct csi_lane_params_t csi_lane_params = {
-  .csi_lane_assign = 0xE4,
+  .csi_lane_assign = 0x0,   // 0xE4,
   .csi_lane_mask = 0x3,
   .csi_if = 1,
   .csid_core = {0},
   .csi_phy_sel = 0,
 };
 #else
+#error "NDM - we don't support this hardware"
 static struct csi_lane_params_t csi_lane_params = {
   .csi_lane_assign = 0x4320,
   .csi_lane_mask = 0x7,
@@ -180,7 +181,7 @@ static struct msm_camera_i2c_reg_array init_reg_array[] = {
   {0x3001, 0x00}, // D[7:0] set to input
   {0x3002, 0x00}, // Vsync, PCLK, FREX, Strobe, CSD, CSK, GPIO input
   {0x3011, 0x02}, // Drive strength 2x
-  {0x3018, 0x4c}, // MIPI 2 lane
+  {0x3018, 0x2c}, // MIPI 1 lane   //{0x3018, 0x4c}, // MIPI 2 lane
   {0x3022, 0x00},
   {0x3034, 0x1a}, // 10-bit mode
   {0x3035, 0x21}, // PLL
@@ -406,7 +407,7 @@ static struct msm_camera_csid_vc_cfg ov5648_q5v22e_cid_cfg[] = {
 
 static struct msm_camera_csi2_params ov5648_q5v22e_csi_params = {
   .csid_params = {
-    .lane_cnt = 2,
+    .lane_cnt = 1,   // 2,
     .lut_params = {
       .num_cid = ARRAY_SIZE(ov5648_q5v22e_cid_cfg),
       .vc_cfg = {
@@ -416,8 +417,8 @@ static struct msm_camera_csi2_params ov5648_q5v22e_csi_params = {
     },
   },
   .csiphy_params = {
-    .lane_cnt = 2,
-    .settle_cnt = 0x1B,
+    .lane_cnt = 1,   // 2,
+    .settle_cnt = 0x7,    // ?1B is better than 7? 0x1B,
   },
 };
 
@@ -440,7 +441,7 @@ static sensor_stream_info_array_t ov5648_q5v22e_stream_info_array = {
 };
 
 static struct msm_camera_i2c_reg_array res0_reg_array[] = {
-  //2592x1944 15fps 2 lane MIPI 420Mbps/lane
+  //2592x1944 15fps 2 lane MIPI 420Mbps/lane		//2DO:FIX
   {0x3708, 0x63}, //
   {0x3709, 0x12}, //
   {0x370c, 0xc0}, //
@@ -484,7 +485,7 @@ static struct msm_camera_i2c_reg_array res0_reg_array[] = {
 
 };
 static struct msm_camera_i2c_reg_array res1_reg_array[] = {
-  // 1296x972 30fps 2 lane MIPI 420Mbps/lane
+  // 1296x972 30fps 2 lane MIPI 420Mbps/lane		//2DO:FIX
   {0x3708, 0x66},
   {0x3709, 0x52},
   {0x370c, 0xc3},
@@ -774,9 +775,9 @@ static sensor_lib_t sensor_lib_ptr = {
   /* sensor init params */
   .sensor_init_params = &sensor_init_params,
   /* sensor actuator name */
-   .actuator_name = "a3907",
+//   .actuator_name = "a3907",
   /* module eeprom name */
-   .eeprom_name = "sunny_q5v22e",
+//   .eeprom_name = "sunny_q5v22e",
   /* sensor output settings */
   .sensor_output = &sensor_output,
   /* sensor output register address */
