@@ -96,8 +96,8 @@
 #define OLP_CNT  (OLD_FRAME_WIDTH * OLD_FRAME_HEIGHT)
 
 #define RSHIFT 0x1C
-#define XSHIFT 0x01
-#define YSHIFT 0x1A
+#define XSHIFT 0x00
+#define YSHIFT 0x17
 
 typedef struct LcdFrame_t {
   uint16_t data[LCD_FRAME_WIDTH*LCD_FRAME_HEIGHT];
@@ -196,20 +196,27 @@ static const INIT_SCRIPT st7735_init_scr[] =
 
 static const INIT_SCRIPT nv3022_init_scr[] =
 {
-        { 0x01, 0, { 0x00}, 150},
-        { 0x11, 0, { 0x00}, 500},
-        { 0x20, 0, { 0x00}, 0},
-        { 0x36, 1, { 0xE0}, 0}, //exchange rotate and reverse order in each of 2 dim
-        { 0x3A, 1, { 0x65}, 0}, // Interface pixel format (16 bit/pixel 65k RGB data)
+  { 0x01, 0, { 0x00}, 150}, // Software reset
+  { 0x11, 0, { 0x00}, 500}, // Sleep out
+  { 0x20, 0, { 0x00}, 0}, // Display inversion off
+  { 0x36, 1, { 0xA8}, 0}, //exchange rotate and reverse order in each of 2 dim
+  { 0x3A, 1, { 0x05}, 0}, // Interface pixel format (16 bit/pixel 65k RGB data)
 
-        { 0x13, 0, { 0x00}, 100},
-        { 0x21, 1, { 0x00 }, 0 }, // Display inversion on
-        { 0x29, 0, { 0x00}, 10},
+  { 0xE0, 16, { 0x07, 0x0e, 0x08, 0x07, 0x10, 0x07, 0x02, 0x07, 0x09, 0x0f, 0x25, 0x36, 0x00, 0x08, 0x04, 0x10 }, 0},  //
+  { 0xE1, 16, { 0x0a, 0x0d, 0x08, 0x07, 0x0f, 0x07, 0x02, 0x07, 0x09, 0x0f, 0x25, 0x35, 0x00, 0x09, 0x04, 0x10 }, 0},
 
-	{ 0x2A, 4, { XSHIFT >> 8, XSHIFT & 0xFF, (LCD_FRAME_WIDTH + XSHIFT -1) >> 8, (LCD_FRAME_WIDTH + XSHIFT -1) & 0xFF } }, // Column address set
-	{ 0x2B, 4, { YSHIFT >> 8, YSHIFT & 0xFF, (LCD_FRAME_HEIGHT + YSHIFT -1) >> 8, (LCD_FRAME_HEIGHT + YSHIFT -1) & 0xFF } }, // Row address set
+  { 0xFC, 1, { 128+64}, 0},
 
-{ 0 } 
+  { 0x13, 0, { 0x00}, 100}, // Normal Display Mode On
+  { 0x21, 0, { 0x00 }, 10 }, // Display inversion on
+  { 0x20, 0, { 0x00 }, 10 }, // Display inversion off
+  { 0x26, 1, {0x02} , 10}, // Set Gamma
+  { 0x29, 0, { 0x00}, 10}, // Display On
+
+  { 0x2A, 4, { XSHIFT >> 8, XSHIFT & 0xFF, (LCD_FRAME_WIDTH + XSHIFT -1) >> 8, (LCD_FRAME_WIDTH + XSHIFT -1) & 0xFF } }, // Column address set
+  { 0x2B, 4, { YSHIFT >> 8, YSHIFT & 0xFF, (LCD_FRAME_HEIGHT + YSHIFT -1) >> 8, (LCD_FRAME_HEIGHT + YSHIFT -1) & 0xFF } }, // Row address set
+
+  { 0 } 
 };
 
 
@@ -340,6 +347,8 @@ void lcd_set_brightness(int brightness)
 
 void lcd_draw_frame2(const uint16_t* frame, size_t size) {
    static const uint8_t WRITE_RAM = 0x2C;
+   static const uint8_t PAD = 0x0;
+   
 	int totfr = 0;
 	uint8_t *frame2, *ifr_p, *ofr_p;
 	int i, j, k, size2 = 0;
@@ -387,6 +396,7 @@ void lcd_draw_frame2(const uint16_t* frame, size_t size) {
 	}
 
    	lcd_spi_transfer(true, 1, &WRITE_RAM);
+   	lcd_spi_transfer(false, 1, &PAD);
    	lcd_spi_transfer(false, size2, frame2);
 	free(frame2);
 }
