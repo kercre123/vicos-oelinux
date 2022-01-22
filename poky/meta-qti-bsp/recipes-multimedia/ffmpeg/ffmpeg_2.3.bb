@@ -27,9 +27,9 @@ do_configure () {
     ./configure --enable-cross-compile --cross-prefix=${TARGET_PREFIX} \
     --cpu=armv7-a --target-os=linux --sysroot=${STAGING_DIR_TARGET} --arch=${TARGET_ARCH} --disable-mmx \
     --enable-shared --disable-doc --disable-htmlpages --disable-manpages --disable-podpages \
-    --disable-txtpages --disable-avdevice --disable-swresample --disable-swscale \
-    --disable-postproc --enable-small --disable-avfilter --disable-debug --disable-ffserver --disable-ffplay \
-    --extra-cflags="${EXTRA_CFLAGS}" --enable-gpl --disable-network --disable-zlib --disable-ffmpeg --disable-encoders \
+    --disable-txtpages --enable-avdevice --enable-swresample --disable-swscale \
+    --disable-postproc --enable-small --enable-avfilter --disable-debug --disable-ffserver \
+    --extra-cflags="${EXTRA_CFLAGS}" --enable-gpl --disable-network --disable-zlib --disable-encoders \
     --disable-decoders --disable-muxers --disable-bsfs --disable-devices --disable-protocol=udp \
     --disable-protocol=tcp --disable-protocol=rtp --disable-protocol=pipe --disable-protocol=http \
     --disable-parser=cavsvideo --disable-parser=dca --disable-parser=dirac --disable-parser=dnxhd --disable-parser=mjpeg \
