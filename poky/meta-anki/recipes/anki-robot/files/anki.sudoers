@@ -6,3 +6,4 @@
 %anki ALL = (root, root) NOPASSWD: /sbin/reboot
 %anki ALL = (root, root) NOPASSWD: /anki/bin/diagnostics-logger
 %anki ALL = (root, root) NOPASSWD: /anki/bin/vic-log-cat
+%anki ALL = (root, root) NOPASSWD: /bin/systemctl restart chronyd
