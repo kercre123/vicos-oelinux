@@ -86,6 +86,7 @@ int anki_camera_frame_callback(const uint8_t* image,
                                int height,
                                void* cb_ctx)
 {
+
   // bpp must be a whole byte value
   assert((bpp % 8) == 0);
 
@@ -116,17 +117,33 @@ int anki_camera_frame_callback(const uint8_t* image,
   frame->frame_id = frame_id;
   frame->timestamp = timestamp;
 
-  if (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10) {
+  int downsampled_width = width / 10 * 8; // First account for 10 bits to 8 bits.
+  downsampled_width = downsampled_width / 2; // Then account for downsampling
+
+  int downsampled_height = height / 2;
+
+  if ( (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10) ||
+       (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP)
+      ) {
     // no downsample, just copy
     const size_t frame_data_len = frame->bytes_per_row * frame->height;
     memcpy(frame->data, image, frame_data_len);
+  }
+  else if ( ((downsampled_width * 3) != frame->bytes_per_row) || // RGB is 3 bytes per width
+       (downsampled_height != frame->height) ) {
+    loge("%s: want a downsampled image of %dx%d, but got a downsampled image of %dx%d",
+	 __FUNCTION__, (frame->bytes_per_row / 3), frame->height,
+	 downsampled_width, downsampled_height);
+    return -1;
   }
   else {
     // downsample
     bayer_mipi_bggr10_downsample(image, frame->data, width, height, 10);
   }
 
-  if (s_dump_images && (frame->format != ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10)) {
+  if ( s_dump_images && (frame->format != ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10) &&
+      (frame->format != ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP)
+      ) {
     debug_dump_frame(frame->data, width, height, 24);
   }
 
@@ -167,6 +184,22 @@ static anki_camera_frame_t s_frame_info_rgb888 = {
   .format = ANKI_CAM_FORMAT_RGB888,
 };
 
+static anki_camera_frame_t s_frame_info_bayer_mipi_bggr10_2mp = {
+  .width = 1600,
+  .height = 1200,
+  .bytes_per_row = (10 * 1600) / 8,
+  .bits_per_pixel = 10,
+  .format = ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP,
+};
+
+static anki_camera_frame_t s_frame_info_rgb888_2mp = {
+  .width = 800,
+  .height = 600,
+  .bytes_per_row = 800 * 3,
+  .bits_per_pixel = 8,
+  .format = ANKI_CAM_FORMAT_RGB888_2MP,
+};
+
 int get_camera_frame_info(const anki_camera_pixel_format_t format, anki_camera_frame_t* out_frame)
 {
   if (out_frame == NULL) {
@@ -181,6 +214,14 @@ int get_camera_frame_info(const anki_camera_pixel_format_t format, anki_camera_f
   }
   case ANKI_CAM_FORMAT_RGB888: {
     *out_frame = s_frame_info_rgb888;
+    break;
+  }
+  case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP: {
+    *out_frame = s_frame_info_bayer_mipi_bggr10_2mp;
+    break;
+  }
+  case ANKI_CAM_FORMAT_RGB888_2MP: {
+    *out_frame = s_frame_info_rgb888_2mp;
     break;
   }
   default: {
@@ -259,6 +300,14 @@ int camera_capture_alloc(struct anki_camera_capture* capture,
     break;
     case ANKI_CAM_FORMAT_RGB888: {
       memcpy(frame, &s_frame_info_rgb888, sizeof(s_frame_info_rgb888));
+    }
+    break;
+    case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP: {
+      memcpy(frame, &s_frame_info_bayer_mipi_bggr10_2mp, sizeof(s_frame_info_bayer_mipi_bggr10_2mp));
+    }
+    break;
+    case ANKI_CAM_FORMAT_RGB888_2MP: {
+      memcpy(frame, &s_frame_info_rgb888_2mp, sizeof(s_frame_info_rgb888_2mp));
     }
     break;
     }

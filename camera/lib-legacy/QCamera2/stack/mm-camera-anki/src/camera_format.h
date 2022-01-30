@@ -17,6 +17,8 @@ typedef enum {
   ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10,
   ANKI_CAM_FORMAT_RAW = ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10,
   ANKI_CAM_FORMAT_RGB888,
+  ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP,
+  ANKI_CAM_FORMAT_RGB888_2MP,
 } anki_camera_pixel_format_t;
 
 #endif // __anki_camera_format_h__

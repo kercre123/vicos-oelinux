@@ -195,7 +195,7 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
     // allocate mem
     if (!is_camera_capture_initialized(&ctx->camera)) {
       logv("%s: initialize capture buffer", __FUNCTION__);
-      rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888);
+      rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888_2MP);
       if (rc != 0) {
         loge("%s: error initializing camera capture", __FUNCTION__);
         break;
@@ -511,7 +511,7 @@ int start_server(struct server_ctx* ctx)
   if (ctx->params.autostart_camera) {
     if (!is_camera_capture_initialized(&ctx->camera)) {
       logd("%s: initialize capture buffer", __func__);
-      int rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888);
+      int rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888_2MP);
       if (rc != 0) {
         loge("%s: error initializing camera capture", __func__);
       }
