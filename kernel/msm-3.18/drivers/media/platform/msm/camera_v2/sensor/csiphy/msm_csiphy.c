@@ -28,7 +28,7 @@
 #include "include/msm_csiphy_3_5_hwreg.h"
 #include "cam_hw_ops.h"
 
-#define DBG_CSIPHY 1
+#define DBG_CSIPHY 0
 #define SOF_DEBUG_ENABLE 1
 #define SOF_DEBUG_DISABLE 0
 
@@ -51,12 +51,7 @@
 #define CSIPHY_SOF_DEBUG_COUNT                      2
 
 #undef CDBG
-#define CONFIG_MSMB_CAMERA_DEBUG
-#ifdef CONFIG_MSM_CAMERA_DEBUG
-#define CDBG(fmt, args...) pr_err(fmt, ##args)
-#else
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
-#endif
 
 static struct v4l2_file_operations msm_csiphy_v4l2_subdev_fops;
 

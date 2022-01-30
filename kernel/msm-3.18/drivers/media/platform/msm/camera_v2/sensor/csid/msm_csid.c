@@ -51,7 +51,7 @@
 #define CSID_VERSION_V40                      0x40000000
 #define MSM_CSID_DRV_NAME                    "msm_csid"
 
-#define DBG_CSID                             1
+#define DBG_CSID                             0
 #define SHORT_PKT_CAPTURE                    0
 #define SHORT_PKT_OFFSET                     0x200
 #define ENABLE_3P_BIT                        1
@@ -65,12 +65,7 @@
 #define CSID_TIMEOUT msecs_to_jiffies(100)
 
 #undef CDBG
-#define CONFIG_MSMB_CAMERA_DEBUG
-#ifdef CONFIG_MSMB_CAMERA_DEBUG
-#define CDBG(fmt, args...) pr_err(fmt, ##args)
-#else
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
-#endif
 
 static struct camera_vreg_t csid_vreg_info[] = {
 	{"qcom,mipi-csi-vdd", 0, 0, 12000},
@@ -143,9 +138,9 @@ static void msm_csid_set_debug_reg(struct csid_device *csid_dev,
 	if ((csid_dev->hw_dts_version == CSID_VERSION_V34_1) ||
 		(csid_dev->hw_dts_version == CSID_VERSION_V36)) {
 			val = ((1 << csid_params->lane_cnt) - 1) << 20;
-			msm_camera_io_w(0xFFFFFFFF | val, csid_dev->base +
+			msm_camera_io_w(0x7f010800 | val, csid_dev->base +
 			csid_dev->ctrl_reg->csid_reg.csid_irq_mask_addr);
-			msm_camera_io_w(0xFFFFFFFF | val, csid_dev->base +
+			msm_camera_io_w(0x7f010800 | val, csid_dev->base +
 			csid_dev->ctrl_reg->csid_reg.csid_irq_clear_cmd_addr);
 	} else {
 		if (csid_dev->csid_3p_enabled == 1) {
