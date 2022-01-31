@@ -38,6 +38,17 @@
 int disconnect_client(struct server_ctx* ctx);
 int shutdown_camera(struct server_ctx* ctx);
 
+// TODO: Placeholder for factory images.
+// When this code is unified with master image we'll
+// need to actually detect.
+anki_camera_pixel_format_t get_camera_format()
+{
+  if (0) {
+    return ANKI_CAM_FORMAT_RGB888;
+  } else {
+    return ANKI_CAM_FORMAT_RGB888_2MP;
+  }
+}
 
 int configure_socket(int socket)
 {
@@ -195,7 +206,7 @@ int process_one_message(struct server_ctx* ctx, struct anki_camera_msg* msg)
     // allocate mem
     if (!is_camera_capture_initialized(&ctx->camera)) {
       logv("%s: initialize capture buffer", __FUNCTION__);
-      rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888_2MP);
+      rc = camera_capture_init(&ctx->camera, get_camera_format());
       if (rc != 0) {
         loge("%s: error initializing camera capture", __FUNCTION__);
         break;
@@ -511,7 +522,7 @@ int start_server(struct server_ctx* ctx)
   if (ctx->params.autostart_camera) {
     if (!is_camera_capture_initialized(&ctx->camera)) {
       logd("%s: initialize capture buffer", __func__);
-      int rc = camera_capture_init(&ctx->camera, ANKI_CAM_FORMAT_RGB888_2MP);
+      int rc = camera_capture_init(&ctx->camera, get_camera_format());
       if (rc != 0) {
         loge("%s: error initializing camera capture", __func__);
       }
