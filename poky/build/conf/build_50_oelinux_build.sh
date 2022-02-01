@@ -17,7 +17,7 @@ source build/conf/set_anki_build_version.sh
 
 cd $WS/poky/build
 
-conf/clean_all_artifacts.sh
+conf/build_35_clean_all_artifacts.sh
 
 while getopts v: flag
 do
