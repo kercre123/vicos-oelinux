@@ -58,6 +58,7 @@ case "${BUILD_VARIANT}" in
 esac
 
 cd $WS/_build
+mkdir -p ~/vicos-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/
 cp vicos-${VICOS_VERSION}.ota ~/vicos-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/
 cp vicos-${VICOS_VERSION}.ota ~/vicos-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/latest.ota
 

@@ -74,7 +74,7 @@ $(BUILD)/%.img: $(IMG_DIR)/%.ext4
 	echo "sha256=`shasum -a256 -b $< | awk '{ print $$1 }'`" >> $@
 
 %.sha256: %.ini
-	openssl dgst -sha256 -sign $(OTAKEY) -passin env:OTA_KEY_PASS -out $@ $<
+	openssl dgst -sha256 -sign $(OTAKEY) -passin env:OTA_MANIFEST_SIGNING_KEY -out $@ $<
 
 orange_boot_img: $(BUILD)
 	curl http://vmosAlpha.ankicore.com/apq8009-robot-boot.img.gz.enc > $(BOOT_GZ_ENC)
