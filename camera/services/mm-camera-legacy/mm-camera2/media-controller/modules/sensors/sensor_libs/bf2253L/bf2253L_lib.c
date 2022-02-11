@@ -175,7 +175,7 @@ static struct msm_camera_i2c_reg_array init_reg_array0[] = {
 //;;FrameH:1236
 
 	//{0xf2, 0x01},/0xf2[0]:1,reset
-	{0x00, 0x2e},// Mirror and invert pixels
+	{0x00, 0x22},// Mirror and invert pixels
 	{0xe1, 0x06},
 	{0xe2, 0x06},
 	{0xe3, 0x0e},
@@ -205,7 +205,7 @@ static struct msm_camera_i2c_reg_array init_reg_array0[] = {
 	{0x77, 0x03},
 	{0x78, 0x0e},
 	{0x79, 0x08},
-	{0x00, 0x2e},// Mirror and invert pixels		
+	{0x00, 0x22},// Mirror and invert pixels		
 };
 
 static struct msm_camera_i2c_reg_setting init_reg_setting[] = {
@@ -226,7 +226,7 @@ static struct sensor_lib_reg_settings_array init_settings_array = {
 
 static struct msm_camera_i2c_reg_array start_reg_array[] = {
 	{0xe0, 0x00},
-	{0x00, 0x2e}, // Mirror and invert pixels
+	{0x00, 0x22}, // Mirror and invert pixels
 	{0x01, 0x14},
 
 };
