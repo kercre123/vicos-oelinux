@@ -8,12 +8,49 @@ THIS ASSUMES YOU HAVE BUILT A **NORMAL** OTA UPDATE BEFORE. IF YOU HAVEN'T
 CHECK OUT THE MASTER BRANCH AND FOLLOW THE INSTRUCTIONS SO YOU UNDERSTAND
 HOW THE SYSTEM WORKS.
 
-## Practical matters.
+## Factory image build quickstart
 
-This is a delicate build with potential to brick robots if done incorrectly.
-The best thing to do is get the code build, tested, and locked down, then
-just run the part listed as **Actual Build** on a day to day basis to generate
-the new images.
+Assuming your build machine is already configured here are the
+ocmmands to build new images suitable for use for flashing the
+QualComm chip directly via QDL mode:
+
+```
+
+cd $WORKSPACE/poky
+source build/conf/set_bb_env.sh
+
+cd conf
+
+build_30_inc_anki_build_version.sh
+
+# Build the dev/debug version of the factory image.
+build_40_clean_all_artifacts.sh
+build_50_oelinux_build.sh -v dev # And wait an hour...
+build_60_make_images.sh -v dvt
+
+# Build the non-dev factory version of the factory image.
+# We want the same build version for this and the previous build.
+build_40_clean_all_artifacts.sh
+build_50_oelinux_build.sh -v fac # And wait an hour...
+build_60_make_images.sh -v dvt
+
+# Tag in git now that entire build is done and we have good images.
+build_70_git_tag_repos.sh
+```
+
+This will put the new files in `~/victor-fac-builds/dvt/` and then
+these can be copied to the systems that actually flash new heads.
+
+## Unlock Image Practical matters.
+
+Unlock images hack the ABOOT record on an existing production Vector
+to switch modes. Since we are doing this via a userland software
+update, rather than with the normal tools that bypass the OS and write
+directly to the chip we are in dangerous territory. Generating a bad
+set of files has the potential to brick robots.  The best thing to do
+is get the code build, tested, and locked down, then just run the part
+listed as **Actual Build** on a day to day basis to generate the new
+images.
 
 If you do need to bring up a new machine, make sure to test
 extensively before rolling out an image.
