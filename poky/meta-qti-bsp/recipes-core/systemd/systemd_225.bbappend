@@ -31,16 +31,13 @@ do_install_append () {
    ln -sf /lib/systemd/system/systemd-logind.service ${D}/lib/systemd/system/ffbm.target.wants/systemd-logind.service
    ln -sf /lib/systemd/system/getty.target ${D}/lib/systemd/system/ffbm.target.wants/getty.target
    ln -sf /lib/systemd/system/systemd-ask-password-wall.path ${D}/lib/systemd/system/ffbm.target.wants/systemd-ask-password-wall.path
-   
-   # Hack for DDL testing. We have dev builds for factory testing.
-   # So we should always treat that like we're doing a factory build
-   # And not make people manually mount /factory as rw
-   #
-   # Since we no longer build mainline images off of this branch
-   # We don't need to worry about how it eventually behaves in production
-   install -m 0750 ${WORKDIR}/mount-factory-data \
+   if [ "${FACTORY}" == "1" ]; then
+       install -m 0750 ${WORKDIR}/mount-factory-data \
                     -D ${D}${sysconfdir}/initscripts/mount-data
-
+   else
+   install -m 0750 ${WORKDIR}/mount-data \
+                -D ${D}${sysconfdir}/initscripts/mount-data
+   fi
    install -d ${D}${systemd_unitdir}/system/
    install -m 0644 ${WORKDIR}/mount-data.service \
                 -D ${D}${systemd_unitdir}/system/mount-data.service
