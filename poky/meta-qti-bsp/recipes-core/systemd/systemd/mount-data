@@ -64,6 +64,17 @@ case "$1" in
         make_userdata true
         sync
       fi
+      PACKOUT_FLAG=`/bin/emr-cat o`
+      if [ $? -eq 0 ]; then # If we can't test the packout flag we don't want to risk remounting
+        if [ $PACKOUT_FLAG -eq 00000000 ]; then # If packout flag is not set
+          echo "Not packed out, remounting /factory rw" > /dev/kmsg
+          sync
+          mount -o remount,rw /factory
+          make_tomlog
+        fi
+      else
+        echo "Couldn't determine packout status" > /dev/kmsg
+      fi
     fi
     ;;
 
