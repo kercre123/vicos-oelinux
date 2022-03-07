@@ -3973,6 +3973,10 @@ void aboot_init(const struct app_descriptor *app)
 	dprintf(INFO,"serial number: %s\n",sn_buf);
 	dprintf(INFO, "chip_serial: %d\n", board_chip_serial());
 
+#ifdef ANKIDEV
+	is_anki_dev = true;
+#endif
+	
 #ifdef QSN_LOCK
 	ASSERT(board_chip_serial() == QSN_LOCK);
 	is_anki_dev = true;

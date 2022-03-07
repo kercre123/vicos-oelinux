@@ -57,6 +57,10 @@ python () {
     bb.note("LK QSN_LOCK={}".format(qsn))
     if qsn:
         d.appendVar('EXTRA_OEMAKE', ' QSN_LOCK=' + qsn)
+    ankidev = os.environ.get('ANKIDEV', False)
+    bb.note("LK ANKIDEV={}".format(ankidev))
+    if ankidev:
+       d.appendVar('EXTRA_OEMAKE', ' ANKIDEV=1')
 }
 
 #enable hardfloat

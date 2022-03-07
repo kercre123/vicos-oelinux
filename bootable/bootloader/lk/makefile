@@ -81,6 +81,9 @@ ifeq ($(ENABLE_EARLY_ETHERNET),1)
   CFLAGS += -DENABLE_EARLY_ETHERNET=1
 endif
 
+ifeq ($(ANKIDEV),1)
+  CFLAGS += -DANKIDEV=1
+endif
 
 # setup toolchain prefix
 TOOLCHAIN_PREFIX ?= arm-eabi-
