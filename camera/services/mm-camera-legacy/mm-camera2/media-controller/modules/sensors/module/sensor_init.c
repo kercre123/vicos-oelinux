@@ -34,6 +34,9 @@ static char *sensor_libs[] = {
  *  absolute path
  **/
 
+// This will give us 16 subversions before we release a major rev 3.0
+#define DDL_BASE_VERSION 0x20
+
 sensor_anki_t sensor_get_anki_type() {
   int fd = -1;
   uint32_t emr_data[8]; // The emr header
@@ -44,7 +47,7 @@ sensor_anki_t sensor_get_anki_type() {
   // See emr-cat.c to determine how we got the offset
   uint32_t hw_ver = emr_data[1];
        
-  if (hw_ver < 20) {
+  if (hw_ver < DDL_BASE_VERSION) {
     return OV8856;
   } else {
     return BF2253L;
