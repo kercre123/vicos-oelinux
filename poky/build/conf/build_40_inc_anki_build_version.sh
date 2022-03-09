@@ -17,7 +17,7 @@ OUT_DIR=s3://assets.digitaldreamlabs.com/vic/ufxTn3XGcVNK2YrF/
 BUILD_VERSION_FILE=${CONF_DIR}/${CONF_FILE}
 
 mkdir -p ${CONF_DIR}
-echo aws s3 cp  ${OUT_DIR}${CONF_FILE} ${BUILD_VERSION_FILE}
+aws s3 cp  ${OUT_DIR}${CONF_FILE} ${BUILD_VERSION_FILE}
 
 if [[ -f "$BUILD_VERSION_FILE" ]];then
     echo "FOUND $BUILD_VERSION_FILE"
@@ -30,6 +30,6 @@ fi
 NEXT_BUILD_VERSION=$(expr "$CURRENT_BUILD_VERSION" + 1)
 echo $NEXT_BUILD_VERSION > $BUILD_VERSION_FILE
 
-echo aws s3 cp ${BUILD_VERSION_FILE} ${OUT_DIR}
+aws s3 cp ${BUILD_VERSION_FILE} ${OUT_DIR}
 
 echo Updated build version to $NEXT_BUILD_VERSION ...
