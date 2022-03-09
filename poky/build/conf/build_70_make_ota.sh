@@ -21,6 +21,9 @@ case "${BRANCH}" in
     v20)
 	BRANCH_SUBFOLDER=v20
 	;;
+    v20-l)
+	BRANCH_SUBFOLDER=v20-l
+	;;
     *) echo "BAD OPTION. '-b master' or '-b rc' or '-b v20'" && exit 1;;
 esac
 
