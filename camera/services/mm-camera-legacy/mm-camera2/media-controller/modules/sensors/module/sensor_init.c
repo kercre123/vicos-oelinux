@@ -35,7 +35,16 @@ static char *sensor_libs[] = {
  **/
 
 sensor_anki_t sensor_get_anki_type() {
-  if (0) {
+  int fd = -1;
+  uint32_t emr_data[8]; // The emr header
+
+  fd = open("/dev/block/bootdevice/by-name/emr",O_RDONLY);
+  read(fd, &emr_data, sizeof(emr_data));
+
+  // See emr-cat.c to determine how we got the offset
+  uint32_t hw_ver = emr_data[1];
+       
+  if (hw_ver < 20) {
     return OV8856;
   } else {
     return BF2253L;
