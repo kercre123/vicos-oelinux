@@ -40,6 +40,7 @@ void usage(char* name)
   printf("   --fps-reduction,-r <SCALE>          reduce frame rate to 30/<SCALE> fps (default: 2)\n");
   printf("   --verbose,-v <LOG LEVEL>            enable verbose output: 0-5 [silent,errors(default),warnings,info,debug,verbose]\n");
   printf("   --dump,-d                           dump processed image received from camera system\n");
+  printf("   --legacy,-l                         use legacy 1mp camera\n");
   printf("   --format,-f <FORMAT>                set initial capture format (RGB or YUV, default: RGB)\n");
   printf("   --help,-h                           this helpful message\n");
 }
@@ -74,6 +75,7 @@ int main(int argc, char* argv[])
   uint8_t autostart_camera = 0;
   uint8_t slave_mode = 0;
   uint8_t debug_dump_images = 0;
+  uint8_t one_megapixel = 0;
   uint8_t fps_reduction = 2;
   uint8_t verbose_level = 1;
   char* format = NULL;
@@ -87,6 +89,7 @@ int main(int argc, char* argv[])
     {"fpsreduction",        1, NULL, 'r'},
     {"verbose",             1, NULL, 'v'},
     {"dump",                0, NULL, 'd'},
+    {"legacy",              0, NULL, 'l'},
     {"format",              1, NULL, 'f'},
     {"help",                0, NULL, 'h'},
     {0, 0, 0, 0}
@@ -109,6 +112,9 @@ int main(int argc, char* argv[])
       break;
     case 'r':
       fps_reduction = atoi(optarg);
+      break;
+    case 'l':
+      one_megapixel = 1;
       break;
     case 'S':
       slave_mode = 1;
@@ -143,7 +149,11 @@ int main(int argc, char* argv[])
   s_camera_server.params.exit_on_disconnect = slave_mode;
   s_camera_server.params.debug_dump_images = debug_dump_images;
   s_camera_server.capture_params.fps_reduction = (fps_reduction) >= 1 ? fps_reduction : 1;
-  s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RAW;
+  if (one_megapixel) {
+    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RGB888;
+  } else {
+    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RGB888_2MP;
+  }
 
   if(format != NULL)
   {
