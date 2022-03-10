@@ -28,7 +28,7 @@ static const char* USAGE_FMT = \
 "Where <KEY TO READ> is one of:\n" \
 "h: Print this help text instead of reading EMR\n" \
 "e: ESN\n" \
-"v: HW_FER\n" \
+"v: HW_VER\n" \
 "m: MODEL\n" \
 "l: LOT_CODE\n" \
 "r: PLAYPEN_READY_FLAG\n" \
