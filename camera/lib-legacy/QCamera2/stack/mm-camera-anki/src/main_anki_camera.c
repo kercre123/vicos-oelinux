@@ -67,6 +67,23 @@ static void setup_signal_handler()
   }
 }
 
+static uint32_t vector_hw_version()
+{
+  int fd = -1;
+  uint32_t emr_data[8]; // The emr header
+
+  fd = open("/dev/block/bootdevice/by-name/emr",O_RDONLY);
+
+  if (fd == -1) { return 0;} // ABORT!
+  
+  read(fd, &emr_data, sizeof(emr_data));
+
+  // See emr-cat.c to determine how we got the offset
+  uint32_t hw_ver = emr_data[1];
+
+  return hw_ver;
+}
+
 int main(int argc, char* argv[])
 {
   setup_signal_handler();
@@ -89,7 +106,6 @@ int main(int argc, char* argv[])
     {"fpsreduction",        1, NULL, 'r'},
     {"verbose",             1, NULL, 'v'},
     {"dump",                0, NULL, 'd'},
-    {"legacy",              0, NULL, 'l'},
     {"format",              1, NULL, 'f'},
     {"help",                0, NULL, 'h'},
     {0, 0, 0, 0}
@@ -113,9 +129,6 @@ int main(int argc, char* argv[])
     case 'r':
       fps_reduction = atoi(optarg);
       break;
-    case 'l':
-      one_megapixel = 1;
-      break;
     case 'S':
       slave_mode = 1;
       break;
@@ -132,6 +145,15 @@ int main(int argc, char* argv[])
     }
   }
 
+  printf("VECTOR HW VER %d\n", vector_hw_version());
+  if(vector_hw_version() < 0x20) {
+    one_megapixel = 1;
+    printf("%s\n", "LEGACY one megapixel mode!");
+  } else {
+    one_megapixel = 0;
+    printf("%s\n", "DEFAULT two megapixel mode!");
+  }
+  
   // configure logging
   int log_level = AnkiCameraLogLevelMax - verbose_level;
   setMinLogLevel(log_level);
