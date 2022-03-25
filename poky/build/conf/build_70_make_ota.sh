@@ -2,6 +2,8 @@
 
 set -e
 
+[ -z ${OTA_MANIFEST_SIGNING_KEY+y} ] && echo "OTA_MANIFEST_SIGNING_KEY not defined" && exit 1
+
 while getopts :v:b: flag
 do
     case "${flag}" in
