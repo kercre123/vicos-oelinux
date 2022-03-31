@@ -54,7 +54,7 @@ gen_buildprop() {
    fi
 
    # Combine victor + OS build versions
-   VERSION_ID="v${VICTOR_BUILD_VERSION}_os${OS_VERSION}"
+   VERSION_ID="${OS_VERSION}#${VICTOR_BUILD_REV}"
    BUILD_ID="v${VICTOR_BUILD_VERSION}${VICTOR_REV_TAG}_os${OS_VERSION}${REV_TAG}-${BUILD_TIMESTAMP}"
 
    echo "ro.anki.version=${OS_VERSION}" >> ${IMAGE_ROOTFS}/build.prop
