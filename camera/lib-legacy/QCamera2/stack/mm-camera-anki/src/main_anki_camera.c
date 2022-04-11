@@ -81,6 +81,8 @@ static uint32_t vector_hw_version()
   // See emr-cat.c to determine how we got the offset
   uint32_t hw_ver = emr_data[1];
 
+  close(fd);
+  
   return hw_ver;
 }
 

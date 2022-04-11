@@ -173,6 +173,8 @@ static uint32_t get_vector_hw_version() {
 
   DAS_LOG(DAS_INFO, "hw_version.get", "Got HW version 0x%x", hw_ver );
 
+  close(fd);
+  
   return hw_ver;
 }
 
