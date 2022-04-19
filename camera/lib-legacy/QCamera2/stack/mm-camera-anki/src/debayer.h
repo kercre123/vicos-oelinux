@@ -25,6 +25,12 @@ void bayer_mipi_bggr10_downsample(const uint8_t *bayer,
                                   int bayer_sy,
                                   int bpp);
 
+void bayer_mipi_rggb10_downsample(const uint8_t *bayer,
+                                  uint8_t *out_rgb,
+                                  int bayer_sx,
+                                  int bayer_sy,
+                                  int bpp);
+
 #ifdef __cplusplus
 }
 #endif
