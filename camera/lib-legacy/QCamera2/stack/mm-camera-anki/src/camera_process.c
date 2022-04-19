@@ -138,7 +138,7 @@ int anki_camera_frame_callback(const uint8_t* image,
   }
   else {
     // downsample
-    bayer_mipi_bggr10_downsample(image, frame->data, width, height, 10);
+    bayer_mipi_rggb10_downsample(image, frame->data, width, height, 10);
   }
 
   if ( s_dump_images && (frame->format != ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10) &&

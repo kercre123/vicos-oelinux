@@ -19,7 +19,7 @@ extern "C" {
 
 #include <stdint.h>
 
-void bayer_mipi_bggr10_downsample(const uint8_t *bayer,
+void bayer_mipi_rggb10_downsample(const uint8_t *bayer,
                                   uint8_t *out_rgb,
                                   int bayer_sx,
                                   int bayer_sy,

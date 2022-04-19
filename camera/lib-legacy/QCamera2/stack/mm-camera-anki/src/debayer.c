@@ -30,7 +30,7 @@
 #define USE_NEON_DOWNSAMPLE 1
 #endif
 #if USE_NEON_DOWNSAMPLE
-void bayer_mipi_bggr10_downsample(const uint8_t *bayer_in, uint8_t *rgb, int bayer_sx, int bayer_sy, int bpp)
+void bayer_mipi_rggb10_downsample(const uint8_t *bayer_in, uint8_t *rgb, int bayer_sx, int bayer_sy, int bpp)
 {
   // input width must be divisble by bpp
   assert((bayer_sx % bpp) == 0);
@@ -96,6 +96,8 @@ void bayer_mipi_bggr10_downsample(const uint8_t *bayer_in, uint8_t *rgb, int bay
         "VQSHL.U8 d1, d1, #2 \n\t"
         "VQSHL.U8 d2, d2, #2 \n\t"
 
+        "VSWP.8 d0, d2 \n\t" // Swap colors since 2MP is opposite of old 1MP camera
+	
         // Interleaving store of red, green, and blue bytes into output rgb image
         "VST3.8 {d0, d1, d2}, [%[out]]! \n\t"
 
@@ -124,9 +126,9 @@ void bayer_mipi_bggr10_downsample(const uint8_t *bayer, uint8_t *rgb, int bayer_
   register int i, j;
   int tmp;
 
-  outB = &rgb[0];
+  outB = &rgb[2];
   outG = &rgb[1];
-  outR = &rgb[2];
+  outR = &rgb[0];
 
   // Raw image are reported as 1280x720, 10bpp BGGR MIPI Bayer format
   // Based on frame metadata, the raw image dimensions are actually 1600x720 10bpp pixels.
