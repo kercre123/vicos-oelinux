@@ -26,7 +26,7 @@
 #include "camera_memory.h"
 #include "log.h"
 
-static int  s_dump_images = 1;
+static int  s_dump_images = 0;
 static char s_output_path[256] = "/data/misc/camera/test";
 
 void debug_dump_frame(uint8_t *frame, int num_bytes, char* prefix)
