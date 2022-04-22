@@ -174,9 +174,9 @@ int main(int argc, char* argv[])
   s_camera_server.params.debug_dump_images = debug_dump_images;
   s_camera_server.capture_params.fps_reduction = (fps_reduction) >= 1 ? fps_reduction : 1;
   if (one_megapixel) {
-    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RGB888;
+    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RAW;
   } else {
-    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RGB888_2MP;
+    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RAW_2MP;
   }
 
   if(format != NULL)
