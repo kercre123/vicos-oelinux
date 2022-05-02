@@ -170,15 +170,15 @@ verify-aboot-dev:
 	grep "Widgit" $(EMMC_FILE) ||  (echo "ABOOT CHECK FAILED. BAD x509"; exit 1)
 	echo "ABOOT CHECK PASSED. CORRECT x509."
 
-verify-boot-oskr: verify-aboot-oskr
+verify-boot-oskr:
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(OSKR_BOOT_KEY).pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
 	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
-verify-boot-prod: verify-aboot-prod
+verify-boot-prod:
 	openssl pkeyutl -verify -in  $(NON_SECURE_KERNEL).sha256  -sigfile $(NON_SECURE_KERNEL).sig -inkey $(BOOT_KEY).pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
 	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
-verify-boot-dev: verify-aboot-dev
+verify-boot-dev:
 	openssl pkeyutl -verify -in  $(SECURE_KERNEL).sha256  -sigfile $(SECURE_KERNEL).sig -inkey vble-qti.key.pub -pubin -pkeyopt digest:sha256 -pkeyopt rsa_padding_mode:pkcs1 | grep "Signature Verified Successfully"
 	echo "BOOT CHECK PASSED. CORRECT IMG SIGNATURE"
 
