@@ -358,7 +358,11 @@ void lcd_gpio_setup(void)
   DnC_PIN = gpio_create(GPIO_LCD_WRX, gpio_DIR_OUTPUT, gpio_HIGH);
 
   RESET_PIN1 = gpio_create_open_drain_output(GPIO_LCD_RESET1, gpio_HIGH);
-  RESET_PIN2 = gpio_create_open_drain_output(GPIO_LCD_RESET2, gpio_HIGH);
+  if (display_version() == MIDAS) {
+    RESET_PIN2 = gpio_create(GPIO_LCD_RESET2,gpio_DIR_OUTPUT,  gpio_HIGH);
+  } else {
+    RESET_PIN2 = gpio_create_open_drain_output(GPIO_LCD_RESET2, gpio_HIGH);
+  }
 }
 
 
