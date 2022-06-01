@@ -20,7 +20,13 @@ case "${BRANCH}" in
     rc)
 	BRANCH_SUBFOLDER=rc
 	;;
-    *) echo "BAD OPTION. '-b master' or '-b rc'" && exit 1;;
+    v20)
+	BRANCH_SUBFOLDER=v20
+	;;
+    v20-l)
+	BRANCH_SUBFOLDER=v20-l
+	;;
+    *) echo "BAD OPTION. '-b master' or '-b rc' or '-b v20'" && exit 1;;
 esac
 
 # Find where the global conf directory is...

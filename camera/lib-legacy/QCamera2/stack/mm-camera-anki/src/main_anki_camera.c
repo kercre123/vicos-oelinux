@@ -40,6 +40,7 @@ void usage(char* name)
   printf("   --fps-reduction,-r <SCALE>          reduce frame rate to 30/<SCALE> fps (default: 2)\n");
   printf("   --verbose,-v <LOG LEVEL>            enable verbose output: 0-5 [silent,errors(default),warnings,info,debug,verbose]\n");
   printf("   --dump,-d                           dump processed image received from camera system\n");
+  printf("   --legacy,-l                         use legacy 1mp camera\n");
   printf("   --format,-f <FORMAT>                set initial capture format (RGB or YUV, default: RGB)\n");
   printf("   --help,-h                           this helpful message\n");
 }
@@ -66,6 +67,25 @@ static void setup_signal_handler()
   }
 }
 
+static uint32_t vector_hw_version()
+{
+  int fd = -1;
+  uint32_t emr_data[8]; // The emr header
+
+  fd = open("/dev/block/bootdevice/by-name/emr",O_RDONLY);
+
+  if (fd == -1) { return 0;} // ABORT!
+  
+  read(fd, &emr_data, sizeof(emr_data));
+
+  // See emr-cat.c to determine how we got the offset
+  uint32_t hw_ver = emr_data[1];
+
+  close(fd);
+  
+  return hw_ver;
+}
+
 int main(int argc, char* argv[])
 {
   setup_signal_handler();
@@ -74,6 +94,7 @@ int main(int argc, char* argv[])
   uint8_t autostart_camera = 0;
   uint8_t slave_mode = 0;
   uint8_t debug_dump_images = 0;
+  uint8_t one_megapixel = 0;
   uint8_t fps_reduction = 2;
   uint8_t verbose_level = 1;
   char* format = NULL;
@@ -126,6 +147,15 @@ int main(int argc, char* argv[])
     }
   }
 
+  printf("VECTOR HW VER %d\n", vector_hw_version());
+  if(vector_hw_version() < 0x20) {
+    one_megapixel = 1;
+    printf("%s\n", "LEGACY one megapixel mode!");
+  } else {
+    one_megapixel = 0;
+    printf("%s\n", "DEFAULT two megapixel mode!");
+  }
+  
   // configure logging
   int log_level = AnkiCameraLogLevelMax - verbose_level;
   setMinLogLevel(log_level);
@@ -143,7 +173,11 @@ int main(int argc, char* argv[])
   s_camera_server.params.exit_on_disconnect = slave_mode;
   s_camera_server.params.debug_dump_images = debug_dump_images;
   s_camera_server.capture_params.fps_reduction = (fps_reduction) >= 1 ? fps_reduction : 1;
-  s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RAW;
+  if (one_megapixel) {
+    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RAW;
+  } else {
+    s_camera_server.capture_params.pixel_format = ANKI_CAM_FORMAT_RAW_2MP;
+  }
 
   if(format != NULL)
   {

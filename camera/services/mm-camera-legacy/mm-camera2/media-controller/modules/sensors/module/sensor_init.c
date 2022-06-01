@@ -9,42 +9,9 @@
 #include "server_debug.h"
 #include <cutils/properties.h>
 
-#if defined(MSM8916_SENSORS)
-#define BOARD_SENSORS \
-  "imx135", \
-  "ov5648_q5v22e", \
-  "S5K4E1_13P1BA", \
-  "ov2680", \
-  "ov2680_5987fhq", \
-  "ov16825", \
-  "imx214", \
-  "ov13850", \
-  "ov13850_q13v06k",\
-  "ov8858", \
-  "ov5670_q5v41b", \
-  "s5k3m2xm", \
-  "ov8825",
-#elif defined(MSM8909_SENSORS)
-#define BOARD_SENSORS \
-  "ov8856_f8v05a"
-#else
-#define BOARD_SENSORS \
-  "imx134", \
-  "s5k3m2xm", \
-  "oem_camera1", \
-  "oem_camera2", \
-  "oem_camera3", \
-  "oem_camera4",
-#endif
-
-#if defined(ROBOT_SENSORS)
-#undef BOARD_SENSORS
-#define BOARD_SENSORS \
-  "ov8856_f8v05a"
-#endif
-
-static const char *sensor_libs[] = {
-  BOARD_SENSORS
+// Intentionally bad, we must patch in at runtime!
+static char *sensor_libs[] = {
+  "xxx"
 };
 
 /** sensor_init_probe: probe available sensors
@@ -66,6 +33,26 @@ static const char *sensor_libs[] = {
  *  9) Repeat step 6-8 for all sensor libraries present in
  *  absolute path
  **/
+
+// This will give us 16 subversions before we release a major rev 3.0
+#define DDL_BASE_VERSION 0x20
+
+sensor_anki_t sensor_get_anki_type() {
+  int fd = -1;
+  uint32_t emr_data[8]; // The emr header
+
+  fd = open("/dev/block/bootdevice/by-name/emr",O_RDONLY);
+  read(fd, &emr_data, sizeof(emr_data));
+
+  // See emr-cat.c to determine how we got the offset
+  uint32_t hw_ver = emr_data[1];
+       
+  if (hw_ver < DDL_BASE_VERSION) {
+    return OV8856;
+  } else {
+    return BF2253L;
+  };
+}
 
 boolean sensor_init_probe(module_sensor_ctrl_t *module_ctrl)
 {
@@ -143,6 +130,16 @@ boolean sensor_init_probe(module_sensor_ctrl_t *module_ctrl)
     return FALSE;
   }
 
+  // Patch in camera at runtime depending on version
+  switch (sensor_get_anki_type()) {
+  case BF2253L:
+    sensor_libs[0] = "bf2253L";
+    break;
+  case OV8856:
+    sensor_libs[0] = "ov8856_f8v05a";
+    break;
+  }
+  
   /* Open sensor libraries and get init information */
   for (i = 0; i < ARRAY_SIZE(sensor_libs); i++) {
     if (mask && !(strcmp(sensor_libs[i] , "ov8858_q8v19w")))
