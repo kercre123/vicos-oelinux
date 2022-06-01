@@ -3,6 +3,7 @@
 %anki ALL = (root, root) NOPASSWD: /bin/systemctl restart update-engine-oneshot
 %anki ALL = (root, root) NOPASSWD: /bin/systemctl restart update-engine.service
 %anki ALL = (root, root) NOPASSWD: /bin/systemctl restart wpa_supplicant connman
+%anki ALL = (root, root) NOPASSWD: /bin/systemctl restart chronyd
 %anki ALL = (root, root) NOPASSWD: /sbin/reboot
 %anki ALL = (root, root) NOPASSWD: /anki/bin/diagnostics-logger
 %anki ALL = (root, root) NOPASSWD: /anki/bin/vic-log-cat
