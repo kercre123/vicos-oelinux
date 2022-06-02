@@ -48,13 +48,13 @@ else
 		echo "Unable to get serial number"
 		exit 1;
 	fi
-	if grep -qw $SERIAL unlock.list; then
+#	if grep -qw $SERIAL unlock.list; then
 		# Run user confirmation check for non verity devices
 		rampost orange
-	else
-		rampost x
-		exit 1;
-	fi
+#	else\
+#		rampost x
+#		exit 1;#
+#	fi
 fi
 
 ROOT_MOUNT_POINT=/rootfs
