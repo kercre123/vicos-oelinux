@@ -193,7 +193,7 @@ printf("Press %d!\n", buttonCount);
       }
     }
   }
-  return unlock_TIMEOUT;
+  return unlock_SUCCESS; //unlock_TIMEOUT;
 }
 
 void send_shutdown_message(void) {
