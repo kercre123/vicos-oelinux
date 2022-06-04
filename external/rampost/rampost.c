@@ -62,9 +62,10 @@ void set_body_leds(int success, int inRecovery) {
     ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
   }
   else {   //2 Blues for recovery
+    if(inRecovery) {
     ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_BLUE] = 0xFF;
     ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_BLUE] = 0xFF;
-    if (!inRecovery) { //make them white for normal operation
+    } else { //make them yellow to show we need unlock code
       ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
       ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_GREEN] = 0xFF;
       ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_RED] = 0xFF;
@@ -134,14 +135,14 @@ void show_locked_qsn_icon(void) {
 
 bool imu_is_inverted(void) {
 
-//  static int imu_print_freq =  20;
+  static int imu_print_freq =  20;
   IMURawData rawData[IMU_MAX_SAMPLES_PER_READ];
   imu_manage(rawData);
-//  if (!--imu_print_freq) {
-//    imu_print_freq = 20;
-//    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
-//                                      (rawData->acc[2] < -MIN_INVERTED_G));
-//  }
+  if (!--imu_print_freq) {
+    imu_print_freq = 20;
+    printf("acc = <%d, %d, %d> %d\n", rawData->acc[0], rawData->acc[1], rawData->acc[2],
+                                      (rawData->acc[2] < -MIN_INVERTED_G));
+  }
   if (rawData[0].acc[2] < -MIN_INVERTED_G) {
     return true;
   }
@@ -191,9 +192,9 @@ printf("Press %d!\n", buttonCount);
           return unlock_SUCCESS;
         }
       }
-    }
+      }
   }
-  return unlock_SUCCESS; //unlock_TIMEOUT;
+  return unlock_TIMEOUT;
 }
 
 void send_shutdown_message(void) {
@@ -237,6 +238,8 @@ int main(int argc, const char* argv[]) {
           send_shutdown_message();
         }
       }
+      show_locked_qsn_icon();
+      
     }
   }
 
