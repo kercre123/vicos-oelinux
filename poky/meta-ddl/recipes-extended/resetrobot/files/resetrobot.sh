@@ -24,11 +24,12 @@ logger -t resetrobot "Cleaning up EMR"
 dd if=/dev/zero of=/dev/mmcblk0p29 seek=1 bs=16
 
 logger -t resetrobot "wiping boot_a and boot_b"
-resetrobot dd if=/dev/zero of=/dev/mmcblk0p21
-resetrobot dd if=/dev/zero of=/dev/mmcblk0p24
+dd if=/dev/zero of=/dev/mmcblk0p21
+dd if=/dev/zero of=/dev/mmcblk0p24
 
 logger -t resetrobot "Forcing clear user data flag"
 
 touch /run/wipe-data
 
 logger -t resetrobot "rebooting"
+/sbin/reboot
