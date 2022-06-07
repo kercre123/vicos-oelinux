@@ -13,7 +13,7 @@
 # expected directory so we know it's mounted
 while [ -z "`getprop anki.robot.name`" ];
 do
-    logger -t localsshuser "Robot doesn't have a unique name yet. Sleeping for 5 seconds..."
+    logger -t resetrobot "Robot doesn't have a unique name yet. Sleeping for 5 seconds..."
     sleep 5
 done
 
