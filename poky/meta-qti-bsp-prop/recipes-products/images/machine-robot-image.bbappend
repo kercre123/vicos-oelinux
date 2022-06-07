@@ -2,7 +2,7 @@
 include ${BASEMACHINE}/${BASEMACHINE}-robot-qti-image.inc
 
 # BRC: Set systemd default target to run victor processes
-SYSTEMD_DEFAULT_TARGET="anki-robot.target"
+SYSTEMD_DEFAULT_TARGET="multi-user.target"
 
 inherit qimage
 
