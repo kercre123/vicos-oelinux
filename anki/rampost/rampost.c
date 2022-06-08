@@ -322,8 +322,12 @@ int main(int argc, const char* argv[])
     set_body_leds(success, in_recovery_mode);
   }
 
+  // Always init, even if we don't show image, to clear the screen.
+  // If not we see some random garbage in the boot process on PVT/MP
+  // machines.
+  lcd_device_init(); 
+  
   if (error_code || is_dev_unit || is_low_battery || is_too_hot) {
-    lcd_device_init(); // We'll be displaying something
     lcd_set_brightness(5);
     //Skip everything else on syscon error!
     if (error_code) {
