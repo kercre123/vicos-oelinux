@@ -62,7 +62,7 @@
 				pins = "gpio58","gpio94";
 				//bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
-				output-enable; output-high;
+				output-enable; output-high; 
 			};
 		};
 
@@ -219,11 +219,11 @@
 			};
 			spi0_cs0_sleep: spi0_cs0_sleep {
 				mux {
-					pins = "gpio18", "gpio55";  // GPIO 55 is not technically part of SPI0 but we need to disable the bias and for the LCD (on SPI0) so we do it here.
+					pins = "gpio18";
 					function = "gpio";
 				};
 				config {
-					pins = "gpio18", "gpio55";
+					pins = "gpio18";
 					drive-strength = <2>;
 					bias-disable;
 				};
@@ -233,22 +233,22 @@
     spi1 {
 			spi1_default: spi1_default {
 				mux {
-					pins = "gpio12", "gpio13", "gpio15";
+					pins = "gpio12", "gpio15";
 					function = "blsp_spi4";
 				};
 				config {
-					pins = "gpio12", "gpio13", "gpio15";
-					drive-strength = <12>; /* 12 MA */
+					pins = "gpio12", "gpio15";
+					drive-strength = <2>; /* 12 MA */
 					bias-disable; /* No PULL */
 				};
 			};
 			spi1_sleep: spi1_sleep {
 				mux {
-					pins = "gpio12", "gpio13", "gpio15";
+					pins = "gpio12", "gpio15";
 					function = "gpio";
 				};
 				config {
-					pins = "gpio12", "gpio13", "gpio15";
+					pins = "gpio12", "gpio15";
 					drive-strength = <2>; /* 2 MA */
 					bias-pull-down; /* pull down */
 				};
@@ -272,9 +272,77 @@
 				config {
 					pins = "gpio14";
 					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
+			spi1_rs0_active: spi1_rs0_active {
+				mux {
+					pins = "gpio13";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio13";
+					drive-strength = <2>;
 					bias-disable;
 				};
 			};
+			spi1_rs0_sleep: spi1_rs0_sleep {
+				mux {
+					pins = "gpio13";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio13";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+			spi1_rst_active: spi1_rst_active {
+				mux {
+					pins = "gpio55";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio55";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+			spi1_rst_sleep: spi1_rst_sleep {
+				mux {
+					pins = "gpio55";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio55";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+//<RevI>
+			spi1_wrx_active: spi1_wrx_active {
+				mux {
+					pins = "gpio110";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio110";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+			spi1_wrx_sleep: spi1_wrx_sleep {
+				mux {
+					pins = "gpio110";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio110";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+//<!RevI>
 		};
 
 		pmx_i2c_6 {

@@ -2,6 +2,8 @@
 
 set -e
 
+[ -z ${OTA_MANIFEST_SIGNING_KEY+y} ] && echo "OTA_MANIFEST_SIGNING_KEY not defined" && exit 1
+
 while getopts :v:b: flag
 do
     case "${flag}" in
@@ -18,7 +20,13 @@ case "${BRANCH}" in
     rc)
 	BRANCH_SUBFOLDER=rc
 	;;
-    *) echo "BAD OPTION. '-b master' or '-b rc'" && exit 1;;
+    v20)
+	BRANCH_SUBFOLDER=v20
+	;;
+    v20-l)
+	BRANCH_SUBFOLDER=v20-l
+	;;
+    *) echo "BAD OPTION. '-b master' or '-b rc' or '-b v20'" && exit 1;;
 esac
 
 # Find where the global conf directory is...

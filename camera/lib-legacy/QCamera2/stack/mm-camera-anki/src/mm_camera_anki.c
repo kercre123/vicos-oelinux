@@ -253,12 +253,15 @@ int start_camera_capture()
     // since we downsample bayer to rgb
     case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10:
     case ANKI_CAM_FORMAT_RGB888:
+    case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP:
+    case ANKI_CAM_FORMAT_RGB888_2MP:
     {
       rc = anki_mm_camera_start_rdi_capture(&(camera->lib_handle));
     }
     break;
 
     case ANKI_CAM_FORMAT_YUV:
+    case ANKI_CAM_FORMAT_YUV_2MP:
     {
       rc = victor_start_preview(&(camera->lib_handle));
     }

@@ -117,11 +117,25 @@ int anki_camera_frame_callback(const uint8_t* image,
 
   frame->frame_id = frame_id;
   frame->timestamp = timestamp;
+  
+  int downsampled_width = width / 10 * 8; // First account for 10 bits to 8 bits.
+  downsampled_width = downsampled_width / 2; // Then account for downsampling
 
+  int downsampled_height = height / 2;
+  
   if (frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10 ||
-      frame->format == ANKI_CAM_FORMAT_YUV) {
+      frame->format == ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP ||
+      frame->format == ANKI_CAM_FORMAT_YUV ||
+      frame->format == ANKI_CAM_FORMAT_YUV_2MP ) {
     // no downsample, just copy
     memcpy(frame->data, image, frame_data_len);
+  }
+  else if ( ((downsampled_width * 3) != frame->bytes_per_row) || // RGB is 3 bytes per width
+       (downsampled_height != frame->height) ) {
+    loge("%s: want a downsampled image of %dx%d, but got a downsampled image of %dx%d",
+        __FUNCTION__, (frame->bytes_per_row / 3), frame->height,
+        downsampled_width, downsampled_height);
+    return -1;
   }
   else {
     // downsample
@@ -131,11 +145,13 @@ int anki_camera_frame_callback(const uint8_t* image,
   if(s_dump_images)
   {
     char* s;
-    if(frame->format == ANKI_CAM_FORMAT_RGB888)
+    if(frame->format == ANKI_CAM_FORMAT_RGB888 ||
+       frame->format == ANKI_CAM_FORMAT_RGB888_2MP)
     {
       s = "rgb";
     }
-    else if(frame->format == ANKI_CAM_FORMAT_YUV)
+    else if(frame->format == ANKI_CAM_FORMAT_YUV ||
+	    frame->format == ANKI_CAM_FORMAT_YUV_2MP )
     {
       s = "yuv";
     }
@@ -171,6 +187,14 @@ static anki_camera_frame_t s_frame_info_bayer_mipi_bggr10 = {
   .format = ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10,
 };
 
+static anki_camera_frame_t s_frame_info_bayer_mipi_bggr10_2mp = {
+  .width = 1600,
+  .height = 1200,
+  .bytes_per_row = (10 * 1600) / 8,
+  .bits_per_pixel = 10,
+  .format = ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP,
+};
+
 static anki_camera_frame_t s_frame_info_rgb888 = {
   .width = 640,
   .height = 360,
@@ -179,10 +203,26 @@ static anki_camera_frame_t s_frame_info_rgb888 = {
   .format = ANKI_CAM_FORMAT_RGB888,
 };
 
+static anki_camera_frame_t s_frame_info_rgb888_2mp = {
+  .width = 800,
+  .height = 600,
+  .bytes_per_row = 800 * 3,
+  .bits_per_pixel = 8,
+  .format = ANKI_CAM_FORMAT_RGB888_2MP,
+};
+
 static anki_camera_frame_t s_frame_info_yuv420sp = {
   .width = 1280,
   .height = 1080, // YUV data has 1080 rows which convert to 720 pixels
   .bytes_per_row = 1280,
+  .bits_per_pixel = 12, // A block of 2x2 pixels is 4 Y + 1 U + 1 V = 6 bytes / 4 pixels = 12 bits/pixel
+  .format = ANKI_CAM_FORMAT_YUV,
+};
+
+static anki_camera_frame_t s_frame_info_yuv420sp_2mp = {
+  .width = 1600,
+  .height = 1200, // YUV data has 1080 rows which convert to 720 pixels
+  .bytes_per_row = 1600,
   .bits_per_pixel = 12, // A block of 2x2 pixels is 4 Y + 1 U + 1 V = 6 bytes / 4 pixels = 12 bits/pixel
   .format = ANKI_CAM_FORMAT_YUV,
 };
@@ -205,6 +245,18 @@ int get_camera_frame_info(const anki_camera_pixel_format_t format, anki_camera_f
   }
   case ANKI_CAM_FORMAT_YUV: {
     *out_frame = s_frame_info_yuv420sp;
+    break;
+  }
+  case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP: {
+    *out_frame = s_frame_info_bayer_mipi_bggr10_2mp;
+    break;
+  }
+  case ANKI_CAM_FORMAT_RGB888_2MP: {
+    *out_frame = s_frame_info_rgb888_2mp;
+    break;
+  }
+  case ANKI_CAM_FORMAT_YUV_2MP: {
+    *out_frame = s_frame_info_yuv420sp_2mp;
     break;
   }
   default: {
@@ -287,6 +339,14 @@ int camera_capture_alloc(struct anki_camera_capture* capture,
     break;
     case ANKI_CAM_FORMAT_YUV: {
       memcpy(frame, &s_frame_info_yuv420sp, sizeof(s_frame_info_yuv420sp));
+    }
+    break;
+    case ANKI_CAM_FORMAT_BAYER_MIPI_BGGR10_2MP: {
+      memcpy(frame, &s_frame_info_bayer_mipi_bggr10_2mp, sizeof(s_frame_info_bayer_mipi_bggr10_2mp));
+    }
+    break;
+    case ANKI_CAM_FORMAT_RGB888_2MP: {
+      memcpy(frame, &s_frame_info_rgb888_2mp, sizeof(s_frame_info_rgb888_2mp));
     }
     break;
     }
