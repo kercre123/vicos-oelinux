@@ -24,7 +24,7 @@ else
   TAR=tar
 endif
 
-OTAKEY ?= ota_test.key
+OTAKEY ?= ota_prod.key
 OTAPASS ?= file:ota_test.pass
 OTAENC ?= 1
 ANKIDEV ?= 1

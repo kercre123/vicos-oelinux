@@ -125,7 +125,7 @@ int main(int argc, const char* argv[]) {
   success = lcd_device_read_status();
   printf("lcd check = %d\n",success);
   set_body_leds(success, recovery_mode_check());
-  //  show_dev_unit();
+  show_dev_unit();
   lcd_gpio_teardown();
   
   return 0;
