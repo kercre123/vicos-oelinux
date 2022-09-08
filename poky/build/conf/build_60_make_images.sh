@@ -37,4 +37,4 @@ cd $WS/_build
 mkdir -p ~/cozmo-fac-builds/${BUILD_VARIANT}/
 cp apq8009-robot-boot.img ~/cozmo-fac-builds/${BUILD_VARIANT}/cozmo-${VICOS_VERSION}-boot.img
 cp apq8009-robot-sysfs.img ~/cozmo-fac-builds/${BUILD_VARIANT}/cozmo-${VICOS_VERSION}-sysfs.img
-cp vicos-${VICOS_VERSION}.ota ~/cozmo-fac-builds/${BUILD_VARIANT}
+cp cozmo-${VICOS_VERSION}.ota ~/cozmo-fac-builds/${BUILD_VARIANT}
