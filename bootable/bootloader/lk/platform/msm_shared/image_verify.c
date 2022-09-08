@@ -36,7 +36,7 @@
 
 #ifdef PROD_BOOT_KEY
 
-#include <LEOEMCertificate_prod.h>
+#include <LEOEMCertificate_cozmo_prod.h>
 
 #else
 

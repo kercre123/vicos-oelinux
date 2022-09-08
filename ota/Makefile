@@ -116,7 +116,7 @@ serve: $(OTA_FILE)
 NON_SECURE_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img.nonsecure
 SECURE_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img
 PROD_KERNEL=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/apq8009-robot-boot.img
-BOOT_KEY ?= qtipri.encrypted.key
+BOOT_KEY ?= qticozmopri.encrypted.key
 DEV_BOOT_KEY = ../poky/meta-qti-bsp-prop/recipes-products/images/kernel/vble-qti.key
 OSKR_BOOT_KEY ?= qtioskrpri.encrypted.key
 
