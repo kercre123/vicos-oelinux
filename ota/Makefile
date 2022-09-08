@@ -37,7 +37,7 @@ endif
 
 UPDATE_VERSION ?= $(shell cat $(OS_VERSION_FILE))
 
-OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).ota
+OTA_FILE=$(BUILD)/cozmo-$(UPDATE_VERSION).ota
 
 all: $(BUILD) $(OTA_FILE)
 
