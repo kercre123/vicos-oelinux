@@ -27,7 +27,8 @@ done
 echo BUILDING ${BUILD_VARIANT} BUILD NUMBER ${ANKI_BUILD_VERSION}...
 
 case "${BUILD_VARIANT}" in
+    dbg) build-victor-robot-perf-image;;
     dev) build-victor-robot-facdev-image;;
     fac) build-victor-robot-factory-image;;
-    *) echo "BAD OPTION. Use '-v (dev|fac)'" && exit 1;;
+    *) echo "BAD OPTION. Use '-v (dbg|dev|fac)'" && exit 1;;
 esac

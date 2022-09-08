@@ -22,6 +22,9 @@ VICOS_VERSION=`cat $WS/poky/build/tmp-glibc/work/apq8009_robot-oe-linux-gnueabi/
 
 cd $WS/ota
 case "${BUILD_VARIANT}" in
+    dbg)
+	make
+    ;;
     dvt)
 	make
     ;;
@@ -30,7 +33,7 @@ case "${BUILD_VARIANT}" in
 	make verify-boot-prod
 	ANKIDEV=0 make
     ;;
-    *) echo "BAD OPTION. '-v (dvt|pvt)'" && exit 1;;
+    *) echo "BAD OPTION. '-v (dbg|dvt|pvt)'" && exit 1;;
 esac
 
 cd $WS/_build
