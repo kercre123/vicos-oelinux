@@ -5,14 +5,14 @@
 # Find where the global conf directory is...
 scriptdir="$(dirname "${BASH_SOURCE}")"
 # Find where the workspace is...
-CONF_DIR=~/vicos-fac-builds
+CONF_DIR=~/cozmo-fac-builds
 mkdir -p ${CONF_DIR}
 BUILD_VERSION_FILE=$CONF_DIR/anki_build_version.txt
 
 if [[ -f "$BUILD_VERSION_FILE" ]];then
     CURRENT_BUILD_VERSION=$(cat $BUILD_VERSION_FILE)
 else
-    CURRENT_BUILD_VERSION=6000
+    CURRENT_BUILD_VERSION=500
 fi
 
 export ANKI_BUILD_VERSION=$CURRENT_BUILD_VERSION

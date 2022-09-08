@@ -34,7 +34,7 @@ case "${BUILD_VARIANT}" in
 esac
 
 cd $WS/_build
-mkdir -p ~/vicos-fac-builds/${BUILD_VARIANT}/
-cp apq8009-robot-boot.img ~/vicos-fac-builds/${BUILD_VARIANT}/vicos-${VICOS_VERSION}-boot.img
-cp apq8009-robot-sysfs.img ~/vicos-fac-builds/${BUILD_VARIANT}/vicos-${VICOS_VERSION}-sysfs.img
-cp vicos-${VICOS_VERSION}.ota ~/vicos-fac-builds/${BUILD_VARIANT}
+mkdir -p ~/cozmo-fac-builds/${BUILD_VARIANT}/
+cp apq8009-robot-boot.img ~/cozmo-fac-builds/${BUILD_VARIANT}/cozmo-${VICOS_VERSION}-boot.img
+cp apq8009-robot-sysfs.img ~/cozmo-fac-builds/${BUILD_VARIANT}/cozmo-${VICOS_VERSION}-sysfs.img
+cp vicos-${VICOS_VERSION}.ota ~/cozmo-fac-builds/${BUILD_VARIANT}
