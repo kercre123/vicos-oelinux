@@ -11,12 +11,12 @@ done
 
 case "${BRANCH}" in
     master)
-	GIT_BRANCH=master
+	GIT_BRANCH=ddl/cozmo-main
 	GIT_BRANCH_CLOUD=main
 	;;
     rc)
-	GIT_BRANCH=release/candidate
-	GIT_BRANCH_CLOUD=release/candidate
+	GIT_BRANCH=ddl/cozmo-rc
+	GIT_BRANCH_CLOUD=ddl/cozmo-rc
     ;;
     *)
 	echo "BAD OPTION. Use '-b master' for dev build or '-b rc' for release candidate."

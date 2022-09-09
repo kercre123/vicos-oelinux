@@ -11,9 +11,9 @@ set -e
 # Find where the global conf directory is...
 scriptdir="$(dirname "${BASH_SOURCE}")"
 # Find where the workspace is...
-CONF_DIR=~/vicos-builds
+CONF_DIR=~/cozmo-builds
 CONF_FILE=anki_build_version.txt
-OUT_DIR=s3://assets.digitaldreamlabs.com/vic/ufxTn3XGcVNK2YrF/
+OUT_DIR=s3://assets.digitaldreamlabs.com/cozmo/6TQMDcxAqX8yfZcz/
 BUILD_VERSION_FILE=${CONF_DIR}/${CONF_FILE}
 
 mkdir -p ${CONF_DIR}
@@ -24,7 +24,7 @@ if [[ -f "$BUILD_VERSION_FILE" ]];then
     CURRENT_BUILD_VERSION=$(cat $BUILD_VERSION_FILE)
 else
     echo "DIDN'T FIND $BUILD_VERSION_FILE"
-    CURRENT_BUILD_VERSION=6000
+    CURRENT_BUILD_VERSION=2000
 fi
 
 NEXT_BUILD_VERSION=$(expr "$CURRENT_BUILD_VERSION" + 1)
