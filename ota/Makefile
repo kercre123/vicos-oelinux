@@ -38,7 +38,7 @@ endif
 
 UPDATE_VERSION ?= $(shell cat $(OS_VERSION_FILE))
 
-OTA_FILE=$(BUILD)/vicos-$(UPDATE_VERSION).ota
+OTA_FILE=$(BUILD)/cozmo-$(UPDATE_VERSION).ota
 
 all: $(BUILD) $(OTA_FILE)
 
@@ -125,7 +125,7 @@ serve: $(OTA_FILE)
 
 NON_SECURE_KERNEL=$(IMG_DIR)/apq8009-robot-boot.img.nonsecure
 PROD_KERNEL=$(IMG_DIR)/apq8009-robot-boot.img
-BOOT_KEY ?= qtipri.encrypted.key
+BOOT_KEY ?= qticozmopri.encrypted.key
 OSKR_BOOT_KEY ?= qtioskrpri.encrypted.key
 DEV_BOOT_KEY = ../poky/meta-qti-bsp-prop/recipes-products/images/kernel/vble-qti.key
 
