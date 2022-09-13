@@ -19,10 +19,10 @@ mkdir -p ${CERT_ROOT}
 # responsible for resolving this correctly.
 
 # Check for valid robot name, based on format:
-# Vector-[A-Z][0-9][A-Z][0-9] (e.g. Vector-F1S3)
+# Cozmo-[A-Z][0-9][A-Z][0-9] (e.g. Vector-F1S3)
 ROBOT_NAME=$(getprop "anki.robot.name" | tr ' ' '-')
 
-if [[ ! $ROBOT_NAME =~ ^Vector-[A-Z][0-9][A-Z][0-9]$ ]]; then
+if [[ ! $ROBOT_NAME =~ ^Cozmo-[A-Z][0-9][A-Z][0-9]$ ]]; then
     echo "error: '$ROBOT_NAME' is not a valid robot name"
     exit 1
 fi
