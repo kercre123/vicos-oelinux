@@ -20,7 +20,7 @@ case "${BRANCH}" in
     ;;
     *)
 	echo "BAD OPTION. Use '-b master' for dev build or '-b rc' for release candidate."
-        return 1
+        exit 1
    ;;
 esac
 
