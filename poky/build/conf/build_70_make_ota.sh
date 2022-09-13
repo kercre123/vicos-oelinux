@@ -67,6 +67,6 @@ esac
 
 cd $WS/_build
 mkdir -p ~/cozmo-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/
-cp vicos-${VICOS_VERSION}.ota ~/cozmo-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/
-cp vicos-${VICOS_VERSION}.ota ~/cozmo-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/latest.ota
+cp cozmo-${VICOS_VERSION}.ota ~/cozmo-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/
+cp cozmo-${VICOS_VERSION}.ota ~/cozmo-builds/${BRANCH_SUBFOLDER}/${BUILD_VARIANT}/latest.ota
 

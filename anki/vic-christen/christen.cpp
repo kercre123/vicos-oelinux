@@ -26,11 +26,11 @@
 
 const std::string kRobotNamePropertyKey = "anki.robot.name";
 const std::string kProductNamePropertyKey = "ro.anki.product.name";
-const std::string kDefaultProductName = "Vector";
-const std::string kVectorNamePattern = "Vector ([A-Z][0-9][A-Z][0-9])";
+const std::string kDefaultProductName = "Cozmo";
+const std::string kVectorNamePattern = "Cozmo ([A-Z][0-9][A-Z][0-9])";
 const std::string kTestNameFile = "/factory/name";
 const std::string kProcCmdlineFile = "/proc/cmdline";
-const uint32_t kVectorNameSize = 11;
+const uint32_t kVectorNameSize = 10;
 const uint32_t kRtsHeaderVersion = 2;
 
 const std::string kSwitchboardBlockDevice = "/dev/block/bootdevice/by-name/switchboard";
