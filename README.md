@@ -115,6 +115,9 @@ factory reset.
         source build/conf/set_bb_env.sh
         build-victor-robot-factory-image # wait 40-50 minutes
 
+TODO: Should be build a DVT fac image allowing users to ssh in
+for dev units only?
+
 ## OPTION 1: Making a factory image
 
 This is relatively easy as we are simply trying to build the three
@@ -146,9 +149,28 @@ including an ABOOT unlocked to that QSN must be generated. Doing so
 requires a few steps but can be largely automated. If this is done
 wrong it has potential to BRICK a vector unit since we're messing with
 code normally set by the factory and never modified again. Take
-care to follow all instructions precisely
+care to follow all instructions precisely.
 
-### Set OSKR Unlock flavor if wanted
+### Unlock build directory - Making the skeleton build directory
+
+First we build a generic set of files so that we have correct `boot`
+and `sysfs` partitions for the OTA. This build directory is then used
+as a skeleton for builds of individual files. Build out an image as
+normal to prep the skeleton dirctory.
+
+Later we will make sure the `lk` app is built properly with
+appropriate signing keys.
+
+1. Check out a unique build directory. Do not try to switch between
+    branches on the main build directory.
+
+2. Build out a new factory image.
+
+3. Test the image as an OTA and make sure it behaves like we expect.
+
+This should only be done once per build machine.
+
+### Set OSKR Unlock flavor for the OSKR unlock build directory
 
 By default this will be a Dev bot build pointing to our dev stack and
 with a warning screen. If we want an OSKR build we need to change the
@@ -159,7 +181,10 @@ cd ota
 make oskrsign
 ```
 
-### Full unlock build
+### Full unlock build - Individual robots
+
+This is the procedure to use the skeleton generated above to generate
+a full unique unlock image for installation on an individual robot.
 
 #### Preqrequisite: APQ Sectools
 
@@ -182,23 +207,42 @@ To get the QSN:
 2. Run `logs` and wait for the log dump to finish.
 
 
-#### Actual Build
+#### Actual Unlock Build instructions - Individual robot
 
 1. Initialize environment:
         cd poky # FROM MP-UNLOCK
         source build/conf/set_bb_env.sh
-1. To set the proper environment variables, you need to run a build task and then quit it after it fires up.
+	
+1. To set the proper environment variables, you need to run a build
+    task and then quit it immediately after it fires up. We want it
+    to `export` various environment settings, but we **DONT'T** want
+    it to build anything new for the `sysfs` or `boot` images.
 
     For a DEV image: `build-robot-perf-image`
 
     For an OSKR image: `build-robot-perfoskr-image`
 
+    With these environment variables we will determine which X509
+    certificate is included in the `lk` applications, which controls
+    secure boot.
+
 1. Make the unlock file: `cd ota` and `python3 mk_unlock.py -q<qsn>
    -sm --sectools ~/src/apq8009-le-1-0-2_ap_standard_oem/common/tools/sectools/` or
    `python3 mk_unlock.py -l <file with one QSN per line> -sm --sectools ~/src/apq8009-le-1-0-2_ap_standard_oem/common/tools/sectools/`
 
-Note that signing the LK (`-s`) with cause the script to prompt for the signing password and making the OTA file (`-m`)
-will cause it to prompt for the OTA signing key password.
+    Note that signing the LK (`-s`) with cause the script to prompt
+    for the signing password and making the OTA file (`-m`) will cause it
+    to prompt for the OTA signing key password.
+
+    This will create an OTA with a custom unlock file with an `lk`
+    bootloader that:
+
+    1. Has either a DVT or OSKR x509 certificate allowing it to
+        only install OTA images signed with the appropriate key,
+	and not PROD images.
+
+    2. Is locked to a specific QSN preventing the OTA from being
+        able to be used on random robots in the wild.
 
 When the build is complete you'll have a file in
 `MP-UNLOCK/_build/unlock` with the robot's QSN in the filename. This
