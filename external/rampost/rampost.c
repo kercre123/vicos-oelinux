@@ -57,21 +57,16 @@ enum {LED_BACKPACK_FRONT, LED_BACKPACK_MIDDLE, LED_BACKPACK_BACK};
 
 void set_body_leds(int success, int inRecovery) {
   struct LightState ledPayload;
-
-  if (!success) {
-    ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
-  }
-  else {   //2 Blues for recovery
-    if(inRecovery) {
-    ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_BLUE] = 0xFF;
-    ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_BLUE] = 0xFF;
-    } else { //make them yellow to show we need unlock code
-      ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
-      ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_GREEN] = 0xFF;
-      ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_RED] = 0xFF;
-      ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_GREEN] = 0xFF;
-    }
-  }
+  
+  ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_BLUE] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_RED] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_FRONT * LED_CHANEL_CT + LED0_GREEN] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_BLUE] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_RED] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_MIDDLE * LED_CHANEL_CT + LED0_GREEN] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_BACK * LED_CHANEL_CT + LED0_BLUE] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_BACK * LED_CHANEL_CT + LED0_RED] = 0xFF;
+  ledPayload.ledColors[LED_BACKPACK_BACK * LED_CHANEL_CT + LED0_GREEN] = 0xFF;
 
   int errCode = hal_init(SPINE_TTY, SPINE_BAUD);
   if (errCode) {
@@ -167,34 +162,8 @@ typedef enum {
 } UnlockState;
 
 
-UnlockState wait_for_unlock(void) {
-  int buttonCount = 0;
-  uint64_t start = steady_clock_now();
-  uint64_t now;
-
-  printf("Waiting %lld ns for UNLOCK!\n", REACTION_TIME);
-
-  for (now = steady_clock_now(); now-start < REACTION_TIME; now=steady_clock_now()) {
-    uint16_t buttonState = 0;
-    const struct SpineMessageHeader* hdr = hal_get_next_frame(FRAME_WAIT_MS);
-    if (hdr->payload_type == PAYLOAD_DATA_FRAME) {
-      buttonState = ((struct BodyToHead*)(hdr+1))->touchLevel[1];
-    }
-    else if (hdr->payload_type == PAYLOAD_BOOT_FRAME) {
-      //extract button data from stub packet and put in fake full packet
-      buttonState = ((struct MicroBodyToHead*)(hdr+1))->buttonPressed;
-    }
-    if ( imu_is_inverted() ) {
-      if (button_was_released(buttonState)) {
-        buttonCount++;
-printf("Press %d!\n", buttonCount);
-        if (buttonCount >= 3 ) {
-          return unlock_SUCCESS;
-        }
-      }
-      }
-  }
-  return unlock_TIMEOUT;
+UnlockState wait_forever(void) {
+  while (1) {};
 }
 
 void send_shutdown_message(void) {
@@ -233,11 +202,7 @@ int main(int argc, const char* argv[]) {
       imu_open();
       imu_init();
 
-      if (wait_for_unlock() != unlock_SUCCESS) {
-        while (1) {
-          send_shutdown_message();
-        }
-      }
+      wait_forever();
       show_locked_qsn_icon();
       
     }

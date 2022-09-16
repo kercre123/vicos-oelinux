@@ -78,6 +78,7 @@ $(MANIFEST).ini: $(BUILD) $(BOOT_STATS) $(SYS_STATS)
 	echo "manifest_version=0.9.2"           >> $@
 	echo "update_version=$(UPDATE_VERSION)" >> $@
 	echo "num_images=2"                     >> $@
+	echo "ankidev=0"                        >> $@
 	echo "[BOOT]"                           >> $@
 	echo "encryption=$(OTAENC)"             >> $@
 	echo "delta=0"                          >> $@
