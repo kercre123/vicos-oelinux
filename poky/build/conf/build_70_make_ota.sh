@@ -42,6 +42,7 @@ export IMG_DIR=../poky/build/tmp-glibc/deploy/images/apq8009-robot-robot-perf/
 cd $WS/ota
 case "${BUILD_VARIANT}" in
     dev)
+	make verify-boot-dev
 	make
     ;;
     prod)
