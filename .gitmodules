@@ -1,7 +1,7 @@
 [submodule "anki/victor"]
 	path = anki/victor
-	url = git@github.com:anki/victor.git
-	branch = escape-pod
+	url = https://github.com/kercre123/victor
+	branch = master
 [submodule "anki/vector-cloud"]
 	path = anki/vector-cloud
 	url = https://github.com/digital-dream-labs/vector-cloud
