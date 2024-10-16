@@ -1,5 +1,7 @@
 # vicos-oelinux
 
+(note: some kernel files were missing in the dump I received. these still exist in previous trees)
+
 This repository contains the embedded OS that runs on victor hardware.
 If you are looking for victor embedded firmware, robotics, animation and engine layers checkout [vicos](https://github.com/anki/victor).
 
